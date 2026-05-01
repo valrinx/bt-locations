@@ -196,7 +196,7 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script>
         const STORAGE_KEY = 'bt_locations_data';
-        const JSON_URL = 'https://raw.githubusercontent.com/valrinx/bt-locations/main/all_locations.json';
+        const JSON_URL = './all_locations.json';
 
         function saveLocations() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
@@ -519,8 +519,10 @@
             btn.textContent = 'กำลังบันทึก...';
             try {
                 const jsonContent = JSON.stringify(locations, null, 2);
-                const fileInfo = await githubGetFile('all_locations.json', token);
-                await githubPutFile('all_locations.json', jsonContent, fileInfo.sha, token, 'Update locations from web app');
+                const fileInfo1 = await githubGetFile('all_locations.json', token);
+                await githubPutFile('all_locations.json', jsonContent, fileInfo1.sha, token, 'Update locations from web app');
+                const fileInfo2 = await githubGetFile('docs/all_locations.json', token);
+                await githubPutFile('docs/all_locations.json', jsonContent, fileInfo2.sha, token, 'Sync docs/all_locations.json');
                 showSaveStatus('บันทึกสำเร็จ!', false);
             } catch(err) {
                 console.error(err);
