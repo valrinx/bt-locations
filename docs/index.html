@@ -530,6 +530,23 @@
 
         // Init
         update();
+
+        // Background sync: fetch latest data from server
+        (async () => {
+            try {
+                const res = await fetch('./all_locations.json?t=' + Date.now());
+                if (!res.ok) return;
+                const text = await res.text();
+                if (!text.startsWith('[')) return;
+                const fresh = JSON.parse(text);
+                if (fresh.length > 0 && JSON.stringify(fresh) !== JSON.stringify(locations)) {
+                    locations = fresh;
+                    saveLocations();
+                    update();
+                    console.log('Synced', fresh.length, 'locations from server');
+                }
+            } catch(e) {}
+        })();
     </script>
 </body>
 </html>
