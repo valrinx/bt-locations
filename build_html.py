@@ -5,15 +5,6 @@ with open(r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json', 'r', e
 
 lists = sorted(set(l['list'] for l in locs))
 
-js_entries = []
-for l in locs:
-    name = l['name'].replace('"', '\\"') if l['name'] else ''
-    lst = l['list'].replace('"', '\\"')
-    city = l.get('city', '').replace('"', '\\"')
-    js_entries.append(f'{{name:"{name}",lat:{l["lat"]},lng:{l["lng"]},list:"{lst}",city:"{city}"}}')
-
-js_array = ',\n            '.join(js_entries)
-
 filter_options = ''.join(f'<option value="{l}">{l}</option>' for l in lists)
 
 html = f'''<!DOCTYPE html>
@@ -213,25 +204,14 @@ html = f'''<!DOCTYPE html>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script>
-        const DEFAULT_LOCATIONS = [
-            {js_array}
-        ];
-
         const STORAGE_KEY = 'bt_locations_data';
-
-        function loadLocations() {{
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {{
-                try {{ return JSON.parse(saved); }} catch(e) {{}}
-            }}
-            return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
-        }}
+        const JSON_URL = 'https://raw.githubusercontent.com/valrinx/bt-locations/main/all_locations.json';
 
         function saveLocations() {{
             localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
         }}
 
-        let locations = loadLocations();
+        let locations = [];
         let addMode = false;
         let editingIndex = -1;
 
@@ -545,8 +525,29 @@ html = f'''<!DOCTYPE html>
             }}
         }}
 
-        // Init
-        update();
+        // Init: load from GitHub JSON, fallback to localStorage
+        async function init() {{
+            document.getElementById('count').textContent = 'กำลังโหลด...';
+            try {{
+                const res = await fetch(JSON_URL + '?t=' + Date.now());
+                if (res.ok) {{
+                    locations = await res.json();
+                    saveLocations();
+                }}
+            }} catch(e) {{
+                console.warn('Failed to fetch from GitHub, using localStorage');
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {{
+                    try {{ locations = JSON.parse(saved); }} catch(e2) {{}}
+                }}
+            }}
+            if (!locations.length) {{
+                document.getElementById('count').textContent = 'ไม่มีข้อมูล';
+                return;
+            }}
+            update();
+        }}
+        init();
     </script>
 </body>
 </html>'''
