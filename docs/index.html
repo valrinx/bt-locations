@@ -1556,7 +1556,14 @@
 
         // === RESET ===
         document.getElementById('btnReset').onclick = () => {
-            if (confirm('รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น?')) {
+            const msg = '⚠️ ยืนยันการรีเซ็ต?\n\n'
+                + 'สิ่งที่จะเกิดขึ้น:\n'
+                + '• ข้อมูลที่แก้ไขในเครื่องนี้จะถูกลบทั้งหมด\n'
+                + '• ระบบจะโหลดข้อมูลเริ่มต้นกลับมา\n'
+                + '• จุดที่เพิ่ม/แก้ไข/ลบ ที่ยังไม่ได้ Save to GitHub จะหายไป\n\n'
+                + 'หากต้องการเก็บข้อมูลไว้ ให้กด "ยกเลิก" แล้วกด Export ก่อน';
+            if (!confirm(msg)) return;
+            {
                 localStorage.removeItem(STORAGE_KEY);
                 locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
                 update();
