@@ -66,6 +66,21 @@ python -m http.server 8080
 - [x] Sync ข้อมูลข้ามเครื่อง (background fetch `all_locations.json`)
 - [x] ปรับปรุง UI ของ popup / modal ให้สวยขึ้น
 
+**ควรทำ:**
+- [ ] สร้าง `import_takeout.py` — import GeoJSON จาก Google Takeout อัตโนมัติ
+- [ ] ลบไฟล์ test ที่ไม่ใช้ (`docs/test.html`, `test_html.js`)
+
+**น่าทำ:**
+- [ ] ค้นหา/กรองแบบ multi-filter (ชื่อ + เขต + รายการ พร้อมกัน)
+- [ ] แสดงสถิติ dashboard (จำนวนจุดต่อเขต, ต่อรายการ)
+- [ ] ปรับ Mobile responsive ให้ใช้งานง่ายขึ้น
+- [ ] เพิ่มปุ่ม Undo ย้อนการแก้ไขล่าสุด
+
+**Nice-to-have:**
+- [ ] แยกสี marker ตาม list
+- [ ] Bulk edit/delete (เลือกหลายจุดแล้วแก้ไข/ลบทีเดียว)
+- [ ] Heatmap mode แสดงความหนาแน่นของจุด
+
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
 ### 2026-05-02
