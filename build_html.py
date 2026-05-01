@@ -77,18 +77,28 @@ html = f'''<!DOCTYPE html>
             font-size: 11px; font-weight: bold; color: #1a73e8;
             white-space: nowrap;
         }}
-        .popup-content {{ text-align: center; }}
-        .popup-content h3 {{ color: #1a73e8; margin-bottom: 6px; font-size: 16px; }}
-        .popup-content p {{ color: #555; margin: 2px 0; font-size: 12px; }}
-        .popup-content a, .popup-content button {{
-            display: inline-block; margin-top: 4px; padding: 4px 10px;
-            border-radius: 4px; text-decoration: none; font-size: 12px;
-            cursor: pointer; border: none;
+        .popup-content {{ text-align: center; min-width: 180px; }}
+        .popup-content h3 {{
+            color: #fff; margin: -12px -20px 10px; padding: 12px 20px;
+            font-size: 15px; font-weight: 600;
+            background: linear-gradient(135deg, #1a73e8, #4285f4);
+            border-radius: 8px 8px 0 0;
+        }}
+        .popup-content .popup-info {{ color: #555; margin: 4px 0; font-size: 12px; line-height: 1.5; }}
+        .popup-content .popup-info strong {{ color: #333; }}
+        .popup-content .popup-actions {{ margin-top: 10px; display: flex; gap: 6px; justify-content: center; }}
+        .popup-content .popup-actions a, .popup-content .popup-actions button {{
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 6px 12px; border-radius: 6px; text-decoration: none;
+            font-size: 12px; cursor: pointer; border: none; font-weight: 500;
+            transition: all 0.2s ease;
         }}
         .popup-content .link-gmaps {{ background: #1a73e8; color: white; }}
-        .popup-content .link-gmaps:hover {{ background: #1557b0; }}
-        .popup-content .btn-popup-edit {{ background: #fbbc04; color: #333; margin-left: 4px; }}
-        .popup-content .btn-popup-delete {{ background: #ea4335; color: white; margin-left: 4px; }}
+        .popup-content .link-gmaps:hover {{ background: #1557b0; transform: translateY(-1px); }}
+        .popup-content .btn-popup-edit {{ background: #fbbc04; color: #333; }}
+        .popup-content .btn-popup-edit:hover {{ background: #f0b400; transform: translateY(-1px); }}
+        .popup-content .btn-popup-delete {{ background: #ea4335; color: white; }}
+        .popup-content .btn-popup-delete:hover {{ background: #d33426; transform: translateY(-1px); }}
         .list-panel {{
             position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
             background: white; max-height: 35vh; overflow-y: auto;
@@ -111,26 +121,44 @@ html = f'''<!DOCTYPE html>
         /* Modal */
         .modal-overlay {{
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+            z-index: 2000; justify-content: center; align-items: center;
         }}
         .modal-overlay.open {{ display: flex; }}
         .modal {{
-            background: white; border-radius: 12px; padding: 24px; width: 90vw; max-width: 400px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            background: white; border-radius: 16px; width: 90vw; max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+            animation: modalIn 0.25s ease;
         }}
+        @keyframes modalIn {{
+            from {{ opacity: 0; transform: scale(0.95) translateY(10px); }}
+            to {{ opacity: 1; transform: scale(1) translateY(0); }}
+        }}
+        .modal-header {{
+            background: linear-gradient(135deg, #1a73e8, #4285f4);
+            color: white; padding: 18px 24px; font-size: 18px; font-weight: 600;
+        }}
+        .modal-body {{ padding: 20px 24px; }}
         .modal h2 {{ margin-bottom: 16px; font-size: 18px; color: #333; }}
-        .modal label {{ display: block; margin-bottom: 4px; font-size: 13px; color: #555; font-weight: 500; }}
-        .modal input {{
-            width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px;
-            font-size: 14px; margin-bottom: 12px; outline: none;
+        .modal label {{
+            display: block; margin-bottom: 6px; font-size: 13px;
+            color: #444; font-weight: 600; letter-spacing: 0.3px;
         }}
-        .modal input:focus {{ border-color: #4285f4; }}
-        .modal-btns {{ display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }}
-        .modal-btns .btn {{ padding: 8px 16px; font-size: 14px; }}
-        .btn-cancel {{ background: #eee; color: #333; }}
+        .modal input {{
+            width: 100%; border: 2px solid #e8e8e8; border-radius: 8px; padding: 10px 12px;
+            font-size: 14px; margin-bottom: 14px; outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }}
+        .modal input:focus {{ border-color: #4285f4; box-shadow: 0 0 0 3px rgba(66,133,244,0.15); }}
+        .modal-btns {{ display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8f9fa; }}
+        .modal-btns .btn {{
+            padding: 10px 20px; font-size: 14px; border-radius: 8px;
+            font-weight: 600; transition: all 0.2s ease;
+        }}
+        .btn-cancel {{ background: #e8e8e8; color: #555; }}
         .btn-cancel:hover {{ background: #ddd; }}
-        .btn-save {{ background: #4285f4; color: white; }}
-        .btn-save:hover {{ background: #3275e4; }}
+        .btn-save {{ background: linear-gradient(135deg, #1a73e8, #4285f4); color: white; }}
+        .btn-save:hover {{ background: linear-gradient(135deg, #1557b0, #3275e4); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(66,133,244,0.4); }}
         .add-mode-banner {{
             display: none; position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
             z-index: 1500; background: #34a853; color: white; padding: 10px 20px;
@@ -179,10 +207,12 @@ html = f'''<!DOCTYPE html>
     <!-- Token Modal -->
     <div class="modal-overlay" id="tokenModalOverlay">
         <div class="modal">
-            <h2>GitHub Token</h2>
-            <p style="font-size:13px;color:#555;margin-bottom:12px;">ใส่ Personal Access Token เพื่อบันทึกข้อมูลขึ้น GitHub<br><small>Token จะเก็บใน browser นี้เท่านั้น</small></p>
-            <label>GitHub Token</label>
-            <input type="password" id="tokenInput" placeholder="github_pat_...">
+            <div class="modal-header">GitHub Token</div>
+            <div class="modal-body">
+                <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6;">ใส่ Personal Access Token เพื่อบันทึกข้อมูลขึ้น GitHub<br><small style="color:#999;">Token จะเก็บใน browser นี้เท่านั้น</small></p>
+                <label>Token</label>
+                <input type="password" id="tokenInput" placeholder="github_pat_...">
+            </div>
             <div class="modal-btns">
                 <button class="btn btn-cancel" id="tokenCancel">ยกเลิก</button>
                 <button class="btn btn-save" id="tokenSave">บันทึก Token</button>
@@ -193,17 +223,19 @@ html = f'''<!DOCTYPE html>
     <!-- Edit/Add Modal -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal">
-            <h2 id="modalTitle">แก้ไขจุด</h2>
-            <label>ชื่อ</label>
-            <input type="text" id="modalName" placeholder="ชื่อจุด">
-            <label>รายการ (List)</label>
-            <input type="text" id="modalList" placeholder="เช่น BT-Topup, ดินแดง">
-            <label>เขต (City)</label>
-            <input type="text" id="modalCity" placeholder="เขต/อำเภอ">
-            <label>Latitude</label>
-            <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
-            <label>Longitude</label>
-            <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+            <div class="modal-header" id="modalTitle">แก้ไขจุด</div>
+            <div class="modal-body">
+                <label>ชื่อ</label>
+                <input type="text" id="modalName" placeholder="ชื่อจุด">
+                <label>รายการ (List)</label>
+                <input type="text" id="modalList" placeholder="เช่น BT-Topup, ดินแดง">
+                <label>เขต (City)</label>
+                <input type="text" id="modalCity" placeholder="เขต/อำเภอ">
+                <label>Latitude</label>
+                <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
+                <label>Longitude</label>
+                <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+            </div>
             <div class="modal-btns">
                 <button class="btn btn-cancel" id="modalCancel">ยกเลิก</button>
                 <button class="btn btn-save" id="modalSave">บันทึก</button>
@@ -246,12 +278,16 @@ html = f'''<!DOCTYPE html>
         function getPopupHTML(loc, idx) {{
             return `<div class="popup-content">
                 <h3>${{loc.name || 'ไม่มีชื่อ'}}</h3>
-                ${{loc.city ? `<p>เขต: ${{loc.city}}</p>` : ''}}
-                <p>รายการ: ${{loc.list}}</p>
-                <p>Lat: ${{loc.lat}}, Lng: ${{loc.lng}}</p>
-                <a class="link-gmaps" href="https://www.google.com/maps?q=${{loc.lat}},${{loc.lng}}" target="_blank">Google Maps</a>
-                <button class="btn-popup-edit" onclick="openEdit(${{idx}})">แก้ไข</button>
-                <button class="btn-popup-delete" onclick="deleteLoc(${{idx}})">ลบ</button>
+                <div class="popup-info">
+                    ${{loc.city ? `<strong>เขต:</strong> ${{loc.city}}<br>` : ''}}
+                    <strong>รายการ:</strong> ${{loc.list}}<br>
+                    <strong>พิกัด:</strong> ${{loc.lat.toFixed(6)}}, ${{loc.lng.toFixed(6)}}
+                </div>
+                <div class="popup-actions">
+                    <a class="link-gmaps" href="https://www.google.com/maps?q=${{loc.lat}},${{loc.lng}}" target="_blank">Google Maps</a>
+                    <button class="btn-popup-edit" onclick="openEdit(${{idx}})">แก้ไข</button>
+                    <button class="btn-popup-delete" onclick="deleteLoc(${{idx}})">ลบ</button>
+                </div>
             </div>`;
         }}
 
