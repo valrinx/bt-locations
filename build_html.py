@@ -1,7 +1,16 @@
 import json
 import shutil
+import os
+from datetime import datetime
 
-with open(r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json', 'r', encoding='utf-8') as f:
+# Auto backup
+src = r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json'
+backup_dir = r'C:\Users\T\Documents\GitHub\bt-locations\backups'
+os.makedirs(backup_dir, exist_ok=True)
+backup_name = f'all_locations_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+shutil.copy2(src, os.path.join(backup_dir, backup_name))
+
+with open(src, 'r', encoding='utf-8') as f:
     locs = json.load(f)
 
 lists = sorted(set(l['list'] for l in locs))
@@ -173,6 +182,30 @@ html = f'''<!DOCTYPE html>
             background: white; color: #34a853; border: none; border-radius: 4px;
             padding: 4px 12px; margin-left: 12px; cursor: pointer; font-size: 12px;
         }}
+        .legend-panel {{
+            position: absolute; bottom: 30px; left: 10px; z-index: 1000;
+            background: white; border-radius: 8px; padding: 10px 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-height: 300px;
+            overflow-y: auto; font-size: 12px; display: none;
+        }}
+        .legend-panel.show {{ display: block; }}
+        .legend-item {{ display: flex; align-items: center; gap: 6px; padding: 2px 0; }}
+        .legend-dot {{ width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3); flex-shrink: 0; }}
+
+        body.dark {{ background: #1a1a2e; }}
+        body.dark .controls {{ background: rgba(30,30,50,0.95); color: #e0e0e0; }}
+        body.dark .controls input,
+        body.dark .controls select {{ background: #2a2a4a; color: #e0e0e0; border-color: #444; }}
+        body.dark .list-panel {{ background: rgba(30,30,50,0.95); color: #e0e0e0; }}
+        body.dark .legend-panel {{ background: rgba(30,30,50,0.95); color: #e0e0e0; }}
+        body.dark .modal {{ background: #1e1e3e; color: #e0e0e0; }}
+        body.dark .modal-header {{ background: linear-gradient(135deg, #1a1a4a, #2a2a6a); }}
+        body.dark .modal-body {{ background: #1e1e3e; }}
+        body.dark .modal-body label {{ color: #ccc; }}
+        body.dark .modal input {{ background: #2a2a4a; color: #e0e0e0; border-color: #444; }}
+        body.dark .modal-btns {{ background: #252550; }}
+        body.dark .count-badge {{ background: #2a2a6a; color: #8ab4f8; }}
+
         @media (max-width: 600px) {{
             .controls {{
                 left: 5px; right: 5px; top: 5px; padding: 6px 8px; gap: 4px;
@@ -212,7 +245,11 @@ html = f'''<!DOCTYPE html>
         <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>Undo</button>
         <button class="btn btn-delete" id="btnBulkDel">ลบที่กรอง</button>
         <button class="btn" id="btnHeatmap" style="background:#f97316;color:white;">Heatmap</button>
+        <button class="btn" id="btnLegend" style="background:#8b5cf6;color:white;">Legend</button>
+        <button class="btn" id="btnDark" style="background:#334155;color:white;">🌙</button>
+        <button class="btn" id="btnTile" style="background:#059669;color:white;">🗺️</button>
     </div>
+    <div class="legend-panel" id="legendPanel"></div>
     <div class="add-mode-banner" id="addBanner">
         คลิกบนแผนที่เพื่อเพิ่มจุดใหม่
         <button class="btn-cancel-add" id="btnCancelAdd">ยกเลิก</button>
@@ -306,10 +343,23 @@ html = f'''<!DOCTYPE html>
         let editingIndex = -1;
 
         const map = L.map('map').setView([13.75, 100.5], 11);
-        L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19
-        }}).addTo(map);
+        const tileLayers = {{
+            'Street': L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                attribution: '&copy; OSM', maxZoom: 19
+            }}),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}', {{
+                attribution: '&copy; Esri', maxZoom: 19
+            }}),
+            'Terrain': L.tileLayer('https://{{s}}.tile.opentopomap.org/{{z}}/{{x}}/{{y}}.png', {{
+                attribution: '&copy; OpenTopoMap', maxZoom: 17
+            }}),
+            'Dark': L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+                attribution: '&copy; CartoDB', maxZoom: 19
+            }})
+        }};
+        const tileNames = Object.keys(tileLayers);
+        let currentTileIdx = 0;
+        tileLayers[tileNames[0]].addTo(map);
 
         let markerCluster = L.markerClusterGroup();
         let currentMarkers = [];
@@ -328,9 +378,35 @@ html = f'''<!DOCTYPE html>
                     <a class="link-gmaps" href="https://www.google.com/maps?q=${{loc.lat}},${{loc.lng}}" target="_blank">Google Maps</a>
                     <button class="btn-popup-edit" onclick="openEdit(${{idx}})">แก้ไข</button>
                     <button class="btn-popup-delete" onclick="deleteLoc(${{idx}})">ลบ</button>
+                    <button class="btn-popup-edit" onclick="measureFrom(${{idx}})" style="background:#059669;">📏 วัดระยะ</button>
                 </div>
             </div>`;
         }}
+
+        let measureStart = null;
+        let measureLine = null;
+        function haversine(lat1,lng1,lat2,lng2) {{
+            const R = 6371000;
+            const p1 = lat1*Math.PI/180, p2 = lat2*Math.PI/180;
+            const dp = (lat2-lat1)*Math.PI/180, dl = (lng2-lng1)*Math.PI/180;
+            const a = Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }}
+        window.measureFrom = function(idx) {{
+            const loc = locations[idx];
+            if (!measureStart) {{
+                measureStart = loc;
+                map.closePopup();
+                alert(`เลือกจุดเริ่ม: ${{loc.name || loc.list}}\\nคลิกหมุดอีกจุด แล้วกด "📏 วัดระยะ" เพื่อวัด`);
+            }} else {{
+                const d = haversine(measureStart.lat, measureStart.lng, loc.lat, loc.lng);
+                const km = (d/1000).toFixed(2);
+                if (measureLine) map.removeLayer(measureLine);
+                measureLine = L.polyline([[measureStart.lat,measureStart.lng],[loc.lat,loc.lng]], {{color:'red',weight:3,dashArray:'8,8'}}).addTo(map);
+                alert(`📏 ระยะทาง:\\n${{measureStart.name || measureStart.list}} → ${{loc.name || loc.list}}\\n${{km}} km (${{Math.round(d)}} m)`);
+                measureStart = null;
+            }}
+        }};
 
         const listColors = {{}};
         const colorPalette = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#5a67d8','#805ad5','#d53f8c','#718096'];
@@ -388,11 +464,17 @@ html = f'''<!DOCTYPE html>
             }});
         }}
 
+        let zoomToFiltered = false;
         function update() {{
             const filtered = getFiltered();
             renderMarkers(filtered);
             renderList(filtered);
             updateFilterOptions();
+            updateLegend();
+            if (zoomToFiltered && filtered.length > 0 && filtered.length < locations.length) {{
+                const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
+                map.fitBounds(bounds, {{padding: [30, 30]}});
+            }}
         }}
 
         function updateFilterOptions() {{
@@ -558,6 +640,47 @@ html = f'''<!DOCTYPE html>
             reader.readAsText(file);
             e.target.value = '';
         }};
+
+        // === LEGEND ===
+        function updateLegend() {{
+            const panel = document.getElementById('legendPanel');
+            if (!panel.classList.contains('show')) return;
+            const lists = [...new Set(getFiltered().map(l => l.list))].sort();
+            panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">Legend</div>' +
+                lists.map(l => `<div class="legend-item"><span class="legend-dot" style="background:${{getListColor(l)}}"></span>${{l}}</div>`).join('');
+        }}
+        document.getElementById('btnLegend').onclick = () => {{
+            const panel = document.getElementById('legendPanel');
+            panel.classList.toggle('show');
+            updateLegend();
+        }};
+
+        // === DARK MODE ===
+        document.getElementById('btnDark').onclick = () => {{
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            document.getElementById('btnDark').textContent = isDark ? '☀️' : '🌙';
+        }};
+
+        // === MAP TILE ===
+        document.getElementById('btnTile').onclick = () => {{
+            map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
+            currentTileIdx = (currentTileIdx + 1) % tileNames.length;
+            tileLayers[tileNames[currentTileIdx]].addTo(map);
+            document.getElementById('btnTile').textContent = tileNames[currentTileIdx];
+        }};
+
+        // === ZOOM TO FILTERED ===
+        document.getElementById('listFilter').addEventListener('change', () => {{
+            zoomToFiltered = true;
+            update();
+            zoomToFiltered = false;
+        }});
+        document.getElementById('cityFilter').addEventListener('change', () => {{
+            zoomToFiltered = true;
+            update();
+            zoomToFiltered = false;
+        }});
 
         // === HEATMAP ===
         document.getElementById('btnHeatmap').onclick = () => {{

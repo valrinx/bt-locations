@@ -10,6 +10,10 @@
 | `build_html.py` | สร้าง `docs/index.html` จาก JSON |
 | `merge_sheet.py` | รวมข้อมูลจาก Google Sheet CSV เข้า JSON |
 | `import_takeout.py` | Import GeoJSON จาก Google Takeout |
+| `auto_city.py` | Auto-detect city จาก GPS (Nominatim) |
+| `validate_data.py` | ตรวจจุดซ้ำ/ผิดปกติ |
+| `backups/` | Backup อัตโนมัติก่อนทุก build |
+| `.github/workflows/build.yml` | GitHub Actions auto build+deploy |
 | `docs/index.html` | หน้าเว็บ (generated) — UI, map, CRUD, GitHub save |
 | `docs/locations.js` | ข้อมูลหมุดแยกไฟล์ (generated จาก build) |
 | `docs/all_locations.json` | สำเนา JSON สำหรับ GitHub Pages |
@@ -26,6 +30,10 @@
 - Reset พร้อม popup คำเตือน
 - Save to GitHub ผ่าน API (เก็บ token ใน localStorage)
 - Background sync ข้อมูลข้ามเครื่อง
+- Legend สีอธิบาย list + Dark mode + 4 map tiles (Street/Satellite/Terrain/Dark)
+- วัดระยะทางระหว่าง 2 จุด (haversine)
+- Zoom to filtered อัตโนมัติเมื่อเลือก filter
+- Backup อัตโนมัติก่อนทุก build + GitHub Actions auto build
 - ข้อมูลหมุดแยกไฟล์ `locations.js` เพื่อให้ `index.html` เบาลง
 
 ## วิธี Build
@@ -87,20 +95,19 @@ python -m http.server 8080
 - [x] Heatmap mode แสดงความหนาแน่นของจุด (leaflet.heat)
 
 **ด้านข้อมูล:**
-- [ ] Auto-detect city จาก GPS (reverse geocoding จาก Nominatim)
-- [ ] ตรวจจุดซ้ำ (Duplicate Detection) — เตือนจุดที่ห่างกัน < 50 เมตร
-- [ ] ตรวจจุดผิดปกติ — lat/lng = 0, นอกประเทศไทย, ไม่มีชื่อ
+- [x] `auto_city.py` — Auto-detect city จาก GPS (reverse geocoding Nominatim)
+- [x] `validate_data.py` — ตรวจจุดซ้ำ (< 50m), จุดผิดปกติ (lat/lng=0, นอกไทย, ไม่มีชื่อ)
 
 **ด้าน UI/UX:**
-- [ ] แสดง Legend สี — อธิบายว่าสีไหนคือ list อะไร
-- [ ] Zoom to filtered — กด filter แล้ว map zoom ไปที่กลุ่มจุดอัตโนมัติ
-- [ ] Dark mode — สลับ theme มืด/สว่าง
-- [ ] แสดง route/ระยะทาง ระหว่าง 2 จุด
+- [x] แสดง Legend สี — อธิบายว่าสีไหนคือ list อะไร
+- [x] Zoom to filtered — กด filter แล้ว map zoom ไปที่กลุ่มจุดอัตโนมัติ
+- [x] Dark mode — สลับ theme มืด/สว่าง
+- [x] แสดง route/ระยะทาง ระหว่าง 2 จุด (📏 วัดระยะ)
 
 **ด้านระบบ:**
-- [ ] Auto build + deploy (GitHub Actions รัน `build_html.py` เมื่อ push)
-- [ ] Backup อัตโนมัติ ก่อนทุกการแก้ไข
-- [ ] รองรับหลาย map tile (OpenStreetMap, Satellite, Terrain)
+- [x] Auto build + deploy (GitHub Actions รัน `build_html.py` เมื่อ push)
+- [x] Backup อัตโนมัติ ก่อนทุก build (`backups/`)
+- [x] รองรับหลาย map tile (Street, Satellite, Terrain, Dark)
 
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
@@ -114,6 +121,10 @@ python -m http.server 8080
 - เพิ่ม Bulk delete (ลบจุดที่กรองอยู่ทั้งหมด)
 - เพิ่ม Heatmap mode (leaflet.heat)
 - ลบไฟล์ test ที่ไม่ใช้
+- สร้าง `auto_city.py` (reverse geocoding) + `validate_data.py` (ตรวจซ้ำ/ผิดปกติ)
+- เพิ่ม Legend สี, Dark mode, 4 map tiles, Zoom to filtered
+- เพิ่มวัดระยะทางระหว่าง 2 จุด (📏)
+- เพิ่ม GitHub Actions auto build + Backup อัตโนมัติ
 - `build_html.py` สร้าง `docs/locations.js` + copy `all_locations.json` อัตโนมัติ
 - เพิ่ม background sync: fetch `all_locations.json` เพื่อ sync ข้อมูลข้ามเครื่อง
 - ปรับ UI: popup มี gradient header, modal มี animation + backdrop blur + gradient buttons
