@@ -86,6 +86,22 @@ python -m http.server 8080
 - [x] Bulk delete (ลบจุดที่กรองอยู่ทั้งหมด)
 - [x] Heatmap mode แสดงความหนาแน่นของจุด (leaflet.heat)
 
+**ด้านข้อมูล:**
+- [ ] Auto-detect city จาก GPS (reverse geocoding จาก Nominatim)
+- [ ] ตรวจจุดซ้ำ (Duplicate Detection) — เตือนจุดที่ห่างกัน < 50 เมตร
+- [ ] ตรวจจุดผิดปกติ — lat/lng = 0, นอกประเทศไทย, ไม่มีชื่อ
+
+**ด้าน UI/UX:**
+- [ ] แสดง Legend สี — อธิบายว่าสีไหนคือ list อะไร
+- [ ] Zoom to filtered — กด filter แล้ว map zoom ไปที่กลุ่มจุดอัตโนมัติ
+- [ ] Dark mode — สลับ theme มืด/สว่าง
+- [ ] แสดง route/ระยะทาง ระหว่าง 2 จุด
+
+**ด้านระบบ:**
+- [ ] Auto build + deploy (GitHub Actions รัน `build_html.py` เมื่อ push)
+- [ ] Backup อัตโนมัติ ก่อนทุกการแก้ไข
+- [ ] รองรับหลาย map tile (OpenStreetMap, Satellite, Terrain)
+
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
 ### 2026-05-02
