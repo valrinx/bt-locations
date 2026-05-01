@@ -9,18 +9,23 @@
 | `all_locations.json` | ข้อมูลหมุดทั้งหมด (source of truth) |
 | `build_html.py` | สร้าง `docs/index.html` จาก JSON |
 | `merge_sheet.py` | รวมข้อมูลจาก Google Sheet CSV เข้า JSON |
+| `import_takeout.py` | Import GeoJSON จาก Google Takeout |
 | `docs/index.html` | หน้าเว็บ (generated) — UI, map, CRUD, GitHub save |
 | `docs/locations.js` | ข้อมูลหมุดแยกไฟล์ (generated จาก build) |
 | `docs/all_locations.json` | สำเนา JSON สำหรับ GitHub Pages |
 
 ## ฟีเจอร์ปัจจุบัน
 
-- แสดงหมุดบนแผนที่ พร้อม MarkerCluster
-- ค้นหา + กรองตามรายการ (list)
-- CRUD: เพิ่ม/แก้ไข/ลบ จุดบนแผนที่
+- แสดงหมุดบนแผนที่ พร้อม MarkerCluster + แยกสีตาม list
+- ค้นหา + กรองตามรายการ (list) + เขต (city) แบบ multi-filter
+- CRUD: เพิ่ม/แก้ไข/ลบ จุดบนแผนที่ + Undo (สูงสุด 20 ครั้ง)
+- Bulk delete จุดที่กรองอยู่
 - Export / Import JSON
+- Heatmap mode แสดงความหนาแน่นของจุด
+- Stats dashboard (สถิติจำนวนจุดตามรายการ/เขต)
 - Reset พร้อม popup คำเตือน
 - Save to GitHub ผ่าน API (เก็บ token ใน localStorage)
+- Background sync ข้อมูลข้ามเครื่อง
 - ข้อมูลหมุดแยกไฟล์ `locations.js` เพื่อให้ `index.html` เบาลง
 
 ## วิธี Build
@@ -67,23 +72,32 @@ python -m http.server 8080
 - [x] ปรับปรุง UI ของ popup / modal ให้สวยขึ้น
 
 **ควรทำ:**
-- [ ] สร้าง `import_takeout.py` — import GeoJSON จาก Google Takeout อัตโนมัติ
-- [ ] ลบไฟล์ test ที่ไม่ใช้ (`docs/test.html`, `test_html.js`)
+- [x] สร้าง `import_takeout.py` — import GeoJSON จาก Google Takeout อัตโนมัติ
+- [x] ลบไฟล์ test ที่ไม่ใช้ (`docs/test.html`, `test_html.js`)
 
 **น่าทำ:**
-- [ ] ค้นหา/กรองแบบ multi-filter (ชื่อ + เขต + รายการ พร้อมกัน)
-- [ ] แสดงสถิติ dashboard (จำนวนจุดต่อเขต, ต่อรายการ)
-- [ ] ปรับ Mobile responsive ให้ใช้งานง่ายขึ้น
-- [ ] เพิ่มปุ่ม Undo ย้อนการแก้ไขล่าสุด
+- [x] ค้นหา/กรองแบบ multi-filter (ชื่อ + เขต + รายการ พร้อมกัน)
+- [x] แสดงสถิติ dashboard (จำนวนจุดต่อเขต, ต่อรายการ)
+- [x] ปรับ Mobile responsive ให้ใช้งานง่ายขึ้น
+- [x] เพิ่มปุ่ม Undo ย้อนการแก้ไขล่าสุด
 
 **Nice-to-have:**
-- [ ] แยกสี marker ตาม list
-- [ ] Bulk edit/delete (เลือกหลายจุดแล้วแก้ไข/ลบทีเดียว)
-- [ ] Heatmap mode แสดงความหนาแน่นของจุด
+- [x] แยกสี marker ตาม list (CircleMarker + color palette)
+- [x] Bulk delete (ลบจุดที่กรองอยู่ทั้งหมด)
+- [x] Heatmap mode แสดงความหนาแน่นของจุด (leaflet.heat)
 
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
 ### 2026-05-02
+- สร้าง `import_takeout.py` สำหรับ import GeoJSON จาก Google Takeout
+- เพิ่ม multi-filter: กรองตามรายการ + เขต พร้อมกัน
+- เพิ่ม Stats dashboard (สถิติจุดตามรายการ/เขต)
+- ปรับ Mobile responsive ให้ใช้งานง่ายขึ้น
+- เพิ่มปุ่ม Undo (เก็บ history สูงสุด 20 ครั้ง)
+- แยกสี marker ตาม list ด้วย CircleMarker + color palette
+- เพิ่ม Bulk delete (ลบจุดที่กรองอยู่ทั้งหมด)
+- เพิ่ม Heatmap mode (leaflet.heat)
+- ลบไฟล์ test ที่ไม่ใช้
 - `build_html.py` สร้าง `docs/locations.js` + copy `all_locations.json` อัตโนมัติ
 - เพิ่ม background sync: fetch `all_locations.json` เพื่อ sync ข้อมูลข้ามเครื่อง
 - ปรับ UI: popup มี gradient header, modal มี animation + backdrop blur + gradient buttons

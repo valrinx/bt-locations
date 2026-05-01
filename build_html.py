@@ -17,6 +17,9 @@ js_array = ',\n            '.join(js_entries)
 
 filter_options = ''.join(f'<option value="{l}">{l}</option>' for l in lists)
 
+cities = sorted(set(l.get('city', '') for l in locs if l.get('city', '')))
+city_options = ''.join(f'<option value="{c}">{c}</option>' for c in cities)
+
 html = f'''<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -171,10 +174,18 @@ html = f'''<!DOCTYPE html>
             padding: 4px 12px; margin-left: 12px; cursor: pointer; font-size: 12px;
         }}
         @media (max-width: 600px) {{
-            .controls {{ left: 10px; top: 10px; padding: 6px 8px; gap: 4px; }}
-            .controls input {{ width: 100px; font-size: 12px; }}
-            .controls select {{ max-width: 120px; font-size: 12px; }}
+            .controls {{
+                left: 5px; right: 5px; top: 5px; padding: 6px 8px; gap: 4px;
+                max-width: calc(100vw - 10px); flex-wrap: wrap;
+            }}
+            .controls input {{ width: calc(50% - 4px); font-size: 12px; }}
+            .controls select {{ width: calc(50% - 4px); max-width: none; font-size: 12px; }}
             .btn {{ font-size: 11px; padding: 5px 8px; }}
+            .modal {{ width: 95vw; }}
+            .modal-header {{ padding: 14px 16px; font-size: 16px; }}
+            .modal-body {{ padding: 14px 16px; }}
+            .modal-btns {{ padding: 12px 16px; }}
+            .list-panel {{ max-height: 40vh; }}
         }}
     </style>
 </head>
@@ -186,6 +197,10 @@ html = f'''<!DOCTYPE html>
             <option value="">ทุกรายการ</option>
             {filter_options}
         </select>
+        <select id="cityFilter">
+            <option value="">ทุกเขต</option>
+            {city_options}
+        </select>
         <span class="count-badge" id="count">0 จุด</span>
         <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
         <button class="btn btn-github" id="btnGithub">Save to GitHub</button>
@@ -193,6 +208,10 @@ html = f'''<!DOCTYPE html>
         <button class="btn btn-export" id="btnExport">Export</button>
         <button class="btn btn-import" id="btnImport">Import</button>
         <button class="btn btn-reset" id="btnReset">Reset</button>
+        <button class="btn btn-export" id="btnStats" style="background:#0d9488;">Stats</button>
+        <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>Undo</button>
+        <button class="btn btn-delete" id="btnBulkDel">ลบที่กรอง</button>
+        <button class="btn" id="btnHeatmap" style="background:#f97316;color:white;">Heatmap</button>
     </div>
     <div class="add-mode-banner" id="addBanner">
         คลิกบนแผนที่เพื่อเพิ่มจุดใหม่
@@ -243,12 +262,26 @@ html = f'''<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- Stats Modal -->
+    <div class="modal-overlay" id="statsModalOverlay">
+        <div class="modal" style="max-width:500px;">
+            <div class="modal-header">สถิติข้อมูล</div>
+            <div class="modal-body" id="statsBody" style="max-height:60vh;overflow-y:auto;"></div>
+            <div class="modal-btns">
+                <button class="btn btn-cancel" id="statsClose">ปิด</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="locations.js"></script>
     <script>
 
         const STORAGE_KEY = 'bt_locations_data';
+        const undoStack = [];
+        const MAX_UNDO = 20;
 
         function loadLocations() {{
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -256,6 +289,12 @@ html = f'''<!DOCTYPE html>
                 try {{ return JSON.parse(saved); }} catch(e) {{}}
             }}
             return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+        }}
+
+        function pushUndo() {{
+            undoStack.push(JSON.stringify(locations));
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+            document.getElementById('btnUndo').disabled = false;
         }}
 
         function saveLocations() {{
@@ -274,6 +313,8 @@ html = f'''<!DOCTYPE html>
 
         let markerCluster = L.markerClusterGroup();
         let currentMarkers = [];
+        let heatLayer = null;
+        let heatmapMode = false;
 
         function getPopupHTML(loc, idx) {{
             return `<div class="popup-content">
@@ -291,13 +332,28 @@ html = f'''<!DOCTYPE html>
             </div>`;
         }}
 
+        const listColors = {{}};
+        const colorPalette = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#5a67d8','#805ad5','#d53f8c','#718096'];
+        function getListColor(list) {{
+            if (!listColors[list]) {{
+                let h = 0;
+                for (let i = 0; i < list.length; i++) h = list.charCodeAt(i) + ((h << 5) - h);
+                listColors[list] = colorPalette[Math.abs(h) % colorPalette.length];
+            }}
+            return listColors[list];
+        }}
+
         function renderMarkers(filtered) {{
             map.removeLayer(markerCluster);
             markerCluster = L.markerClusterGroup();
             currentMarkers = [];
             filtered.forEach(loc => {{
                 const idx = locations.indexOf(loc);
-                const marker = L.marker([loc.lat, loc.lng]);
+                const color = getListColor(loc.list);
+                const marker = L.circleMarker([loc.lat, loc.lng], {{
+                    radius: 8, fillColor: color, color: '#fff',
+                    weight: 2, opacity: 1, fillOpacity: 0.85
+                }});
                 const label = loc.name || loc.list;
                 marker.bindTooltip(label, {{
                     permanent: true, direction: 'top', offset: [0, -10],
@@ -307,17 +363,28 @@ html = f'''<!DOCTYPE html>
                 markerCluster.addLayer(marker);
                 currentMarkers.push({{loc, marker, idx}});
             }});
-            map.addLayer(markerCluster);
+            if (!heatmapMode) {{
+                map.addLayer(markerCluster);
+            }}
+
+            // Heatmap layer
+            if (heatLayer) map.removeLayer(heatLayer);
+            if (heatmapMode) {{
+                const heatData = filtered.map(l => [l.lat, l.lng, 1]);
+                heatLayer = L.heatLayer(heatData, {{radius: 25, blur: 15, maxZoom: 17}}).addTo(map);
+            }}
             document.getElementById('count').textContent = filtered.length + ' จุด';
         }}
 
         function getFiltered() {{
             const q = document.getElementById('search').value.toLowerCase();
             const list = document.getElementById('listFilter').value;
+            const city = document.getElementById('cityFilter').value;
             return locations.filter(l => {{
                 const matchList = !list || l.list === list;
+                const matchCity = !city || l.city === city;
                 const matchSearch = !q || (l.name && l.name.toLowerCase().includes(q)) || l.list.toLowerCase().includes(q) || (l.city && l.city.toLowerCase().includes(q));
-                return matchList && matchSearch;
+                return matchList && matchCity && matchSearch;
             }});
         }}
 
@@ -334,10 +401,17 @@ html = f'''<!DOCTYPE html>
             const lists = [...new Set(locations.map(l => l.list))].sort();
             sel.innerHTML = '<option value="">ทุกรายการ</option>' + lists.map(l => `<option value="${{l}}">${{l}}</option>`).join('');
             sel.value = current;
+
+            const citySel = document.getElementById('cityFilter');
+            const currentCity = citySel.value;
+            const cities = [...new Set(locations.map(l => l.city).filter(c => c))].sort();
+            citySel.innerHTML = '<option value="">ทุกเขต</option>' + cities.map(c => `<option value="${{c}}">${{c}}</option>`).join('');
+            citySel.value = currentCity;
         }}
 
         document.getElementById('search').addEventListener('input', update);
         document.getElementById('listFilter').addEventListener('change', update);
+        document.getElementById('cityFilter').addEventListener('change', update);
 
         // List panel
         const listBody = document.getElementById('listBody');
@@ -413,6 +487,7 @@ html = f'''<!DOCTYPE html>
             if (!loc) return;
             const name = loc.name || loc.list || 'ไม่มีชื่อ';
             if (!confirm(`ลบจุด "${{name}}" ?`)) return;
+            pushUndo();
             locations.splice(idx, 1);
             saveLocations();
             map.closePopup();
@@ -436,6 +511,7 @@ html = f'''<!DOCTYPE html>
             const lng = parseFloat(document.getElementById('modalLng').value);
             if (isNaN(lat) || isNaN(lng)) {{ alert('กรุณากรอก Lat/Lng ให้ถูกต้อง'); return; }}
 
+            pushUndo();
             if (editingIndex >= 0) {{
                 locations[editingIndex] = {{ name, lat, lng, list, city }};
             }} else {{
@@ -471,6 +547,7 @@ html = f'''<!DOCTYPE html>
                     const imported = JSON.parse(ev.target.result);
                     if (!Array.isArray(imported)) {{ alert('ไฟล์ไม่ถูกต้อง'); return; }}
                     if (confirm(`Import ${{imported.length}} จุด? (จะแทนที่ข้อมูลปัจจุบัน)`)) {{
+                        pushUndo();
                         locations = imported;
                         saveLocations();
                         update();
@@ -482,6 +559,79 @@ html = f'''<!DOCTYPE html>
             e.target.value = '';
         }};
 
+        // === HEATMAP ===
+        document.getElementById('btnHeatmap').onclick = () => {{
+            heatmapMode = !heatmapMode;
+            const btn = document.getElementById('btnHeatmap');
+            btn.textContent = heatmapMode ? 'Markers' : 'Heatmap';
+            btn.style.background = heatmapMode ? '#3182ce' : '#f97316';
+            update();
+        }};
+
+        // === BULK DELETE ===
+        document.getElementById('btnBulkDel').onclick = () => {{
+            const filtered = getFiltered();
+            if (filtered.length === locations.length) {{
+                alert('กรุณาใช้ filter เลือกจุดที่ต้องการลบก่อน');
+                return;
+            }}
+            if (!filtered.length) {{ alert('ไม่มีจุดที่แสดงอยู่'); return; }}
+            if (!confirm(`ลบ ${{filtered.length}} จุดที่แสดงอยู่?`)) return;
+            pushUndo();
+            const toRemove = new Set(filtered);
+            locations = locations.filter(l => !toRemove.has(l));
+            saveLocations();
+            update();
+            alert(`ลบ ${{filtered.length}} จุดแล้ว`);
+        }};
+
+        // === UNDO ===
+        document.getElementById('btnUndo').onclick = () => {{
+            if (!undoStack.length) return;
+            locations = JSON.parse(undoStack.pop());
+            saveLocations();
+            update();
+            document.getElementById('btnUndo').disabled = undoStack.length === 0;
+        }};
+
+        // === STATS ===
+        document.getElementById('btnStats').onclick = () => {{
+            const listCount = {{}};
+            const cityCount = {{}};
+            locations.forEach(l => {{
+                listCount[l.list] = (listCount[l.list] || 0) + 1;
+                if (l.city) cityCount[l.city] = (cityCount[l.city] || 0) + 1;
+            }});
+            const sortedLists = Object.entries(listCount).sort((a,b) => b[1] - a[1]);
+            const sortedCities = Object.entries(cityCount).sort((a,b) => b[1] - a[1]);
+            let html = `<div style="margin-bottom:16px;"><strong>รวมทั้งหมด:</strong> ${{locations.length}} จุด</div>`;
+            html += `<div style="margin-bottom:12px;"><strong>ตามรายการ (${{sortedLists.length}}):</strong></div>`;
+            html += '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px;">';
+            sortedLists.forEach(([name, count]) => {{
+                const pct = (count / locations.length * 100).toFixed(1);
+                html += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:4px 8px;">${{name}}</td>
+                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${{count}}</td>
+                    <td style="padding:4px 8px;text-align:right;color:#888;">${{pct}}%</td>
+                </tr>`;
+            }});
+            html += '</table>';
+            html += `<div style="margin-bottom:12px;"><strong>ตามเขต (${{sortedCities.length}}):</strong></div>`;
+            html += '<table style="width:100%;font-size:13px;border-collapse:collapse;">';
+            sortedCities.forEach(([name, count]) => {{
+                html += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:4px 8px;">${{name}}</td>
+                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${{count}}</td>
+                </tr>`;
+            }});
+            html += '</table>';
+            document.getElementById('statsBody').innerHTML = html;
+            document.getElementById('statsModalOverlay').classList.add('open');
+        }};
+        document.getElementById('statsClose').onclick = () => {{
+            document.getElementById('statsModalOverlay').classList.remove('open');
+        }};
+
         // === RESET ===
         document.getElementById('btnReset').onclick = () => {{
             const msg = '⚠️ ยืนยันการรีเซ็ต?\\n\\n'
@@ -489,6 +639,7 @@ html = f'''<!DOCTYPE html>
                 + '• กลับเป็นข้อมูลเริ่มต้น\\n\\n'
                 + 'แนะนำ: กด Export สำรองข้อมูลก่อน';
             if (!confirm(msg)) return;
+            pushUndo();
             localStorage.removeItem(STORAGE_KEY);
             locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
             update();
