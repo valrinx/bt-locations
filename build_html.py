@@ -5,6 +5,15 @@ with open(r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json', 'r', e
 
 lists = sorted(set(l['list'] for l in locs))
 
+js_entries = []
+for l in locs:
+    name = l['name'].replace('"', '\\"') if l['name'] else ''
+    lst = l['list'].replace('"', '\\"')
+    city = l.get('city', '').replace('"', '\\"')
+    js_entries.append(f'{{name:"{name}",lat:{l["lat"]},lng:{l["lng"]},list:"{lst}",city:"{city}"}}')
+
+js_array = ',\n            '.join(js_entries)
+
 filter_options = ''.join(f'<option value="{l}">{l}</option>' for l in lists)
 
 html = f'''<!DOCTYPE html>
@@ -204,14 +213,25 @@ html = f'''<!DOCTYPE html>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script>
+        const DEFAULT_LOCATIONS = [
+            {js_array}
+        ];
+
         const STORAGE_KEY = 'bt_locations_data';
-        const JSON_URL = './all_locations.json';
+
+        function loadLocations() {{
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {{
+                try {{ return JSON.parse(saved); }} catch(e) {{}}
+            }}
+            return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+        }}
 
         function saveLocations() {{
             localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
         }}
 
-        let locations = [];
+        let locations = loadLocations();
         let addMode = false;
         let editingIndex = -1;
 
@@ -428,26 +448,13 @@ html = f'''<!DOCTYPE html>
         }};
 
         // === RESET ===
-        document.getElementById('btnReset').onclick = async () => {{
-            const msg = '⚠️ ยืนยันการรีเซ็ต?\n\n'
-                + 'สิ่งที่จะเกิดขึ้น:\n'
-                + '• ข้อมูลที่แก้ไขในเครื่องนี้จะถูกลบทั้งหมด\n'
-                + '• ระบบจะโหลดข้อมูลล่าสุดจาก GitHub ใหม่\n'
-                + '• จุดที่เพิ่ม/แก้ไข/ลบ ที่ยังไม่ได้ Save to GitHub จะหายไป\n\n'
-                + 'หากต้องการเก็บข้อมูลไว้ ให้กด "ยกเลิก" แล้วกด Export ก่อน';
-            if (!confirm(msg)) return;
-            localStorage.removeItem(STORAGE_KEY);
-            try {{
-                const res = await fetch(JSON_URL + '?t=' + Date.now());
-                if (res.ok) {{
-                    locations = await res.json();
-                    saveLocations();
-                }}
-            }} catch(e) {{
-                locations = [];
+        document.getElementById('btnReset').onclick = () => {{
+            if (confirm('รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น?')) {{
+                localStorage.removeItem(STORAGE_KEY);
+                locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+                update();
+                alert('รีเซ็ตสำเร็จ!');
             }}
-            update();
-            alert('รีเซ็ตสำเร็จ! โหลดข้อมูลจาก GitHub ใหม่แล้ว');
         }};
 
         // === SAVE TO GITHUB ===
@@ -521,10 +528,8 @@ html = f'''<!DOCTYPE html>
             btn.textContent = 'กำลังบันทึก...';
             try {{
                 const jsonContent = JSON.stringify(locations, null, 2);
-                const fileInfo1 = await githubGetFile('all_locations.json', token);
-                await githubPutFile('all_locations.json', jsonContent, fileInfo1.sha, token, 'Update locations from web app');
-                const fileInfo2 = await githubGetFile('docs/all_locations.json', token);
-                await githubPutFile('docs/all_locations.json', jsonContent, fileInfo2.sha, token, 'Sync docs/all_locations.json');
+                const fileInfo = await githubGetFile('all_locations.json', token);
+                await githubPutFile('all_locations.json', jsonContent, fileInfo.sha, token, 'Update locations from web app');
                 showSaveStatus('บันทึกสำเร็จ!', false);
             }} catch(err) {{
                 console.error(err);
@@ -540,29 +545,8 @@ html = f'''<!DOCTYPE html>
             }}
         }}
 
-        // Init: load from GitHub JSON, fallback to localStorage
-        async function init() {{
-            document.getElementById('count').textContent = 'กำลังโหลด...';
-            try {{
-                const res = await fetch(JSON_URL + '?t=' + Date.now());
-                if (res.ok) {{
-                    locations = await res.json();
-                    saveLocations();
-                }}
-            }} catch(e) {{
-                console.warn('Failed to fetch from GitHub, using localStorage');
-                const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {{
-                    try {{ locations = JSON.parse(saved); }} catch(e2) {{}}
-                }}
-            }}
-            if (!locations.length) {{
-                document.getElementById('count').textContent = 'ไม่มีข้อมูล';
-                return;
-            }}
-            update();
-        }}
-        init();
+        // Init
+        update();
     </script>
 </body>
 </html>'''
