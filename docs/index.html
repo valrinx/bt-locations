@@ -419,13 +419,33 @@
         };
 
         // === RESET ===
-        document.getElementById('btnReset').onclick = () => {
-            if (confirm('รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น?')) {
-                localStorage.removeItem(STORAGE_KEY);
-                locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
-                update();
-                alert('รีเซ็ตสำเร็จ!');
+        document.getElementById('btnReset').onclick = async () => {
+            const msg = '⚠️ ยืนยันการรีเซ็ต?
+
+'
+                + 'สิ่งที่จะเกิดขึ้น:
+'
+                + '• ข้อมูลที่แก้ไขในเครื่องนี้จะถูกลบทั้งหมด
+'
+                + '• ระบบจะโหลดข้อมูลล่าสุดจาก GitHub ใหม่
+'
+                + '• จุดที่เพิ่ม/แก้ไข/ลบ ที่ยังไม่ได้ Save to GitHub จะหายไป
+
+'
+                + 'หากต้องการเก็บข้อมูลไว้ ให้กด "ยกเลิก" แล้วกด Export ก่อน';
+            if (!confirm(msg)) return;
+            localStorage.removeItem(STORAGE_KEY);
+            try {
+                const res = await fetch(JSON_URL + '?t=' + Date.now());
+                if (res.ok) {
+                    locations = await res.json();
+                    saveLocations();
+                }
+            } catch(e) {
+                locations = [];
             }
+            update();
+            alert('รีเซ็ตสำเร็จ! โหลดข้อมูลจาก GitHub ใหม่แล้ว');
         };
 
         // === SAVE TO GITHUB ===
