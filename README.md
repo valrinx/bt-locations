@@ -62,14 +62,17 @@ python -m http.server 8080
 
 ## สิ่งที่ต้องทำในอนาคต (TODO)
 
-- [ ] ให้ `build_html.py` generate `docs/locations.js` อัตโนมัติ
-- [ ] Sync ข้อมูลข้ามเครื่อง (Save to GitHub แล้วเครื่องอื่นเห็นข้อมูลใหม่)
-- [ ] ปรับปรุง UI ของ popup / modal ให้สวยขึ้น
+- [x] ให้ `build_html.py` generate `docs/locations.js` อัตโนมัติ
+- [x] Sync ข้อมูลข้ามเครื่อง (background fetch `all_locations.json`)
+- [x] ปรับปรุง UI ของ popup / modal ให้สวยขึ้น
 
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
 ### 2026-05-02
-- แยกข้อมูลหมุดออกจาก `index.html` → `locations.js` (ลดจาก 1,664 เหลือ 538 บรรทัด)
+- `build_html.py` สร้าง `docs/locations.js` + copy `all_locations.json` อัตโนมัติ
+- เพิ่ม background sync: fetch `all_locations.json` เพื่อ sync ข้อมูลข้ามเครื่อง
+- ปรับ UI: popup มี gradient header, modal มี animation + backdrop blur + gradient buttons
+- แยกข้อมูลหมุดออกจาก `index.html` → `locations.js` (ลดจาก 1,664 เหลือ ~535 บรรทัด)
 - เพิ่ม popup คำเตือนตอนกด Reset
 - เพิ่มปุ่ม Save to GitHub + Token modal
 - เพิ่ม CRUD (เพิ่ม/แก้ไข/ลบ จุด) + Export/Import JSON
