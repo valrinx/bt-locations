@@ -196,7 +196,6 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="locations.js"></script>
     <script>
-        // DEFAULT_LOCATIONS is loaded from locations.js
 
         const STORAGE_KEY = 'bt_locations_data';
 
@@ -435,12 +434,10 @@
                 + '• กลับเป็นข้อมูลเริ่มต้น\n\n'
                 + 'แนะนำ: กด Export สำรองข้อมูลก่อน';
             if (!confirm(msg)) return;
-            {
-                localStorage.removeItem(STORAGE_KEY);
-                locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
-                update();
-                alert('รีเซ็ตสำเร็จ!');
-            }
+            localStorage.removeItem(STORAGE_KEY);
+            locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+            update();
+            alert('รีเซ็ตสำเร็จ!');
         };
 
         // === SAVE TO GITHUB ===

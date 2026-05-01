@@ -1,4 +1,5 @@
 import json
+import shutil
 
 with open(r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json', 'r', encoding='utf-8') as f:
     locs = json.load(f)
@@ -212,10 +213,8 @@ html = f'''<!DOCTYPE html>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="locations.js"></script>
     <script>
-        const DEFAULT_LOCATIONS = [
-            {js_array}
-        ];
 
         const STORAGE_KEY = 'bt_locations_data';
 
@@ -449,12 +448,15 @@ html = f'''<!DOCTYPE html>
 
         // === RESET ===
         document.getElementById('btnReset').onclick = () => {{
-            if (confirm('รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น?')) {{
-                localStorage.removeItem(STORAGE_KEY);
-                locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
-                update();
-                alert('รีเซ็ตสำเร็จ!');
-            }}
+            const msg = '⚠️ ยืนยันการรีเซ็ต?\\n\\n'
+                + '• ข้อมูลที่แก้ไขจะหายทั้งหมด\\n'
+                + '• กลับเป็นข้อมูลเริ่มต้น\\n\\n'
+                + 'แนะนำ: กด Export สำรองข้อมูลก่อน';
+            if (!confirm(msg)) return;
+            localStorage.removeItem(STORAGE_KEY);
+            locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+            update();
+            alert('รีเซ็ตสำเร็จ!');
         }};
 
         // === SAVE TO GITHUB ===
@@ -554,4 +556,13 @@ html = f'''<!DOCTYPE html>
 with open(r'C:\Users\T\Documents\GitHub\bt-locations\docs\index.html', 'w', encoding='utf-8') as f:
     f.write(html)
 
-print(f'Done! Generated HTML with {len(locs)} locations from {len(lists)} lists')
+# Generate locations.js
+js_content = 'const DEFAULT_LOCATIONS = [\n            ' + js_array + '\n        ];\n'
+with open(r'C:\Users\T\Documents\GitHub\bt-locations\docs\locations.js', 'w', encoding='utf-8') as f:
+    f.write(js_content)
+
+# Copy all_locations.json to docs/
+shutil.copy2(r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json',
+             r'C:\Users\T\Documents\GitHub\bt-locations\docs\all_locations.json')
+
+print(f'Done! Generated HTML + locations.js with {len(locs)} locations from {len(lists)} lists')

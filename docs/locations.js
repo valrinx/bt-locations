@@ -1,4 +1,4 @@
-        const DEFAULT_LOCATIONS = [
+const DEFAULT_LOCATIONS = [
             {name:"",lat:16.3918565,lng:100.7778377,list:"Home",city:""},
             {name:"13°43'27.9\"N 100°30'32.9\"E",lat:13.724425,lng:100.509138,list:"คลองสาน",city:""},
             {name:"13°42'58.5\"N 100°29'45.3\"E",lat:13.716258,lng:100.495912,list:"คลองสาน",city:""},
