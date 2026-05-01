@@ -9,7 +9,8 @@ js_entries = []
 for l in locs:
     name = l['name'].replace('"', '\\"') if l['name'] else ''
     lst = l['list'].replace('"', '\\"')
-    js_entries.append(f'{{name:"{name}",lat:{l["lat"]},lng:{l["lng"]},list:"{lst}"}}')
+    city = l.get('city', '').replace('"', '\\"')
+    js_entries.append(f'{{name:"{name}",lat:{l["lat"]},lng:{l["lng"]},list:"{lst}",city:"{city}"}}')
 
 js_array = ',\n            '.join(js_entries)
 
@@ -45,6 +46,22 @@ html = f'''<!DOCTYPE html>
             background: #4285f4; color: white; border-radius: 12px;
             padding: 4px 10px; font-size: 12px; font-weight: bold;
         }}
+        .btn {{
+            border: none; border-radius: 6px; padding: 6px 12px;
+            font-size: 12px; cursor: pointer; font-weight: 500;
+        }}
+        .btn-add {{ background: #34a853; color: white; }}
+        .btn-add:hover {{ background: #2d9249; }}
+        .btn-edit {{ background: #fbbc04; color: #333; }}
+        .btn-edit:hover {{ background: #f0b400; }}
+        .btn-delete {{ background: #ea4335; color: white; }}
+        .btn-delete:hover {{ background: #d33426; }}
+        .btn-export {{ background: #4285f4; color: white; }}
+        .btn-export:hover {{ background: #3275e4; }}
+        .btn-import {{ background: #9334e6; color: white; }}
+        .btn-import:hover {{ background: #7b28c4; }}
+        .btn-reset {{ background: #666; color: white; }}
+        .btn-reset:hover {{ background: #555; }}
         .custom-popup .leaflet-popup-content-wrapper {{
             border-radius: 8px; font-size: 14px;
         }}
@@ -56,12 +73,15 @@ html = f'''<!DOCTYPE html>
         .popup-content {{ text-align: center; }}
         .popup-content h3 {{ color: #1a73e8; margin-bottom: 6px; font-size: 16px; }}
         .popup-content p {{ color: #555; margin: 2px 0; font-size: 12px; }}
-        .popup-content a {{
-            display: inline-block; margin-top: 8px; padding: 4px 12px;
-            background: #1a73e8; color: white; border-radius: 4px;
-            text-decoration: none; font-size: 12px;
+        .popup-content a, .popup-content button {{
+            display: inline-block; margin-top: 4px; padding: 4px 10px;
+            border-radius: 4px; text-decoration: none; font-size: 12px;
+            cursor: pointer; border: none;
         }}
-        .popup-content a:hover {{ background: #1557b0; }}
+        .popup-content .link-gmaps {{ background: #1a73e8; color: white; }}
+        .popup-content .link-gmaps:hover {{ background: #1557b0; }}
+        .popup-content .btn-popup-edit {{ background: #fbbc04; color: #333; margin-left: 4px; }}
+        .popup-content .btn-popup-delete {{ background: #ea4335; color: white; margin-left: 4px; }}
         .list-panel {{
             position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
             background: white; max-height: 35vh; overflow-y: auto;
@@ -81,10 +101,45 @@ html = f'''<!DOCTYPE html>
         .list-item:hover {{ background: #f5f5f5; }}
         .list-item .name {{ font-weight: 500; font-size: 14px; }}
         .list-item .detail {{ color: #888; font-size: 12px; }}
+        /* Modal */
+        .modal-overlay {{
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center;
+        }}
+        .modal-overlay.open {{ display: flex; }}
+        .modal {{
+            background: white; border-radius: 12px; padding: 24px; width: 90vw; max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }}
+        .modal h2 {{ margin-bottom: 16px; font-size: 18px; color: #333; }}
+        .modal label {{ display: block; margin-bottom: 4px; font-size: 13px; color: #555; font-weight: 500; }}
+        .modal input {{
+            width: 100%; border: 1px solid #ddd; border-radius: 6px; padding: 8px 10px;
+            font-size: 14px; margin-bottom: 12px; outline: none;
+        }}
+        .modal input:focus {{ border-color: #4285f4; }}
+        .modal-btns {{ display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }}
+        .modal-btns .btn {{ padding: 8px 16px; font-size: 14px; }}
+        .btn-cancel {{ background: #eee; color: #333; }}
+        .btn-cancel:hover {{ background: #ddd; }}
+        .btn-save {{ background: #4285f4; color: white; }}
+        .btn-save:hover {{ background: #3275e4; }}
+        .add-mode-banner {{
+            display: none; position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            z-index: 1500; background: #34a853; color: white; padding: 10px 20px;
+            border-radius: 8px; font-size: 14px; font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        .add-mode-banner.show {{ display: block; }}
+        .add-mode-banner .btn-cancel-add {{
+            background: white; color: #34a853; border: none; border-radius: 4px;
+            padding: 4px 12px; margin-left: 12px; cursor: pointer; font-size: 12px;
+        }}
         @media (max-width: 600px) {{
             .controls {{ left: 10px; top: 10px; padding: 6px 8px; gap: 4px; }}
-            .controls input {{ width: 120px; font-size: 12px; }}
-            .controls select {{ max-width: 140px; font-size: 12px; }}
+            .controls input {{ width: 100px; font-size: 12px; }}
+            .controls select {{ max-width: 120px; font-size: 12px; }}
+            .btn {{ font-size: 11px; padding: 5px 8px; }}
         }}
     </style>
 </head>
@@ -93,22 +148,70 @@ html = f'''<!DOCTYPE html>
     <div class="controls">
         <input type="text" id="search" placeholder="ค้นหา...">
         <select id="listFilter">
-            <option value="">ทุกรายการ ({len(locs)})</option>
+            <option value="">ทุกรายการ</option>
             {filter_options}
         </select>
-        <span class="count-badge" id="count">{len(locs)} จุด</span>
+        <span class="count-badge" id="count">0 จุด</span>
+        <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
+        <button class="btn btn-export" id="btnExport">Export</button>
+        <button class="btn btn-import" id="btnImport">Import</button>
+        <button class="btn btn-reset" id="btnReset">Reset</button>
+    </div>
+    <div class="add-mode-banner" id="addBanner">
+        คลิกบนแผนที่เพื่อเพิ่มจุดใหม่
+        <button class="btn-cancel-add" id="btnCancelAdd">ยกเลิก</button>
     </div>
     <button class="list-toggle" id="listToggle">☰</button>
     <div class="list-panel" id="listPanel">
         <div id="listBody"></div>
     </div>
+    <input type="file" id="fileImport" accept=".json" style="display:none">
+
+    <!-- Edit/Add Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2 id="modalTitle">แก้ไขจุด</h2>
+            <label>ชื่อ</label>
+            <input type="text" id="modalName" placeholder="ชื่อจุด">
+            <label>รายการ (List)</label>
+            <input type="text" id="modalList" placeholder="เช่น BT-Topup, ดินแดง">
+            <label>เขต (City)</label>
+            <input type="text" id="modalCity" placeholder="เขต/อำเภอ">
+            <label>Latitude</label>
+            <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
+            <label>Longitude</label>
+            <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+            <div class="modal-btns">
+                <button class="btn btn-cancel" id="modalCancel">ยกเลิก</button>
+                <button class="btn btn-save" id="modalSave">บันทึก</button>
+            </div>
+        </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script>
-        const locations = [
+        const DEFAULT_LOCATIONS = [
             {js_array}
         ];
+
+        const STORAGE_KEY = 'bt_locations_data';
+
+        function loadLocations() {{
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {{
+                try {{ return JSON.parse(saved); }} catch(e) {{}}
+            }}
+            return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+        }}
+
+        function saveLocations() {{
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+        }}
+
+        let locations = loadLocations();
+        let addMode = false;
+        let editingIndex = -1;
 
         const map = L.map('map').setView([13.75, 100.5], 11);
         L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
@@ -116,33 +219,38 @@ html = f'''<!DOCTYPE html>
             maxZoom: 19
         }}).addTo(map);
 
-        let markers = L.markerClusterGroup();
-        const markerMap = {{}};
+        let markerCluster = L.markerClusterGroup();
         let currentMarkers = [];
 
+        function getPopupHTML(loc, idx) {{
+            return `<div class="popup-content">
+                <h3>${{loc.name || 'ไม่มีชื่อ'}}</h3>
+                ${{loc.city ? `<p>เขต: ${{loc.city}}</p>` : ''}}
+                <p>รายการ: ${{loc.list}}</p>
+                <p>Lat: ${{loc.lat}}, Lng: ${{loc.lng}}</p>
+                <a class="link-gmaps" href="https://www.google.com/maps?q=${{loc.lat}},${{loc.lng}}" target="_blank">Google Maps</a>
+                <button class="btn-popup-edit" onclick="openEdit(${{idx}})">แก้ไข</button>
+                <button class="btn-popup-delete" onclick="deleteLoc(${{idx}})">ลบ</button>
+            </div>`;
+        }}
+
         function renderMarkers(filtered) {{
-            map.removeLayer(markers);
-            markers = L.markerClusterGroup();
+            map.removeLayer(markerCluster);
+            markerCluster = L.markerClusterGroup();
             currentMarkers = [];
             filtered.forEach(loc => {{
+                const idx = locations.indexOf(loc);
                 const marker = L.marker([loc.lat, loc.lng]);
                 const label = loc.name || loc.list;
                 marker.bindTooltip(label, {{
                     permanent: true, direction: 'top', offset: [0, -10],
                     className: 'bt-label'
                 }});
-                marker.bindPopup(`
-                    <div class="popup-content">
-                        <h3>${{loc.name || 'ไม่มีชื่อ'}}</h3>
-                        <p>รายการ: ${{loc.list}}</p>
-                        <p>Lat: ${{loc.lat}}, Lng: ${{loc.lng}}</p>
-                        <a href="https://www.google.com/maps?q=${{loc.lat}},${{loc.lng}}" target="_blank">เปิดใน Google Maps</a>
-                    </div>
-                `, {{className: 'custom-popup'}});
-                markers.addLayer(marker);
-                currentMarkers.push({{loc, marker}});
+                marker.bindPopup(getPopupHTML(loc, idx), {{className: 'custom-popup'}});
+                markerCluster.addLayer(marker);
+                currentMarkers.push({{loc, marker, idx}});
             }});
-            map.addLayer(markers);
+            map.addLayer(markerCluster);
             document.getElementById('count').textContent = filtered.length + ' จุด';
         }}
 
@@ -151,7 +259,7 @@ html = f'''<!DOCTYPE html>
             const list = document.getElementById('listFilter').value;
             return locations.filter(l => {{
                 const matchList = !list || l.list === list;
-                const matchSearch = !q || (l.name && l.name.toLowerCase().includes(q)) || l.list.toLowerCase().includes(q);
+                const matchSearch = !q || (l.name && l.name.toLowerCase().includes(q)) || l.list.toLowerCase().includes(q) || (l.city && l.city.toLowerCase().includes(q));
                 return matchList && matchSearch;
             }});
         }}
@@ -160,6 +268,15 @@ html = f'''<!DOCTYPE html>
             const filtered = getFiltered();
             renderMarkers(filtered);
             renderList(filtered);
+            updateFilterOptions();
+        }}
+
+        function updateFilterOptions() {{
+            const sel = document.getElementById('listFilter');
+            const current = sel.value;
+            const lists = [...new Set(locations.map(l => l.list))].sort();
+            sel.innerHTML = '<option value="">ทุกรายการ</option>' + lists.map(l => `<option value="${{l}}">${{l}}</option>`).join('');
+            sel.value = current;
         }}
 
         document.getElementById('search').addEventListener('input', update);
@@ -175,13 +292,13 @@ html = f'''<!DOCTYPE html>
             filtered.forEach(loc => {{
                 const item = document.createElement('div');
                 item.className = 'list-item';
-                item.innerHTML = `<div><span class="name">${{loc.name || 'ไม่มีชื่อ'}}</span><br><span class="detail">${{loc.list}} | ${{loc.lat}}, ${{loc.lng}}</span></div>`;
+                item.innerHTML = `<div><span class="name">${{loc.name || 'ไม่มีชื่อ'}}</span>${{loc.city ? ` <span class="detail">(${{loc.city}})</span>` : ''}}<br><span class="detail">${{loc.list}} | ${{loc.lat}}, ${{loc.lng}}</span></div>`;
                 item.onclick = () => {{
                     map.setView([loc.lat, loc.lng], 17);
                     listPanel.classList.remove('open');
                     const found = currentMarkers.find(m => m.loc === loc);
                     if (found) {{
-                        markers.zoomToShowLayer(found.marker, () => found.marker.openPopup());
+                        markerCluster.zoomToShowLayer(found.marker, () => found.marker.openPopup());
                     }}
                 }};
                 listBody.appendChild(item);
@@ -190,9 +307,136 @@ html = f'''<!DOCTYPE html>
 
         listToggle.onclick = () => listPanel.classList.toggle('open');
 
+        // === ADD MODE ===
+        const addBanner = document.getElementById('addBanner');
+        document.getElementById('btnAdd').onclick = () => {{
+            addMode = true;
+            addBanner.classList.add('show');
+            map.getContainer().style.cursor = 'crosshair';
+        }};
+        document.getElementById('btnCancelAdd').onclick = () => {{
+            addMode = false;
+            addBanner.classList.remove('show');
+            map.getContainer().style.cursor = '';
+        }};
+
+        map.on('click', (e) => {{
+            if (!addMode) return;
+            addMode = false;
+            addBanner.classList.remove('show');
+            map.getContainer().style.cursor = '';
+            editingIndex = -1;
+            document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
+            document.getElementById('modalName').value = '';
+            document.getElementById('modalList').value = '';
+            document.getElementById('modalCity').value = '';
+            document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
+            document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
+            document.getElementById('modalOverlay').classList.add('open');
+        }});
+
+        // === EDIT ===
+        window.openEdit = function(idx) {{
+            const loc = locations[idx];
+            if (!loc) return;
+            editingIndex = idx;
+            document.getElementById('modalTitle').textContent = 'แก้ไขจุด';
+            document.getElementById('modalName').value = loc.name || '';
+            document.getElementById('modalList').value = loc.list || '';
+            document.getElementById('modalCity').value = loc.city || '';
+            document.getElementById('modalLat').value = loc.lat;
+            document.getElementById('modalLng').value = loc.lng;
+            map.closePopup();
+            document.getElementById('modalOverlay').classList.add('open');
+        }};
+
+        // === DELETE ===
+        window.deleteLoc = function(idx) {{
+            const loc = locations[idx];
+            if (!loc) return;
+            const name = loc.name || loc.list || 'ไม่มีชื่อ';
+            if (!confirm(`ลบจุด "${{name}}" ?`)) return;
+            locations.splice(idx, 1);
+            saveLocations();
+            map.closePopup();
+            update();
+        }};
+
+        // === MODAL ===
+        document.getElementById('modalCancel').onclick = () => {{
+            document.getElementById('modalOverlay').classList.remove('open');
+        }};
+        document.getElementById('modalOverlay').onclick = (e) => {{
+            if (e.target === document.getElementById('modalOverlay'))
+                document.getElementById('modalOverlay').classList.remove('open');
+        }};
+
+        document.getElementById('modalSave').onclick = () => {{
+            const name = document.getElementById('modalName').value.trim();
+            const list = document.getElementById('modalList').value.trim() || 'ไม่มีรายการ';
+            const city = document.getElementById('modalCity').value.trim();
+            const lat = parseFloat(document.getElementById('modalLat').value);
+            const lng = parseFloat(document.getElementById('modalLng').value);
+            if (isNaN(lat) || isNaN(lng)) {{ alert('กรุณากรอก Lat/Lng ให้ถูกต้อง'); return; }}
+
+            if (editingIndex >= 0) {{
+                locations[editingIndex] = {{ name, lat, lng, list, city }};
+            }} else {{
+                locations.push({{ name, lat, lng, list, city }});
+            }}
+            saveLocations();
+            document.getElementById('modalOverlay').classList.remove('open');
+            update();
+            if (editingIndex < 0) {{
+                map.setView([lat, lng], 15);
+            }}
+        }};
+
+        // === EXPORT ===
+        document.getElementById('btnExport').onclick = () => {{
+            const blob = new Blob([JSON.stringify(locations, null, 2)], {{type: 'application/json'}});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'bt_locations_export.json';
+            a.click();
+        }};
+
+        // === IMPORT ===
+        document.getElementById('btnImport').onclick = () => {{
+            document.getElementById('fileImport').click();
+        }};
+        document.getElementById('fileImport').onchange = (e) => {{
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {{
+                try {{
+                    const imported = JSON.parse(ev.target.result);
+                    if (!Array.isArray(imported)) {{ alert('ไฟล์ไม่ถูกต้อง'); return; }}
+                    if (confirm(`Import ${{imported.length}} จุด? (จะแทนที่ข้อมูลปัจจุบัน)`)) {{
+                        locations = imported;
+                        saveLocations();
+                        update();
+                        alert('Import สำเร็จ!');
+                    }}
+                }} catch(err) {{ alert('ไฟล์ JSON ไม่ถูกต้อง'); }}
+            }};
+            reader.readAsText(file);
+            e.target.value = '';
+        }};
+
+        // === RESET ===
+        document.getElementById('btnReset').onclick = () => {{
+            if (confirm('รีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น?')) {{
+                localStorage.removeItem(STORAGE_KEY);
+                locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+                update();
+                alert('รีเซ็ตสำเร็จ!');
+            }}
+        }};
+
         // Init
-        renderMarkers(locations);
-        renderList(locations);
+        update();
     </script>
 </body>
 </html>'''
