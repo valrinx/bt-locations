@@ -44,6 +44,12 @@
         .btn-import:hover { background: #7b28c4; }
         .btn-reset { background: #666; color: white; }
         .btn-reset:hover { background: #555; }
+        .btn-github { background: #24292e; color: white; }
+        .btn-github:hover { background: #1b1f23; }
+        .btn-github.saving { background: #666; cursor: wait; }
+        .save-status { font-size: 11px; color: #34a853; font-weight: 500; display: none; }
+        .save-status.show { display: inline; }
+        .save-status.error { color: #ea4335; }
         .custom-popup .leaflet-popup-content-wrapper {
             border-radius: 8px; font-size: 14px;
         }
@@ -135,6 +141,8 @@
         </select>
         <span class="count-badge" id="count">0 จุด</span>
         <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
+        <button class="btn btn-github" id="btnGithub">Save to GitHub</button>
+        <span class="save-status" id="saveStatus"></span>
         <button class="btn btn-export" id="btnExport">Export</button>
         <button class="btn btn-import" id="btnImport">Import</button>
         <button class="btn btn-reset" id="btnReset">Reset</button>
@@ -148,6 +156,20 @@
         <div id="listBody"></div>
     </div>
     <input type="file" id="fileImport" accept=".json" style="display:none">
+
+    <!-- Token Modal -->
+    <div class="modal-overlay" id="tokenModalOverlay">
+        <div class="modal">
+            <h2>GitHub Token</h2>
+            <p style="font-size:13px;color:#555;margin-bottom:12px;">ใส่ Personal Access Token เพื่อบันทึกข้อมูลขึ้น GitHub<br><small>Token จะเก็บใน browser นี้เท่านั้น</small></p>
+            <label>GitHub Token</label>
+            <input type="password" id="tokenInput" placeholder="github_pat_...">
+            <div class="modal-btns">
+                <button class="btn btn-cancel" id="tokenCancel">ยกเลิก</button>
+                <button class="btn btn-save" id="tokenSave">บันทึก Token</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Edit/Add Modal -->
     <div class="modal-overlay" id="modalOverlay">
@@ -1541,6 +1563,94 @@
                 alert('รีเซ็ตสำเร็จ!');
             }
         };
+
+        // === SAVE TO GITHUB ===
+        const GITHUB_TOKEN_KEY = 'bt_github_token';
+        const REPO_OWNER = 'valrinx';
+        const REPO_NAME = 'bt-locations';
+
+        function getToken() { return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; }
+        function setToken(t) { localStorage.setItem(GITHUB_TOKEN_KEY, t); }
+
+        function showSaveStatus(msg, isError) {
+            const el = document.getElementById('saveStatus');
+            el.textContent = msg;
+            el.className = 'save-status show' + (isError ? ' error' : '');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        async function githubGetFile(path, token) {
+            const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (res.status === 404) return { sha: null, content: null };
+            if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+            const data = await res.json();
+            return { sha: data.sha, content: data.content };
+        }
+
+        async function githubPutFile(path, content, sha, token, msg) {
+            const body = { message: msg, content: btoa(unescape(encodeURIComponent(content))) };
+            if (sha) body.sha = sha;
+            const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message || `GitHub error: ${res.status}`);
+            }
+            return await res.json();
+        }
+
+        document.getElementById('btnGithub').onclick = async () => {
+            let token = getToken();
+            if (!token) {
+                document.getElementById('tokenInput').value = '';
+                document.getElementById('tokenModalOverlay').classList.add('open');
+                return;
+            }
+            await doGithubSave(token);
+        };
+
+        document.getElementById('tokenCancel').onclick = () => {
+            document.getElementById('tokenModalOverlay').classList.remove('open');
+        };
+        document.getElementById('tokenModalOverlay').onclick = (e) => {
+            if (e.target === document.getElementById('tokenModalOverlay'))
+                document.getElementById('tokenModalOverlay').classList.remove('open');
+        };
+        document.getElementById('tokenSave').onclick = async () => {
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token) { alert('กรุณากรอก Token'); return; }
+            setToken(token);
+            document.getElementById('tokenModalOverlay').classList.remove('open');
+            await doGithubSave(token);
+        };
+
+        async function doGithubSave(token) {
+            const btn = document.getElementById('btnGithub');
+            btn.classList.add('saving');
+            btn.textContent = 'กำลังบันทึก...';
+            try {
+                const jsonContent = JSON.stringify(locations, null, 2);
+                const fileInfo = await githubGetFile('all_locations.json', token);
+                await githubPutFile('all_locations.json', jsonContent, fileInfo.sha, token, 'Update locations from web app');
+                showSaveStatus('บันทึกสำเร็จ!', false);
+            } catch(err) {
+                console.error(err);
+                if (err.message.includes('401') || err.message.includes('Bad credentials')) {
+                    localStorage.removeItem(GITHUB_TOKEN_KEY);
+                    showSaveStatus('Token ไม่ถูกต้อง กรุณาใส่ใหม่', true);
+                } else {
+                    showSaveStatus('ผิดพลาด: ' + err.message, true);
+                }
+            } finally {
+                btn.classList.remove('saving');
+                btn.textContent = 'Save to GitHub';
+            }
+        }
 
         // Init
         update();
