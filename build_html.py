@@ -42,6 +42,19 @@ html = f'''<!DOCTYPE html>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ font-family: 'Segoe UI', Tahoma, sans-serif; }}
         #map {{ width: 100%; height: 100vh; }}
+        .bt-marker {{
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }}
+        .bt-label {{
+            background: rgba(0,0,0,0.75) !important; color: #fff !important;
+            border: none !important; border-radius: 4px !important;
+            padding: 2px 6px !important; font-size: 11px !important;
+            font-weight: 600 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
+            white-space: nowrap !important;
+        }}
+        .bt-label::before {{
+            border-top-color: rgba(0,0,0,0.75) !important;
+        }}
         .controls {{
             position: absolute; top: 10px; left: 50px; z-index: 1000;
             background: white; border-radius: 10px; padding: 8px 12px;
@@ -461,8 +474,9 @@ html = f'''<!DOCTYPE html>
                 const idx = locations.indexOf(loc);
                 const color = getListColor(loc.list);
                 const marker = L.circleMarker([loc.lat, loc.lng], {{
-                    radius: 8, fillColor: color, color: '#fff',
-                    weight: 2, opacity: 1, fillOpacity: 0.85
+                    radius: 10, fillColor: color, color: '#fff',
+                    weight: 3, opacity: 1, fillOpacity: 0.9,
+                    className: 'bt-marker'
                 }});
                 const label = loc.name || loc.list;
                 marker.bindTooltip(label, {{
