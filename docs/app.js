@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.3.2';
+const APP_VERSION = 'v5.3.3';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -636,27 +636,33 @@ searchInput.addEventListener('input',()=>{
 });
 btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_lastFilteredKey=null;update();};
 
+// Normalize Unicode chars from Google Maps: smart quotes → ASCII
+function _normDMS(s){
+    return s.replace(/[°º]/g,'°')
+            .replace(/[''ʼ′]/g,"'")
+            .replace(/[""″]/g,'"')
+            .replace(/\s+/g,' ').trim();
+}
 function _parseDMS(str){
     // Parse DMS like: 13°45'40.4"N or 100°32'55.3"E
-    const m=str.match(/(\d+)[°]\s*(\d+)['''′]\s*([\d.]+)["""″]?\s*([NSEWnsew])?/);
+    const m=str.match(/(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([NSEWnsew])?/);
     if(!m)return null;
     let val=parseInt(m[1])+parseInt(m[2])/60+parseFloat(m[3])/3600;
     if(m[4]&&/[SsWw]/.test(m[4]))val=-val;
     return val;
 }
 function parseLatLng(q) {
-    const s=q.replace(/\s+/g,' ').trim();
+    const s=_normDMS(q);
     // Decimal format: 13.761, 100.548
     const m=s.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
     if(m){const lat=parseFloat(m[1]),lng=parseFloat(m[2]);if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180)return{lat,lng};}
     // DMS format: 13°45'40.4"N 100°32'55.3"E
-    const parts=s.match(/\d+[°][\s\d'''′."""″NSEWnsew.]+/g);
+    const parts=s.match(/\d+°[\s\d'".NSEWnsew]+/g);
     if(parts&&parts.length===2){
         let a=_parseDMS(parts[0]),b=_parseDMS(parts[1]);
         if(a!==null&&b!==null){
-            // Determine which is lat/lng by direction letter or value
-            const dirA=(parts[0].match(/[NSEWnsew]$/)||[''])[0].toUpperCase();
-            const dirB=(parts[1].match(/[NSEWnsew]$/)||[''])[0].toUpperCase();
+            const dirA=(parts[0].match(/[NSEWnsew]\s*$/)||[''])[0].trim().toUpperCase();
+            const dirB=(parts[1].match(/[NSEWnsew]\s*$/)||[''])[0].trim().toUpperCase();
             let lat,lng;
             if(dirA==='N'||dirA==='S'){lat=a;lng=b;}
             else if(dirA==='E'||dirA==='W'){lat=b;lng=a;}
@@ -668,6 +674,18 @@ function parseLatLng(q) {
     }
     return null;
 }
+// Auto-convert DMS on paste → show decimal + fly to location
+searchInput.addEventListener('paste',e=>{
+    setTimeout(()=>{
+        const coords=parseLatLng(searchInput.value.trim());
+        if(coords){
+            searchInput.value=`${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
+            renderSearchResults();
+            map.flyTo([coords.lat,coords.lng],16,{animate:true,duration:0.8});
+            showToast(`📍 ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,false,true);
+        }
+    },50);
+});
 
 function renderSearchResults() {
     const q=searchInput.value.toLowerCase().trim();
