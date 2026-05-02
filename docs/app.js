@@ -36,6 +36,7 @@ function normalizeLocation(l) {
         list: l.list || 'Uncategorized',
         city: l.city || '',
         note: l.note || '',
+        updatedAt: l.updatedAt || Date.now(),
         ...(l.tags && l.tags.length ? { tags: l.tags } : {}),
         ...(l.photo ? { photo: l.photo } : {}),
     };
@@ -119,10 +120,18 @@ function _setSyncStatus(status) {
 function _updateSyncBadge() {
     let badge = document.getElementById('syncBadge');
     if (!badge) return;
-    const map = { idle: '', ok: '🟢', syncing: '🟡', dirty: '🟡', error: '🔴' };
-    badge.textContent = map[syncStatus] || '';
-    badge.title = { idle: '', ok: 'Synced', syncing: 'กำลัง sync...', dirty: 'ยังไม่ sync', error: 'Sync ล้มเหลว' }[syncStatus] || '';
+    const icons = { idle: '', ok: '🟢', syncing: '🟡', dirty: '🟡', error: '🔴' };
+    badge.textContent = icons[syncStatus] || '';
+    const ago = _lastSyncTime ? Math.round((Date.now() - _lastSyncTime) / 1000) : 0;
+    const agoText = _lastSyncTime ? (ago < 60 ? `${ago}s ago` : `${Math.round(ago / 60)}m ago`) : '';
+    const titles = { idle: '', ok: `Synced ${agoText}`, syncing: 'กำลัง sync...', dirty: 'ยังไม่ sync', error: 'Sync ล้มเหลว' };
+    badge.title = titles[syncStatus] || '';
+    // Update btn tooltip too
+    const btn = document.getElementById('btnGithubSave');
+    if (btn) btn.title = `GitHub Sync ${icons[syncStatus] || ''} ${agoText}`.trim();
 }
+// Auto-refresh badge every 10s to keep "ago" current
+setInterval(_updateSyncBadge, 10000);
 
 let _pushInFlight = false;
 const _debouncedPush = debounce(async () => {
@@ -968,7 +977,7 @@ document.getElementById('editModalSave').onclick=()=>{
     const photo=_modalPhoto||'';
     const tagsRaw=document.getElementById('modalTags').value;
     const tags=tagsRaw?tagsRaw.split(',').map(t=>t.trim()).filter(Boolean):[];
-    const entry={name,lat,lng,list,city,note};
+    const entry={name,lat,lng,list,city,note,updatedAt:Date.now()};
     if(tags.length)entry.tags=tags;
     if(photo)entry.photo=photo;
     if(editingIndex>=0){locations[editingIndex]=entry;addChangelogEntry('edit',entry);}
@@ -1671,55 +1680,79 @@ document.head.appendChild(style);
 function _locKey(l){return l.lat.toFixed(6)+','+l.lng.toFixed(6);}
 
 function mergeLocs(local, remote, base){
-    // 3-way merge: base = last known common state (from _getBaseSnapshot)
-    const bMap=new Map(), lMap=new Map(), rMap=new Map();
-    (base||[]).forEach(l=>bMap.set(_locKey(l),l));
-    local.forEach(l=>lMap.set(_locKey(l),l));
-    remote.forEach(l=>rMap.set(_locKey(l),l));
-    const allKeys=new Set([...lMap.keys(),...rMap.keys()]);
-    const merged=[];
-    let conflicts=0, added=0, removed=0;
-    const conflictDetails=[];
-    allKeys.forEach(key=>{
-        const inBase=bMap.has(key), inLocal=lMap.has(key), inRemote=rMap.has(key);
-        if(inLocal&&inRemote){
-            const ll=lMap.get(key), rl=rMap.get(key);
-            if(inBase){
-                const bl=bMap.get(key);
-                const localChanged=JSON.stringify({...ll,photo:undefined})!==JSON.stringify({...bl,photo:undefined});
-                const remoteChanged=JSON.stringify(rl)!==JSON.stringify({...bl,photo:undefined});
-                if(localChanged&&remoteChanged){
-                    // TRUE CONFLICT: both sides changed same item
-                    conflicts++;
-                    conflictDetails.push({key, local:ll, remote:rl, base:bl, resolution:'local wins'});
-                    console.warn('CONFLICT at', key, '→ local wins', {local:ll, remote:rl, base:bl});
-                    merged.push(ll);
-                } else if(localChanged){
-                    merged.push(ll);
+    // 3-way merge with DETERMINISTIC conflict resolution via updatedAt
+    // Strategy: "latest wins" — item with newer updatedAt wins conflicts
+    try {
+        const bMap=new Map(), lMap=new Map(), rMap=new Map();
+        (base||[]).forEach(l=>bMap.set(_locKey(l),l));
+        local.forEach(l=>lMap.set(_locKey(l),l));
+        remote.forEach(l=>rMap.set(_locKey(l),l));
+        const allKeys=new Set([...lMap.keys(),...rMap.keys()]);
+        const merged=[];
+        let conflicts=0, added=0, removed=0;
+        const conflictDetails=[];
+        allKeys.forEach(key=>{
+            const inBase=bMap.has(key), inLocal=lMap.has(key), inRemote=rMap.has(key);
+            if(inLocal&&inRemote){
+                const ll=lMap.get(key), rl=rMap.get(key);
+                if(inBase){
+                    const bl=bMap.get(key);
+                    const lStrip=JSON.stringify({...ll,photo:undefined});
+                    const rStrip=JSON.stringify({...rl,photo:undefined});
+                    const bStrip=JSON.stringify({...bl,photo:undefined});
+                    const localChanged=lStrip!==bStrip;
+                    const remoteChanged=rStrip!==bStrip;
+                    if(localChanged&&remoteChanged){
+                        // TRUE CONFLICT → latest wins (deterministic)
+                        conflicts++;
+                        const lTime=ll.updatedAt||0, rTime=rl.updatedAt||0;
+                        const winner=lTime>=rTime?'local':'remote';
+                        const chosen=winner==='local'?ll:{...rl,photo:ll.photo||undefined};
+                        conflictDetails.push({key,name:ll.name||rl.name,local:ll,remote:rl,base:bl,winner,lTime,rTime});
+                        console.warn(`CONFLICT at ${key} "${ll.name||rl.name}" → ${winner} wins (local:${new Date(lTime).toISOString()} remote:${new Date(rTime).toISOString()})`);
+                        merged.push(chosen);
+                    } else if(localChanged){
+                        merged.push(ll);
+                    } else {
+                        merged.push({...rl,photo:ll.photo||undefined});
+                    }
                 } else {
-                    merged.push({...rl,photo:ll.photo||undefined});
+                    // Both added same coords — latest wins
+                    const lTime=ll.updatedAt||0, rTime=rl.updatedAt||0;
+                    merged.push(lTime>=rTime?ll:{...rl,photo:ll.photo||undefined});
                 }
-            } else {
-                merged.push(ll); // both added same coords — keep local
+            } else if(inLocal&&!inRemote){
+                if(inBase){
+                    console.warn('Remote deleted:', key, lMap.get(key).name);
+                    removed++;
+                } else {
+                    merged.push(lMap.get(key)); added++;
+                }
+            } else if(!inLocal&&inRemote){
+                if(inBase){
+                    console.warn('Local deleted:', key, rMap.get(key).name);
+                    removed++;
+                } else {
+                    merged.push(rMap.get(key)); added++;
+                }
             }
-        } else if(inLocal&&!inRemote){
-            if(inBase){
-                console.warn('CONFLICT: remote deleted, local kept:', key, lMap.get(key).name);
-                removed++; // remote deleted → respect delete
-            } else {
-                merged.push(lMap.get(key)); added++; // locally added
+        });
+        if(conflictDetails.length) console.warn('MERGE SUMMARY:', conflicts, 'conflicts', conflictDetails);
+        return {merged, conflicts, added, removed, conflictDetails};
+    } catch(mergeErr) {
+        // SAFE MODE: merge crashed → fallback to backup
+        console.error('MERGE FAILED:', mergeErr);
+        try {
+            const backup=JSON.parse(localStorage.getItem(BACKUP_KEY)||'null');
+            if(backup&&backup.length){
+                showToast('⚠️ Merge ล้มเหลว — กู้คืนจาก backup',true);
+                return {merged:backup, conflicts:0, added:0, removed:0, conflictDetails:[], recovered:true};
             }
-        } else if(!inLocal&&inRemote){
-            if(inBase){
-                console.warn('CONFLICT: local deleted, remote kept:', key, rMap.get(key).name);
-                removed++; // local deleted → respect delete
-            } else {
-                merged.push(rMap.get(key)); added++; // remotely added
-            }
-        }
-    });
-    if(conflictDetails.length) console.warn('MERGE CONFLICTS:', conflictDetails.length, conflictDetails);
-    return {merged, conflicts, added, removed, conflictDetails};
+        } catch(e){}
+        // Last resort: return local as-is
+        showToast('⚠️ Merge ล้มเหลว — ใช้ข้อมูล local',true);
+        return {merged:local, conflicts:0, added:0, removed:0, conflictDetails:[], recovered:true};
+    }
 }
 
 function setSyncIndicator(state){
