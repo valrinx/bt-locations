@@ -1383,8 +1383,8 @@ function toggleDark(){document.body.classList.toggle('dark');showToast(document.
 // ════════════════════════════════════════════
 // GITHUB SAVE
 // ════════════════════════════════════════════
-function getToken(){return sessionStorage.getItem(GITHUB_TOKEN_KEY)||'';}
-function setToken(t){sessionStorage.setItem(GITHUB_TOKEN_KEY,t);}
+function getToken(){return localStorage.getItem(GITHUB_TOKEN_KEY)||sessionStorage.getItem(GITHUB_TOKEN_KEY)||'';}
+function setToken(t){localStorage.setItem(GITHUB_TOKEN_KEY,t);sessionStorage.removeItem(GITHUB_TOKEN_KEY);}
 
 document.getElementById('btnGithubSave').onclick=doGithubSaveFlow;
 
@@ -1418,7 +1418,7 @@ async function doGithubSave(token){
         showToast('✅ Sync สำเร็จ',false,true);
         startAutoSync(); // Ensure auto-sync is running after first manual save
     }catch(err){
-        if(err.message.includes('401')||err.message.includes('credentials')){sessionStorage.removeItem(GITHUB_TOKEN_KEY);showToast('🔑 Token ไม่ถูกต้อง',true);}
+        if(err.message.includes('401')||err.message.includes('credentials')){localStorage.removeItem(GITHUB_TOKEN_KEY);sessionStorage.removeItem(GITHUB_TOKEN_KEY);showToast('🔑 Token ไม่ถูกต้อง',true);}
         else if(err.message.includes('404')){showToast('❌ ไม่พบ repo หรือไฟล์',true);}
         else if(err.message.includes('422')){showToast('❌ SHA ไม่ตรง ลอง Sync อีกครั้ง',true);}
         else showToast('❌ '+err.message,true);
@@ -1648,7 +1648,8 @@ async function doSync(silent=true){
     try{
         // Fetch remote
         const res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`,{
-            headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}
+            headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'},
+            cache:'no-store'
         });
         if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);setSyncIndicator('error');return;}
         const data=await res.json();
@@ -1718,7 +1719,8 @@ function _applyRemote(remote, sha){
     locations.forEach(l=>{if(l.photo)photoMap.set(_locKey(l),l.photo);});
     locations=remote.map(l=>{
         const p=photoMap.get(_locKey(l));
-        return p?{...l,photo:p}:l;
+        const n=normalizeLocation(l);
+        return p?{...n,photo:p}:n;
     });
     saveLocations();invalidateCache();update();
     localStorage.setItem(SYNC_SHA_KEY,sha);
@@ -1759,7 +1761,7 @@ function startAutoSync(){
     } else {
         // No token — just pull from raw (public read)
         try{
-            const res=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
+            const res=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`,{cache:'no-store'});
             if(!res.ok)return;const fresh=await res.json();
             if(fresh.length>0&&JSON.stringify(fresh)!==JSON.stringify(locations)){
                 locations=fresh;saveLocations();invalidateCache();update();console.log('Synced',fresh.length,'locs');
