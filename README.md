@@ -30,7 +30,8 @@
 - ค้นหา + กรองตามรายการ (list) + เขต (city) แบบ multi-filter
 - CRUD: เพิ่ม / แก้ไข / ลบจุดบนแผนที่ + Undo สูงสุด 20 ครั้ง
 - Bulk delete จุดที่กรองอยู่
-- Export / Import JSON
+- Export JSON แบบเลือกกรองได้ (ตามรายการ / เขต / ทั้งหมด) พร้อมรองรับ Share API และดาวน์โหลด
+- Import JSON แบบ **Merge** (เพิ่มจุดใหม่ ไม่ลบของเดิม) หรือ **Replace** (แทนที่ทั้งหมด)
 - Heatmap mode แสดงความหนาแน่นของจุด (leaflet.heat)
 - Stats dashboard (สถิติจำนวนจุดตามรายการ/เขต)
 - Reset พร้อม popup คำเตือน
@@ -124,8 +125,11 @@ python -m http.server 8080
 
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
-### 2026-05-02
+### 2026-05-02 (ล่าสุด)
 
+- **แก้ไข Export/Share API** — แก้ bug `id` ซ้ำใน Share modal, จัดการ `AbortError` ถูกต้อง, ส่งไฟล์เป็น File object แทน text string
+- **Export เลือกขอบเขตได้** — เปิด modal Export แล้วกรองตาม **รายการ (List)** และ/หรือ **เขต (City)** ก่อน export พร้อมแสดงจำนวนจุดแบบ real-time
+- **Import Merge mode** — Import ไม่ทับข้อมูลเดิมอีกต่อไป: เลือกได้ระหว่าง **Merge** (เพิ่มเฉพาะจุดใหม่ที่ยังไม่มี ตรวจ duplicate ด้วย lat+lng+name) หรือ **Replace** (แทนที่ทั้งหมด พร้อม confirm)
 - สร้าง `import_takeout.py` สำหรับ import GeoJSON จาก Google Takeout
 - เพิ่ม multi-filter: กรองตามรายการ + เขต พร้อมกัน
 - เพิ่ม Stats dashboard (สถิติจุดตามรายการ/เขต)
