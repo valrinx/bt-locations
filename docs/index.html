@@ -132,6 +132,8 @@
         .map-btn svg { width: 20px; height: 20px; transition: transform 0.2s; }
         .map-btn.gps-searching { color: var(--yellow); animation: gps-btn-pulse 1.2s ease-in-out infinite; }
         .map-btn.gps-found { color: var(--blue); }
+        .map-btn.gps-tracking { color: var(--blue); box-shadow: 0 0 0 3px rgba(26,115,232,0.3), var(--shadow-md); animation: gps-track-pulse 2s ease-in-out infinite; }
+        @keyframes gps-track-pulse { 0%,100% { box-shadow: 0 0 0 3px rgba(26,115,232,0.3), var(--shadow-md); } 50% { box-shadow: 0 0 0 6px rgba(26,115,232,0.12), var(--shadow-md); } }
         @keyframes gps-btn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .map-btn-group {
             background: var(--surface); border-radius: 8px;
@@ -794,6 +796,8 @@
     let nearbyMode = false, nearbyRadius = 2000;
     let gpsWatcher = null, gpsCoarseShown = false, gpsFlyDone = false;
     let gpsActive = false, gpsToastShown = false, gpsFineToastShown = false;
+    let gpsTracking = false;
+    let _lastGpsLat = null, _lastGpsLng = null;
 
     const isMobile = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 600;
 
@@ -830,7 +834,17 @@
     // ════════════════════════════════════════════
     // MAP
     // ════════════════════════════════════════════
-    const map = L.map('map', { zoomControl: false, zoomAnimation: true, fadeAnimation: true }).setView([13.75, 100.5], 11);
+    // ใช้ Canvas renderer — เร็วกว่า SVG มากเมื่อมีหมุดเยอะ
+    const canvasRenderer = L.canvas({ padding: 0.5, tolerance: 5 });
+    const map = L.map('map', {
+        zoomControl: false,
+        zoomAnimation: true,
+        fadeAnimation: true,
+        preferCanvas: true,
+        renderer: canvasRenderer,
+        zoomSnap: 0.5,        // snap ทีละ 0.5 — zoom สมูทขึ้น
+        wheelPxPerZoomLevel: 80, // mouse wheel สมูทขึ้น
+    }).setView([13.75, 100.5], 11);
 
     const tileLayers = {
         'Street':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 }),
@@ -863,6 +877,13 @@
             disableClusteringAtZoom: 18,
             spiderfyOnMaxZoom: true,
             zoomToBoundsOnClick: true,
+            // ลด lag ตอนซูม: ปิด animation เมื่อหมุดเยอะ + chunked loading
+            animate: true,
+            animateAddingMarkers: false,  // ไม่ animate ตอน add — เร็วกว่ามาก
+            chunkedLoading: true,          // แบ่ง load เป็น chunk — UI ไม่ block
+            chunkInterval: 100,            // 100ms ต่อ chunk
+            chunkDelay: 50,                // หน่วง 50ms ก่อนเริ่ม chunk ถัดไป
+            removeOutsideVisibleBounds: true, // ลบ marker นอกจอออก — ลด DOM
             iconCreateFunction(cluster) {
                 const count = cluster.getChildCount();
                 return L.divIcon({ html: `<div><span>${count}</span></div>`, className: `marker-cluster ${getDensityClass(count)}`, iconSize: L.point(40,40) });
@@ -915,10 +936,9 @@
         return arr;
     }
 
-    let _lastFilteredKey = null; // cache key เพื่อ skip re-render ถ้าข้อมูลไม่เปลี่ยน
+    let _lastFilteredKey = null;
 
     function renderMarkers(filtered) {
-        // สร้าง key จาก filtered ids — ถ้าเหมือนเดิมและไม่มี heatmap ไม่ต้อง rebuild
         const key = filtered.map(l => getLocIndex(l)).join(',') + '|' + heatmapMode;
         if (key === _lastFilteredKey) return;
         _lastFilteredKey = key;
@@ -932,13 +952,18 @@
         filtered.forEach(loc => {
             const idx = getLocIndex(loc);
             const color = getColor(loc.list);
-            const marker = L.circleMarker([loc.lat,loc.lng],{radius:9,fillColor:color,color:'#fff',weight:2.5,opacity:1,fillOpacity:0.92});
+            const marker = L.circleMarker([loc.lat,loc.lng],{
+                renderer: canvasRenderer,
+                radius:9, fillColor:color, color:'#fff',
+                weight:2.5, opacity:1, fillOpacity:0.92,
+                bubblingMouseEvents:false
+            });
             marker.bindTooltip(loc.name||loc.list,{permanent:z>=15,direction:'top',offset:[0,-8],className:'bt-tooltip'});
             marker.on('click',()=>showPlaceCard(loc,idx));
             layers.push(marker);
             currentMarkers.push({loc,marker,idx});
         });
-        markerCluster.addLayers(layers); // bulk add — เร็วกว่า addLayer ทีละตัวมาก
+        markerCluster.addLayers(layers);
 
         if (!heatmapMode) map.addLayer(markerCluster);
         if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
@@ -948,10 +973,19 @@
         document.getElementById('countPill').classList.add('show');
     }
 
-    map.on('zoomend',()=>{
-        const z=map.getZoom();
-        currentMarkers.forEach(({marker})=>z>=15?marker.openTooltip():marker.closeTooltip());
-    });
+    // debounce tooltip toggle — ไม่ทำงานระหว่าง zoom animation
+    const _onZoomEnd = debounce(() => {
+        const z = map.getZoom();
+        currentMarkers.forEach(({marker}) => {
+            const tt = marker.getTooltip();
+            if (!tt) return;
+            const content = tt.getContent();
+            marker.unbindTooltip();
+            marker.bindTooltip(content, {permanent: z >= 15, direction:'top', offset:[0,-8], className:'bt-tooltip'});
+            if (z >= 15) marker.openTooltip();
+        });
+    }, 200);
+    map.on('zoomend', _onZoomEnd);
 
     function invalidateCache() {
         _lastFilteredKey = null;
@@ -1213,14 +1247,32 @@
     // ════════════════════════════════════════════
     const btnGps=document.getElementById('btnGps');
 
-    function updateGpsMarker(lat,lng,accuracy) {
-        if(myLocationCircle){myLocationCircle.setLatLng([lat,lng]);myLocationCircle.setRadius(accuracy);}
-        else myLocationCircle=L.circle([lat,lng],{radius:accuracy,color:'#1a73e8',fillColor:'#1a73e8',fillOpacity:0.08,weight:1.5}).addTo(map);
-        const iconHtml=`<div class="you-are-here-wrap"><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"></div></div>`;
-        const icon=L.divIcon({className:'',html:iconHtml,iconSize:[48,48],iconAnchor:[24,24]});
-        if(myLocationMarker){myLocationMarker.setLatLng([lat,lng]);myLocationMarker.setIcon(icon);}
-        else {
-            myLocationMarker=L.marker([lat,lng],{icon,zIndexOffset:1000,interactive:true}).addTo(map)
+    // ── smooth pan ด้วย panTo แทน flyTo — ไม่กระตุกเมื่อตำแหน่งเปลี่ยนนิดเดียว ──
+    function _smoothFollow(lat, lng) {
+        if (!gpsTracking) return;
+        const cur = map.getCenter();
+        const dist = haversine(cur.lat, cur.lng, lat, lng);
+        if (dist < 2) return; // ไม่ขยับถ้าใกล้มาก < 2ม.
+        // panTo สมูทกว่า flyTo สำหรับการติดตาม
+        map.panTo([lat, lng], {animate: true, duration: 0.5, easeLinearity: 0.5, noMoveStart: true});
+    }
+
+    function updateGpsMarker(lat, lng, accuracy) {
+        if (myLocationCircle) {
+            myLocationCircle.setLatLng([lat, lng]);
+            myLocationCircle.setRadius(Math.min(accuracy, 500));
+        } else {
+            myLocationCircle = L.circle([lat, lng], {
+                radius: Math.min(accuracy, 500), color:'#1a73e8',
+                fillColor:'#1a73e8', fillOpacity:0.08, weight:1.5
+            }).addTo(map);
+        }
+        const iconHtml = `<div class="you-are-here-wrap"><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"></div></div>`;
+        const icon = L.divIcon({className:'', html:iconHtml, iconSize:[48,48], iconAnchor:[24,24]});
+        if (myLocationMarker) {
+            myLocationMarker.setLatLng([lat, lng]);
+        } else {
+            myLocationMarker = L.marker([lat, lng], {icon, zIndexOffset:1000, interactive:true}).addTo(map)
                 .bindPopup(`<div style="padding:12px;font-size:13px;min-width:180px;">
                     <b>📍 ตำแหน่งของฉัน</b><br>
                     <small style="color:#5f6368;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
@@ -1228,45 +1280,87 @@
                     <button onclick="openAddAt(${lat},${lng})" style="background:#1a73e8;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
                 </div>`);
         }
-        myLatLng={lat,lng};
-        if(myLocationMarker.isPopupOpen()){
+        myLatLng = {lat, lng};
+        if (myLocationMarker.isPopupOpen()) {
             myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:#1a73e8;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
         }
-        if(listSortMode==='near'||nearbyMode) update();
+        _smoothFollow(lat, lng);
+        if (listSortMode==='near' || nearbyMode) update();
     }
+
+    // หยุดติดตามกล้องเมื่อผู้ใช้ลาก map
+    map.on('dragstart', () => {
+        if (gpsTracking) {
+            gpsTracking = false;
+            btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
+            btnGps.classList.remove('gps-tracking');
+        }
+    });
 
     function stopGps() {
-        if(gpsWatcher!==null){navigator.geolocation.clearWatch(gpsWatcher);gpsWatcher=null;}
-        gpsActive=false;gpsCoarseShown=false;gpsFlyDone=false;gpsToastShown=false;gpsFineToastShown=false;
-        btnGps.classList.remove('gps-searching','gps-found');
+        if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
+        gpsActive = false; gpsTracking = false; gpsCoarseShown = false; gpsFlyDone = false;
+        gpsToastShown = false; gpsFineToastShown = false;
+        btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking');
+        _lastGpsLat = null; _lastGpsLng = null;
     }
 
-    btnGps.onclick=()=>{
-        if(!navigator.geolocation){showToast('Browser ไม่รองรับ GPS',true);return;}
-        if(gpsActive&&myLocationMarker){const ll=myLocationMarker.getLatLng();map.flyTo([ll.lat,ll.lng],17,{animate:true,duration:1.0});return;}
-        stopGps(); gpsActive=true; btnGps.classList.add('gps-searching'); showToast('⏳ กำลังหาตำแหน่ง...');
+    // btnGps: กดครั้งที่ 1 = เปิด GPS + เปิด tracking, กดครั้งที่ 2 = กล้องบินไปตำแหน่ง + เปิด tracking อีกครั้ง
+    btnGps.onclick = () => {
+        if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS', true); return; }
+        if (gpsActive && myLocationMarker) {
+            // toggle tracking: ถ้า tracking อยู่ → บินไปตำแหน่ง, ถ้าไม่ → เปิด tracking
+            gpsTracking = true;
+            btnGps.classList.add('gps-tracking');
+            const ll = myLocationMarker.getLatLng();
+            map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17), {animate:true, duration:0.8, easeLinearity:0.5});
+            showToast('📍 ติดตามตำแหน่ง');
+            return;
+        }
+        stopGps();
+        gpsActive = true; gpsTracking = true;
+        btnGps.classList.add('gps-searching', 'gps-tracking');
+        showToast('⏳ กำลังหาตำแหน่ง...');
         navigator.geolocation.getCurrentPosition(
-            pos=>{
-                if(!gpsActive)return;
-                const{latitude:lat,longitude:lng,accuracy}=pos.coords;
-                gpsCoarseShown=true; updateGpsMarker(lat,lng,accuracy);
-                if(!gpsFlyDone){gpsFlyDone=true;const z=accuracy>1000?13:accuracy>200?15:17;map.flyTo([lat,lng],z,{animate:true,duration:1.0});}
-                btnGps.classList.remove('gps-searching'); btnGps.classList.add('gps-found');
-                if(!gpsToastShown){gpsToastShown=true;showToast(accuracy>500?`📡 ±${Math.round(accuracy)}ม.`:`✅ พบตำแหน่ง ±${Math.round(accuracy)}ม.`,false,true);}
-                gpsWatcher=navigator.geolocation.watchPosition(
-                    pos2=>{
-                        if(!gpsActive)return;
-                        const{latitude:lat2,longitude:lng2,accuracy:acc2}=pos2.coords;
-                        updateGpsMarker(lat2,lng2,acc2);
-                        if(gpsCoarseShown&&acc2<100&&myLocationMarker){const prev=myLocationMarker.getLatLng();if(haversine(prev.lat,prev.lng,lat2,lng2)>5)map.flyTo([lat2,lng2],Math.max(map.getZoom(),17),{animate:true,duration:0.8});}
-                        if(!gpsFineToastShown&&acc2<50){gpsFineToastShown=true;showToast(`✅ แม่นยำ ±${Math.round(acc2)}ม.`,false,true);}
+            pos => {
+                if (!gpsActive) return;
+                const {latitude:lat, longitude:lng, accuracy} = pos.coords;
+                gpsCoarseShown = true;
+                updateGpsMarker(lat, lng, accuracy);
+                if (!gpsFlyDone) {
+                    gpsFlyDone = true;
+                    const z = accuracy > 1000 ? 13 : accuracy > 200 ? 15 : 17;
+                    map.flyTo([lat, lng], z, {animate:true, duration:1.0, easeLinearity:0.5});
+                }
+                btnGps.classList.remove('gps-searching');
+                btnGps.classList.add('gps-found');
+                if (!gpsToastShown) {
+                    gpsToastShown = true;
+                    showToast(accuracy > 500 ? `📡 ±${Math.round(accuracy)}ม.` : `✅ พบตำแหน่ง ±${Math.round(accuracy)}ม.`, false, true);
+                }
+                // watchPosition — อัปเดตแบบ continuous
+                gpsWatcher = navigator.geolocation.watchPosition(
+                    pos2 => {
+                        if (!gpsActive) return;
+                        const {latitude:lat2, longitude:lng2, accuracy:acc2} = pos2.coords;
+                        // กรอง noise: ถ้าตำแหน่งไม่เปลี่ยนมากพอ ไม่ต้อง update marker
+                        if (_lastGpsLat !== null) {
+                            const moved = haversine(_lastGpsLat, _lastGpsLng, lat2, lng2);
+                            if (moved < 1 && acc2 > 20) return; // < 1ม. และ accuracy ไม่ดีขึ้น → skip
+                        }
+                        _lastGpsLat = lat2; _lastGpsLng = lng2;
+                        updateGpsMarker(lat2, lng2, acc2);
+                        if (!gpsFineToastShown && acc2 < 50) {
+                            gpsFineToastShown = true;
+                            showToast(`✅ แม่นยำ ±${Math.round(acc2)}ม.`, false, true);
+                        }
                     },
-                    ()=>{},
-                    {enableHighAccuracy:true,timeout:15000,maximumAge:2000}
+                    () => {},
+                    {enableHighAccuracy:true, timeout:15000, maximumAge:1000}
                 );
             },
-            ()=>{stopGps();showToast('ไม่สามารถหาตำแหน่งได้ กรุณาอนุญาต GPS',true);},
-            {enableHighAccuracy:false,timeout:5000,maximumAge:30000}
+            () => { stopGps(); showToast('ไม่สามารถหาตำแหน่งได้ กรุณาอนุญาต GPS', true); },
+            {enableHighAccuracy:false, timeout:5000, maximumAge:30000}
         );
     };
 
