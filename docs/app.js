@@ -1097,7 +1097,9 @@ document.getElementById('chipRoute').onclick=()=>{
 // ════════════════════════════════════════════
 // INFO PANEL
 // ════════════════════════════════════════════
-document.getElementById('btnMenu').onclick=()=>openInfoPanel('menu');
+document.getElementById('btnMenu').onclick=()=>{
+    try { openInfoPanel('menu'); } catch(e) { alert('Menu error: '+e.message); console.error('Menu error:',e); }
+};
 document.getElementById('infoPanelClose').onclick=closeInfo;
 document.getElementById('infoPanelBackdrop').onclick=closeInfo;
 
@@ -1148,7 +1150,7 @@ function openInfoPanel(mode){
                 ['📊','สถิติ','omStatsM',''],
                 ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmapM',''],
                 ['📝','Changelog','omChangelogM',''],
-                ['�','Sync Now'+(getToken()?` (${Math.round((Date.now()-_lastSyncTime)/1000)}s ago)`:''),'omSyncM',''],
+                ['🔄','Sync Now'+(getToken()?` (${Math.round((Date.now()-_lastSyncTime)/1000)}s ago)`:''),'omSyncM',''],
                 ['🌙','Dark mode','omDarkM',''],
                 ['📍',trackingActive?'⏹ หยุดบันทึกเส้นทาง':'▶ บันทึกเส้นทาง','omTrackM',''],
                 ['🗺️',`ดูเส้นทาง (${savedPaths.length})`,'omShowPathsM',''],
