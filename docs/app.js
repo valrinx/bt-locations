@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.5.1';
+const APP_VERSION = 'v5.5.2';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -754,8 +754,8 @@ document.getElementById('chipMore').addEventListener('click',e=>{
 document.addEventListener('click',e=>{
     if(!e.target.closest('.chip-more-wrap'))_chipDropdown.classList.remove('open');
 });
-// Close dropdown when any item inside is clicked
-_chipDropdown.addEventListener('click',()=>{_chipDropdown.classList.remove('open');});
+// Close dropdown after item handler fires (delay to let onclick run first)
+_chipDropdown.addEventListener('click',()=>{setTimeout(()=>_chipDropdown.classList.remove('open'),50);});
 
 document.getElementById('chipAll').onclick=()=>{filterList='';filterCity='';nearbyMode=false;update();};
 
@@ -907,11 +907,11 @@ document.getElementById('cityMergeBtn').onclick=()=>{
 };
 
 document.getElementById('chipHeatmap').onclick=()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();};
-document.getElementById('chipList2').onclick=()=>{
+document.getElementById('chipShowList').onclick=()=>{
     const lp=document.getElementById('listPanel');
     if(lp.classList.contains('open')){closeListPanel();}else{
         lp.classList.add('open'); closePlaceCard();
-        renderListPanel(getFiltered()); // render เมื่อเปิดครั้งแรก
+        renderListPanel(getFiltered());
     }
 };
 document.getElementById('chipAll').classList.add('active');
