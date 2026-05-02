@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.0';
+const APP_VERSION = 'v5.6.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -15,7 +15,7 @@ const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
 // Sanitize DMS coordinate names
 function _cleanDMSName(n){return(n&&/\d+[°ºᵒ˚]/.test(n))?'':n;}
 // ── Supabase ──
-const _SB_URL = 'https://uaemvtttfeapvofqhnwoo.supabase.co';
+const _SB_URL = 'https://uemvtttfedpvofqhnwoo.supabase.co';
 const _SB_KEY = 'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh';
 const _sb = supabase.createClient(_SB_URL, _SB_KEY);
 // Worker URL: kept for fallback compat
