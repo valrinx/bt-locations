@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.6';
+const APP_VERSION = 'v5.6.7';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1200,19 +1200,23 @@ window.openAddAt=function(lat,lng){
     document.getElementById('modalLat').value=parseFloat(lat).toFixed(6);
     document.getElementById('modalLng').value=parseFloat(lng).toFixed(6);
 
-    // Auto-fill list: use filter or nearest location's list
+    // Auto-fill list/city: use active filter first, then nearest location
     let autoList=filterList||'';
     let autoCity=filterCity||'';
     if(!autoList||!autoCity){
-        // Find nearest existing location to guess list/city
         let bestDist=Infinity, bestLoc=null;
         locations.forEach(l=>{
             const d=haversine(lat,lng,l.lat,l.lng);
             if(d<bestDist){bestDist=d;bestLoc=l;}
         });
-        if(bestLoc&&bestDist<3000){ // within 3km
+        if(bestLoc&&bestDist<10000){ // within 10km
             if(!autoList)autoList=bestLoc.list||'';
             if(!autoCity)autoCity=bestLoc.city||'';
+        }
+        // Fallback: most-used list overall
+        if(!autoList&&locations.length){
+            const cnt={};locations.forEach(l=>{if(l.list)cnt[l.list]=(cnt[l.list]||0)+1;});
+            autoList=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
         }
     }
     document.getElementById('modalList').value=autoList;
