@@ -155,7 +155,7 @@ python -m http.server 8080
 
 - [x] **Unit test สำหรับ Python scripts** — ✅ เสร็จแล้ว (9 tests, validate_data + auto_city)
 - [x] **Lint + format** — ✅ เสร็จแล้ว (pre-commit: black, flake8, trailing-whitespace, check-json)
-- [ ] **แยก JS ออกจาก HTML** — refactor `docs/index.html` ให้โหลด `app.js` แยก (ตอนนี้แยกแค่ data เป็น `locations.js`)
+- [x] **แยก JS ออกจาก HTML** — ✅ เสร็จแล้ว (แยก ~1500 บรรทัดเป็น `docs/app.js`, HTML เหลือแค่ markup + CSS)
 - [x] **Versioning สำหรับ locations.js** — ✅ เสร็จแล้ว (timestamp cache-busting)
 
 ---

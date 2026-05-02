@@ -1,8 +1,9 @@
-const CACHE_NAME = 'bt-locations-v1';
+const CACHE_NAME = 'bt-locations-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './locations.js',
+  './app.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
