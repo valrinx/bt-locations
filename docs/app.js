@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.0';
+const APP_VERSION = 'v5.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -283,11 +283,11 @@ function createClusterGroup() {
         disableClusteringAtZoom: 18,
         spiderfyOnMaxZoom: true,
         zoomToBoundsOnClick: true,
-        animate: true,
+        animate: false,
         animateAddingMarkers: false,
         chunkedLoading: true,
-        chunkInterval: 200,
-        chunkDelay: 50,
+        chunkInterval: 50,
+        chunkDelay: 10,
         removeOutsideVisibleBounds: true,
         iconCreateFunction(cluster) {
             const count = cluster.getChildCount();
@@ -376,7 +376,7 @@ function _buildMarkerCache() {
             bubblingMouseEvents: false,
         });
         marker.bindTooltip(loc.name || loc.list, {
-            permanent: false,
+            permanent: true,
             direction: 'top',
             offset: [0, -2],
             className: 'bt-tooltip',
