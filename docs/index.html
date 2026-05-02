@@ -540,6 +540,17 @@
         .leaflet-popup-tip-container { display: none; }
         .leaflet-control-attribution { font-size: 10px; }
 
+        /* Route number tooltip */
+        .route-number-tooltip {
+            background: #4285f4 !important; color: #fff !important;
+            border: none !important; border-radius: 50% !important;
+            padding: 0 !important; width: 20px !important; height: 20px !important;
+            line-height: 20px !important; text-align: center !important;
+            font-size: 10px !important; font-weight: 700 !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,.3) !important;
+        }
+        .route-number-tooltip::before { display: none !important; }
+
         /* Cluster */
         .marker-cluster {
             background-clip: padding-box;
@@ -629,6 +640,7 @@
             </button>
             <button class="chip" id="chipNearby">📍 ใกล้ฉัน</button>
             <button class="chip" id="chipHeatmap">🔥 Heatmap</button>
+            <button class="chip" id="chipRoute">🛤️ เส้นทาง</button>
             <button class="chip" id="chipList2">☰ รายการ</button>
         </div>
     </div>
@@ -1723,6 +1735,80 @@
     document.getElementById('measureModalClose').onclick=()=>document.getElementById('measureModalOverlay').classList.remove('open');
     document.getElementById('measureModalClear').onclick=()=>{if(measureLine){map.removeLayer(measureLine);measureLine=null;}document.getElementById('measureModalOverlay').classList.remove('open');};
     document.getElementById('measureModalOverlay').onclick=e=>{if(e.target===document.getElementById('measureModalOverlay'))document.getElementById('measureModalOverlay').classList.remove('open');};
+
+    // ════════════════════════════════════════════
+    // ROUTE PLANNING (Nearest-Neighbor TSP)
+    // ════════════════════════════════════════════
+    let routeLine=null, routeMode=false;
+
+    function clearRoute(){
+        if(routeLine){map.removeLayer(routeLine);routeLine=null;}
+        routeMode=false;
+        document.getElementById('chipRoute').classList.remove('active');
+    }
+
+    function doRoute(){
+        const filtered=getFiltered();
+        if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
+        if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
+
+        // Start from GPS location or first point
+        let startLat=myLatLng?myLatLng.lat:filtered[0].lat;
+        let startLng=myLatLng?myLatLng.lng:filtered[0].lng;
+
+        // Nearest-neighbor TSP
+        const remaining=[...filtered];
+        const ordered=[];
+        let curLat=startLat, curLng=startLng;
+        while(remaining.length>0){
+            let bestIdx=0, bestDist=Infinity;
+            for(let i=0;i<remaining.length;i++){
+                const d=haversine(curLat,curLng,remaining[i].lat,remaining[i].lng);
+                if(d<bestDist){bestDist=d;bestIdx=i;}
+            }
+            const next=remaining.splice(bestIdx,1)[0];
+            ordered.push(next);
+            curLat=next.lat;curLng=next.lng;
+        }
+
+        // Calculate total distance
+        let totalDist=0;
+        if(myLatLng)totalDist+=haversine(myLatLng.lat,myLatLng.lng,ordered[0].lat,ordered[0].lng);
+        for(let i=0;i<ordered.length-1;i++){
+            totalDist+=haversine(ordered[i].lat,ordered[i].lng,ordered[i+1].lat,ordered[i+1].lng);
+        }
+
+        // Draw polyline + numbered markers in a layer group
+        if(routeLine){map.removeLayer(routeLine);}
+        const group=L.layerGroup();
+        const pts=[];
+        if(myLatLng)pts.push([myLatLng.lat,myLatLng.lng]);
+        ordered.forEach(l=>pts.push([l.lat,l.lng]));
+        L.polyline(pts,{color:'#4285f4',weight:3,opacity:0.8,dashArray:'8,6'}).addTo(group);
+
+        ordered.forEach((loc,i)=>{
+            L.circleMarker([loc.lat,loc.lng],{radius:10,color:'#fff',fillColor:'#4285f4',fillOpacity:1,weight:2})
+                .bindTooltip(String(i+1),{permanent:true,direction:'center',className:'route-number-tooltip'})
+                .addTo(group);
+        });
+
+        routeLine=group.addTo(map);
+        map.fitBounds(L.latLngBounds(pts),{padding:[60,60]});
+        routeMode=true;
+        document.getElementById('chipRoute').classList.add('active');
+        showToast(`🛤️ เส้นทาง ${ordered.length} จุด · ${formatDist(totalDist)}`,false,true);
+
+        // Show list panel with route order
+        const lp=document.getElementById('listPanel');
+        lp.classList.add('open');
+        renderListPanel(ordered);
+        document.getElementById('listPanelTitle').textContent=`🛤️ เส้นทาง · ${formatDist(totalDist)}`;
+    }
+
+    document.getElementById('chipRoute').onclick=()=>{
+        if(routeMode){clearRoute();showToast('ปิดเส้นทาง');}
+        else doRoute();
+    };
 
     // ════════════════════════════════════════════
     // INFO PANEL
