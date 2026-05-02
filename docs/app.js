@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.9';
+const APP_VERSION = 'v5.7.0';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -609,13 +609,13 @@ function showPlaceCard(loc, idx) {
             ${loc.city?`<span class="dot">·</span><span>${loc.city}</span>`:''}
             ${distHtml}
         </div>
-        ${loc.tags&&loc.tags.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t=>{const tc=getTagColor(t);return`<span data-tag="${t}" title="กดเพื่อตั้งสี tag" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:${tc||'var(--surface2)'};border-radius:12px;font-size:11px;color:${tc?'#fff':'var(--text2)'};font-weight:500;cursor:pointer;border:1px solid ${tc||'var(--border)'};">🏷️ ${t}</span>`;}).join('')}</div>`:''}
-        ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--border);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
-        ${loc.note?`<div style="font-size:13px;color:var(--text2);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>`:''}
+        ${loc.tags&&loc.tags.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t=>{const tc=getTagColor(t);return`<span data-tag="${t}" title="กดเพื่อตั้งสี tag" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:${tc||'var(--surface2)'};border-radius:12px;font-size:11px;color:${tc?'#fff':'var(--gn)'};font-weight:500;cursor:pointer;border:1px solid ${tc||'var(--gn)'};">🏷️ ${t}</span>`;}).join('')}</div>`:''}
+        ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--gn);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
+        ${loc.note?`<div style="font-size:13px;color:var(--gn);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>`:''}
         <div class="place-card-actions">
             <a class="place-action-btn" href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank">
                 <span class="place-action-icon">🗺️</span>
-                <span class="place-action-label" style="color:var(--accent);">Maps</span>
+                <span class="place-action-label" style="color:var(--bl);">Maps</span>
             </a>
             <a class="place-action-btn green" href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank">
                 <span class="place-action-icon">🚗</span>
@@ -654,7 +654,7 @@ function showPlaceCard(loc, idx) {
                 <small>พิกัด GPS</small>
             </div>
             <button onclick="copyCoords(${loc.lat},${loc.lng})"
-                style="border:none;background:none;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;padding:4px 8px;border-radius:8px;flex-shrink:0;">คัดลอก</button>
+                style="border:none;background:none;cursor:pointer;color:var(--bl);font-size:13px;font-weight:500;padding:4px 8px;border-radius:8px;flex-shrink:0;">คัดลอก</button>
         </div>
         ${loc.city?`<div class="place-card-row"><div class="place-card-row-icon">🏙️</div><div class="place-card-row-text">${loc.city}</div></div>`:''}
     `;
@@ -830,7 +830,7 @@ function renderSearchResults() {
     const coords=parseLatLng(searchInput.value.trim());
     if(coords){
         html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});_showSearchMarker(${coords.lat},${coords.lng});document.getElementById('search').blur();">
-            <div class="search-result-icon" style="background:var(--pill);color:var(--accent)">🎯</div>
+            <div class="search-result-icon" style="background:var(--am);color:var(--bl)">🎯</div>
             <div class="search-result-text">
                 <div class="search-result-name">ไปที่พิกัด ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}</div>
                 <div class="search-result-sub">กดเพื่อ zoom ไปยังตำแหน่งนี้</div>
@@ -940,12 +940,12 @@ document.getElementById('listMergeBtn').onclick=()=>{
     container.innerHTML=`
         <div style="padding:12px;">
             <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterList}" (${counts[filterList]} จุด) → ไปรายการไหน?</div>
-            <select id="_mergeListTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px;background:var(--surface);">
+            <select id="_mergeListTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gn);font-size:14px;background:var(--surface);">
                 ${others.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
             </select>
             <div style="display:flex;gap:8px;margin-top:12px;">
                 <button id="_mergeListConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
-                <button id="_mergeListCancel" style="flex:1;padding:10px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
+                <button id="_mergeListCancel" style="flex:1;padding:10px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>`;
     document.getElementById('_mergeListCancel').onclick=()=>{document.getElementById('chipList').click();};
@@ -971,7 +971,7 @@ document.getElementById('chipCity').onclick=()=>{
     container.innerHTML=`<div class="filter-choice-item ${!filterCity?'selected':''}" data-val="">
         <span class="filter-choice-dot" style="background:var(--text3)"></span>ทุกเขต<span class="filter-choice-count">${locations.length}</span></div>
         ${cities.map(([n,c])=>`<div class="filter-choice-item ${filterCity===n?'selected':''}" data-val="${n}">
-        <span class="filter-choice-dot" style="background:var(--accent)"></span>${n}<span class="filter-choice-count">${c}</span></div>`).join('')}`;
+        <span class="filter-choice-dot" style="background:var(--bl)"></span>${n}<span class="filter-choice-count">${c}</span></div>`).join('')}`;
     container.querySelectorAll('.filter-choice-item').forEach(el=>{
         el.onclick=()=>{container.querySelectorAll('.filter-choice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');filterCity=el.dataset.val;};
     });
@@ -1011,12 +1011,12 @@ document.getElementById('cityMergeBtn').onclick=()=>{
     container.innerHTML=`
         <div style="padding:12px;">
             <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterCity}" (${counts[filterCity]} จุด) → ไปเขตไหน?</div>
-            <select id="_mergeCityTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px;background:var(--surface);">
+            <select id="_mergeCityTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gn);font-size:14px;background:var(--surface);">
                 ${others.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
             </select>
             <div style="display:flex;gap:8px;margin-top:12px;">
                 <button id="_mergeCityConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
-                <button id="_mergeCityCancel" style="flex:1;padding:10px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
+                <button id="_mergeCityCancel" style="flex:1;padding:10px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>`;
     document.getElementById('_mergeCityCancel').onclick=()=>{document.getElementById('chipCity').click();};
@@ -1092,12 +1092,12 @@ function updateGpsMarker(lat, lng, accuracy) {
                 <b>📍 ตำแหน่งของฉัน</b><br>
                 <small style="color:var(--text3);">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
                 <small style="color:var(--text3);">±${Math.round(accuracy)}ม.</small><br><br>
-                <button onclick="openAddAt(${lat},${lng})" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
+                <button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
             </div>`);
     }
     myLatLng = {lat, lng};
     if (myLocationMarker.isPopupOpen()) {
-        myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
+        myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
     }
     _smoothFollow(lat, lng);
     if (listSortMode==='near' || nearbyMode) update();
@@ -1151,7 +1151,7 @@ btnGps.onclick = () => {
         gpsTracking = true;
         btnGps.classList.add('gps-tracking');
         const ll = myLocationMarker.getLatLng();
-        map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17), {animate:true, duration:0.8, easeLinearity:0.5});
+        map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17), {animate:true, duration:0.8});
         showToast('📍 ติดตามตำแหน่ง');
         return;
     }
@@ -1168,7 +1168,7 @@ btnGps.onclick = () => {
             if (!gpsFlyDone) {
                 gpsFlyDone = true;
                 const z = accuracy > 1000 ? 13 : accuracy > 200 ? 15 : 17;
-                map.flyTo([lat, lng], z, {animate:true, duration:1.0, easeLinearity:0.5});
+                map.flyTo([lat, lng], z, {animate:true, duration:1.0});
             }
             btnGps.classList.remove('gps-searching');
             btnGps.classList.add('gps-found');
@@ -1501,8 +1501,8 @@ window._showAvoidSettings=function(){
                 <input type="checkbox" id="_avMotorway" ${_routeAvoid.motorway?'checked':''}> 🛣️ หลีกเลี่ยงทางหลวง/มอเตอร์เวย์
             </label>
             <div style="display:flex;gap:8px;margin-top:12px;">
-                <button onclick="_applyAvoidSettings()" style="flex:1;padding:8px;border:none;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ บันทึก</button>
-                <button onclick="document.getElementById('_avoidModal').remove();document.getElementById('_avoidBackdrop').remove();" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
+                <button onclick="_applyAvoidSettings()" style="flex:1;padding:8px;border:none;background:var(--bl);color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ บันทึก</button>
+                <button onclick="document.getElementById('_avoidModal').remove();document.getElementById('_avoidBackdrop').remove();" style="flex:1;padding:8px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>
         <div id="_avoidBackdrop" onclick="document.getElementById('_avoidModal').remove();this.remove();" style="position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,.3);"></div>`;
@@ -1545,9 +1545,9 @@ const ARRIVAL_THRESHOLD = 50; // meters to consider "arrived"
 #directionsBanner .nav-row{display:flex;align-items:center;gap:8px;}
 #directionsBanner .nav-stats{display:flex;gap:12px;font-size:13px;margin:6px 0;}
 #directionsBanner .nav-btns{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;}
-#directionsBanner .nav-btn{flex:1;padding:6px 2px;border:1px solid var(--border);border-radius:8px;
+#directionsBanner .nav-btn{flex:1;padding:6px 2px;border:1px solid var(--gn);border-radius:8px;
   background:var(--surface);cursor:pointer;font-size:11px;min-width:0;color:var(--text);transition:background .15s;}
-#directionsBanner .nav-btn:active{background:var(--border);}
+#directionsBanner .nav-btn:active{background:var(--gn);}
 #directionsBanner .nav-close{padding:6px 10px;border:none;background:#ea4335;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;}
 #directionsBanner .nav-close:active{background:#c62828;}
 `;document.head.appendChild(s);})();
@@ -1585,7 +1585,7 @@ function _updateNavBanner(){
     const distKm=(_navState.totalDist/1000).toFixed(1);
     const etaMins=Math.round(_navState.totalDur/60);
     const destName=_navState.dest?.name||'ปลายทาง';
-    const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--text2);margin-top:4px;">📍 ${_navState.waypoints.length} จุดแวะ</div>`:'';
+    const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--gn);margin-top:4px;">📍 ${_navState.waypoints.length} จุดแวะ</div>`:'';
     banner.innerHTML=`<div class="nav-row"><span style="font-size:18px;">🧭</span><strong style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${destName}</strong></div><div class="nav-stats"><span>📏 ${distKm} km</span><span>⏱️ ~${etaMins} นาที</span></div>${wpText}<div class="nav-btns"><button class="nav-btn" id="_nbWaypoint">📍 จุดแวะ</button><button class="nav-btn" id="_nbAvoid">⚙️ หลีกเลี่ยง</button><button class="nav-btn" id="_nbMaps">🗺️ Maps</button><button class="nav-close" id="_nbClose">✕</button></div>`;
 
     // Bind buttons with addEventListener (reliable, no scope issues)
@@ -1866,19 +1866,19 @@ async function _routeDraw(){
 // ── Inject route panel CSS ──
 (function(){const s=document.createElement('style');s.textContent=`
 .rp-toolbar{padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;}
-.rp-btn{flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:8px;background:var(--surface);
+.rp-btn{flex:1;padding:7px 4px;border:1px solid var(--gn);border-radius:8px;background:var(--surface);
   cursor:pointer;font-size:11px;min-width:0;color:var(--text);transition:background .15s;}
-.rp-btn:active{background:var(--border);}
-.rp-btn-nav{flex:1;padding:7px 4px;border:none;background:var(--accent);color:#fff;border-radius:8px;
+.rp-btn:active{background:var(--gn);}
+.rp-btn-nav{flex:1;padding:7px 4px;border:none;background:var(--bl);color:#fff;border-radius:8px;
   cursor:pointer;font-size:11px;min-width:0;font-weight:600;}
-.rp-btn-nav:active{background:var(--accent);}
-.rp-stop{display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid var(--border);}
+.rp-btn-nav:active{background:var(--bl);}
+.rp-stop{display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid var(--gn);}
 .rp-stop-num{font-size:14px;font-weight:700;color:#4285f4;min-width:22px;text-align:center;}
 .rp-stop-info{flex:1;min-width:0;}
 .rp-stop-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rp-stop-sub{font-size:11px;color:var(--text3);}
 .rp-stop-btn{border:none;background:none;cursor:pointer;font-size:14px;padding:4px;color:var(--text);min-width:28px;}
-.rp-stop-btn:active{background:var(--border);border-radius:6px;}
+.rp-stop-btn:active{background:var(--gn);border-radius:6px;}
 .rp-stop-btn.del{color:#ea4335;}
 `;document.head.appendChild(s);})();
 
@@ -1946,6 +1946,7 @@ async function _routeOptimize(){
     showToast('🧠 กำลังคำนวณเส้นทางที่ดีที่สุด...');
     const startLat=myLatLng?myLatLng.lat:_routeStops[0].lat;
     const startLng=myLatLng?myLatLng.lng:_routeStops[0].lng;
+
     _routeStops=_tspSolve(_routeStops, startLat, startLng);
     await _routeDraw();
     showToast('🧠 จัดลำดับเส้นทางใหม่แล้ว!',false,true);
@@ -2037,8 +2038,8 @@ document.getElementById('btnMenu').onclick=()=>{
         try { openInfoPanel('menu'); } catch(e) { alert('Menu error: '+e.message); console.error('Menu error:',e); }
     }
 };
-document.getElementById('infoPanelClose').onclick=closeInfo;
-document.getElementById('infoPanelBackdrop').onclick=closeInfo;
+document.getElementById('infoPanelClose').onclick = closeInfo;
+document.getElementById('infoPanelBackdrop').onclick = closeInfo;
 
 function openInfoPanel(mode){
     const body=document.getElementById('infoPanelBody');
@@ -2053,7 +2054,7 @@ function openInfoPanel(mode){
             ${log.map(e=>{
                 const d=new Date(e.t);
                 const ts=d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
-                return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);">
+                return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--gn);">
                     <span style="font-size:16px;margin-top:2px;">${actionIcon[e.a]||'❓'}</span>
                     <div style="flex:1;min-width:0;">
                         <div style="font-size:13px;font-weight:600;color:${actionColor[e.a]||'var(--text)'};">${actionLabel[e.a]||e.a}</div>
@@ -2070,11 +2071,11 @@ function openInfoPanel(mode){
         const sl=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
         const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
         body.innerHTML=`<div class="stats-section">
-            <div style="font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px;">${locations.length}</div>
+            <div style="font-size:28px;font-weight:700;color:var(--bl);margin-bottom:4px;">${locations.length}</div>
             <div style="font-size:13px;color:var(--text3);margin-bottom:20px;">สถานที่ทั้งหมด</div>
             <div class="stats-header">ตามรายการ</div>
             ${sl.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:${getColor(n)}"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/maxL*100}%;background:${getColor(n)}"></div></div><span class="stats-count">${c}</span></div>`).join('')}
-            ${sc.length?`<div class="stats-header" style="margin-top:20px;">ตามเขต</div>${sc.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:var(--accent)"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/Math.max(...sc.map(x=>x[1]))*100}%"></div></div><span class="stats-count">${c}</span></div>`).join('')}`:''}
+            ${sc.length?`<div class="stats-header" style="margin-top:20px;">ตามเขต</div>${sc.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:var(--bl)"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/Math.max(...sc.map(x=>x[1]))*100}%"></div></div><span class="stats-count">${c}</span></div>`).join('')}`:''}
         </div>`;
     } else {
         document.getElementById('infoPanelTitle').textContent='BT Locations';
@@ -2097,7 +2098,7 @@ function openInfoPanel(mode){
         body.innerHTML=`
             <div style="padding:8px 4px 4px;">
                 <div style="padding:16px 16px 8px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
+                    <div style="width:44px;height:44px;border-radius:12px;background:var(--bl);display:flex;align-items:center;justify-content:center;">
                         <span style="font-size:22px;color:#fff;">📍</span>
                     </div>
                     <div>
