@@ -193,6 +193,58 @@
         .legend-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
         .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3); flex-shrink: 0; }
 
+        /* ── GPS / ตำแหน่งฉัน ── */
+        .btn-gps {
+            background: #1a73e8; color: white;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .btn-gps:hover { background: #1557b0; }
+        .btn-gps.locating { background: #666; cursor: wait; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+
+        /* ── แถวค้นหา lat/lng ── */
+        .latlng-row {
+            display: flex; gap: 6px; align-items: center;
+        }
+        .latlng-row input {
+            width: 130px !important; font-size: 12px !important;
+        }
+        .btn-latlng-go {
+            background: #059669; color: white; white-space: nowrap;
+        }
+        .btn-latlng-go:hover { background: #047857; }
+
+        /* ── ตัวชี้ตำแหน่งปัจจุบัน (You are here) ── */
+        .you-are-here-pulse {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: #1a73e8; border: 3px solid white;
+            box-shadow: 0 0 0 0 rgba(26,115,232,0.6);
+            animation: gps-pulse 2s infinite;
+        }
+        @keyframes gps-pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(26,115,232,0.6); }
+            70%  { box-shadow: 0 0 0 14px rgba(26,115,232,0); }
+            100% { box-shadow: 0 0 0 0 rgba(26,115,232,0); }
+        }
+
+        /* ── crosshair drop-pin preview ── */
+        #dropPinPreview {
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -100%);
+            z-index: 1600; pointer-events: none;
+            font-size: 32px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+        }
+        #dropPinPreview.show { display: block; }
+
+        /* ── latlng hint box ── */
+        .latlng-hint {
+            position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%);
+            z-index: 1200; background: rgba(0,0,0,0.75); color: #fff;
+            padding: 6px 14px; border-radius: 20px; font-size: 12px;
+            pointer-events: none; display: none;
+        }
+        .latlng-hint.show { display: block; }
+
         body.dark { background: #1a1a2e; }
         body.dark .controls { background: rgba(30,30,50,0.95); color: #e0e0e0; }
         body.dark .controls input,
@@ -211,6 +263,43 @@
         body.dark .mm-item { color: #e0e0e0; }
         body.dark .mm-item:hover { background: #2a2a5a; }
         body.dark .mm-sep { border-color: #333; }
+        body.dark .latlng-hint { background: rgba(255,255,255,0.15); }
+
+        /* ── lat/lng input group ใน modal ── */
+        .latlng-group {
+            border: 2px solid #e8e8e8; border-radius: 10px;
+            padding: 10px 12px 0; margin-bottom: 14px; position: relative;
+        }
+        .latlng-group-label {
+            position: absolute; top: -10px; left: 10px;
+            background: white; padding: 0 4px;
+            font-size: 11px; font-weight: 700; color: #4285f4; letter-spacing: 0.5px;
+        }
+        body.dark .latlng-group { border-color: #444; }
+        body.dark .latlng-group-label { background: #1e1e3e; color: #8ab4f8; }
+        .latlng-group .modal-latlng-row {
+            display: flex; gap: 8px;
+        }
+        .latlng-group .modal-latlng-row input {
+            flex: 1; margin-bottom: 10px;
+        }
+        .btn-use-gps-modal {
+            width: 100%; border: 1.5px dashed #1a73e8; border-radius: 7px;
+            background: #f0f7ff; color: #1a73e8; padding: 7px;
+            font-size: 12px; font-weight: 600; cursor: pointer; margin-bottom: 10px;
+            transition: background 0.15s;
+        }
+        .btn-use-gps-modal:hover { background: #dbeafe; }
+        .btn-use-gps-modal.loading { color: #888; border-color: #ccc; cursor: wait; }
+        body.dark .btn-use-gps-modal { background: #1a274a; border-color: #4285f4; color: #8ab4f8; }
+        body.dark .btn-use-gps-modal:hover { background: #1e3060; }
+
+        /* ── click-to-pin hint ใน modal ── */
+        .modal-pin-hint {
+            font-size: 11px; color: #059669; margin: -8px 0 12px;
+            display: flex; align-items: center; gap: 4px;
+        }
+        body.dark .modal-pin-hint { color: #34d399; }
 
         @media (max-width: 600px) {
             .controls {
@@ -225,12 +314,15 @@
             .modal-body { padding: 14px 16px; }
             .modal-btns { padding: 12px 16px; }
             .list-panel { max-height: 40vh; }
+            .latlng-row input { width: 100px !important; }
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
+
     <div class="controls">
+        <!-- แถว 1: ค้นหา + filter -->
         <div class="ctrl-row">
             <input type="text" id="search" placeholder="ค้นหา...">
             <select id="listFilter">
@@ -244,7 +336,7 @@
             <span class="count-badge" id="count">0 จุด</span>
             <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
             <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>↩</button>
-            <button class="btn btn-github" id="btnGithub">� GitHub</button>
+            <button class="btn btn-github" id="btnGithub">💾 GitHub</button>
             <span class="save-status" id="saveStatus"></span>
             <div class="more-wrap">
                 <button class="btn" id="btnMore" style="background:#475569;color:white;">⋯ เพิ่มเติม</button>
@@ -263,10 +355,29 @@
                 </div>
             </div>
         </div>
+
+        <!-- แถว 2: GPS + ค้นหา lat/lng ← ใหม่ -->
+        <div class="ctrl-row latlng-row">
+            <button class="btn btn-gps" id="btnGps" title="ใช้ตำแหน่งของฉัน">
+                📍 ตำแหน่งฉัน
+            </button>
+            <div class="ctrl-sep"></div>
+            <input type="text" id="latlngSearch"
+                   placeholder="lat, lng เช่น 13.756, 100.501"
+                   title="พิมพ์ lat,lng แล้วกด Enter หรือ ▶">
+            <button class="btn btn-latlng-go" id="btnLatlngGo" title="ไปยังพิกัด">▶ ไป</button>
+        </div>
     </div>
+
+    <!-- ── drop-pin preview emoji ── -->
+    <div id="dropPinPreview">📍</div>
+
+    <!-- ── latlng hint ── -->
+    <div class="latlng-hint" id="latlngHint"></div>
+
     <div class="legend-panel" id="legendPanel"></div>
     <div class="add-mode-banner" id="addBanner">
-        คลิกบนแผนที่เพื่อเพิ่มจุดใหม่
+        📍 คลิกบนแผนที่เพื่อปักหมุด
         <button class="btn-cancel-add" id="btnCancelAdd">ยกเลิก</button>
     </div>
     <button class="list-toggle" id="listToggle">☰</button>
@@ -302,10 +413,29 @@
                 <input type="text" id="modalList" placeholder="เช่น BT-Topup, ดินแดง">
                 <label>เขต (City)</label>
                 <input type="text" id="modalCity" placeholder="เขต/อำเภอ">
-                <label>Latitude</label>
-                <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
-                <label>Longitude</label>
-                <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+
+                <!-- ── lat/lng group ใหม่ ── -->
+                <div class="latlng-group">
+                    <span class="latlng-group-label">📌 พิกัด GPS</span>
+                    <!-- ปุ่ม GPS -->
+                    <button type="button" class="btn-use-gps-modal" id="btnUseGpsModal">
+                        📍 ใช้ตำแหน่งของฉันตอนนี้
+                    </button>
+                    <!-- hint click-to-pin -->
+                    <p class="modal-pin-hint" id="modalPinHint" style="display:none;">
+                        ✅ คลิกบนแผนที่เพื่ออัปเดตพิกัด
+                    </p>
+                    <div class="modal-latlng-row">
+                        <div style="flex:1">
+                            <label style="margin-bottom:4px;">Latitude</label>
+                            <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
+                        </div>
+                        <div style="flex:1">
+                            <label style="margin-bottom:4px;">Longitude</label>
+                            <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-btns">
                 <button class="btn btn-cancel" id="modalCancel">ยกเลิก</button>
@@ -382,6 +512,207 @@
         let heatLayer = null;
         let heatmapMode = false;
 
+        // ═══════════════════════════════════════════════
+        // GPS — ตำแหน่งของฉัน
+        // ═══════════════════════════════════════════════
+        let myLocationMarker = null;
+        let myLocationCircle = null;
+
+        function showMyLocation(lat, lng, accuracy) {
+            // ลบ marker เก่า
+            if (myLocationMarker) map.removeLayer(myLocationMarker);
+            if (myLocationCircle) map.removeLayer(myLocationCircle);
+
+            // วงกลมความแม่นยำ
+            myLocationCircle = L.circle([lat, lng], {
+                radius: accuracy,
+                color: '#1a73e8', fillColor: '#1a73e8',
+                fillOpacity: 0.08, weight: 1.5
+            }).addTo(map);
+
+            // Pulsing dot — "You are here"
+            const icon = L.divIcon({
+                className: '',
+                html: '<div class="you-are-here-pulse"></div>',
+                iconSize: [18, 18],
+                iconAnchor: [9, 9]
+            });
+            myLocationMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000 })
+                .addTo(map)
+                .bindPopup(`<b>📍 ตำแหน่งของฉัน</b><br>
+                    <small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
+                    <small style="color:#888;">ความแม่นยำ ~${Math.round(accuracy)} ม.</small><br><br>
+                    <button onclick="openAddAtLatLng(${lat},${lng})"
+                        style="background:#34a853;color:white;border:none;border-radius:6px;
+                               padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;">
+                        + ปักหมุดที่นี่
+                    </button>`)
+                .openPopup();
+
+            map.setView([lat, lng], 17);
+        }
+
+        document.getElementById('btnGps').addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                alert('Browser ไม่รองรับ GPS');
+                return;
+            }
+            const btn = document.getElementById('btnGps');
+            btn.classList.add('locating');
+            btn.textContent = '⏳ กำลังหา...';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    btn.classList.remove('locating');
+                    btn.textContent = '📍 ตำแหน่งฉัน';
+                    showMyLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+                },
+                (err) => {
+                    btn.classList.remove('locating');
+                    btn.textContent = '📍 ตำแหน่งฉัน';
+                    const msgs = {
+                        1: 'กรุณาอนุญาตการเข้าถึงตำแหน่ง',
+                        2: 'ไม่สามารถหาตำแหน่งได้',
+                        3: 'หมดเวลา ลองใหม่อีกครั้ง'
+                    };
+                    alert('⚠️ ' + (msgs[err.code] || 'ไม่สามารถหาตำแหน่งได้'));
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
+
+        // ═══════════════════════════════════════════════
+        // ค้นหาด้วย lat, lng
+        // ═══════════════════════════════════════════════
+        let searchPinMarker = null;
+
+        function goToLatLng() {
+            const val = document.getElementById('latlngSearch').value.trim();
+            if (!val) return;
+
+            // รับรูปแบบ: "13.756, 100.501" หรือ "13.756 100.501" หรือ "13.756,100.501"
+            const parts = val.split(/[\s,]+/).filter(p => p);
+            if (parts.length < 2) {
+                alert('กรุณาใส่ lat, lng เช่น 13.756, 100.501');
+                return;
+            }
+            const lat = parseFloat(parts[0]);
+            const lng = parseFloat(parts[1]);
+            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                alert('พิกัดไม่ถูกต้อง');
+                return;
+            }
+
+            // ลบ pin เก่า
+            if (searchPinMarker) map.removeLayer(searchPinMarker);
+
+            const pinIcon = L.divIcon({
+                className: '',
+                html: '<div style="font-size:28px;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));">🔍</div>',
+                iconSize: [28, 28], iconAnchor: [14, 28]
+            });
+            searchPinMarker = L.marker([lat, lng], { icon: pinIcon })
+                .addTo(map)
+                .bindPopup(`<b>🔍 พิกัดที่ค้นหา</b><br>
+                    <small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><br>
+                    <button onclick="openAddAtLatLng(${lat},${lng})"
+                        style="background:#34a853;color:white;border:none;border-radius:6px;
+                               padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;">
+                        + ปักหมุดที่นี่
+                    </button>`)
+                .openPopup();
+
+            map.setView([lat, lng], 17);
+
+            // หาหมุดที่ใกล้ที่สุด
+            findNearby(lat, lng);
+        }
+
+        document.getElementById('btnLatlngGo').addEventListener('click', goToLatLng);
+        document.getElementById('latlngSearch').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') goToLatLng();
+        });
+
+        // อัปเดต lat/lng hint ขณะเลื่อน mouse บนแผนที่
+        const latlngHint = document.getElementById('latlngHint');
+        map.on('mousemove', (e) => {
+            latlngHint.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+            latlngHint.classList.add('show');
+        });
+        map.on('mouseout', () => latlngHint.classList.remove('show'));
+
+        // ═══════════════════════════════════════════════
+        // หาหมุดที่ใกล้ที่สุด (แสดงใน popup)
+        // ═══════════════════════════════════════════════
+        function findNearby(lat, lng, radiusM = 500) {
+            const nearby = locations
+                .map((l, i) => ({ ...l, idx: i, dist: haversine(lat, lng, l.lat, l.lng) }))
+                .filter(l => l.dist <= radiusM)
+                .sort((a, b) => a.dist - b.dist)
+                .slice(0, 5);
+
+            if (nearby.length > 0) {
+                let html = `<b>📍 หมุดใกล้เคียง (${radiusM}ม.)</b><br>`;
+                nearby.forEach(l => {
+                    html += `<div style="margin:4px 0;font-size:12px;cursor:pointer;color:#1a73e8;"
+                        onclick="map.setView([${l.lat},${l.lng}],17)">
+                        • ${l.name || l.list} <span style="color:#888">${Math.round(l.dist)}ม.</span>
+                    </div>`;
+                });
+                // append ลง popup ที่มีอยู่
+                if (searchPinMarker) {
+                    const content = searchPinMarker.getPopup().getContent();
+                    searchPinMarker.getPopup().setContent(content + '<hr style="margin:8px 0">' + html);
+                    searchPinMarker.openPopup();
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════
+        // เปิด modal เพิ่มหมุด ณ lat/lng ที่กำหนด
+        // ═══════════════════════════════════════════════
+        window.openAddAtLatLng = function(lat, lng) {
+            map.closePopup();
+            editingIndex = -1;
+            document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
+            document.getElementById('modalName').value = '';
+            document.getElementById('modalList').value = '';
+            document.getElementById('modalCity').value = '';
+            document.getElementById('modalLat').value = lat.toFixed(6);
+            document.getElementById('modalLng').value = lng.toFixed(6);
+            document.getElementById('modalPinHint').style.display = 'flex';
+            document.getElementById('modalOverlay').classList.add('open');
+        };
+
+        // ═══════════════════════════════════════════════
+        // GPS ใน Modal
+        // ═══════════════════════════════════════════════
+        document.getElementById('btnUseGpsModal').addEventListener('click', () => {
+            if (!navigator.geolocation) { alert('Browser ไม่รองรับ GPS'); return; }
+            const btn = document.getElementById('btnUseGpsModal');
+            btn.classList.add('loading');
+            btn.textContent = '⏳ กำลังหาตำแหน่ง...';
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    document.getElementById('modalLat').value = pos.coords.latitude.toFixed(6);
+                    document.getElementById('modalLng').value = pos.coords.longitude.toFixed(6);
+                    btn.classList.remove('loading');
+                    btn.textContent = '✅ ใช้ตำแหน่งของฉันตอนนี้';
+                    // flash สีเขียว
+                    btn.style.background = '#d1fae5';
+                    setTimeout(() => { btn.style.background = ''; btn.textContent = '📍 ใช้ตำแหน่งของฉันตอนนี้'; }, 2000);
+                },
+                () => {
+                    btn.classList.remove('loading');
+                    btn.textContent = '📍 ใช้ตำแหน่งของฉันตอนนี้';
+                    alert('ไม่สามารถหาตำแหน่งได้ กรุณาอนุญาต GPS');
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
+
+        // ═══════════════════════════════════════════════
+        // คลิกแผนที่ → ถ้า modal เปิดอยู่ → อัปเดต lat/lng
+        // ═══════════════════════════════════════════════
         function getPopupHTML(loc, idx) {
             return `<div class="popup-content">
                 <h3>${loc.name || 'ไม่มีชื่อ'}</h3>
@@ -396,7 +727,7 @@
                     <button class="btn-popup-edit" onclick="measureFrom(${idx})" style="background:#059669;">📏 วัดระยะ</button>
                 </div>
                 <div class="popup-actions" style="margin-top:4px;">
-                    <button class="btn-popup-delete" onclick="confirmDelete(${idx})" style="font-size:11px;opacity:0.7;">� ลบจุดนี้</button>
+                    <button class="btn-popup-delete" onclick="confirmDelete(${idx})" style="font-size:11px;opacity:0.7;">🗑 ลบจุดนี้</button>
                 </div>
             </div>`;
         }
@@ -462,7 +793,6 @@
                 map.addLayer(markerCluster);
             }
 
-            // Heatmap layer
             if (heatLayer) map.removeLayer(heatLayer);
             if (heatmapMode) {
                 const heatData = filtered.map(l => [l.lat, l.lng, 1]);
@@ -539,35 +869,72 @@
 
         listToggle.onclick = () => listPanel.classList.toggle('open');
 
-        // === ADD MODE ===
+        // ═══════════════════════════════════════════════
+        // ADD MODE — คลิกแผนที่ปักหมุด
+        // ═══════════════════════════════════════════════
         const addBanner = document.getElementById('addBanner');
+        const dropPinPreview = document.getElementById('dropPinPreview');
+
         document.getElementById('btnAdd').onclick = () => {
             addMode = true;
             addBanner.classList.add('show');
-            map.getContainer().style.cursor = 'crosshair';
+            dropPinPreview.classList.add('show');
+            map.getContainer().style.cursor = 'none'; // ซ่อน cursor ใช้ emoji แทน
         };
-        document.getElementById('btnCancelAdd').onclick = () => {
-            addMode = false;
-            addBanner.classList.remove('show');
-            map.getContainer().style.cursor = '';
-        };
+        document.getElementById('btnCancelAdd').onclick = cancelAddMode;
 
-        map.on('click', (e) => {
-            if (!addMode) return;
+        function cancelAddMode() {
             addMode = false;
             addBanner.classList.remove('show');
+            dropPinPreview.classList.remove('show');
             map.getContainer().style.cursor = '';
+        }
+
+        // ย้าย preview emoji ตาม mouse
+        document.getElementById('map').addEventListener('mousemove', (e) => {
+            if (!addMode) return;
+            dropPinPreview.style.left = e.clientX + 'px';
+            dropPinPreview.style.top  = e.clientY + 'px';
+        });
+
+        // ═══════════════════════════════════════════════
+        // map.on('click') — รวมทั้ง addMode และ click-while-modal-open
+        // ═══════════════════════════════════════════════
+        map.on('click', (e) => {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            // ถ้า modal เปิดอยู่ → อัปเดต lat/lng ตรงๆ (click-to-pin)
+            if (document.getElementById('modalOverlay').classList.contains('open')) {
+                document.getElementById('modalLat').value = lat.toFixed(6);
+                document.getElementById('modalLng').value = lng.toFixed(6);
+                document.getElementById('modalPinHint').style.display = 'flex';
+                // flash
+                ['modalLat','modalLng'].forEach(id => {
+                    const el = document.getElementById(id);
+                    el.style.borderColor = '#059669';
+                    setTimeout(() => el.style.borderColor = '', 800);
+                });
+                return;
+            }
+
+            // addMode ปกติ
+            if (!addMode) return;
+            cancelAddMode();
             editingIndex = -1;
             document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
             document.getElementById('modalName').value = '';
             document.getElementById('modalList').value = '';
             document.getElementById('modalCity').value = '';
-            document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
-            document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
+            document.getElementById('modalLat').value = lat.toFixed(6);
+            document.getElementById('modalLng').value = lng.toFixed(6);
+            document.getElementById('modalPinHint').style.display = 'flex';
             document.getElementById('modalOverlay').classList.add('open');
         });
 
-        // === EDIT ===
+        // ═══════════════════════════════════════════════
+        // EDIT
+        // ═══════════════════════════════════════════════
         window.openEdit = function(idx) {
             const loc = locations[idx];
             if (!loc) return;
@@ -578,22 +945,19 @@
             document.getElementById('modalCity').value = loc.city || '';
             document.getElementById('modalLat').value = loc.lat;
             document.getElementById('modalLng').value = loc.lng;
+            document.getElementById('modalPinHint').style.display = 'flex';
             map.closePopup();
             document.getElementById('modalOverlay').classList.add('open');
         };
 
-        // === DELETE ===
+        // ═══════════════════════════════════════════════
+        // DELETE
+        // ═══════════════════════════════════════════════
         window.confirmDelete = function(idx) {
             const loc = locations[idx];
             if (!loc) return;
             const name = loc.name || loc.list || 'ไม่มีชื่อ';
-            if (!confirm(`⚠️ ยืนยันลบจุดนี้?
-
-"${name}"
-รายการ: ${loc.list}
-พิกัด: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}
-
-(กด Undo ได้ถ้าลบผิด)`)) return;
+            if (!confirm(`⚠️ ยืนยันลบจุดนี้?\n\n"${name}"\nรายการ: ${loc.list}\nพิกัด: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}\n\n(กด Undo ได้ถ้าลบผิด)`)) return;
             pushUndo();
             locations.splice(idx, 1);
             saveLocations();
@@ -602,13 +966,18 @@
         };
         window.deleteLoc = window.confirmDelete;
 
-        // === MODAL ===
+        // ═══════════════════════════════════════════════
+        // MODAL SAVE / CANCEL
+        // ═══════════════════════════════════════════════
         document.getElementById('modalCancel').onclick = () => {
             document.getElementById('modalOverlay').classList.remove('open');
+            document.getElementById('modalPinHint').style.display = 'none';
         };
         document.getElementById('modalOverlay').onclick = (e) => {
-            if (e.target === document.getElementById('modalOverlay'))
+            if (e.target === document.getElementById('modalOverlay')) {
                 document.getElementById('modalOverlay').classList.remove('open');
+                document.getElementById('modalPinHint').style.display = 'none';
+            }
         };
 
         document.getElementById('modalSave').onclick = () => {
@@ -627,13 +996,16 @@
             }
             saveLocations();
             document.getElementById('modalOverlay').classList.remove('open');
+            document.getElementById('modalPinHint').style.display = 'none';
             update();
             if (editingIndex < 0) {
                 map.setView([lat, lng], 15);
             }
         };
 
-        // === EXPORT ===
+        // ═══════════════════════════════════════════════
+        // EXPORT / IMPORT
+        // ═══════════════════════════════════════════════
         document.getElementById('btnExport').onclick = () => {
             const blob = new Blob([JSON.stringify(locations, null, 2)], {type: 'application/json'});
             const a = document.createElement('a');
@@ -641,11 +1013,7 @@
             a.download = 'bt_locations_export.json';
             a.click();
         };
-
-        // === IMPORT ===
-        document.getElementById('btnImport').onclick = () => {
-            document.getElementById('fileImport').click();
-        };
+        document.getElementById('btnImport').onclick = () => document.getElementById('fileImport').click();
         document.getElementById('fileImport').onchange = (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -667,21 +1035,20 @@
             e.target.value = '';
         };
 
-        // === MORE MENU ===
+        // ═══════════════════════════════════════════════
+        // MORE MENU
+        // ═══════════════════════════════════════════════
         document.getElementById('btnMore').onclick = (e) => {
             e.stopPropagation();
             document.getElementById('moreMenu').classList.toggle('show');
         };
-        document.addEventListener('click', () => {
-            document.getElementById('moreMenu').classList.remove('show');
-        });
+        document.addEventListener('click', () => document.getElementById('moreMenu').classList.remove('show'));
         document.getElementById('moreMenu').onclick = (e) => {
-            if (e.target.classList.contains('mm-item')) {
+            if (e.target.classList.contains('mm-item'))
                 document.getElementById('moreMenu').classList.remove('show');
-            }
         };
 
-        // === LEGEND ===
+        // LEGEND
         function updateLegend() {
             const panel = document.getElementById('legendPanel');
             if (!panel.classList.contains('show')) return;
@@ -690,12 +1057,11 @@
                 lists.map(l => `<div class="legend-item"><span class="legend-dot" style="background:${getListColor(l)}"></span>${l}</div>`).join('');
         }
         document.getElementById('btnLegend').onclick = () => {
-            const panel = document.getElementById('legendPanel');
-            panel.classList.toggle('show');
+            document.getElementById('legendPanel').classList.toggle('show');
             updateLegend();
         };
 
-        // === DARK MODE ===
+        // DARK MODE
         document.getElementById('btnDark').onclick = () => {
             const isDark = !document.body.classList.contains('dark');
             document.body.classList.toggle('dark', isDark);
@@ -711,7 +1077,7 @@
             }
         };
 
-        // === MAP TILE ===
+        // MAP TILE
         document.getElementById('btnTile').onclick = () => {
             if (document.body.classList.contains('dark')) {
                 map.removeLayer(darkTile);
@@ -725,19 +1091,11 @@
             document.getElementById('btnTile').textContent = '🗺️ ' + tileNames[currentTileIdx];
         };
 
-        // === ZOOM TO FILTERED ===
-        document.getElementById('listFilter').addEventListener('change', () => {
-            zoomToFiltered = true;
-            update();
-            zoomToFiltered = false;
-        });
-        document.getElementById('cityFilter').addEventListener('change', () => {
-            zoomToFiltered = true;
-            update();
-            zoomToFiltered = false;
-        });
+        // ZOOM TO FILTERED
+        document.getElementById('listFilter').addEventListener('change', () => { zoomToFiltered = true; update(); zoomToFiltered = false; });
+        document.getElementById('cityFilter').addEventListener('change', () => { zoomToFiltered = true; update(); zoomToFiltered = false; });
 
-        // === HEATMAP ===
+        // HEATMAP
         document.getElementById('btnHeatmap').onclick = () => {
             heatmapMode = !heatmapMode;
             const btn = document.getElementById('btnHeatmap');
@@ -746,13 +1104,10 @@
             update();
         };
 
-        // === BULK DELETE ===
+        // BULK DELETE
         document.getElementById('btnBulkDel').onclick = () => {
             const filtered = getFiltered();
-            if (filtered.length === locations.length) {
-                alert('กรุณาใช้ filter เลือกจุดที่ต้องการลบก่อน');
-                return;
-            }
+            if (filtered.length === locations.length) { alert('กรุณาใช้ filter เลือกจุดที่ต้องการลบก่อน'); return; }
             if (!filtered.length) { alert('ไม่มีจุดที่แสดงอยู่'); return; }
             if (!confirm(`ลบ ${filtered.length} จุดที่แสดงอยู่?`)) return;
             pushUndo();
@@ -763,7 +1118,7 @@
             alert(`ลบ ${filtered.length} จุดแล้ว`);
         };
 
-        // === UNDO ===
+        // UNDO
         document.getElementById('btnUndo').onclick = () => {
             if (!undoStack.length) return;
             locations = JSON.parse(undoStack.pop());
@@ -772,7 +1127,7 @@
             document.getElementById('btnUndo').disabled = undoStack.length === 0;
         };
 
-        // === STATS ===
+        // STATS
         document.getElementById('btnStats').onclick = () => {
             const listCount = {};
             const cityCount = {};
@@ -780,42 +1135,30 @@
                 listCount[l.list] = (listCount[l.list] || 0) + 1;
                 if (l.city) cityCount[l.city] = (cityCount[l.city] || 0) + 1;
             });
-            const sortedLists = Object.entries(listCount).sort((a,b) => b[1] - a[1]);
-            const sortedCities = Object.entries(cityCount).sort((a,b) => b[1] - a[1]);
+            const sortedLists = Object.entries(listCount).sort((a,b) => b[1]-a[1]);
+            const sortedCities = Object.entries(cityCount).sort((a,b) => b[1]-a[1]);
             let html = `<div style="margin-bottom:16px;"><strong>รวมทั้งหมด:</strong> ${locations.length} จุด</div>`;
             html += `<div style="margin-bottom:12px;"><strong>ตามรายการ (${sortedLists.length}):</strong></div>`;
             html += '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px;">';
             sortedLists.forEach(([name, count]) => {
                 const pct = (count / locations.length * 100).toFixed(1);
-                html += `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:4px 8px;">${name}</td>
-                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${count}</td>
-                    <td style="padding:4px 8px;text-align:right;color:#888;">${pct}%</td>
-                </tr>`;
+                html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:4px 8px;">${name}</td><td style="padding:4px 8px;text-align:right;font-weight:600;">${count}</td><td style="padding:4px 8px;text-align:right;color:#888;">${pct}%</td></tr>`;
             });
             html += '</table>';
             html += `<div style="margin-bottom:12px;"><strong>ตามเขต (${sortedCities.length}):</strong></div>`;
             html += '<table style="width:100%;font-size:13px;border-collapse:collapse;">';
             sortedCities.forEach(([name, count]) => {
-                html += `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:4px 8px;">${name}</td>
-                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${count}</td>
-                </tr>`;
+                html += `<tr style="border-bottom:1px solid #eee;"><td style="padding:4px 8px;">${name}</td><td style="padding:4px 8px;text-align:right;font-weight:600;">${count}</td></tr>`;
             });
             html += '</table>';
             document.getElementById('statsBody').innerHTML = html;
             document.getElementById('statsModalOverlay').classList.add('open');
         };
-        document.getElementById('statsClose').onclick = () => {
-            document.getElementById('statsModalOverlay').classList.remove('open');
-        };
+        document.getElementById('statsClose').onclick = () => document.getElementById('statsModalOverlay').classList.remove('open');
 
-        // === RESET ===
+        // RESET
         document.getElementById('btnReset').onclick = async () => {
-            const msg = '⚠️ ยืนยันการรีเซ็ต?\n\n'
-                + '• ข้อมูลที่แก้ไขจะหายทั้งหมด\n'
-                + '• ระบบจะดึงข้อมูลล่าสุดจาก GitHub\n\n'
-                + 'แนะนำ: กด Export สำรองข้อมูลก่อน';
+            const msg = '⚠️ ยืนยันการรีเซ็ต?\n\n• ข้อมูลที่แก้ไขจะหายทั้งหมด\n• ระบบจะดึงข้อมูลล่าสุดจาก GitHub\n\nแนะนำ: กด Export สำรองข้อมูลก่อน';
             if (!confirm(msg)) return;
             pushUndo();
             localStorage.removeItem(STORAGE_KEY);
@@ -823,19 +1166,19 @@
                 const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
                 if (res.ok) {
                     locations = await res.json();
-                    saveLocations();
-                    update();
+                    saveLocations(); update();
                     alert(`รีเซ็ตสำเร็จ! โหลด ${locations.length} จุดจาก GitHub`);
                     return;
                 }
-            } catch(e) { console.warn('Fetch from GitHub failed', e); }
+            } catch(e) {}
             locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
-            saveLocations();
-            update();
+            saveLocations(); update();
             alert('รีเซ็ตสำเร็จ (ใช้ข้อมูลเริ่มต้น)');
         };
 
-        // === SAVE TO GITHUB ===
+        // ═══════════════════════════════════════════════
+        // SAVE TO GITHUB
+        // ═══════════════════════════════════════════════
         const GITHUB_TOKEN_KEY = 'bt_github_token';
         const REPO_OWNER = 'valrinx';
         const REPO_NAME = 'bt-locations';
@@ -884,10 +1227,7 @@
             }
             await doGithubSave(token);
         };
-
-        document.getElementById('tokenCancel').onclick = () => {
-            document.getElementById('tokenModalOverlay').classList.remove('open');
-        };
+        document.getElementById('tokenCancel').onclick = () => document.getElementById('tokenModalOverlay').classList.remove('open');
         document.getElementById('tokenModalOverlay').onclick = (e) => {
             if (e.target === document.getElementById('tokenModalOverlay'))
                 document.getElementById('tokenModalOverlay').classList.remove('open');
@@ -906,13 +1246,10 @@
             btn.textContent = 'กำลังบันทึก...';
             try {
                 const jsonContent = JSON.stringify(locations, null, 2);
-                // 1) Save all_locations.json
                 const fileInfo = await githubGetFile('all_locations.json', token);
                 await githubPutFile('all_locations.json', jsonContent, fileInfo.sha, token, 'Update locations from web app');
-                // 2) Also update docs/all_locations.json for GitHub Pages
                 const docsInfo = await githubGetFile('docs/all_locations.json', token);
                 await githubPutFile('docs/all_locations.json', jsonContent, docsInfo.sha, token, 'Sync docs/all_locations.json');
-                // 3) Update docs/locations.js
                 const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';\n';
                 const jsInfo = await githubGetFile('docs/locations.js', token);
                 await githubPutFile('docs/locations.js', jsContent, jsInfo.sha, token, 'Sync docs/locations.js');
@@ -934,7 +1271,7 @@
         // Init
         update();
 
-        // Background sync: fetch latest data from GitHub
+        // Background sync
         (async () => {
             try {
                 const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
@@ -944,8 +1281,7 @@
                 const fresh = JSON.parse(text);
                 if (fresh.length > 0 && fresh.length >= locations.length && JSON.stringify(fresh) !== JSON.stringify(locations)) {
                     locations = fresh;
-                    saveLocations();
-                    update();
+                    saveLocations(); update();
                     console.log('Synced', fresh.length, 'locations from GitHub');
                 }
             } catch(e) {}
