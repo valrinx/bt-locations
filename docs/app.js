@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.4.3';
+const APP_VERSION = 'v5.4.4';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -472,10 +472,10 @@ function invalidateCache() {
 function update() {
     const filtered = getFiltered();
     renderMarkers(filtered);
-    // render list panel เฉพาะเมื่อเปิดอยู่ — ไม่ทำงานเบื้องหลัง
-    if (document.getElementById('listPanel').classList.contains('open')) {
+    // render list panel เฉพาะเมื่อเปิดอยู่ และไม่ได้อยู่ใน route mode
+    if (document.getElementById('listPanel').classList.contains('open') && !routeMode) {
         renderListPanel(filtered);
-    } else {
+    } else if (!routeMode) {
         document.getElementById('listPanelTitle').textContent = filtered.length + ' สถานที่';
     }
     updateChipLabels();
