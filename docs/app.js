@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.5.6';
+const APP_VERSION = 'v5.6.0';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -14,7 +14,11 @@ const TRACKING_KEY = 'bt_tracked_paths';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
 // Sanitize DMS coordinate names
 function _cleanDMSName(n){return(n&&/\d+[°ºᵒ˚]/.test(n))?'':n;}
-// Worker URL: default → Cloudflare Worker, override via localStorage
+// ── Supabase ──
+const _SB_URL = 'https://uaemvtttfeapvofqhnwoo.supabase.co';
+const _SB_KEY = 'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh';
+const _sb = supabase.createClient(_SB_URL, _SB_KEY);
+// Worker URL: kept for fallback compat
 const DEFAULT_WORKER_URL = 'https://bt-locations.teenson4.workers.dev';
 function getWorkerUrl(){return localStorage.getItem(WORKER_URL_KEY)||DEFAULT_WORKER_URL;}
 function getApiKey(){return localStorage.getItem(API_KEY_KEY)||'';}
@@ -189,24 +193,42 @@ function _updateSyncBadge() {
 setInterval(_updateSyncBadge, 10000);
 
 let _pushInFlight = false;
-function _canSync(){return useWorker()||!!getToken();}
+function _canSync(){return true;} // Supabase always available
 const _debouncedPush = debounce(async () => {
     if (_pushInFlight) return;
-    if (!_canSync()) return;
     _pushInFlight = true;
     _setSyncStatus('syncing');
     try {
-        const token = getToken();
-        const locs = locations.map(l => { const { photo, ...rest } = l; return rest; });
-        const shaData = await githubFile('all_locations.json', token);
-        await _pushToGithub(token, locs, shaData.sha);
+        const rows = locations.map(l => ({
+            name: _cleanDMSName(l.name)||'',
+            lat: l.lat, lng: l.lng,
+            list: l.list||'', city: l.city||'',
+            note: l.note||'',
+            tags: Array.isArray(l.tags)?l.tags.join(','):(l.tags||''),
+            photo: l.photo||'',
+            added_by: localStorage.getItem('bt_username')||'',
+            updated_at: new Date(l.updatedAt||Date.now()).toISOString(),
+            id: l.sb_id||undefined,
+        }));
+        // Upsert by id if exists, otherwise insert
+        const toUpsert = rows.filter(r=>r.id);
+        const toInsert = rows.filter(r=>!r.id);
+        if(toUpsert.length){
+            const {error} = await _sb.from('locations').upsert(toUpsert,{onConflict:'id'});
+            if(error)throw new Error(error.message);
+        }
+        if(toInsert.length){
+            const {data,error} = await _sb.from('locations').insert(toInsert.map(({id,...r})=>r)).select('id,lat,lng');
+            if(error)throw new Error(error.message);
+            // Attach returned Supabase IDs back to local locations
+            if(data){data.forEach(row=>{const loc=locations.find(l=>l.lat===row.lat&&l.lng===row.lng);if(loc)loc.sb_id=row.id;});}
+        }
         _clearDirty();
-        _saveBaseSnapshot(locs, null);
         _setSyncStatus('ok');
         _lastSyncTime = Date.now();
-        console.log('Pushed to GitHub:', locs.length, 'locs');
+        _writeCache();
     } catch (err) {
-        console.warn('Push failed (will retry):', err.message);
+        console.warn('Supabase push failed:', err.message);
         _setSyncStatus('error');
     } finally { _pushInFlight = false; }
 }, 2000);
@@ -2283,11 +2305,9 @@ function doBulkDel(){
 }
 
 async function doReset(){
-    showConfirm('🔄','รีเซ็ตข้อมูล?','ข้อมูลที่แก้ไขจะหาย ระบบจะดึงข้อมูลใหม่จาก GitHub',async()=>{
+    showConfirm('🔄','รีเซ็ตข้อมูล?','ข้อมูลที่แก้ไขจะหาย ระบบจะดึงข้อมูลใหม่จาก Supabase',async()=>{
         pushUndo();localStorage.removeItem(STORAGE_KEY);
-        try{const res=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
-            if(res.ok){locations=await res.json();saveLocations();invalidateCache();update();showToast(`โหลด ${locations.length} จุดจาก GitHub`,false,true);return;}}catch{}
-        locations=JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));saveLocations();invalidateCache();update();showToast('รีเซ็ตสำเร็จ');
+        await doSync(false);
     });
     closeInfo();
 }
@@ -2295,84 +2315,19 @@ async function doReset(){
 function toggleDark(){document.body.classList.toggle('dark');showToast(document.body.classList.contains('dark')?'Dark mode':'Light mode');closeInfo();}
 
 // ════════════════════════════════════════════
-// GITHUB SAVE
+// SUPABASE SAVE (replaces GitHub save)
 // ════════════════════════════════════════════
-function getToken(){return localStorage.getItem(GITHUB_TOKEN_KEY)||sessionStorage.getItem(GITHUB_TOKEN_KEY)||'';}
-function setToken(t){localStorage.setItem(GITHUB_TOKEN_KEY,t);sessionStorage.removeItem(GITHUB_TOKEN_KEY);}
+function getToken(){return '';}
+function setToken(t){}
 
-document.getElementById('btnGithubSave').onclick=doGithubSaveFlow;
-
-async function doGithubSaveFlow(){
-    if(!_canSync()){
-        // Pre-fill existing values
-        document.getElementById('workerUrlInput').value=getWorkerUrl();
-        document.getElementById('apiKeyInput').value=getApiKey();
-        document.getElementById('tokenInput').value=getToken();
-        document.getElementById('tokenModalOverlay').classList.add('open');
-        return;
-    }
-    await doGithubSave(getToken());
-}
+document.getElementById('btnGithubSave').onclick=()=>{showToast('⏳ กำลังซิงค์...');_debouncedPush.flush?_debouncedPush.flush():_debouncedPush();};
 document.getElementById('tokenCancel').onclick=()=>document.getElementById('tokenModalOverlay').classList.remove('open');
-document.getElementById('tokenSave').onclick=async()=>{
-    const workerUrl=document.getElementById('workerUrlInput').value.trim().replace(/\/$/,'');
-    const apiKey=document.getElementById('apiKeyInput').value.trim();
-    const token=document.getElementById('tokenInput').value.trim();
-
-    // Save Worker settings
-    if(workerUrl){localStorage.setItem(WORKER_URL_KEY,workerUrl);}else{localStorage.removeItem(WORKER_URL_KEY);}
-    if(apiKey){localStorage.setItem(API_KEY_KEY,apiKey);}else{localStorage.removeItem(API_KEY_KEY);}
-    if(token){setToken(token);}
-
-    if(!workerUrl&&!token){showToast('กรุณากรอก Worker URL หรือ Token',true);return;}
-    document.getElementById('tokenModalOverlay').classList.remove('open');
-    await doGithubSave(token);
-};
+document.getElementById('tokenSave').onclick=()=>document.getElementById('tokenModalOverlay').classList.remove('open');
 document.getElementById('tokenModalOverlay').onclick=e=>{if(e.target===document.getElementById('tokenModalOverlay'))document.getElementById('tokenModalOverlay').classList.remove('open');};
 
-function _workerHeaders(){
-    const h={'Content-Type':'application/json'};
-    const key=getApiKey();
-    if(key)h['X-API-Key']=key;
-    return h;
-}
-async function githubFile(path,token){
-    if(useWorker()){
-        const r=await fetch(`${getWorkerUrl()}/api/file?path=${encodeURIComponent(path)}`,{headers:_workerHeaders()});
-        if(!r.ok)throw new Error(`Worker ${r.status}`);
-        const d=await r.json();
-        if(d.error)throw new Error(d.error);
-        return{sha:d.sha};
-    }
-    const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`,{headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}});
-    if(r.status===404)return{sha:null};if(!r.ok)throw new Error(`GitHub ${r.status}`);const d=await r.json();return{sha:d.sha};
-}
-async function githubPut(path,content,sha,token,msg){
-    const b64=btoa(unescape(encodeURIComponent(content)));
-    if(useWorker()){
-        const r=await fetch(`${getWorkerUrl()}/api/file`,{method:'PUT',headers:_workerHeaders(),body:JSON.stringify({path,content:b64,sha,message:msg})});
-        if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||`Worker ${r.status}`);}
-        return;
-    }
-    const b={message:msg,content:b64};if(sha)b.sha=sha;
-    const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`,{method:'PUT',headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(b)});
-    if(!r.ok){const e=await r.json();throw new Error(e.message||`GitHub ${r.status}`);}
-}
-
-async function doGithubSave(token){
-    const btn=document.getElementById('btnGithubSave'); btn.style.color='#fbbc04';
-    showToast('⏳ กำลังซิงค์...');
-    try{
-        await doSync(false);
-        showToast('✅ Sync สำเร็จ',false,true);
-        startAutoSync(); // Ensure auto-sync is running after first manual save
-    }catch(err){
-        if(err.message.includes('401')||err.message.includes('credentials')){localStorage.removeItem(GITHUB_TOKEN_KEY);sessionStorage.removeItem(GITHUB_TOKEN_KEY);showToast('🔑 Token ไม่ถูกต้อง',true);}
-        else if(err.message.includes('404')){showToast('❌ ไม่พบ repo หรือไฟล์',true);}
-        else if(err.message.includes('422')){showToast('❌ SHA ไม่ตรง ลอง Sync อีกครั้ง',true);}
-        else showToast('❌ '+err.message,true);
-    }finally{btn.style.color='';}
-}
+function _workerHeaders(){return{'Content-Type':'application/json'};}
+async function githubFile(path,token){return{sha:null};}
+async function githubPut(path,content,sha,token,msg){}
 
 // ════════════════════════════════════════════
 // CONFIRM DIALOG
@@ -2547,9 +2502,63 @@ style.textContent=`.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#f
 document.head.appendChild(style);
 
 // ════════════════════════════════════════════
-// MULTI-USER SYNC (GitHub-based polling + merge)
+// SUPABASE SYNC — load + realtime
 // ════════════════════════════════════════════
+async function doSync(silent=true){
+    if(_syncing)return;
+    _syncing=true;
+    _setSyncStatus('syncing');
+    try{
+        const {data,error}=await _sb.from('locations').select('*').order('created_at',{ascending:true});
+        if(error)throw new Error(error.message);
+        const loaded=data.map(r=>normalizeLocation({
+            sb_id:r.id, name:r.name||'', lat:r.lat, lng:r.lng,
+            list:r.list||'', city:r.city||'', note:r.note||'',
+            tags:r.tags?r.tags.split(',').filter(Boolean):[],
+            photo:r.photo||'',
+            updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now(),
+        }));
+        locations=loaded;
+        _writeCache();invalidateCache();update();
+        _clearDirty();_setSyncStatus('ok');_lastSyncTime=Date.now();
+        if(!silent)showToast(`✅ โหลด ${locations.length} จุดจาก Supabase`,false,true);
+    }catch(err){
+        _setSyncStatus('error');
+        if(!silent)showToast('❌ Sync: '+err.message,true);
+    }finally{_syncing=false;}
+}
+
 function _locKey(l){return l.lat.toFixed(6)+','+l.lng.toFixed(6);}
+
+// Realtime subscription — all 8 users see live changes
+function startRealtimeSync(){
+    _sb.channel('locations-rt')
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'locations'},payload=>{
+            const r=payload.new;
+            const exists=locations.find(l=>l.sb_id===r.id);
+            if(!exists){
+                const loc=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
+                locations.push(loc);
+                _writeCache();invalidateCache();update();
+                showToast(`📍 จุดใหม่: "${r.name||'ไม่มีชื่อ'}"`);
+            }
+        })
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locations'},payload=>{
+            const r=payload.new;
+            const idx=locations.findIndex(l=>l.sb_id===r.id);
+            if(idx>=0){
+                const photo=locations[idx].photo;
+                locations[idx]=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:photo||r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
+                _writeCache();invalidateCache();update();
+            }
+        })
+        .on('postgres_changes',{event:'DELETE',schema:'public',table:'locations'},payload=>{
+            const id=payload.old.id;
+            locations=locations.filter(l=>l.sb_id!==id);
+            _writeCache();invalidateCache();update();
+        })
+        .subscribe();
+}
 
 function mergeLocs(local, remote, base){
     // 3-way merge with DETERMINISTIC conflict resolution via updatedAt
@@ -2634,257 +2643,28 @@ function setSyncIndicator(state){
     if(state)btn.classList.add('sync-'+state);
 }
 
-async function doSync(silent=true){
-    if(_syncing)return;
-    const token=getToken();
-    const hasWorker=useWorker();
-    if(!token&&!hasWorker){if(!silent)showToast('กรุณาตั้ง Worker URL หรือใส่ Token',true);return;}
-    _syncing=true;
-    _setSyncStatus('syncing');
-    try{
-        let res, data;
-        if(hasWorker){
-            res=await fetch(`${getWorkerUrl()}/api/file?path=all_locations.json`,{headers:_workerHeaders()});
-            if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);_setSyncStatus('error');return;}
-            data=await res.json();
-            if(data.error){throw new Error(data.error);}
-        }else{
-            res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`,{
-                headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}
-            });
-            if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);_setSyncStatus('error');return;}
-            data=await res.json();
-        }
-        const remoteSha=data.sha;
-        const remoteContent=JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))));
-
-        // Use PROPER base snapshot (set at load time)
-        const base=_getBaseSnapshot();
-        const baseSha=_getBaseSha();
-        const localStripped=locations.map(l=>{const{photo,...rest}=l;return rest;});
-
-        if(remoteSha===baseSha||remoteSha===localStorage.getItem(SYNC_SHA_KEY)){
-            // Remote unchanged since our base
-            const localJson=JSON.stringify(localStripped);
-            const baseJson=base?JSON.stringify(base):null;
-            if(localJson!==baseJson&&baseJson){
-                await _pushToGithub(token, localStripped, remoteSha);
-                _saveBaseSnapshot(localStripped, null);
-                _clearDirty();
-                if(!silent)showToast('⬆️ Pushed local changes',false,true);
-            } else {
-                if(!silent)showToast('✅ ข้อมูลตรงกัน',false,true);
-            }
-            _setSyncStatus('ok');
-        } else {
-            // Remote changed since our base
-            const localJson=JSON.stringify(localStripped);
-            const baseJson=base?JSON.stringify(base):null;
-            if(localJson===baseJson||!base){
-                // No local changes — just pull
-                _applyRemote(remoteContent, remoteSha);
-                if(!silent)showToast(`⬇️ ดึง ${remoteContent.length} จุดจาก GitHub`,false,true);
-                console.log('Sync: pulled',remoteContent.length,'locs');
-            } else {
-                // BOTH changed — 3-way merge with REAL base
-                console.warn('3-WAY MERGE needed: base has', (base||[]).length, 'local has', localStripped.length, 'remote has', remoteContent.length);
-                const result=mergeLocs(localStripped, remoteContent, base);
-                const photoMap=new Map();
-                locations.forEach(l=>{if(l.photo)photoMap.set(_locKey(l),l.photo);});
-                result.merged.forEach(l=>{
-                    const p=photoMap.get(_locKey(l));
-                    if(p)l.photo=p;
-                });
-                locations=result.merged;
-                _writeCache();invalidateCache();update();
-                const mergedStripped=locations.map(l=>{const{photo,...rest}=l;return rest;});
-                await _pushToGithub(token, mergedStripped, remoteSha);
-                _saveBaseSnapshot(mergedStripped, null);
-                _clearDirty();
-                const msg=`🔀 Merge: +${result.added} -${result.removed}${result.conflicts?' ⚠️'+result.conflicts+' conflicts':''}`;
-                if(!silent)showToast(msg,result.conflicts>0);
-                console.log('Sync: merged',msg);
-            }
-            _setSyncStatus('ok');
-        }
-        _lastSyncTime=Date.now();
-    }catch(err){
-        console.warn('Sync error:',err);
-        _setSyncStatus('error');
-        if(!silent)showToast('❌ Sync: '+err.message,true);
-    }finally{_syncing=false;}
-}
-
-function _applyRemote(remote, sha){
-    const photoMap=new Map();
-    locations.forEach(l=>{if(l.photo)photoMap.set(_locKey(l),l.photo);});
-    locations=remote.map(l=>{
-        const p=photoMap.get(_locKey(l));
-        const n=normalizeLocation(l);
-        return p?{...n,photo:p}:n;
-    });
-    _writeCache();invalidateCache();update();
-    // Save as new base snapshot
-    _saveBaseSnapshot(remote, sha);
-    localStorage.setItem(SYNC_SHA_KEY,sha);
-    localStorage.setItem(SYNC_SNAPSHOT_KEY,JSON.stringify(remote));
-    _clearDirty();
-    _setSyncStatus('ok');
-}
-
-async function _pushToGithub(token, locs, currentSha){
-    const json=JSON.stringify(locs,null,2);
-    const locJs='const DEFAULT_LOCATIONS='+JSON.stringify(locs)+';\n';
-    // Push all 3 files
-    await githubPut('all_locations.json',json,currentSha,token,'Sync from web');
-    const f2=await githubFile('docs/all_locations.json',token);
-    await githubPut('docs/all_locations.json',json,f2.sha,token,'Sync docs');
-    const f3=await githubFile('docs/locations.js',token);
-    await githubPut('docs/locations.js',locJs,f3.sha,token,'Sync locations.js');
-    // Update local snapshot
-    const f1=await githubFile('all_locations.json',token);
-    localStorage.setItem(SYNC_SHA_KEY,f1.sha);
-    localStorage.setItem(SYNC_SNAPSHOT_KEY,JSON.stringify(locs));
-}
 
 let _visibilityBound = false;
 function startAutoSync(){
+    startRealtimeSync();
+    // Periodic pull every 60s as fallback
     if(_syncTimer)clearInterval(_syncTimer);
     _syncTimer=setInterval(()=>{
-        if(_canSync()&&document.visibilityState==='visible')doSync(true);
-    },SYNC_INTERVAL);
-    // Bind visibility listener ONCE only
-    if (!_visibilityBound) {
-        _visibilityBound = true;
+        if(document.visibilityState==='visible'&&Date.now()-_lastSyncTime>55000)doSync(true);
+    },60000);
+    if(!_visibilityBound){
+        _visibilityBound=true;
         document.addEventListener('visibilitychange',()=>{
-            if(document.visibilityState==='visible'&&_canSync()&&Date.now()-_lastSyncTime>10000)doSync(true);
+            if(document.visibilityState==='visible'&&Date.now()-_lastSyncTime>15000)doSync(true);
         });
     }
 }
 
-// Initial load: GitHub = SINGLE source of truth
-// Base snapshot = the version we loaded → used for 3-way merge later
+// Initial load: Supabase = SINGLE source of truth
 (async()=>{
-    const token = getToken();
-    let ghData = null, ghSha = null;
-
-    // Crash recovery: check for backup if main cache is corrupted
-    if (!locations.length) {
-        try {
-            const backup = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
-            if (backup && backup.length) {
-                locations = backup.map(normalizeLocation);
-                console.warn('Crash recovery: restored', locations.length, 'locs from backup');
-            }
-        } catch (e) {}
-    }
-
-    // 1. Fetch from GitHub (source of truth) — via Worker if configured
-    const hasWorker = useWorker();
-    try {
-        if (hasWorker) {
-            const res = await fetch(`${getWorkerUrl()}/api/file?path=all_locations.json`, { headers: _workerHeaders() });
-            if (res.ok) {
-                const d = await res.json();
-                if (d.content && d.sha) {
-                    ghData = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))));
-                    ghSha = d.sha;
-                }
-            }
-        } else if (token) {
-            const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
-                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-            });
-            if (res.ok) {
-                const d = await res.json();
-                ghData = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))));
-                ghSha = d.sha;
-            }
-        }
-        if (!ghData) {
-            const rawUrl = hasWorker ? `${getWorkerUrl()}/api/raw?path=all_locations.json` : `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`;
-            const res = await fetch(rawUrl);
-            if (res.ok) ghData = await res.json();
-        }
-    } catch (e) { console.warn('GitHub fetch failed:', e.message); }
-
-    // 2. Resolve: dirty detection + conflict resolution
-    if (ghData && ghData.length > 0) {
-        if (_isDirty()) {
-            const base = _getBaseSnapshot(); // REAL base from last load
-            const localStripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
-            const ghJson = JSON.stringify(ghData);
-            const baseJson = base ? JSON.stringify(base) : null;
-
-            if (baseJson && ghJson !== baseJson) {
-                // CONFLICT: both local AND GitHub changed
-                console.warn('CONFLICT: local dirty + GitHub changed since base');
-                console.warn('Base:', (base||[]).length, 'Local:', localStripped.length, 'Remote:', ghData.length);
-                const result = mergeLocs(localStripped, ghData, base);
-                const photoMap = new Map();
-                locations.forEach(l => { if (l.photo) photoMap.set(_locKey(l), l.photo); });
-                locations = result.merged.map(l => {
-                    const n = normalizeLocation(l);
-                    const p = photoMap.get(_locKey(n));
-                    return p ? { ...n, photo: p } : n;
-                });
-                _writeCache();
-                invalidateCache(); update();
-                if (token && ghSha) {
-                    try {
-                        const mergedStripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
-                        await _pushToGithub(token, mergedStripped, ghSha);
-                        _saveBaseSnapshot(mergedStripped, null);
-                        _clearDirty();
-                        _setSyncStatus('ok');
-                        const msg = `🔀 Merge: +${result.added} -${result.removed}${result.conflicts ? ' ⚠️' + result.conflicts + ' conflicts' : ''}`;
-                        showToast(msg, result.conflicts > 0);
-                    } catch (e) { console.warn('Merge push failed:', e); _setSyncStatus('error'); }
-                }
-            } else {
-                // GitHub unchanged — local wins, push it
-                console.log('Dirty: local changes, GitHub unchanged → pushing');
-                if (token) _debouncedPush();
-            }
-        } else {
-            // Not dirty — GitHub wins (normal load)
-            const photoMap = new Map();
-            locations.forEach(l => { if (l.photo) photoMap.set(_locKey(l), l.photo); });
-            locations = ghData.map(l => {
-                const n = normalizeLocation(l);
-                const p = photoMap.get(_locKey(n));
-                return p ? { ...n, photo: p } : n;
-            });
-            _writeCache();
-            if (ghSha) {
-                localStorage.setItem(SYNC_SHA_KEY, ghSha);
-                localStorage.setItem(SYNC_SNAPSHOT_KEY, JSON.stringify(ghData));
-            }
-            _clearDirty();
-            invalidateCache(); update();
-            console.log('Loaded from GitHub:', locations.length, 'locs');
-        }
-        // ★ SAVE BASE SNAPSHOT — the "common ancestor" for future merges
-        const stripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
-        _saveBaseSnapshot(stripped, ghSha);
-    } else {
-        // GitHub unavailable — use cache
-        console.log('GitHub unavailable, using cache:', locations.length, 'locs');
-        if (_isDirty()) {
-            showToast('⚠️ มีข้อมูลที่ยังไม่ได้ sync', true);
-            _setSyncStatus('dirty');
-        }
-    }
-
-    // Background retry: if still dirty, retry push every 5s
-    setInterval(() => {
-        if (_isDirty() && _canSync() && !_pushInFlight && document.visibilityState === 'visible') {
-            console.log('Background retry: pushing dirty changes...');
-            _debouncedPush();
-        }
-    }, 5000);
-
-    if (_canSync()) startAutoSync();
+    // Initial load from Supabase (source of truth)
+    await doSync(false);
+    startAutoSync();
 })();
 
 // ════════════════════════════════════════════
