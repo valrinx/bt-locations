@@ -1146,16 +1146,18 @@ function clearRoute(){
     document.getElementById('chipRoute').classList.remove('active');
 }
 
-function doRoute(){
+async function doRoute(){
     const filtered=getFiltered();
     if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
     if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
+
+    showToast('🛤️ กำลังวางแผนเส้นทาง...');
 
     // Start from GPS location or first point
     let startLat=myLatLng?myLatLng.lat:filtered[0].lat;
     let startLng=myLatLng?myLatLng.lng:filtered[0].lng;
 
-    // Nearest-neighbor TSP
+    // Nearest-neighbor TSP ordering
     const remaining=[...filtered];
     const ordered=[];
     let curLat=startLat, curLng=startLng;
@@ -1170,38 +1172,95 @@ function doRoute(){
         curLat=next.lat;curLng=next.lng;
     }
 
-    // Calculate total distance
-    let totalDist=0;
-    if(myLatLng)totalDist+=haversine(myLatLng.lat,myLatLng.lng,ordered[0].lat,ordered[0].lng);
-    for(let i=0;i<ordered.length-1;i++){
-        totalDist+=haversine(ordered[i].lat,ordered[i].lng,ordered[i+1].lat,ordered[i+1].lng);
+    // Build waypoints: [GPS] + ordered stops
+    const waypoints=[];
+    if(myLatLng)waypoints.push([myLatLng.lng,myLatLng.lat]);
+    ordered.forEach(l=>waypoints.push([l.lng,l.lat]));
+
+    // Try OSRM real road routing (max ~100 waypoints per request)
+    let roadCoords=null, totalDistM=0, totalDurS=0, useOSRM=false;
+    const OSRM_LIMIT = 100;
+
+    if(waypoints.length <= OSRM_LIMIT){
+        try{
+            // Split into chunks of 25 waypoints (OSRM performs better)
+            const CHUNK=25;
+            const allCoords=[];
+            totalDistM=0; totalDurS=0;
+            for(let i=0;i<waypoints.length-1;i+=CHUNK-1){
+                const chunk=waypoints.slice(i, Math.min(i+CHUNK, waypoints.length));
+                if(chunk.length<2)break;
+                const coordStr=chunk.map(c=>c[0]+','+c[1]).join(';');
+                const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
+                const res=await fetch(url);
+                const data=await res.json();
+                if(data.routes&&data.routes.length){
+                    const r=data.routes[0];
+                    const coords=r.geometry.coordinates.map(c=>[c[1],c[0]]);
+                    // Avoid duplicate point at chunk boundaries
+                    if(allCoords.length&&coords.length)coords.shift();
+                    allCoords.push(...coords);
+                    totalDistM+=r.distance;
+                    totalDurS+=r.duration;
+                }else{throw new Error('No route');}
+            }
+            roadCoords=allCoords;
+            useOSRM=true;
+        }catch(e){
+            console.warn('OSRM route failed, using straight lines:',e.message);
+        }
     }
 
-    // Draw polyline + numbered markers in a layer group
+    // Fallback: straight-line distance
+    if(!useOSRM){
+        totalDistM=0;
+        if(myLatLng)totalDistM+=haversine(myLatLng.lat,myLatLng.lng,ordered[0].lat,ordered[0].lng);
+        for(let i=0;i<ordered.length-1;i++){
+            totalDistM+=haversine(ordered[i].lat,ordered[i].lng,ordered[i+1].lat,ordered[i+1].lng);
+        }
+    }
+
+    // Draw on map
     if(routeLine){map.removeLayer(routeLine);}
     const group=L.layerGroup();
-    const pts=[];
-    if(myLatLng)pts.push([myLatLng.lat,myLatLng.lng]);
-    ordered.forEach(l=>pts.push([l.lat,l.lng]));
-    L.polyline(pts,{color:'#4285f4',weight:3,opacity:0.8,dashArray:'8,6'}).addTo(group);
 
+    if(useOSRM&&roadCoords){
+        // Real road polyline
+        L.polyline(roadCoords,{color:'#4285f4',weight:4,opacity:0.85}).addTo(group);
+    }else{
+        // Straight-line fallback (dashed)
+        const pts=[];
+        if(myLatLng)pts.push([myLatLng.lat,myLatLng.lng]);
+        ordered.forEach(l=>pts.push([l.lat,l.lng]));
+        L.polyline(pts,{color:'#4285f4',weight:3,opacity:0.8,dashArray:'8,6'}).addTo(group);
+    }
+
+    // Numbered markers
+    const allPts=[];
+    if(myLatLng)allPts.push([myLatLng.lat,myLatLng.lng]);
     ordered.forEach((loc,i)=>{
+        allPts.push([loc.lat,loc.lng]);
         L.circleMarker([loc.lat,loc.lng],{radius:10,color:'#fff',fillColor:'#4285f4',fillOpacity:1,weight:2})
             .bindTooltip(String(i+1),{permanent:true,direction:'center',className:'route-number-tooltip'})
             .addTo(group);
     });
 
     routeLine=group.addTo(map);
-    map.fitBounds(L.latLngBounds(pts),{padding:[60,60]});
+    map.fitBounds(L.latLngBounds(allPts),{padding:[60,60]});
     routeMode=true;
     document.getElementById('chipRoute').classList.add('active');
-    showToast(`🛤️ เส้นทาง ${ordered.length} จุด · ${formatDist(totalDist)}`,false,true);
+
+    // Format summary
+    const distText=formatDist(totalDistM);
+    const etaText=useOSRM?` · ~${Math.round(totalDurS/60)} นาที`:'';
+    const modeText=useOSRM?'🛣️':'📏';
+    showToast(`${modeText} เส้นทาง ${ordered.length} จุด · ${distText}${etaText}`,false,true);
 
     // Show list panel with route order
     const lp=document.getElementById('listPanel');
     lp.classList.add('open');
     renderListPanel(ordered);
-    document.getElementById('listPanelTitle').textContent=`🛤️ เส้นทาง · ${formatDist(totalDist)}`;
+    document.getElementById('listPanelTitle').textContent=`${modeText} เส้นทาง · ${distText}${etaText}`;
 }
 
 document.getElementById('chipRoute').onclick=()=>{
