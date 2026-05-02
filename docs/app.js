@@ -6,8 +6,16 @@ const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
 const SYNC_SHA_KEY = 'bt_sync_sha';
 const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
+const FAVORITES_KEY = 'bt_favorites';
+const TRACKING_KEY = 'bt_tracked_paths';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
 const undoStack = [], redoStack = [], MAX_UNDO = 20;
+let favorites = new Set((() => { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; } })());
+function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); }
+function favKey(loc) { return `${loc.lat.toFixed(6)},${loc.lng.toFixed(6)}`; }
+function toggleFavorite(loc) { const k = favKey(loc); if (favorites.has(k)) favorites.delete(k); else favorites.add(k); saveFavorites(); }
+function isFavorite(loc) { return favorites.has(favKey(loc)); }
+let filterFavorites = false;
 const MAX_CHANGELOG = 200;
 const SYNC_INTERVAL = 30000; // 30 seconds
 let _syncTimer = null, _syncing = false, _lastSyncTime = 0;
@@ -192,7 +200,8 @@ function getFiltered() {
         const mc = !filterCity || l.city===filterCity;
         const ms = !q||(l.name||'').toLowerCase().includes(q)||l.list.toLowerCase().includes(q)||(l.city||'').toLowerCase().includes(q)||(l.tags||[]).some(t=>t.toLowerCase().includes(q))||matchCoords(l,q);
         const mn = !nearbyMode||!myLatLng||haversine(myLatLng.lat,myLatLng.lng,l.lat,l.lng)<=nearbyRadius;
-        return ml&&mc&&ms&&mn;
+        const mf = !filterFavorites||isFavorite(l);
+        return ml&&mc&&ms&&mn&&mf;
     });
 }
 
@@ -218,12 +227,13 @@ function _buildMarkerCache() {
         const color = getColor(loc.list);
         // ใช้ DivIcon วงกลมแทน circleMarker — ทำงานกับ cluster ได้ 100%
         const size = 18;
+        const fav = isFavorite(loc);
         const icon = L.divIcon({
             className: '',
             html: `<div style="
                 width:${size}px;height:${size}px;border-radius:50%;
-                background:${color};border:2.5px solid #fff;
-                box-shadow:0 1px 4px rgba(0,0,0,.35);
+                background:${color};border:2.5px solid ${fav?'#f9ab00':'#fff'};
+                box-shadow:0 1px 4px rgba(0,0,0,.35)${fav?',0 0 6px rgba(249,171,0,.6)':''};
                 box-sizing:border-box;
                 will-change:transform;
             " data-idx="${idx}"></div>`,
@@ -385,6 +395,14 @@ function showPlaceCard(loc, idx) {
                 <span class="place-action-icon">🔗</span>
                 <span class="place-action-label">แชร์</span>
             </button>
+            <button class="place-action-btn green" onclick="doDirectionsTo(${idx})">
+                <span class="place-action-icon">🧭</span>
+                <span class="place-action-label">นำทาง</span>
+            </button>
+            <button class="place-action-btn orange" onclick="doToggleFavorite(${idx})">
+                <span class="place-action-icon">${isFavorite(loc)?'⭐':'☆'}</span>
+                <span class="place-action-label">${isFavorite(loc)?'ยกเลิก':'ชอบ'}</span>
+            </button>
             <button class="place-action-btn red" onclick="doConfirmDelete(${idx})">
                 <span class="place-action-icon">🗑️</span>
                 <span class="place-action-label">ลบ</span>
@@ -426,6 +444,7 @@ function fallbackCopy(text) {
 }
 
 function closePlaceCard() { document.getElementById('placeCard').classList.remove('open'); }
+window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'⭐ เพิ่มในรายการโปรดแล้ว':'☆ นำออกจากรายการโปรดแล้ว');};
 document.getElementById('placeCardClose').onclick = closePlaceCard;
 
 // ════════════════════════════════════════════
@@ -520,6 +539,8 @@ function renderSearchResults() {
 // FILTER CHIPS
 // ════════════════════════════════════════════
 document.getElementById('chipAll').onclick=()=>{filterList='';filterCity='';nearbyMode=false;update();};
+
+document.getElementById('chipFav').onclick=()=>{filterFavorites=!filterFavorites;document.getElementById('chipFav').classList.toggle('active',filterFavorites);update();};
 
 document.getElementById('chipNearby').onclick=()=>{
     if(!myLatLng){showToast('กรุณาเปิด GPS ก่อน',true);return;}
@@ -1043,6 +1064,9 @@ function openInfoPanel(mode){
                 ['📝','Changelog','omChangelogM',''],
                 ['�','Sync Now'+(getToken()?` (${Math.round((Date.now()-_lastSyncTime)/1000)}s ago)`:''),'omSyncM',''],
                 ['🌙','Dark mode','omDarkM',''],
+                ['📍',trackingActive?'⏹ หยุดบันทึกเส้นทาง':'▶ บันทึกเส้นทาง','omTrackM',''],
+                ['🗺️',`ดูเส้นทาง (${savedPaths.length})`,'omShowPathsM',''],
+                ['📤','Export เส้นทาง','omExportPathsM',''],
                 ['↩','Undo','omUndoM',''],
                 ['↪','Redo','omRedoM',''],
                 ['🗑️','ลบที่กรอง (Bulk)','omBulkDelM','red'],
@@ -1058,6 +1082,9 @@ function openInfoPanel(mode){
         b('omSyncM',    ()=>{closeInfo();doSync(false);});
         b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
         b('omDarkM',    toggleDark);
+        b('omTrackM',   ()=>{closeInfo();if(trackingActive)stopTracking();else startTracking();});
+        b('omShowPathsM',()=>{closeInfo();showSavedPaths();});
+        b('omExportPathsM',()=>{closeInfo();exportPaths();});
         b('omUndoM',    doUndo);
         b('omRedoM',    doRedo);
         b('omBulkDelM', doBulkDel);

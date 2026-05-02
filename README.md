@@ -201,10 +201,10 @@ python -m http.server 8080
 - [ ] **Add central state manager** — simple store pattern
 
 #### PHASE 3: Core Features
-- [ ] **Favorite / pin system** — ⭐ flag + filter favorites + highlight markers
+- [x] **Favorite / pin system** — ✅ เสร็จแล้ว (⭐ flag + filter chip + golden marker + place card button)
 - [ ] **Color tags** — สีต่อ tag (แทน list เดิม)
-- [ ] **Path tracking** — บันทึกเส้นทาง + draw polyline + save/export path
-- [ ] **Directions API** — OSRM / Google Directions + multi-point routing + distance + ETA
+- [x] **Path tracking** — ✅ เสร็จแล้ว (GPS polyline + save/export GeoJSON + ดูเส้นทางเก่า)
+- [x] **Directions API** — ✅ เสร็จแล้ว (OSRM routing + distance/ETA + ปุ่มนำทางใน place card)
 
 #### PHASE 4: Data System
 - [ ] **Data versioning** — `{ "version": 2, "data": [...] }`
