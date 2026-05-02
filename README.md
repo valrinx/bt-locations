@@ -146,9 +146,9 @@ python -m http.server 8080
 ### 🟢 Nice-to-have (ฟีเจอร์เพิ่ม)
 
 - [x] **Export เป็น image** — ✅ เสร็จแล้ว (PNG พร้อม overlay ข้อมูล)
-- [ ] **Route planning** — เลือกหลายจุดแล้วคำนวณเส้นทางที่สั้นที่สุด (TSP แบบง่าย)
+- [x] **Route planning** — ✅ เสร็จแล้ว (Nearest-neighbor TSP + polyline + numbered stops)
 - [x] **Tag/label system** — ✅ เสร็จแล้ว (tags ต่อจุด + ค้นหาได้)
-- [ ] **Changelog UI** — ดู history การแก้ไขข้อมูลแต่ละจุดในหน้าเว็บ
+- [x] **Changelog UI** — ✅ เสร็จแล้ว (เก็บประวัติ add/edit/delete + แสดงใน info panel)
 - [ ] **Multi-user collaboration** — sync แบบ realtime ผ่าน GitHub หรือ backend
 
 ### 🔧 ด้านระบบ / code quality

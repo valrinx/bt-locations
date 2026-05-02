@@ -875,9 +875,19 @@
     // STATE
     // ════════════════════════════════════════════
     const STORAGE_KEY = 'bt_locations_data';
+    const CHANGELOG_KEY = 'bt_changelog';
     const GITHUB_TOKEN_KEY = 'bt_github_token';
     const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
     const undoStack = [], MAX_UNDO = 20;
+    const MAX_CHANGELOG = 200;
+
+    function getChangelog(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
+    function addChangelogEntry(action,loc){
+        const log=getChangelog();
+        log.unshift({t:Date.now(),a:action,n:loc.name||'',lat:loc.lat,lng:loc.lng,list:loc.list||''});
+        if(log.length>MAX_CHANGELOG)log.length=MAX_CHANGELOG;
+        localStorage.setItem(CHANGELOG_KEY,JSON.stringify(log));
+    }
 
     let locations = (() => {
         try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); }
@@ -1698,8 +1708,8 @@
         const entry={name,lat,lng,list,city,note};
         if(tags.length)entry.tags=tags;
         if(photo)entry.photo=photo;
-        if(editingIndex>=0) locations[editingIndex]=entry;
-        else locations.push(entry);
+        if(editingIndex>=0){locations[editingIndex]=entry;addChangelogEntry('edit',entry);}
+        else{locations.push(entry);addChangelogEntry('add',entry);}
         saveLocations(); invalidateCache();
         document.getElementById('editModalOverlay').classList.remove('open');
         update();
@@ -1713,6 +1723,7 @@
     window.doConfirmDelete=function(idx){
         const loc=locations[idx]; if(!loc)return;
         showConfirm('🗑️','ลบสถานที่?',`"${loc.name||loc.list}" จะถูกลบ (Undo ได้)`,()=>{
+            addChangelogEntry('delete',loc);
             pushUndo();locations.splice(idx,1);saveLocations();invalidateCache();closePlaceCard();update();showToast('ลบแล้ว');
         });
     };
@@ -1819,7 +1830,27 @@
 
     function openInfoPanel(mode){
         const body=document.getElementById('infoPanelBody');
-        if(mode==='stats'){
+        if(mode==='changelog'){
+            document.getElementById('infoPanelTitle').textContent='ประวัติการแก้ไข';
+            const log=getChangelog();
+            const actionLabel={add:'เพิ่ม',edit:'แก้ไข',delete:'ลบ'};
+            const actionIcon={add:'➕',edit:'✏️',delete:'🗑️'};
+            const actionColor={add:'#34a853',edit:'#4285f4',delete:'#ea4335'};
+            if(!log.length){body.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e1b\u0e23\u0e30\u0e27\u0e31\u0e15\u0e34</div>';}
+            else{body.innerHTML=`<div style="padding:8px 16px;">
+                ${log.map(e=>{
+                    const d=new Date(e.t);
+                    const ts=d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+                    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);">
+                        <span style="font-size:16px;margin-top:2px;">${actionIcon[e.a]||'❓'}</span>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:13px;font-weight:600;color:${actionColor[e.a]||'var(--text)'};">${actionLabel[e.a]||e.a}</div>
+                            <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.n||'(\u0e44\u0e21\u0e48\u0e21\u0e35\u0e0a\u0e37\u0e48\u0e2d)'}</div>
+                            <div style="font-size:11px;color:var(--text3);">${e.list} · ${ts}</div>
+                        </div>
+                    </div>`;}).join('')}
+            </div>`;}
+        } else if(mode==='stats'){
             document.getElementById('infoPanelTitle').textContent='สถิติ';
             const lc={},cc={};
             locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
@@ -1843,6 +1874,7 @@
                     ['📥','Import (JSON/CSV/KML/GPX)','omImportM',''],
                     ['📊','สถิติ','omStatsM',''],
                     ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmapM',''],
+                    ['📝','Changelog','omChangelogM',''],
                     ['🌙','Dark mode','omDarkM',''],
                     ['↩','Undo','omUndoM',''],
                     ['🗑️','ลบที่กรอง (Bulk)','omBulkDelM','red'],
@@ -1854,6 +1886,7 @@
             b('omExportImgM', doExportImage);
             b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
             b('omStatsM',   ()=>openInfoPanel('stats'));
+            b('omChangelogM',()=>openInfoPanel('changelog'));
             b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
             b('omDarkM',    toggleDark);
             b('omUndoM',    doUndo);
