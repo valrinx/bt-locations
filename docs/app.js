@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.4.1';
+const APP_VERSION = 'v5.4.2';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1703,44 +1703,83 @@ async function _routeDraw(){
     _renderRoutePanel();
 }
 
+// ── Inject route panel CSS ──
+(function(){const s=document.createElement('style');s.textContent=`
+.rp-toolbar{padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;}
+.rp-btn{flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:8px;background:var(--surface);
+  cursor:pointer;font-size:11px;min-width:0;color:var(--text);transition:background .15s;}
+.rp-btn:active{background:var(--border);}
+.rp-btn-nav{flex:1;padding:7px 4px;border:none;background:#1a73e8;color:#fff;border-radius:8px;
+  cursor:pointer;font-size:11px;min-width:0;font-weight:600;}
+.rp-btn-nav:active{background:#1558b0;}
+.rp-stop{display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid var(--border);}
+.rp-stop-num{font-size:14px;font-weight:700;color:#4285f4;min-width:22px;text-align:center;}
+.rp-stop-info{flex:1;min-width:0;}
+.rp-stop-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rp-stop-sub{font-size:11px;color:var(--text3);}
+.rp-stop-btn{border:none;background:none;cursor:pointer;font-size:14px;padding:4px;color:var(--text);min-width:28px;}
+.rp-stop-btn:active{background:var(--border);border-radius:6px;}
+.rp-stop-btn.del{color:#ea4335;}
+`;document.head.appendChild(s);})();
+
 // ── Interactive route panel (replaces list panel) ──
 function _renderRoutePanel(){
     const lp=document.getElementById('listPanel');
     lp.classList.add('open');
     const distText=formatDist(_routeDist);
     const etaMins=_routeUseOSRM?Math.round(_routeDur/60):0;
-    const etaTraffic=_routeUseOSRM?Math.round((_routeDur*(_navState.trafficFactor||1))/60):0;
     const modeText=_routeUseOSRM?'🛣️':'📏';
     const etaText=_routeUseOSRM?` · ~${etaMins} นาที`:'';
 
     document.getElementById('listPanelTitle').textContent=`${modeText} เส้นทาง ${_routeStops.length} จุด · ${distText}${etaText}`;
 
     const body=document.getElementById('listBody');
-    body.innerHTML=`
-        <div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;">
-            <button onclick="_routeOptimize()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;min-width:0;">🧠 จัดลำดับฉลาด</button>
-            <button onclick="_showAvoidSettings()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;min-width:0;">⚙️ หลีกเลี่ยง</button>
-            <button onclick="_routeAddStop()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;min-width:0;">➕ เพิ่มจุด</button>
-            <button onclick="_routeNavigate()" style="flex:1;padding:6px;border:none;background:#1a73e8;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;min-width:0;">🧭 นำทาง</button>
-        </div>
-        <div id="_routeStopList" style="padding:0 8px 8px;">
-            ${_routeStops.map((s,i)=>`
-                <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid var(--border);">
-                    <span style="font-size:14px;font-weight:700;color:#4285f4;min-width:22px;text-align:center;">${i+1}</span>
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name||'ไม่มีชื่อ'}</div>
-                        <div style="font-size:11px;color:var(--text3);">${s.list||''}${s.city?' · '+s.city:''}</div>
-                    </div>
-                    <button onclick="_routeMoveStop(${i},-1)" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;" ${i===0?'disabled':''}>▲</button>
-                    <button onclick="_routeMoveStop(${i},1)" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;" ${i===_routeStops.length-1?'disabled':''}>▼</button>
-                    <button onclick="_routeRemoveStop(${i})" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;color:#ea4335;">✕</button>
-                </div>
-            `).join('')}
+    // Build toolbar
+    let html=`<div class="rp-toolbar">
+        <button class="rp-btn" data-rp="optimize">🧠 จัดลำดับ</button>
+        <button class="rp-btn" data-rp="avoid">⚙️ หลีกเลี่ยง</button>
+        <button class="rp-btn" data-rp="add">➕ เพิ่มจุด</button>
+        <button class="rp-btn-nav" data-rp="navigate">🧭 นำทาง</button>
+    </div><div style="padding:0 8px 8px;">`;
+
+    // Build stop list
+    _routeStops.forEach((s,i)=>{
+        html+=`<div class="rp-stop">
+            <span class="rp-stop-num">${i+1}</span>
+            <div class="rp-stop-info">
+                <div class="rp-stop-name">${s.name||s.list||'ไม่มีชื่อ'}</div>
+                <div class="rp-stop-sub">${s.list||''}${s.city?' · '+s.city:''}</div>
+            </div>
+            <button class="rp-stop-btn" data-rp="up" data-idx="${i}" ${i===0?'disabled':''}>▲</button>
+            <button class="rp-stop-btn" data-rp="down" data-idx="${i}" ${i===_routeStops.length-1?'disabled':''}>▼</button>
+            <button class="rp-stop-btn del" data-rp="remove" data-idx="${i}">✕</button>
         </div>`;
+    });
+    html+=`</div>`;
+    body.innerHTML=html;
+
+    // Bind all buttons via event delegation
+    body.addEventListener('click',_routePanelClick);
+}
+
+function _routePanelClick(e){
+    const btn=e.target.closest('[data-rp]');
+    if(!btn)return;
+    const action=btn.dataset.rp;
+    const idx=parseInt(btn.dataset.idx);
+    switch(action){
+        case 'optimize':_routeOptimize();break;
+        case 'avoid':_showAvoidSettings();break;
+        case 'add':_routeAddStop();break;
+        case 'navigate':_routeNavigate();break;
+        case 'up':_routeMoveStop(idx,-1);break;
+        case 'down':_routeMoveStop(idx,1);break;
+        case 'remove':_routeRemoveStop(idx);break;
+    }
 }
 
 // ── Route actions ──
-window._routeOptimize=async function(){
+async function _routeOptimize(){
     if(_routeStops.length<3){showToast('ต้องมีอย่างน้อย 3 จุดถึงจะจัดลำดับได้',true);return;}
     showToast('🧠 กำลังคำนวณเส้นทางที่ดีที่สุด...');
     const startLat=myLatLng?myLatLng.lat:_routeStops[0].lat;
@@ -1748,35 +1787,32 @@ window._routeOptimize=async function(){
     _routeStops=_tspSolve(_routeStops, startLat, startLng);
     await _routeDraw();
     showToast('🧠 จัดลำดับเส้นทางใหม่แล้ว!',false,true);
-};
+}
 
-window._routeMoveStop=async function(idx,dir){
+async function _routeMoveStop(idx,dir){
     const newIdx=idx+dir;
     if(newIdx<0||newIdx>=_routeStops.length)return;
     const tmp=_routeStops[idx];
     _routeStops[idx]=_routeStops[newIdx];
     _routeStops[newIdx]=tmp;
     await _routeDraw();
-};
+}
 
-window._routeRemoveStop=async function(idx){
+async function _routeRemoveStop(idx){
     _routeStops.splice(idx,1);
     if(_routeStops.length<1){clearRoute();closeListPanel();showToast('ล้างเส้นทาง');return;}
     await _routeDraw();
-};
+}
 
-window._routeAddStop=function(){
-    // Show search-like UI for picking a stop
+function _routeAddStop(){
     const q=prompt('พิมพ์ชื่อสถานที่หรือพิกัด (lat,lng):','');
     if(!q)return;
-    // Try coords
     const coords=parseLatLng(q);
     if(coords){
         _routeStops.push({lat:coords.lat,lng:coords.lng,name:`จุดกำหนด (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,list:'',city:''});
         _routeDraw();
         return;
     }
-    // Search locations
     const matches=locations.filter(l=>(l.name||'').toLowerCase().includes(q.toLowerCase())||l.list.toLowerCase().includes(q.toLowerCase()));
     if(!matches.length){showToast('ไม่พบสถานที่',true);return;}
     if(matches.length===1){
@@ -1785,7 +1821,6 @@ window._routeAddStop=function(){
         showToast(`➕ เพิ่ม "${matches[0].name||matches[0].list}"`);
         return;
     }
-    // Multiple matches → pick from list
     const msg=matches.slice(0,10).map((m,i)=>`${i+1}. ${m.name||m.list}`).join('\n');
     const pick=prompt(`พบ ${matches.length} จุด เลือกเลข:\n${msg}`);
     if(!pick)return;
@@ -1795,10 +1830,9 @@ window._routeAddStop=function(){
         _routeDraw();
         showToast(`➕ เพิ่ม "${sel.name||sel.list}"`);
     }
-};
+}
 
-window._routeNavigate=function(){
-    // Open Google Maps with all stops
+function _routeNavigate(){
     if(!_routeStops.length)return;
     const last=_routeStops[_routeStops.length-1];
     let url=`https://www.google.com/maps/dir/?api=1&destination=${last.lat},${last.lng}`;
@@ -1808,7 +1842,7 @@ window._routeNavigate=function(){
     }
     if(myLatLng)url+=`&origin=${myLatLng.lat},${myLatLng.lng}`;
     window.open(url,'_blank');
-};
+}
 
 async function doRoute(){
     const filtered=getFiltered();
