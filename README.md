@@ -18,7 +18,8 @@
 | `validate_data.py` | ตรวจจุดซ้ำ (< 50m) และจุดผิดปกติ (lat/lng=0, นอกไทย, ไม่มีชื่อ) |
 | `backups/` | Backup อัตโนมัติก่อนทุก build |
 | `.github/workflows/build.yml` | GitHub Actions auto build + deploy |
-| `docs/index.html` | หน้าเว็บ (generated) — UI, map, CRUD, GitHub save |
+| `docs/index.html` | หน้าเว็บ — HTML markup + CSS only |
+| `docs/app.js` | JavaScript logic ทั้งหมด (~1700 บรรทัด) |
 | `docs/locations.js` | ข้อมูลหมุดแยกไฟล์ (generated จาก build) |
 | `docs/all_locations.json` | สำเนา JSON สำหรับ GitHub Pages |
 | `topup_map.html` | แผนที่ Topup Locations แบบ standalone |
@@ -29,22 +30,48 @@
 
 ## ฟีเจอร์ปัจจุบัน
 
+### 🗺️ แผนที่ + Markers
 - แสดงหมุดบนแผนที่พร้อม MarkerCluster + แยกสีตาม list (CircleMarker + color palette)
-- ค้นหา + กรองตามรายการ (list) + เขต (city) แบบ multi-filter
+- Heatmap mode แสดงความหนาแน่นของจุด (leaflet.heat)
+- Route planning — Nearest-neighbor TSP + polyline + numbered stops
+- วัดระยะทางระหว่าง 2 จุด (haversine)
+- 4 map tiles: Street / Satellite / Terrain / Dark
+- Zoom to filtered อัตโนมัติเมื่อเลือก filter
+
+### 🔍 ค้นหา + กรอง
+- ค้นหา + กรองตามรายการ (list) + เขต (city) + tags แบบ multi-filter
+- ค้นหาตามพิกัด (paste lat,lng)
+- Tag/label system ต่อจุด + ค้นหาได้
+
+### ✏️ CRUD + Data
 - CRUD: เพิ่ม / แก้ไข / ลบจุดบนแผนที่ + Undo สูงสุด 20 ครั้ง
 - Bulk delete จุดที่กรองอยู่
-- Export JSON แบบเลือกกรองได้ (ตามรายการ / เขต / ทั้งหมด) พร้อมรองรับ Share API และดาวน์โหลด
-- Import JSON แบบ **Merge** (เพิ่มจุดใหม่ ไม่ลบของเดิม) หรือ **Replace** (แทนที่ทั้งหมด)
-- Heatmap mode แสดงความหนาแน่นของจุด (leaflet.heat)
-- Stats dashboard (สถิติจำนวนจุดตามรายการ/เขต)
-- Reset พร้อม popup คำเตือน
-- Save to GitHub ผ่าน API (เก็บ token ใน localStorage)
-- Background sync ข้อมูลข้ามเครื่อง (fetch `all_locations.json`)
-- Legend สี + Dark mode + 4 map tiles (Street / Satellite / Terrain / Dark)
-- วัดระยะทางระหว่าง 2 จุด (haversine)
-- Zoom to filtered อัตโนมัติเมื่อเลือก filter
+- Photo/attachment support (แนบรูป + resize + แสดงใน place card)
+- Changelog UI — เก็บประวัติ add/edit/delete + แสดงใน info panel
+
+### 📤 Export / Import
+- Export JSON + Export รูปแผนที่ (PNG) พร้อมรองรับ Share API
+- Import หลายรูปแบบ: JSON / CSV / KML / GPX / GeoJSON + Merge/Replace
+- Data validation + schema normalization ตอน import
+
+### ☁️ Sync + Multi-user
+- Multi-user collaboration — GitHub-based 3-way merge, auto-sync ทุก 30 วิ
+- Conflict resolution อัตโนมัติ + sync indicator
+- Save to GitHub ผ่าน API (token ใน sessionStorage)
+- Permalink / แชร์จุด — URL `#lat,lng,zoom`
+
+### 📱 Mobile + Performance
+- PWA / Offline support — Service Worker + manifest + cache tiles
+- Mobile UX: long-press เพิ่มจุด, swipe-down ปิด place card, vibration feedback
+- Performance: preferCanvas (mobile), tile lazy-loading, marker limit, debounced search
+- Z-index system (CSS variables) ไม่มี UI ซ้อนทับ
+
+### 🔧 ระบบ
+- Dark mode + Stats dashboard
 - Backup อัตโนมัติก่อนทุก build + GitHub Actions auto build + deploy
-- UI: popup มี gradient header, modal มี animation + backdrop blur + gradient buttons
+- Debug mode: `window.btDebug` (stats, forceSync, clearCache)
+- Pre-commit hooks: black, flake8, trailing-whitespace, check-json
+- Unit tests: validate_data + auto_city (9 tests)
 
 ---
 
@@ -155,14 +182,43 @@ python -m http.server 8080
 
 - [x] **Unit test สำหรับ Python scripts** — ✅ เสร็จแล้ว (9 tests, validate_data + auto_city)
 - [x] **Lint + format** — ✅ เสร็จแล้ว (pre-commit: black, flake8, trailing-whitespace, check-json)
-- [x] **แยก JS ออกจาก HTML** — ✅ เสร็จแล้ว (แยก ~1500 บรรทัดเป็น `docs/app.js`, HTML เหลือแค่ markup + CSS)
+- [x] **แยก JS ออกจาก HTML** — ✅ เสร็จแล้ว (แยก ~1700 บรรทัดเป็น `docs/app.js`, HTML เหลือแค่ markup + CSS)
 - [x] **Versioning สำหรับ locations.js** — ✅ เสร็จแล้ว (timestamp cache-busting)
+- [x] **Performance + UI stability** — ✅ เสร็จแล้ว (preferCanvas, tile opts, z-index system, marker limit, debug mode)
+
+### 🚀 อนาคต (Next Phase)
+
+- [ ] **Refactor app.js เป็น modules** — แยก map / UI / data logic
+- [ ] **Favorite / pin system** — ปักหมุดจุดโปรด
+- [ ] **Path tracking** — บันทึกเส้นทางการเดินทาง
+- [ ] **Directions API** — นำทางจริงผ่าน Google/OSRM
 
 ---
 
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
-### 2026-05-02 (ล่าสุด)
+### 2026-05-02
+
+- **Performance + UI Stability Update**
+  - Map: `preferCanvas` (mobile), ปิด animations mobile, `minZoom:5` / `maxZoom:19`
+  - Tile: `updateWhenIdle`, `updateWhenZooming:false`, `keepBuffer` ลด request
+  - Marker limit: 1000 (mobile) / 2000 (desktop)
+  - Z-index system: CSS variables ทั้งระบบ ไม่มี UI ซ้อนทับ
+  - Lat/lng overlay: ย้ายกลางล่าง, ซ่อนบน mobile
+  - Modal: fix max-height + overflow บนจอใหญ่
+  - Mobile: long-press (600ms) เพิ่มจุด, swipe-down ปิด place card, vibration feedback
+  - Import: validate JSON + normalize schema อัตโนมัติ
+  - Debug: `window.btDebug` (stats, forceSync, clearCache, exportDebug)
+- **Multi-user collaboration** — GitHub-based 3-way merge, auto-sync ทุก 30 วิ, conflict resolution, sync indicator
+- **แยก JS ออกจาก HTML** — ดึง ~1700 บรรทัดเป็น `docs/app.js`, HTML เหลือ ~880 บรรทัด
+- **Route planning** — Nearest-neighbor TSP + dashed polyline + numbered stops
+- **Changelog UI** — เก็บประวัติ add/edit/delete ใน localStorage + ดูจาก Menu
+- **Tag/label system** — tags ต่อจุด + ค้นหาได้
+- **Photo/attachment support** — แนบรูป + resize 800px + JPEG 70% + แสดงใน place card
+- **Export รูปแผนที่** — PNG พร้อม overlay ข้อมูล
+- **Pre-commit hooks** — black, flake8, trailing-whitespace, check-json
+
+### 2026-05-02 (เช้า)
 
 - **เพิ่ม Topup Locations Map** — แผนที่แสดงจุด Topup แบบ standalone (`topup_map.html`)
   - ค้นหาจุด BT ได้แบบ real-time
