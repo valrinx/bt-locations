@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.2';
+const APP_VERSION = 'v5.6.3';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -233,10 +233,12 @@ const _debouncedPush = debounce(async () => {
     } finally { _pushInFlight = false; }
 }, 2000);
 
+let _sbLoaded = false; // true only after initial Supabase load completes
 const saveLocations = debounce(() => {
     if (!_validateBeforeSave()) return;
-    _markDirty();
     _writeCache();
+    if (!_sbLoaded) return; // don't push during initial load
+    _markDirty();
     _debouncedPush();
 }, 300);
 
@@ -2672,6 +2674,7 @@ function startAutoSync(){
 (async()=>{
     // Initial load from Supabase (source of truth)
     await doSync(false);
+    _sbLoaded = true;
     startAutoSync();
 })();
 
