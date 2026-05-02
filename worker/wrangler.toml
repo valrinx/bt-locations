@@ -1,0 +1,11 @@
+name = "bt-locations-api"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Secrets (set via: wrangler secret put GITHUB_TOKEN)
+# GITHUB_TOKEN = <your token>
+
+[vars]
+REPO_OWNER = "valrinx"
+REPO_NAME = "bt-locations"
+# API_SECRET = ""  # optional, set via wrangler secret if needed

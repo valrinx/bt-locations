@@ -1,15 +1,21 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.1';
+const APP_VERSION = 'v5.2';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
+const WORKER_URL_KEY = 'bt_worker_url';
+const API_KEY_KEY = 'bt_api_key';
 const SYNC_SHA_KEY = 'bt_sync_sha';
 const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
 const FAVORITES_KEY = 'bt_favorites';
 const TRACKING_KEY = 'bt_tracked_paths';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
+// Worker URL: if set, all GitHub API calls go through Cloudflare Worker
+function getWorkerUrl(){return localStorage.getItem(WORKER_URL_KEY)||'';}
+function getApiKey(){return localStorage.getItem(API_KEY_KEY)||'';}
+function useWorker(){return !!getWorkerUrl();}
 const undoStack = [], redoStack = [], MAX_UNDO = 20;
 let favorites = new Set((() => { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; } })());
 function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); }
@@ -178,22 +184,19 @@ function _updateSyncBadge() {
 setInterval(_updateSyncBadge, 10000);
 
 let _pushInFlight = false;
+function _canSync(){return useWorker()||!!getToken();}
 const _debouncedPush = debounce(async () => {
     if (_pushInFlight) return;
-    const token = getToken();
-    if (!token) return;
+    if (!_canSync()) return;
     _pushInFlight = true;
     _setSyncStatus('syncing');
     try {
+        const token = getToken();
         const locs = locations.map(l => { const { photo, ...rest } = l; return rest; });
-        const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
-            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-        if (!res.ok) throw new Error('GitHub fetch: ' + res.status);
-        const data = await res.json();
-        await _pushToGithub(token, locs, data.sha);
+        const shaData = await githubFile('all_locations.json', token);
+        await _pushToGithub(token, locs, shaData.sha);
         _clearDirty();
-        _saveBaseSnapshot(locs, null); // update base after push
+        _saveBaseSnapshot(locs, null);
         _setSyncStatus('ok');
         _lastSyncTime = Date.now();
         console.log('Pushed to GitHub:', locs.length, 'locs');
@@ -2094,23 +2097,58 @@ function setToken(t){localStorage.setItem(GITHUB_TOKEN_KEY,t);sessionStorage.rem
 document.getElementById('btnGithubSave').onclick=doGithubSaveFlow;
 
 async function doGithubSaveFlow(){
-    if(!getToken()){document.getElementById('tokenInput').value='';document.getElementById('tokenModalOverlay').classList.add('open');return;}
+    if(!_canSync()){
+        // Pre-fill existing values
+        document.getElementById('workerUrlInput').value=getWorkerUrl();
+        document.getElementById('apiKeyInput').value=getApiKey();
+        document.getElementById('tokenInput').value=getToken();
+        document.getElementById('tokenModalOverlay').classList.add('open');
+        return;
+    }
     await doGithubSave(getToken());
 }
 document.getElementById('tokenCancel').onclick=()=>document.getElementById('tokenModalOverlay').classList.remove('open');
 document.getElementById('tokenSave').onclick=async()=>{
-    const t=document.getElementById('tokenInput').value.trim();
-    if(!t){showToast('กรุณากรอก Token',true);return;}
-    setToken(t);document.getElementById('tokenModalOverlay').classList.remove('open');await doGithubSave(t);
+    const workerUrl=document.getElementById('workerUrlInput').value.trim().replace(/\/$/,'');
+    const apiKey=document.getElementById('apiKeyInput').value.trim();
+    const token=document.getElementById('tokenInput').value.trim();
+
+    // Save Worker settings
+    if(workerUrl){localStorage.setItem(WORKER_URL_KEY,workerUrl);}else{localStorage.removeItem(WORKER_URL_KEY);}
+    if(apiKey){localStorage.setItem(API_KEY_KEY,apiKey);}else{localStorage.removeItem(API_KEY_KEY);}
+    if(token){setToken(token);}
+
+    if(!workerUrl&&!token){showToast('กรุณากรอก Worker URL หรือ Token',true);return;}
+    document.getElementById('tokenModalOverlay').classList.remove('open');
+    await doGithubSave(token);
 };
 document.getElementById('tokenModalOverlay').onclick=e=>{if(e.target===document.getElementById('tokenModalOverlay'))document.getElementById('tokenModalOverlay').classList.remove('open');};
 
+function _workerHeaders(){
+    const h={'Content-Type':'application/json'};
+    const key=getApiKey();
+    if(key)h['X-API-Key']=key;
+    return h;
+}
 async function githubFile(path,token){
+    if(useWorker()){
+        const r=await fetch(`${getWorkerUrl()}/api/file?path=${encodeURIComponent(path)}`,{headers:_workerHeaders()});
+        if(!r.ok)throw new Error(`Worker ${r.status}`);
+        const d=await r.json();
+        if(d.error)throw new Error(d.error);
+        return{sha:d.sha};
+    }
     const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`,{headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}});
     if(r.status===404)return{sha:null};if(!r.ok)throw new Error(`GitHub ${r.status}`);const d=await r.json();return{sha:d.sha};
 }
 async function githubPut(path,content,sha,token,msg){
-    const b={message:msg,content:btoa(unescape(encodeURIComponent(content)))};if(sha)b.sha=sha;
+    const b64=btoa(unescape(encodeURIComponent(content)));
+    if(useWorker()){
+        const r=await fetch(`${getWorkerUrl()}/api/file`,{method:'PUT',headers:_workerHeaders(),body:JSON.stringify({path,content:b64,sha,message:msg})});
+        if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error||`Worker ${r.status}`);}
+        return;
+    }
+    const b={message:msg,content:b64};if(sha)b.sha=sha;
     const r=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`,{method:'PUT',headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(b)});
     if(!r.ok){const e=await r.json();throw new Error(e.message||`GitHub ${r.status}`);}
 }
@@ -2393,15 +2431,24 @@ function setSyncIndicator(state){
 async function doSync(silent=true){
     if(_syncing)return;
     const token=getToken();
-    if(!token){if(!silent)showToast('กรุณาใส่ Token ก่อน',true);return;}
+    const hasWorker=useWorker();
+    if(!token&&!hasWorker){if(!silent)showToast('กรุณาตั้ง Worker URL หรือใส่ Token',true);return;}
     _syncing=true;
     _setSyncStatus('syncing');
     try{
-        const res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`,{
-            headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}
-        });
-        if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);_setSyncStatus('error');return;}
-        const data=await res.json();
+        let res, data;
+        if(hasWorker){
+            res=await fetch(`${getWorkerUrl()}/api/file?path=all_locations.json`,{headers:_workerHeaders()});
+            if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);_setSyncStatus('error');return;}
+            data=await res.json();
+            if(data.error){throw new Error(data.error);}
+        }else{
+            res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`,{
+                headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}
+            });
+            if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);_setSyncStatus('error');return;}
+            data=await res.json();
+        }
         const remoteSha=data.sha;
         const remoteContent=JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))));
 
@@ -2498,13 +2545,13 @@ let _visibilityBound = false;
 function startAutoSync(){
     if(_syncTimer)clearInterval(_syncTimer);
     _syncTimer=setInterval(()=>{
-        if(getToken()&&document.visibilityState==='visible')doSync(true);
+        if(_canSync()&&document.visibilityState==='visible')doSync(true);
     },SYNC_INTERVAL);
     // Bind visibility listener ONCE only
     if (!_visibilityBound) {
         _visibilityBound = true;
         document.addEventListener('visibilitychange',()=>{
-            if(document.visibilityState==='visible'&&getToken()&&Date.now()-_lastSyncTime>10000)doSync(true);
+            if(document.visibilityState==='visible'&&_canSync()&&Date.now()-_lastSyncTime>10000)doSync(true);
         });
     }
 }
@@ -2526,9 +2573,19 @@ function startAutoSync(){
         } catch (e) {}
     }
 
-    // 1. Fetch from GitHub (source of truth)
+    // 1. Fetch from GitHub (source of truth) — via Worker if configured
+    const hasWorker = useWorker();
     try {
-        if (token) {
+        if (hasWorker) {
+            const res = await fetch(`${getWorkerUrl()}/api/file?path=all_locations.json`, { headers: _workerHeaders() });
+            if (res.ok) {
+                const d = await res.json();
+                if (d.content && d.sha) {
+                    ghData = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))));
+                    ghSha = d.sha;
+                }
+            }
+        } else if (token) {
             const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
                 headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
             });
@@ -2539,7 +2596,8 @@ function startAutoSync(){
             }
         }
         if (!ghData) {
-            const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
+            const rawUrl = hasWorker ? `${getWorkerUrl()}/api/raw?path=all_locations.json` : `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`;
+            const res = await fetch(rawUrl);
             if (res.ok) ghData = await res.json();
         }
     } catch (e) { console.warn('GitHub fetch failed:', e.message); }
@@ -2614,13 +2672,13 @@ function startAutoSync(){
 
     // Background retry: if still dirty, retry push every 5s
     setInterval(() => {
-        if (_isDirty() && getToken() && !_pushInFlight && document.visibilityState === 'visible') {
+        if (_isDirty() && _canSync() && !_pushInFlight && document.visibilityState === 'visible') {
             console.log('Background retry: pushing dirty changes...');
             _debouncedPush();
         }
     }, 5000);
 
-    if (token) startAutoSync();
+    if (_canSync()) startAutoSync();
 })();
 
 // ════════════════════════════════════════════
@@ -2631,6 +2689,7 @@ window.btDebug = {
     get filtered() { return getFiltered(); },
     get syncSha() { return localStorage.getItem(SYNC_SHA_KEY); },
     get token() { return getToken() ? '✅ set' : '❌ none'; },
+    get worker() { return useWorker() ? `✅ ${getWorkerUrl()}` : '❌ not set'; },
     get stats() {
         const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
         return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,dirty:_isDirty(),lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};

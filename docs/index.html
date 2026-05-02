@@ -839,9 +839,20 @@
     <div class="modal-overlay" id="tokenModalOverlay">
         <div class="modal token-modal">
             <div class="token-icon">🔑</div>
-            <div class="token-title">GitHub Token</div>
-            <div class="token-sub">ใส่ Personal Access Token เพื่อบันทึกข้อมูลขึ้น GitHub<br><small style="color:var(--text3);">เก็บใน browser เท่านั้น</small></div>
+            <div class="token-title">ตั้งค่า Sync</div>
+            <div class="token-sub">เลือกวิธี sync: ใช้ Worker (แนะนำ) หรือ Token โดยตรง</div>
             <div class="modal-body">
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">☁️ Cloudflare Worker (แนะนำ)</div>
+                <div class="modal-field">
+                    <label>Worker URL</label>
+                    <input type="url" id="workerUrlInput" placeholder="https://bt-locations-api.xxx.workers.dev">
+                </div>
+                <div class="modal-field">
+                    <label>API Key (ถ้ามี)</label>
+                    <input type="password" id="apiKeyInput" placeholder="optional">
+                </div>
+                <div style="border-top:1px solid var(--border);margin:12px 0;"></div>
+                <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;">🔑 GitHub Token (ถ้าไม่มี Worker)</div>
                 <div class="modal-field">
                     <label>Token</label>
                     <input type="password" id="tokenInput" placeholder="github_pat_...">
@@ -849,7 +860,7 @@
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-cancel" id="tokenCancel">ยกเลิก</button>
-                <button class="modal-btn modal-btn-save" id="tokenSave">บันทึก &amp; อัปโหลด</button>
+                <button class="modal-btn modal-btn-save" id="tokenSave">บันทึก &amp; Sync</button>
             </div>
         </div>
     </div>
