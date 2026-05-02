@@ -137,7 +137,7 @@ python -m http.server 8080
 
 ### 🟡 น่าทำ (ปรับปรุง UX)
 
-- [ ] **Mobile UX ปรับปรุงต่อ** — panel collapsible, ปุ่มใหญ่ขึ้น (base responsive เสร็จแล้ว)
+- [x] **Mobile UX ปรับปรุงต่อ** — ✅ เสร็จแล้ว (ปุ่มใหญ่ขึ้น, safe-area, chip/search compact)
 - [x] **Cluster click → zoom + แสดง list** — ✅ เสร็จแล้ว
 - [x] **ค้นหาตามพิกัด** — ✅ เสร็จแล้ว
 - [x] **Permalink per location** — ✅ เสร็จแล้ว
@@ -145,7 +145,7 @@ python -m http.server 8080
 
 ### 🟢 Nice-to-have (ฟีเจอร์เพิ่ม)
 
-- [ ] **Export เป็น PDF หรือ image** — สั่งพิมพ์แผนที่ตามกรอบที่เห็น
+- [x] **Export เป็น image** — ✅ เสร็จแล้ว (PNG พร้อม overlay ข้อมูล)
 - [ ] **Route planning** — เลือกหลายจุดแล้วคำนวณเส้นทางที่สั้นที่สุด (TSP แบบง่าย)
 - [ ] **Tag/label system** — เพิ่ม tag อิสระต่อจุด นอกเหนือจาก list/city
 - [ ] **Changelog UI** — ดู history การแก้ไขข้อมูลแต่ละจุดในหน้าเว็บ
@@ -153,7 +153,7 @@ python -m http.server 8080
 
 ### 🔧 ด้านระบบ / code quality
 
-- [ ] **Unit test สำหรับ Python scripts** — ครอบ `validate_data.py`, `merge_sheet.py`, `auto_city.py`
+- [x] **Unit test สำหรับ Python scripts** — ✅ เสร็จแล้ว (9 tests, validate_data + auto_city)
 - [ ] **Lint + format** — เพิ่ม pre-commit hook (black, flake8 สำหรับ Python; ESLint สำหรับ JS)
 - [ ] **แยก JS ออกจาก HTML** — refactor `docs/index.html` ให้โหลด `app.js` แยก (ตอนนี้แยกแค่ data เป็น `locations.js`)
 - [x] **Versioning สำหรับ locations.js** — ✅ เสร็จแล้ว (timestamp cache-busting)

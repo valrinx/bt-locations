@@ -1691,6 +1691,7 @@
                 <div style="font-size:14px;color:var(--text2);margin-bottom:20px;">แผนที่จุด BT Locations · ${locations.length} สถานที่</div>
                 ${[
                     ['📤','Export JSON','omExportM',''],
+                    ['🖼️','Export \u0e23\u0e39\u0e1b\u0e41\u0e1c\u0e19\u0e17\u0e35\u0e48','omExportImgM',''],
                     ['📥','Import (JSON/CSV/KML/GPX)','omImportM',''],
                     ['📊','สถิติ','omStatsM',''],
                     ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmapM',''],
@@ -1702,6 +1703,7 @@
             </div>`;
             const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
             b('omExportM',  doExport);
+            b('omExportImgM', doExportImage);
             b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
             b('omStatsM',   ()=>openInfoPanel('stats'));
             b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
@@ -1714,6 +1716,66 @@
         document.getElementById('infoPanelBackdrop').classList.add('show');
     }
     function closeInfo(){document.getElementById('infoPanel').classList.remove('open');document.getElementById('infoPanelBackdrop').classList.remove('show');}
+
+    // ════════════════════════════════════════════
+    // EXPORT IMAGE — capture map as PNG
+    // ════════════════════════════════════════════
+    function doExportImage() {
+        closeInfo();
+        showToast('กำลังสร้างรูป...');
+        setTimeout(()=>{
+            const mapEl=document.getElementById('map');
+            const canvas=document.createElement('canvas');
+            const w=mapEl.offsetWidth, h=mapEl.offsetHeight;
+            canvas.width=w; canvas.height=h;
+            const ctx=canvas.getContext('2d');
+
+            // Draw map tiles
+            const tiles=mapEl.querySelectorAll('.leaflet-tile');
+            const origin=mapEl.querySelector('.leaflet-map-pane');
+            const transform=getComputedStyle(origin).transform;
+            let tx=0,ty=0;
+            if(transform&&transform!=='none'){
+                const m=transform.match(/matrix.*\((.+)\)/);
+                if(m){const v=m[1].split(',').map(Number);tx=v[4]||0;ty=v[5]||0;}
+            }
+            tiles.forEach(tile=>{
+                try{
+                    const tileContainer=tile.parentElement;
+                    const containerTransform=getComputedStyle(tileContainer).transform;
+                    let ctx2=0,cty=0;
+                    if(containerTransform&&containerTransform!=='none'){
+                        const m2=containerTransform.match(/matrix.*\((.+)\)/);
+                        if(m2){const v2=m2[1].split(',').map(Number);ctx2=v2[4]||0;cty=v2[5]||0;}
+                    }
+                    const x=parseInt(tile.style.left||0)+tx+ctx2;
+                    const y=parseInt(tile.style.top||0)+ty+cty;
+                    ctx.drawImage(tile,x,y,parseInt(tile.style.width||256),parseInt(tile.style.height||256));
+                }catch(e){}
+            });
+
+            // Draw info text
+            ctx.fillStyle='rgba(0,0,0,0.6)';
+            ctx.fillRect(0,h-32,w,32);
+            ctx.fillStyle='#fff';
+            ctx.font='13px sans-serif';
+            const center=map.getCenter();
+            const info=`BT Locations · ${getFiltered().length} sites · ${center.lat.toFixed(4)},${center.lng.toFixed(4)} · z${map.getZoom()}`;
+            ctx.fillText(info,8,h-10);
+
+            // Download
+            canvas.toBlob(blob=>{
+                if(!blob){showToast('ไม่สามารถสร้างรูปได้ (CORS)',true);return;}
+                const url=URL.createObjectURL(blob);
+                const a=document.createElement('a');
+                a.href=url;
+                a.download=`bt_map_${new Date().toISOString().slice(0,10)}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('บันทึกรูปแผนที่แล้ว',false,true);
+            },'image/png');
+        },300);
+    }
 
     // ════════════════════════════════════════════
     // EXPORT — รองรับมือถือ ✅
