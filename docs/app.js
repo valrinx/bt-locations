@@ -1,6 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
+const APP_VERSION = 'v4.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -2011,13 +2012,25 @@ window.btDebug = {
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
+// Version badge
+(function showVersion(){
+    const badge = document.getElementById('versionBadge');
+    if (badge) badge.textContent = `app:${APP_VERSION}`;
+    // Detect SW cache version
+    if ('caches' in window) {
+        caches.keys().then(keys => {
+            const swVer = keys.find(k => k.startsWith('bt-locations-')) || 'none';
+            if (badge) badge.textContent = `app:${APP_VERSION} sw:${swVer}`;
+            console.log('SW cache:', swVer, 'App:', APP_VERSION);
+        });
+    }
+})();
+
 // PWA: register service worker + force update
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(reg => {
         console.log('SW registered:', reg.scope);
-        // Check for updates immediately
         reg.update();
-        // When new SW found → activate immediately + reload
         reg.addEventListener('updatefound', () => {
             const newSW = reg.installing;
             if (!newSW) return;
@@ -2029,7 +2042,6 @@ if ('serviceWorker' in navigator) {
             });
         });
     }).catch(err => console.warn('SW failed:', err));
-    // Also reload when controller changes (SW takeover)
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (refreshing) return;
