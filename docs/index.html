@@ -226,7 +226,7 @@
         }
         .info-panel-close:hover { background: var(--surface2); }
         .info-panel-title { font-size: 18px; font-weight: 600; flex: 1; }
-        .info-panel-body { flex: 1; overflow-y: auto; }
+        .info-panel-body { flex: 1; overflow-y: auto; background: var(--surface2); }
         /* Mobile: bottom sheet — ไม่บังแผนที่ */
         @media (max-width: 599px) {
             .info-panel {
@@ -510,12 +510,15 @@
 
         /* ══ INFO PANEL MENU ══ */
         .om-item {
-            display: flex; align-items: center; gap: 14px; padding: 14px 20px;
+            display: flex; align-items: center; gap: 12px; padding: 12px 14px;
             border: none; background: none; width: 100%; text-align: left;
-            font-size: 14px; font-family: inherit; color: var(--text); cursor: pointer; transition: background 0.1s;
+            font-size: 14px; font-family: inherit; color: var(--text); cursor: pointer;
+            transition: background 0.12s;
         }
+        .om-item:not(:last-child) { border-bottom: 1px solid var(--border); }
         .om-item:hover { background: var(--surface2); }
-        .om-item svg { width: 20px; height: 20px; color: var(--text3); flex-shrink: 0; }
+        .om-item:active { background: var(--border); }
+        .om-item svg { width: 16px; height: 16px; color: var(--text3); flex-shrink: 0; }
         .om-item.red { color: var(--red); }
         .om-item.red svg { color: var(--red); }
         .om-sep { height: 1px; background: var(--border); margin: 4px 0; }

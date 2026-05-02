@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.5';
+const APP_VERSION = 'v5.5.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1944,26 +1944,54 @@ function openInfoPanel(mode){
         </div>`;
     } else {
         document.getElementById('infoPanelTitle').textContent='BT Locations';
-        body.innerHTML=`<div style="padding:16px;">
-            <div style="font-size:14px;color:var(--text2);margin-bottom:20px;">แผนที่จุด BT Locations · ${locations.length} สถานที่</div>
-            ${[
-                ['📤','Export JSON','omExportM',''],
-                ['🖼️','Export \u0e23\u0e39\u0e1b\u0e41\u0e1c\u0e19\u0e17\u0e35\u0e48','omExportImgM',''],
-                ['📥','Import (JSON/CSV/KML/GPX)','omImportM',''],
-                ['📊','สถิติ','omStatsM',''],
-                ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmapM',''],
-                ['📝','Changelog','omChangelogM',''],
-                ['🔄','Sync Now'+(getToken()?` (${Math.round((Date.now()-_lastSyncTime)/1000)}s ago)`:''),'omSyncM',''],
-                ['🌙','Dark mode','omDarkM',''],
-                ['📍',trackingActive?'⏹ หยุดบันทึกเส้นทาง':'▶ บันทึกเส้นทาง','omTrackM',''],
-                ['🗺️',`ดูเส้นทาง (${savedPaths.length})`,'omShowPathsM',''],
-                ['📤','Export เส้นทาง','omExportPathsM',''],
-                ['↩','Undo','omUndoM',''],
-                ['↪','Redo','omRedoM',''],
-                ['🗑️','ลบที่กรอง (Bulk)','omBulkDelM','red'],
-                ['🔄','รีเซ็ตข้อมูล','omResetM','red'],
-            ].map(([icon,label,id,cls])=>`<button class="om-item ${cls}" id="${id}" style="border-radius:12px;"><span style="font-size:18px;width:20px;">${icon}</span>${label}</button>`).join('<div class="om-sep" style="margin:2px 0;"></div>')}
-        </div>`;
+        const _syncAgo=getToken()?` · ${Math.round((Date.now()-_lastSyncTime)/1000)}s ago`:'';
+        const _darkLabel=document.body.classList.contains('dark')?'☀️ Light mode':'🌙 Dark mode';
+        const _trackLabel=trackingActive?'⏹ หยุดบันทึก':'▶ บันทึกเส้นทาง';
+        const _menuSection=(title,items)=>`
+            <div style="margin-bottom:8px;">
+                <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:12px 16px 4px;">${title}</div>
+                <div style="background:var(--surface);border-radius:14px;margin:0 12px;overflow:hidden;box-shadow:var(--shadow-sm);">
+                    ${items.map(([icon,label,id,cls])=>`
+                        <button class="om-item ${cls||''}" id="${id}">
+                            <span style="font-size:16px;width:24px;text-align:center;">${icon}</span>
+                            <span style="flex:1;font-size:14px;">${label}</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text3);opacity:0.4;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>`;
+        body.innerHTML=`
+            <div style="padding:8px 4px 4px;">
+                <div style="padding:16px 16px 8px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;border-radius:12px;background:var(--blue);display:flex;align-items:center;justify-content:center;">
+                        <span style="font-size:22px;color:#fff;">📍</span>
+                    </div>
+                    <div>
+                        <div style="font-size:16px;font-weight:700;color:var(--text);">BT Locations</div>
+                        <div style="font-size:12px;color:var(--text3);">${locations.length} สถานที่${_syncAgo}</div>
+                    </div>
+                </div>
+                ${_menuSection('ข้อมูล',[
+                    ['🔄','Sync','omSyncM',''],
+                    ['📤','Export','omExportM',''],
+                    ['📥','Import','omImportM',''],
+                    ['📊','สถิติ','omStatsM',''],
+                    ['📝','Changelog','omChangelogM',''],
+                ])}
+                ${_menuSection('เครื่องมือ',[
+                    [_darkLabel.split(' ')[0],_darkLabel.split(' ').slice(1).join(' '),'omDarkM',''],
+                    ['📍',_trackLabel,'omTrackM',''],
+                    ['🗺️','ดูเส้นทาง ('+savedPaths.length+')','omShowPathsM',''],
+                    ['📤','Export เส้นทาง','omExportPathsM',''],
+                    ['🖼️','Export รูปแผนที่','omExportImgM',''],
+                ])}
+                ${_menuSection('แก้ไข',[
+                    ['↩️','Undo','omUndoM',''],
+                    ['↪️','Redo','omRedoM',''],
+                    ['🗑️','ลบที่กรอง','omBulkDelM','red'],
+                    ['⚠️','รีเซ็ตข้อมูล','omResetM','red'],
+                ])}
+            </div>`;
         const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
         b('omExportM',  doExport);
         b('omExportImgM', doExportImage);
