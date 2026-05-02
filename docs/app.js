@@ -70,47 +70,62 @@ function throttle(fn, ms) {
 }
 
 // ── save: debounced + integrity check ──
-// Architecture: GitHub = source of truth, localStorage = cache
-// save → update cache + push GitHub
+// Architecture: GitHub = SINGLE source of truth
+// localStorage = read cache + dirty queue (offline fallback)
+// Flow: edit → mark dirty → push GitHub → if success: clear dirty + update cache
+//       if push fails (offline): keep dirty → resolve on next load
+const DIRTY_KEY = 'bt_dirty';
 function _validateBeforeSave() {
     if (!Array.isArray(locations)) { console.error('Save aborted: locations is not array'); return false; }
-    if (locations.length === 0) return true; // allow empty
+    if (locations.length === 0) return true;
     const sample = locations[0];
     if (typeof sample.lat !== 'number' || typeof sample.lng !== 'number') { console.error('Save aborted: invalid lat/lng in first item'); return false; }
     return true;
 }
-let _pushPending = false;
+function _markDirty() { localStorage.setItem(DIRTY_KEY, '1'); }
+function _clearDirty() { localStorage.removeItem(DIRTY_KEY); }
+function _isDirty() { return localStorage.getItem(DIRTY_KEY) === '1'; }
+
+// Write to localStorage cache (always, as offline fallback)
+function _writeCache() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+}
+
+let _pushInFlight = false;
 const _debouncedPush = debounce(async () => {
-    if (!_pushPending) return;
-    _pushPending = false;
+    if (_pushInFlight) return;
     const token = getToken();
-    if (!token) return; // no token → cache only
+    if (!token) return; // no token → cache-only mode
+    _pushInFlight = true;
     try {
+        setSyncIndicator('active');
         const locs = locations.map(l => { const { photo, ...rest } = l; return rest; });
-        const sha = localStorage.getItem(SYNC_SHA_KEY) || '';
-        // Get current SHA from GitHub
         const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' },
             cache: 'no-store'
         });
-        if (!res.ok) { console.warn('Auto-push: fetch failed', res.status); setSyncIndicator('error'); return; }
+        if (!res.ok) throw new Error('GitHub fetch: ' + res.status);
         const data = await res.json();
         await _pushToGithub(token, locs, data.sha);
+        // Push succeeded → GitHub is now in sync → clear dirty
+        _clearDirty();
         setSyncIndicator('ok');
         _lastSyncTime = Date.now();
-        console.log('Auto-pushed to GitHub:', locs.length, 'locs');
+        console.log('Pushed to GitHub:', locs.length, 'locs');
     } catch (err) {
-        console.warn('Auto-push failed:', err.message);
+        console.warn('Push failed (will retry):', err.message);
         setSyncIndicator('error');
-    }
-}, 2000); // 2s debounce for GitHub push
+        // dirty flag stays → will resolve on next load or retry
+    } finally { _pushInFlight = false; }
+}, 2000);
 
 const saveLocations = debounce(() => {
     if (!_validateBeforeSave()) return;
-    // 1. Update local cache
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
-    // 2. Queue GitHub push
-    _pushPending = true;
+    // 1. Mark dirty BEFORE anything
+    _markDirty();
+    // 2. Write local cache (offline fallback)
+    _writeCache();
+    // 3. Push to GitHub (async, will clear dirty on success)
     _debouncedPush();
 }, 300);
 
@@ -1785,51 +1800,97 @@ function startAutoSync(){
     });
 }
 
-// Initial load: GitHub = source of truth, localStorage = cache
+// Initial load: GitHub = SINGLE source of truth
+// If dirty (local changes not pushed) → detect conflict → resolve
 (async()=>{
-    let loaded = false;
-    // Try GitHub first (always — raw is public)
+    const token = getToken();
+    let ghData = null, ghSha = null;
+
+    // 1. Try fetch from GitHub
     try {
-        const token = getToken();
-        let fresh;
         if (token) {
-            // Authenticated fetch (gets latest, no CDN cache)
             const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
                 headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' },
                 cache: 'no-store'
             });
             if (res.ok) {
-                const data = await res.json();
-                fresh = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))));
-                localStorage.setItem(SYNC_SHA_KEY, data.sha);
-                localStorage.setItem(SYNC_SNAPSHOT_KEY, JSON.stringify(fresh));
+                const d = await res.json();
+                ghData = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g, '')))));
+                ghSha = d.sha;
             }
         }
-        if (!fresh) {
-            // Public raw fetch (may have ~5min CDN cache)
+        if (!ghData) {
             const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`, { cache: 'no-store' });
-            if (res.ok) fresh = await res.json();
+            if (res.ok) ghData = await res.json();
         }
-        if (fresh && fresh.length > 0) {
-            // Preserve local photos
+    } catch (e) { console.warn('GitHub fetch failed:', e.message); }
+
+    // 2. Decide what to use
+    if (ghData && ghData.length > 0) {
+        if (_isDirty()) {
+            // Local has unsaved changes — check if GitHub also changed
+            const snapshot = (() => { try { return JSON.parse(localStorage.getItem(SYNC_SNAPSHOT_KEY) || 'null'); } catch { return null; } })();
+            const localStripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
+            const ghJson = JSON.stringify(ghData);
+            const snapJson = snapshot ? JSON.stringify(snapshot) : null;
+
+            if (snapJson && ghJson !== snapJson) {
+                // CONFLICT: both local AND GitHub changed since last sync
+                console.warn('CONFLICT: local dirty + GitHub changed');
+                showToast('⚠️ มีข้อมูลขัดแย้ง — กรุณาเลือก', true);
+                // Use 3-way merge
+                const result = mergeLocs(localStripped, ghData, snapshot);
+                const photoMap = new Map();
+                locations.forEach(l => { if (l.photo) photoMap.set(_locKey(l), l.photo); });
+                locations = result.merged.map(l => {
+                    const n = normalizeLocation(l);
+                    const p = photoMap.get(_locKey(n));
+                    return p ? { ...n, photo: p } : n;
+                });
+                _writeCache();
+                invalidateCache(); update();
+                // Push merged result to GitHub
+                if (token && ghSha) {
+                    try {
+                        const mergedStripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
+                        await _pushToGithub(token, mergedStripped, ghSha);
+                        _clearDirty();
+                        setSyncIndicator('ok');
+                        showToast(`🔀 Merge สำเร็จ: +${result.added} -${result.removed}`, false, true);
+                    } catch (e) { console.warn('Merge push failed:', e); setSyncIndicator('error'); }
+                }
+            } else {
+                // GitHub unchanged — local wins, push it
+                console.log('Dirty: pushing local changes to GitHub');
+                _writeCache();
+                if (token) _debouncedPush();
+                invalidateCache(); update();
+            }
+        } else {
+            // Not dirty — GitHub wins (normal case)
             const photoMap = new Map();
             locations.forEach(l => { if (l.photo) photoMap.set(_locKey(l), l.photo); });
-            locations = fresh.map(l => {
+            locations = ghData.map(l => {
                 const n = normalizeLocation(l);
                 const p = photoMap.get(_locKey(n));
                 return p ? { ...n, photo: p } : n;
             });
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+            _writeCache();
+            if (ghSha) {
+                localStorage.setItem(SYNC_SHA_KEY, ghSha);
+                localStorage.setItem(SYNC_SNAPSHOT_KEY, JSON.stringify(ghData));
+            }
+            _clearDirty();
             invalidateCache(); update();
-            loaded = true;
             console.log('Loaded from GitHub:', locations.length, 'locs');
         }
-    } catch (e) { console.warn('GitHub load failed, using cache:', e.message); }
+    } else {
+        // GitHub unavailable — use cache
+        console.log('GitHub unavailable, using cache:', locations.length, 'locs');
+        if (_isDirty()) showToast('⚠️ มีข้อมูลที่ยังไม่ได้ sync', true);
+    }
 
-    if (!loaded) console.log('Using localStorage cache:', locations.length, 'locs');
-
-    // Start auto-sync if token available
-    if (getToken()) startAutoSync();
+    if (token) startAutoSync();
 })();
 
 // ════════════════════════════════════════════
@@ -1842,7 +1903,7 @@ window.btDebug = {
     get token() { return getToken() ? '✅ set' : '❌ none'; },
     get stats() {
         const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
-        return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};
+        return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,dirty:_isDirty(),lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};
     },
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
