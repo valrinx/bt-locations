@@ -118,6 +118,17 @@ python -m http.server 8080
    ```
 
 4. **เปิด preview → Ctrl+Shift+R (hard refresh)** เพื่อเลี่ยง cache
+5. **fetch ข้าม domain (GitHub API) → ห้ามใส่ header ที่ CORS ไม่อนุญาต**
+   - ❌ `'Cache-Control': 'no-cache'` → ทำให้ CORS preflight fail บน Android/PC Chrome
+   - ❌ `cache: 'no-store'` → ไม่จำเป็นและอาจมีปัญหา
+   - ✅ ใช้แค่ `Authorization` + `Accept` เท่านั้น
+6. **เพิ่มเมนู/UI ที่อ้างอิงตัวแปร → ต้องประกาศตัวแปรก่อนเสมอ**
+   - grep ตรวจว่าทุกตัวแปรที่ใช้ถูก `let`/`const`/`function` ไว้แล้ว
+   - ถ้าไม่มี → JS crash ทั้งหน้า (เคยเกิดกับ `trackingActive`)
+7. **ทดสอบบนมือถือทุกครั้งที่แก้ไข** — iOS/Android/PC ทำงานต่างกัน
+   - Android Chrome: CORS เข้มงวด, SW cache aggressive
+   - iOS Safari: CORS ผ่อนปรน, SW lifecycle ต่าง
+   - ถ้า sync ใช้ได้บน iOS แต่ไม่ได้บน Android → ตรวจ CORS headers ก่อน
 
 > 💡 **Tip:** GitHub Actions จะ auto build + deploy หลัง push ไป `main` — ดูสถานะที่ Actions tab ใน repo
 
