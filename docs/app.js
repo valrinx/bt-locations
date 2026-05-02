@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.0';
+const APP_VERSION = 'v5.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -276,11 +276,12 @@ function createClusterGroup() {
         maxClusterRadius: function(zoom) {
             if (zoom >= 18) return 10;
             if (zoom >= 16) return 20;
-            if (zoom >= 14) return 35;
-            if (zoom >= 12) return 50;
-            return 80;
+            if (zoom >= 14) return 40;
+            if (zoom >= 12) return 70;
+            if (zoom >= 10) return 100;
+            return 120;
         },
-        disableClusteringAtZoom: 18,
+        disableClusteringAtZoom: 17,
         spiderfyOnMaxZoom: true,
         zoomToBoundsOnClick: true,
         animate: false,
@@ -413,7 +414,10 @@ function renderMarkers(filtered) {
     map.removeLayer(markerCluster);
     markerCluster = createClusterGroup();
 
-    const MAX_MARKERS = _mobile ? 1000 : 2000;
+    const zoom = map.getZoom();
+    const MAX_MARKERS = _mobile
+        ? (zoom >= 15 ? 300 : zoom >= 13 ? 150 : 80)
+        : (zoom >= 15 ? 800 : zoom >= 13 ? 400 : 200);
     const layers = [];
     let truncated = false;
     filteredIdxSet.forEach(idx => {
@@ -806,7 +810,11 @@ function _updateTooltipVisibility() {
         }
     });
 }
-map.on('zoomend', _updateTooltipVisibility);
+map.on('zoomend', () => {
+    _updateTooltipVisibility();
+    _lastFilteredKey = null; // force re-render with new marker limit
+    update();
+});
 
 map.on('dragstart', () => {
     if (gpsTracking) {
@@ -1080,54 +1088,6 @@ function cancelMeasureMode(){
 document.getElementById('measureModalClose').onclick=()=>document.getElementById('measureModalOverlay').classList.remove('open');
 document.getElementById('measureModalClear').onclick=()=>{if(measureLine){map.removeLayer(measureLine);measureLine=null;}document.getElementById('measureModalOverlay').classList.remove('open');};
 document.getElementById('measureModalOverlay').onclick=e=>{if(e.target===document.getElementById('measureModalOverlay'))document.getElementById('measureModalOverlay').classList.remove('open');};
-
-// ════════════════════════════════════════════
-// DIRECTIONS (OSRM routing from current location)
-// ════════════════════════════════════════════
-let _directionsLine = null;
-window.doDirectionsTo = function(idx) {
-    const dest = locations[idx];
-    if (!dest) { showToast('ไม่พบสถานที่', true); return; }
-    closePlaceCard();
-
-    if (!navigator.geolocation) {
-        // Fallback: open Google Maps directions
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-        return;
-    }
-
-    showToast('📍 กำลังหาตำแหน่งของคุณ...');
-    navigator.geolocation.getCurrentPosition(pos => {
-        const from = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
-
-        fetch(url).then(r => r.json()).then(data => {
-            if (!data.routes || !data.routes.length) {
-                showToast('❌ หาเส้นทางไม่ได้', true);
-                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-                return;
-            }
-            const route = data.routes[0];
-            const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-            const distKm = (route.distance / 1000).toFixed(1);
-            const mins = Math.round(route.duration / 60);
-
-            // Remove old directions line
-            if (_directionsLine) map.removeLayer(_directionsLine);
-            _directionsLine = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.8 }).addTo(map);
-            map.fitBounds(_directionsLine.getBounds(), { padding: [60, 60] });
-
-            showToast(`🧭 ${dest.name || 'ปลายทาง'}: ${distKm} km · ~${mins} นาที`, false, true);
-        }).catch(() => {
-            showToast('❌ OSRM ล้มเหลว — เปิด Google Maps', true);
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-        });
-    }, err => {
-        console.warn('GPS error:', err);
-        showToast('📍 ไม่สามารถหาตำแหน่ง — เปิด Google Maps');
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-    }, { enableHighAccuracy: true, timeout: 10000 });
-};
 
 // ════════════════════════════════════════════
 // ROUTE PLANNING (Nearest-Neighbor TSP)
