@@ -44,6 +44,7 @@
             cursor: default;
         }
         #map.add-cursor { cursor: crosshair; }
+        #map.measure-cursor { cursor: crosshair; }
 
         /* ══ SEARCH BAR ══ */
         .search-bar {
@@ -194,17 +195,11 @@
         .map-btn svg { width: 20px; height: 20px; transition: transform 0.2s; }
         .map-btn:active svg { transform: scale(0.9); }
 
-        /* GPS button states */
-        .map-btn.gps-searching {
-            color: var(--yellow);
-            animation: gps-btn-spin 1s linear infinite;
-        }
-        .map-btn.gps-found {
-            color: var(--blue);
-        }
-        @keyframes gps-btn-spin {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
+        .map-btn.gps-searching { color: var(--yellow); animation: gps-btn-pulse 1.2s ease-in-out infinite; }
+        .map-btn.gps-found { color: var(--blue); }
+        @keyframes gps-btn-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
         }
 
         .map-btn-group {
@@ -355,9 +350,9 @@
         .place-card-meta { font-size: 14px; color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
         .place-card-meta .dot { color: var(--text3); }
 
-        .place-card-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+        .place-card-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
         .place-action-btn {
-            flex: 1; display: flex; flex-direction: column;
+            flex: 1; min-width: 60px; display: flex; flex-direction: column;
             align-items: center; gap: 4px; padding: 10px 4px;
             background: var(--blue-light); border: none; border-radius: 12px;
             cursor: pointer; transition: background 0.15s, transform 0.15s; text-decoration: none;
@@ -370,11 +365,14 @@
         .place-action-btn.green:hover { background: #ceead6; transform: translateY(-2px); }
         .place-action-btn.yellow { background: #fef7e0; }
         .place-action-btn.yellow:hover { background: #fdeea3; transform: translateY(-2px); }
+        .place-action-btn.purple { background: #f3e8fd; }
+        .place-action-btn.purple:hover { background: #e8d5fc; transform: translateY(-2px); }
         .place-action-icon { font-size: 20px; }
         .place-action-label { font-size: 11px; font-weight: 600; color: var(--blue); font-family: inherit; }
         .place-action-btn.red .place-action-label { color: var(--red); }
         .place-action-btn.green .place-action-label { color: var(--green); }
         .place-action-btn.yellow .place-action-label { color: #b45309; }
+        .place-action-btn.purple .place-action-label { color: #7b1fa2; }
 
         .place-card-divider { height: 1px; background: var(--border); margin: 12px 0; }
         .place-card-row { display: flex; align-items: flex-start; gap: 14px; padding: 8px 0; }
@@ -417,6 +415,20 @@
         .list-panel-close:hover { background: var(--surface2); }
         .list-body { overflow-y: auto; flex: 1; }
 
+        /* Sort bar inside list panel */
+        .list-sort-bar {
+            display: flex; gap: 6px; padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+        }
+        .list-sort-bar::-webkit-scrollbar { display: none; }
+        .sort-btn {
+            padding: 4px 12px; border-radius: 14px; border: none;
+            background: var(--surface2); font-size: 12px; font-family: inherit;
+            color: var(--text2); cursor: pointer; white-space: nowrap; transition: all 0.12s;
+        }
+        .sort-btn.active { background: var(--blue-light); color: var(--blue); font-weight: 600; }
+
         .list-item {
             display: flex; align-items: center; gap: 12px;
             padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border);
@@ -454,14 +466,15 @@
         .modal-body { padding: 20px 24px; }
         .modal-field { margin-bottom: 16px; }
         .modal-field label { display: block; font-size: 12px; font-weight: 600; color: var(--blue); margin-bottom: 4px; letter-spacing: 0.5px; }
-        .modal-field input, .modal-field select {
+        .modal-field input, .modal-field select, .modal-field textarea {
             width: 100%; padding: 12px 14px;
             border: 2px solid var(--border); border-radius: 12px;
             font-size: 15px; font-family: inherit; color: var(--text);
             outline: none; transition: border-color 0.15s;
             background: var(--surface);
         }
-        .modal-field input:focus, .modal-field select:focus { border-color: var(--blue); }
+        .modal-field textarea { resize: vertical; min-height: 72px; }
+        .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--blue); }
 
         .latlng-row { display: flex; gap: 10px; }
         .latlng-row .modal-field { flex: 1; }
@@ -528,6 +541,25 @@
         }
         .add-banner-cancel:hover { background: rgba(255,255,255,0.25); }
 
+        /* ══ MEASURE BANNER ══ */
+        .measure-banner {
+            position: fixed;
+            top: 80px; left: 50%; transform: translateX(-50%);
+            z-index: 1500;
+            background: #7b1fa2; color: white;
+            padding: 12px 20px; border-radius: 20px;
+            font-size: 14px; font-weight: 500;
+            box-shadow: var(--shadow-lg);
+            display: none; align-items: center; gap: 10px;
+            white-space: nowrap;
+        }
+        .measure-banner.show { display: flex; }
+        .measure-banner-cancel {
+            background: rgba(255,255,255,0.15); border: none; color: white;
+            padding: 5px 14px; border-radius: 14px; font-size: 13px;
+            cursor: pointer; font-family: inherit;
+        }
+
         #crosshair {
             display: none; position: fixed;
             pointer-events: none; z-index: 1600;
@@ -544,6 +576,7 @@
         }
         .latlng-hint.show { opacity: 1; }
 
+        /* ══ TOAST STACK ══ */
         .save-toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
             z-index: 2100; background: #202124; color: white;
@@ -554,6 +587,7 @@
         }
         .save-toast.show { opacity: 1; }
         .save-toast.error { background: var(--red); }
+        .save-toast.success { background: var(--green); }
 
         /* ══ INFO PANEL MENU ITEMS ══ */
         .om-item {
@@ -569,14 +603,17 @@
         .om-item.red svg { color: var(--red); }
         .om-sep { height: 1px; background: var(--border); margin: 4px 0; }
 
-        /* ══ DARK MODE ══ */
+        /* ══ MOBILE RESPONSIVE ══ */
         body.dark {
             --surface: #202124; --surface2: #303134; --border: #5f6368;
             --text: #e8eaed; --text2: #9aa0a6; --text3: #5f6368;
             --blue-light: #1a3a6b; background: #202124;
         }
+        body.dark .search-input { color: var(--text); }
+        body.dark .modal-field input,
+        body.dark .modal-field select,
+        body.dark .modal-field textarea { background: var(--surface2); color: var(--text); }
 
-        /* ══ MOBILE ══ */
         @media (max-width: 599px) {
             :root { --sidebar-w: 100vw; }
             .search-bar { top: 8px; left: 8px; right: 8px; width: auto; }
@@ -584,6 +621,8 @@
             .fab { right: 12px; bottom: 16px; }
             .count-pill { bottom: 80px; }
             .gps-btn-wrap { right: 8px; bottom: 88px; }
+            .place-card-actions { gap: 6px; }
+            .place-action-btn { padding: 8px 2px; }
         }
 
         /* Leaflet overrides */
@@ -598,10 +637,7 @@
         .leaflet-control-attribution { font-size: 10px; }
 
         /* ══ DENSITY-BASED CLUSTER COLORS ══ */
-        .marker-cluster {
-            background-clip: padding-box;
-            border-radius: 20px;
-        }
+        .marker-cluster { background-clip: padding-box; border-radius: 20px; }
         .marker-cluster div {
             width: 30px; height: 30px;
             margin-left: 5px; margin-top: 5px;
@@ -610,25 +646,22 @@
             color: #fff;
             display: flex; align-items: center; justify-content: center;
         }
-        .cluster-density-low { background: rgba(52, 168, 83, 0.25) !important; }
-        .cluster-density-low div { background: rgba(52, 168, 83, 0.9) !important; }
-        .cluster-density-medium { background: rgba(251, 188, 4, 0.25) !important; }
-        .cluster-density-medium div { background: rgba(251, 188, 4, 0.9) !important; color: #333 !important; }
-        .cluster-density-high { background: rgba(234, 67, 53, 0.25) !important; }
-        .cluster-density-high div { background: rgba(234, 67, 53, 0.9) !important; }
-        .cluster-density-extreme { background: rgba(103, 58, 183, 0.25) !important; }
-        .cluster-density-extreme div { background: rgba(103, 58, 183, 0.9) !important; }
+        .cluster-density-low { background: rgba(52,168,83,0.25) !important; }
+        .cluster-density-low div { background: rgba(52,168,83,0.9) !important; }
+        .cluster-density-medium { background: rgba(251,188,4,0.25) !important; }
+        .cluster-density-medium div { background: rgba(251,188,4,0.9) !important; color: #333 !important; }
+        .cluster-density-high { background: rgba(234,67,53,0.25) !important; }
+        .cluster-density-high div { background: rgba(234,67,53,0.9) !important; }
+        .cluster-density-extreme { background: rgba(103,58,183,0.25) !important; }
+        .cluster-density-extreme div { background: rgba(103,58,183,0.9) !important; }
 
-        /* ══ YOU-ARE-HERE — smooth + layered pulse ══ */
+        /* ══ YOU-ARE-HERE ══ */
         .you-are-here-wrap {
-            position: relative;
-            width: 48px; height: 48px;
+            position: relative; width: 48px; height: 48px;
             display: flex; align-items: center; justify-content: center;
         }
         .you-are-here-ring {
-            position: absolute;
-            width: 48px; height: 48px;
-            border-radius: 50%;
+            position: absolute; width: 48px; height: 48px; border-radius: 50%;
             background: rgba(26,115,232,0.15);
             animation: gps-ring 2.4s ease-out infinite;
         }
@@ -639,17 +672,15 @@
             100% { transform: scale(1.8); opacity: 0; }
         }
         .you-are-here {
-            position: relative;
-            width: 16px; height: 16px; border-radius: 50%;
-            background: #1a73e8;
-            border: 3px solid white;
-            box-shadow: 0 2px 8px rgba(26,115,232,0.5);
-            z-index: 1;
+            position: relative; width: 16px; height: 16px; border-radius: 50%;
+            background: #1a73e8; border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.5); z-index: 1;
         }
 
-        /* ══ GPS ACCURACY CIRCLE ══ */
-        .leaflet-interactive.gps-accuracy-circle {
-            transition: none;
+        /* ══ NEARBY DISTANCE BADGE ══ */
+        .distance-badge {
+            display: inline-block; background: var(--blue-light); color: var(--blue);
+            font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 6px;
         }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -689,6 +720,7 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg>
                 <span id="chipCityLabel">เขต</span>
             </button>
+            <button class="chip" id="chipNearby">📍 ใกล้ฉัน</button>
             <button class="chip" id="chipHeatmap">🔥 Heatmap</button>
             <button class="chip" id="chipList2">☰ รายการ</button>
         </div>
@@ -698,6 +730,12 @@
     <div class="add-banner" id="addBanner">
         📍 คลิกบนแผนที่เพื่อปักหมุด
         <button class="add-banner-cancel" id="btnCancelAdd">ยกเลิก</button>
+    </div>
+
+    <!-- ══ MEASURE BANNER ══ -->
+    <div class="measure-banner" id="measureBanner">
+        📏 เลือกจุดที่ 2 เพื่อวัดระยะ
+        <button class="measure-banner-cancel" id="btnCancelMeasure">ยกเลิก</button>
     </div>
 
     <!-- ══ MAP CONTROLS ══ -->
@@ -759,6 +797,13 @@
             <span class="list-panel-title" id="listPanelTitle">สถานที่ทั้งหมด</span>
             <button class="list-panel-close" id="listPanelClose">✕</button>
         </div>
+        <div class="list-sort-bar" id="listSortBar">
+            <button class="sort-btn active" data-sort="default">ค่าเริ่มต้น</button>
+            <button class="sort-btn" data-sort="name">ชื่อ A-Z</button>
+            <button class="sort-btn" data-sort="list">รายการ</button>
+            <button class="sort-btn" data-sort="city">เขต</button>
+            <button class="sort-btn" data-sort="near" id="sortNear">ใกล้ฉัน</button>
+        </div>
         <div class="list-body" id="listBody"></div>
     </div>
 
@@ -801,11 +846,17 @@
                 </div>
                 <div class="modal-field">
                     <label>รายการ (List)</label>
-                    <input type="text" id="modalList" placeholder="เช่น บางเขน">
+                    <input type="text" id="modalList" placeholder="เช่น บางเขน" list="listSuggestions">
+                    <datalist id="listSuggestions"></datalist>
                 </div>
                 <div class="modal-field">
                     <label>เขต (City)</label>
-                    <input type="text" id="modalCity" placeholder="เขต/อำเภอ">
+                    <input type="text" id="modalCity" placeholder="เขต/อำเภอ" list="citySuggestions">
+                    <datalist id="citySuggestions"></datalist>
+                </div>
+                <div class="modal-field">
+                    <label>หมายเหตุ (ไม่บังคับ)</label>
+                    <textarea id="modalNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
                 </div>
                 <button class="gps-modal-btn" id="btnUseGpsModal">📍 ใช้ตำแหน่งของฉัน</button>
                 <div class="latlng-row">
@@ -859,6 +910,19 @@
         </div>
     </div>
 
+    <!-- ══ MEASURE RESULT MODAL ══ -->
+    <div class="modal-overlay" id="measureModalOverlay">
+        <div class="modal confirm-modal">
+            <div class="confirm-icon">📏</div>
+            <div class="confirm-title">ระยะทาง</div>
+            <div class="confirm-text" id="measureResultText"></div>
+            <div class="confirm-footer">
+                <button class="modal-btn modal-btn-cancel" id="measureModalClose">ปิด</button>
+                <button class="modal-btn modal-btn-save" id="measureModalClear">ลบเส้น</button>
+            </div>
+        </div>
+    </div>
+
     <div class="save-toast" id="saveToast"></div>
     <input type="file" id="fileImport" accept=".json" style="display:none">
 
@@ -880,17 +944,24 @@
         try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); }
         catch(e) { return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); }
     })();
+
     let addMode = false, editingIndex = -1;
     let filterList = '', filterCity = '';
     let heatmapMode = false;
-    let measureStart = null, measureLine = null;
+    let measureMode = false, measureStart = null, measureLine = null;
     let myLocationMarker = null, myLocationCircle = null;
+    let listSortMode = 'default';
+    let myLatLng = null; // ตำแหน่งของฉัน (ใช้สำหรับ sort near + nearby filter)
+    let nearbyMode = false, nearbyRadius = 2000; // 2 km
 
     // ── GPS State ──────────────────────────────
-    let gpsWatcher = null;          // watchPosition id
-    let gpsCoarseShown = false;     // เคยแสดง coarse แล้วหรือยัง
-    let gpsFlyDone = false;         // fly ไปแล้วหรือยัง (ครั้งแรก)
-    let gpsActive = false;          // กำลัง track อยู่
+    let gpsWatcher = null;
+    let gpsCoarseShown = false;
+    let gpsFlyDone = false;
+    let gpsActive = false;
+    // ── GPS toast guard: แสดงแค่ครั้งแรก ──────
+    let gpsToastShown = false;
+    let gpsFineToastShown = false;
     // ──────────────────────────────────────────
 
     function saveLocations() { localStorage.setItem(STORAGE_KEY, JSON.stringify(locations)); }
@@ -929,7 +1000,7 @@
     function createClusterGroup() {
         return L.markerClusterGroup({
             maxClusterRadius: 50,
-            iconCreateFunction: function(cluster) {
+            iconCreateFunction(cluster) {
                 const count = cluster.getChildCount();
                 const cls = getDensityClass(count);
                 return L.divIcon({
@@ -962,14 +1033,18 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
+    function formatDist(m) {
+        return m >= 1000 ? `${(m/1000).toFixed(1)} กม.` : `${Math.round(m)} ม.`;
+    }
+
     // ════════════════════════════════════════════
     // RENDER
     // ════════════════════════════════════════════
     function matchCoords(l, q) {
-        const latStr = String(l.lat), lngStr = String(l.lng), qClean = q.replace(/\s/g, '');
+        const latStr = String(l.lat), lngStr = String(l.lng), qClean = q.replace(/\s/g,'');
         return latStr.includes(q) || lngStr.includes(q)
-            || (latStr + ',' + lngStr).includes(qClean)
-            || (latStr + ', ' + lngStr).includes(qClean);
+            || (latStr+','+lngStr).includes(qClean)
+            || (latStr+', '+lngStr).includes(qClean);
     }
 
     function getFiltered() {
@@ -982,8 +1057,22 @@
                 || l.list.toLowerCase().includes(q)
                 || (l.city||'').toLowerCase().includes(q)
                 || matchCoords(l, q);
-            return ml && mc && ms;
+            // nearby filter
+            const mn = !nearbyMode || !myLatLng
+                || haversine(myLatLng.lat, myLatLng.lng, l.lat, l.lng) <= nearbyRadius;
+            return ml && mc && ms && mn;
         });
+    }
+
+    function getSorted(filtered) {
+        const arr = [...filtered];
+        if (listSortMode === 'name') arr.sort((a,b) => (a.name||'').localeCompare(b.name||'','th'));
+        else if (listSortMode === 'list') arr.sort((a,b) => a.list.localeCompare(b.list,'th'));
+        else if (listSortMode === 'city') arr.sort((a,b) => (a.city||'').localeCompare(b.city||'','th'));
+        else if (listSortMode === 'near' && myLatLng) {
+            arr.sort((a,b) => haversine(myLatLng.lat,myLatLng.lng,a.lat,a.lng) - haversine(myLatLng.lat,myLatLng.lng,b.lat,b.lng));
+        }
+        return arr;
     }
 
     function renderMarkers(filtered) {
@@ -1030,6 +1119,17 @@
         renderMarkers(filtered);
         renderListPanel(filtered);
         updateChipLabels();
+        refreshDatalistSuggestions();
+    }
+
+    // ════════════════════════════════════════════
+    // DATALIST SUGGESTIONS (autocomplete)
+    // ════════════════════════════════════════════
+    function refreshDatalistSuggestions() {
+        const lists = [...new Set(locations.map(l => l.list).filter(Boolean))];
+        const cities = [...new Set(locations.map(l => l.city).filter(Boolean))];
+        document.getElementById('listSuggestions').innerHTML = lists.map(l => `<option value="${l}">`).join('');
+        document.getElementById('citySuggestions').innerHTML = cities.map(c => `<option value="${c}">`).join('');
     }
 
     // ════════════════════════════════════════════
@@ -1040,7 +1140,9 @@
         document.getElementById('chipCityLabel').textContent = filterCity || 'เขต';
         document.getElementById('chipList').classList.toggle('active', !!filterList);
         document.getElementById('chipCity').classList.toggle('active', !!filterCity);
-        document.getElementById('chipAll').classList.toggle('active', !filterList && !filterCity);
+        document.getElementById('chipAll').classList.toggle('active', !filterList && !filterCity && !nearbyMode);
+        document.getElementById('chipNearby').classList.toggle('active', nearbyMode);
+        document.getElementById('chipHeatmap').classList.toggle('active', heatmapMode);
     }
 
     // ════════════════════════════════════════════
@@ -1048,22 +1150,31 @@
     // ════════════════════════════════════════════
     function showPlaceCard(loc, idx) {
         const color = getColor(loc.list);
+        const dist = myLatLng ? haversine(myLatLng.lat, myLatLng.lng, loc.lat, loc.lng) : null;
+        const distHtml = dist !== null ? `<span class="distance-badge">📍 ${formatDist(dist)}</span>` : '';
+
         document.getElementById('placeCardContent').innerHTML = `
             <div class="place-card-name">${loc.name || 'ไม่มีชื่อ'}</div>
             <div class="place-card-meta">
                 <span style="color:${color};font-weight:600;">● ${loc.list}</span>
                 ${loc.city ? `<span class="dot">·</span><span>${loc.city}</span>` : ''}
+                ${distHtml}
             </div>
+            ${loc.note ? `<div style="font-size:13px;color:var(--text2);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>` : ''}
             <div class="place-card-actions">
                 <a class="place-action-btn" href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank">
                     <span class="place-action-icon">🗺️</span>
                     <span class="place-action-label" style="color:#1a73e8;">Maps</span>
                 </a>
-                <button class="place-action-btn green" onclick="openEdit(${idx})">
+                <a class="place-action-btn green" href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank">
+                    <span class="place-action-icon">🚗</span>
+                    <span class="place-action-label">Waze</span>
+                </a>
+                <button class="place-action-btn yellow" onclick="openEdit(${idx})">
                     <span class="place-action-icon">✏️</span>
                     <span class="place-action-label">แก้ไข</span>
                 </button>
-                <button class="place-action-btn yellow" onclick="startMeasure(${idx})">
+                <button class="place-action-btn purple" onclick="startMeasureMode(${idx})">
                     <span class="place-action-icon">📏</span>
                     <span class="place-action-label">วัดระยะ</span>
                 </button>
@@ -1099,16 +1210,19 @@
     function renderListPanel(filtered) {
         const body = document.getElementById('listBody');
         document.getElementById('listPanelTitle').textContent = `${filtered.length} สถานที่`;
-        body.innerHTML = filtered.map((loc) => {
+        const sorted = getSorted(filtered);
+        body.innerHTML = sorted.map((loc) => {
             const color = getColor(loc.list);
             const idx = locations.indexOf(loc);
+            const dist = myLatLng ? haversine(myLatLng.lat, myLatLng.lng, loc.lat, loc.lng) : null;
+            const distText = dist !== null ? ` · ${formatDist(dist)}` : '';
             return `<div class="list-item" onclick="showPlaceCard(locations[${idx}], ${idx}); closeListPanel();">
                 <div class="list-item-icon" style="background:${color}20;">
                     <span style="font-size:16px;">📍</span>
                 </div>
                 <div class="list-item-text">
                     <div class="list-item-name">${loc.name || 'ไม่มีชื่อ'}</div>
-                    <div class="list-item-sub">${loc.list}${loc.city ? ' · ' + loc.city : ''}</div>
+                    <div class="list-item-sub">${loc.list}${loc.city ? ' · ' + loc.city : ''}${distText}</div>
                 </div>
                 <span class="list-item-chevron">›</span>
             </div>`;
@@ -1116,6 +1230,20 @@
     }
     window.closeListPanel = () => document.getElementById('listPanel').classList.remove('open');
     document.getElementById('listPanelClose').onclick = closeListPanel;
+
+    // Sort buttons
+    document.getElementById('listSortBar').addEventListener('click', e => {
+        const btn = e.target.closest('.sort-btn');
+        if (!btn) return;
+        const sort = btn.dataset.sort;
+        if (sort === 'near' && !myLatLng) {
+            showToast('กรุณาเปิด GPS ก่อน', true); return;
+        }
+        listSortMode = sort;
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === sort));
+        const filtered = getFiltered();
+        renderListPanel(filtered);
+    });
 
     // ════════════════════════════════════════════
     // SEARCH
@@ -1161,12 +1289,27 @@
     // ════════════════════════════════════════════
     // FILTER CHIPS
     // ════════════════════════════════════════════
-    document.getElementById('chipAll').onclick = () => { filterList = ''; filterCity = ''; update(); };
+    document.getElementById('chipAll').onclick = () => {
+        filterList = ''; filterCity = ''; nearbyMode = false; update();
+    };
+
+    document.getElementById('chipNearby').onclick = () => {
+        if (!myLatLng) {
+            showToast('กรุณาเปิด GPS ก่อน', true); return;
+        }
+        nearbyMode = !nearbyMode;
+        update();
+        if (nearbyMode) {
+            const filtered = getFiltered();
+            if (filtered.length > 0) map.flyToBounds(L.latLngBounds(filtered.map(l => [l.lat, l.lng])), { padding: [60, 60], animate: true, duration: 0.8 });
+            showToast(`📍 แสดง ${getFiltered().length} จุดใกล้ฉัน (${nearbyRadius/1000} กม.)`);
+        }
+    };
 
     document.getElementById('chipList').onclick = () => {
         const counts = {};
         locations.forEach(l => { counts[l.list] = (counts[l.list]||0) + 1; });
-        const lists = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        const lists = Object.entries(counts).sort((a,b) => b[1]-a[1]);
         const container = document.getElementById('listChoiceList');
         container.innerHTML = `
             <div class="filter-choice-item ${!filterList ? 'selected' : ''}" data-val="">
@@ -1184,8 +1327,7 @@
         container.querySelectorAll('.filter-choice-item').forEach(el => {
             el.onclick = () => {
                 container.querySelectorAll('.filter-choice-item').forEach(x => x.classList.remove('selected'));
-                el.classList.add('selected');
-                filterList = el.dataset.val;
+                el.classList.add('selected'); filterList = el.dataset.val;
             };
         });
         document.getElementById('listFilterModalOverlay').classList.add('open');
@@ -1205,15 +1347,14 @@
     };
     document.getElementById('listFilterModalOverlay').onclick = e => {
         if (e.target === document.getElementById('listFilterModalOverlay')) {
-            document.getElementById('listFilterModalOverlay').classList.remove('open');
-            update();
+            document.getElementById('listFilterModalOverlay').classList.remove('open'); update();
         }
     };
 
     document.getElementById('chipCity').onclick = () => {
         const counts = {};
         locations.forEach(l => { if (l.city) counts[l.city] = (counts[l.city]||0) + 1; });
-        const cities = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+        const cities = Object.entries(counts).sort((a,b) => b[1]-a[1]);
         const container = document.getElementById('cityChoiceList');
         container.innerHTML = `
             <div class="filter-choice-item ${!filterCity ? 'selected' : ''}" data-val="">
@@ -1231,8 +1372,7 @@
         container.querySelectorAll('.filter-choice-item').forEach(el => {
             el.onclick = () => {
                 container.querySelectorAll('.filter-choice-item').forEach(x => x.classList.remove('selected'));
-                el.classList.add('selected');
-                filterCity = el.dataset.val;
+                el.classList.add('selected'); filterCity = el.dataset.val;
             };
         });
         document.getElementById('cityFilterModalOverlay').classList.add('open');
@@ -1252,8 +1392,7 @@
     };
     document.getElementById('cityFilterModalOverlay').onclick = e => {
         if (e.target === document.getElementById('cityFilterModalOverlay')) {
-            document.getElementById('cityFilterModalOverlay').classList.remove('open');
-            update();
+            document.getElementById('cityFilterModalOverlay').classList.remove('open'); update();
         }
     };
 
@@ -1283,12 +1422,11 @@
     };
 
     // ════════════════════════════════════════════
-    // GPS — Fast-first (coarse → fine), smooth fly, triple pulse
+    // GPS — แสดง toast เพียงครั้งเดียว (FIX BUG)
     // ════════════════════════════════════════════
     const btnGps = document.getElementById('btnGps');
 
-    function updateGpsMarker(lat, lng, accuracy, isCoarse) {
-        // สร้าง/อัปเดต accuracy circle
+    function updateGpsMarker(lat, lng, accuracy) {
         if (myLocationCircle) {
             myLocationCircle.setLatLng([lat, lng]);
             myLocationCircle.setRadius(accuracy);
@@ -1300,7 +1438,6 @@
             }).addTo(map);
         }
 
-        // สร้าง/อัปเดต marker
         const iconHtml = `
             <div class="you-are-here-wrap">
                 <div class="you-are-here-ring"></div>
@@ -1308,22 +1445,14 @@
                 <div class="you-are-here-ring"></div>
                 <div class="you-are-here"></div>
             </div>`;
-        const icon = L.divIcon({
-            className: '',
-            html: iconHtml,
-            iconSize: [48, 48],
-            iconAnchor: [24, 24]
-        });
+        const icon = L.divIcon({ className: '', html: iconHtml, iconSize: [48, 48], iconAnchor: [24, 24] });
 
         if (myLocationMarker) {
             myLocationMarker.setLatLng([lat, lng]);
             myLocationMarker.setIcon(icon);
         } else {
-            myLocationMarker = L.marker([lat, lng], {
-                icon,
-                zIndexOffset: 1000,
-                interactive: true
-            }).addTo(map)
+            myLocationMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000, interactive: true })
+              .addTo(map)
               .bindPopup(`<div style="padding:12px;font-size:13px;min-width:180px;">
                   <b>📍 ตำแหน่งของฉัน</b><br>
                   <small style="color:#5f6368;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
@@ -1331,63 +1460,79 @@
                   <button onclick="openAddAt(${lat},${lng})" style="background:#1a73e8;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
               </div>`);
         }
+
+        // อัปเดต myLatLng ทุกครั้ง (ใช้สำหรับ nearby + sort)
+        myLatLng = { lat, lng };
+
+        // อัปเดต popup content เมื่อ accuracy เปลี่ยน (ไม่แสดง toast ซ้ำ)
+        if (myLocationMarker.isPopupOpen()) {
+            myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;">
+                <b>📍 ตำแหน่งของฉัน</b><br>
+                <small style="color:#5f6368;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
+                <small style="color:#5f6368;">ความแม่นยำ ±${Math.round(accuracy)}ม.</small><br><br>
+                <button onclick="openAddAt(${lat},${lng})" style="background:#1a73e8;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
+            </div>`);
+        }
+
+        // รีเฟรช list ถ้ากำลัง sort/filter ใกล้ฉัน
+        if (listSortMode === 'near' || nearbyMode) update();
     }
 
     function stopGps() {
-        if (gpsWatcher !== null) {
-            navigator.geolocation.clearWatch(gpsWatcher);
-            gpsWatcher = null;
-        }
-        gpsActive = false;
-        gpsCoarseShown = false;
-        gpsFlyDone = false;
+        if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
+        gpsActive = false; gpsCoarseShown = false; gpsFlyDone = false;
+        gpsToastShown = false; gpsFineToastShown = false;
         btnGps.classList.remove('gps-searching', 'gps-found');
     }
 
     btnGps.onclick = () => {
         if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS'); return; }
 
-        // กดซ้ำ = ถ้า found แล้ว → fly ไปตำแหน่งอีกครั้ง
+        // กดซ้ำ → fly ไปตำแหน่ง
         if (gpsActive && myLocationMarker) {
             const ll = myLocationMarker.getLatLng();
             map.flyTo([ll.lat, ll.lng], 17, { animate: true, duration: 1.0 });
             return;
         }
 
-        // เริ่มหาตำแหน่ง
         stopGps();
         gpsActive = true;
         btnGps.classList.add('gps-searching');
+        // แสดง toast ครั้งเดียว
         showToast('⏳ กำลังหาตำแหน่ง...');
 
-        // ── Phase 1: IP/coarse ก่อน (เร็วมาก) ──────────
+        // Phase 1: coarse (เร็ว)
         navigator.geolocation.getCurrentPosition(
             pos => {
                 if (!gpsActive) return;
                 const { latitude: lat, longitude: lng, accuracy } = pos.coords;
                 gpsCoarseShown = true;
-                updateGpsMarker(lat, lng, accuracy, true);
+                updateGpsMarker(lat, lng, accuracy);
 
                 if (!gpsFlyDone) {
                     gpsFlyDone = true;
-                    // ถ้า accuracy หยาบมาก zoom ไม่ลึก
                     const zoom = accuracy > 1000 ? 13 : accuracy > 200 ? 15 : 17;
                     map.flyTo([lat, lng], zoom, { animate: true, duration: 1.0 });
                 }
 
                 btnGps.classList.remove('gps-searching');
                 btnGps.classList.add('gps-found');
-                showToast(accuracy > 500 ? '📡 ตำแหน่งโดยประมาณ (กำลัง refine...)' : '✅ พบตำแหน่งแล้ว');
 
-                // ── Phase 2: watch สำหรับ fine GPS ──────
+                // แสดง toast เพียงครั้งเดียว ณ ตอนที่ได้ coarse
+                if (!gpsToastShown) {
+                    gpsToastShown = true;
+                    showToast(accuracy > 500 ? `📡 ตำแหน่งโดยประมาณ ±${Math.round(accuracy)}ม.` : `✅ พบตำแหน่ง ±${Math.round(accuracy)}ม.`);
+                }
+
+                // Phase 2: watch fine GPS (silent — ไม่แสดง toast อีก)
                 gpsWatcher = navigator.geolocation.watchPosition(
                     pos2 => {
                         if (!gpsActive) return;
                         const { latitude: lat2, longitude: lng2, accuracy: acc2 } = pos2.coords;
-                        updateGpsMarker(lat2, lng2, acc2, false);
+                        updateGpsMarker(lat2, lng2, acc2);
 
-                        // fly smooth ถ้า position เปลี่ยนมากพอ
-                        if (gpsCoarseShown && acc2 < 100) {
+                        // fly เมื่อ position เปลี่ยนมากพอ (silent)
+                        if (gpsCoarseShown && acc2 < 100 && myLocationMarker) {
                             const prev = myLocationMarker.getLatLng();
                             const dist = haversine(prev.lat, prev.lng, lat2, lng2);
                             if (dist > 5) {
@@ -1395,34 +1540,31 @@
                             }
                         }
 
-                        if (acc2 < 50) showToast(`✅ แม่นยำ ±${Math.round(acc2)}ม.`);
+                        // แสดง toast ครั้งเดียวเมื่อ fine GPS พร้อม
+                        if (!gpsFineToastShown && acc2 < 50) {
+                            gpsFineToastShown = true;
+                            showToast(`✅ แม่นยำ ±${Math.round(acc2)}ม.`, false, true);
+                        }
                     },
-                    err => { /* silent — coarse ยังแสดงอยู่ */ },
+                    () => { /* silent */ },
                     { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 }
                 );
             },
-            err => {
-                stopGps();
-                showToast('ไม่สามารถหาตำแหน่งได้', true);
-            },
-            // Phase 1 ใช้ low accuracy → เร็วมาก
+            () => { stopGps(); showToast('ไม่สามารถหาตำแหน่งได้', true); },
             { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
         );
     };
 
-    // GPS ใน Modal — เร็วด้วย low accuracy ก่อน
+    // GPS ใน Modal
     document.getElementById('btnUseGpsModal').onclick = () => {
         if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS'); return; }
         const btn = document.getElementById('btnUseGpsModal');
         btn.textContent = '⏳ กำลังหาตำแหน่ง...';
-
-        // coarse ก่อน (เร็ว)
         navigator.geolocation.getCurrentPosition(pos => {
             document.getElementById('modalLat').value = pos.coords.latitude.toFixed(6);
             document.getElementById('modalLng').value = pos.coords.longitude.toFixed(6);
             btn.textContent = '✅ ได้ตำแหน่งแล้ว';
             setTimeout(() => btn.textContent = '📍 ใช้ตำแหน่งของฉัน', 2000);
-            // refine ถ้า accuracy หยาบ
             if (pos.coords.accuracy > 100) {
                 navigator.geolocation.getCurrentPosition(pos2 => {
                     document.getElementById('modalLat').value = pos2.coords.latitude.toFixed(6);
@@ -1449,6 +1591,7 @@
         crosshair.classList.add('show');
         document.getElementById('map').classList.add('add-cursor');
         closePlaceCard();
+        cancelMeasureMode();
     };
 
     document.getElementById('btnCancelAdd').onclick = cancelAddMode;
@@ -1472,16 +1615,34 @@
     // ════════════════════════════════════════════
     map.on('click', e => {
         const { lat, lng } = e.latlng;
+
+        // ถ้า modal เปิดอยู่ → ใส่พิกัด
         if (document.getElementById('editModalOverlay').classList.contains('open')) {
             document.getElementById('modalLat').value = lat.toFixed(6);
             document.getElementById('modalLng').value = lng.toFixed(6);
-            ['modalLat', 'modalLng'].forEach(id => {
+            ['modalLat','modalLng'].forEach(id => {
                 const el = document.getElementById(id);
                 el.style.borderColor = '#34a853';
                 setTimeout(() => el.style.borderColor = '', 800);
             });
             return;
         }
+
+        // Measure mode: คลิกบนแผนที่เพื่อกำหนดจุดที่ 2
+        if (measureMode && measureStart) {
+            const d = haversine(measureStart.lat, measureStart.lng, lat, lng);
+            if (measureLine) map.removeLayer(measureLine);
+            measureLine = L.polyline(
+                [[measureStart.lat, measureStart.lng], [lat, lng]],
+                { color: '#7b1fa2', weight: 3, dashArray: '8,6' }
+            ).addTo(map);
+            document.getElementById('measureResultText').textContent =
+                `${formatDist(d)}\n(จาก: ${measureStart.name || measureStart.list} → พิกัดที่เลือก)`;
+            document.getElementById('measureModalOverlay').classList.add('open');
+            cancelMeasureMode();
+            return;
+        }
+
         if (!addMode) return;
         cancelAddMode();
         openAddAt(lat, lng);
@@ -1494,6 +1655,7 @@
         document.getElementById('modalName').value = '';
         document.getElementById('modalList').value = filterList || '';
         document.getElementById('modalCity').value = filterCity || '';
+        document.getElementById('modalNote').value = '';
         document.getElementById('modalLat').value = parseFloat(lat).toFixed(6);
         document.getElementById('modalLng').value = parseFloat(lng).toFixed(6);
         document.getElementById('editModalOverlay').classList.add('open');
@@ -1513,6 +1675,7 @@
         document.getElementById('modalName').value = loc.name || '';
         document.getElementById('modalList').value = loc.list || '';
         document.getElementById('modalCity').value = loc.city || '';
+        document.getElementById('modalNote').value = loc.note || '';
         document.getElementById('modalLat').value  = loc.lat;
         document.getElementById('modalLng').value  = loc.lng;
         closePlaceCard();
@@ -1528,16 +1691,17 @@
         const name = document.getElementById('modalName').value.trim();
         const list = document.getElementById('modalList').value.trim() || 'ไม่มีรายการ';
         const city = document.getElementById('modalCity').value.trim();
+        const note = document.getElementById('modalNote').value.trim();
         const lat  = parseFloat(document.getElementById('modalLat').value);
         const lng  = parseFloat(document.getElementById('modalLng').value);
         if (isNaN(lat) || isNaN(lng)) { showToast('กรุณากรอก Lat/Lng', true); return; }
         pushUndo();
-        if (editingIndex >= 0) locations[editingIndex] = { name, lat, lng, list, city };
-        else locations.push({ name, lat, lng, list, city });
+        if (editingIndex >= 0) locations[editingIndex] = { name, lat, lng, list, city, note };
+        else locations.push({ name, lat, lng, list, city, note });
         saveLocations();
         document.getElementById('editModalOverlay').classList.remove('open');
         update();
-        showToast(editingIndex >= 0 ? 'บันทึกสำเร็จ' : 'เพิ่มสถานที่แล้ว');
+        showToast(editingIndex >= 0 ? 'บันทึกสำเร็จ' : 'เพิ่มสถานที่แล้ว', false, true);
         if (editingIndex < 0) map.flyTo([lat, lng], 15, { animate: true, duration: 0.7 });
     };
 
@@ -1552,22 +1716,32 @@
     };
 
     // ════════════════════════════════════════════
-    // MEASURE
+    // MEASURE MODE (ปรับปรุงใหม่)
     // ════════════════════════════════════════════
-    window.startMeasure = function(idx) {
+    window.startMeasureMode = function(idx) {
         const loc = locations[idx];
-        if (!measureStart) {
-            measureStart = loc; closePlaceCard(); showToast('เลือกจุดที่ 2 เพื่อวัดระยะ');
-        } else {
-            const d = haversine(measureStart.lat, measureStart.lng, loc.lat, loc.lng);
-            if (measureLine) map.removeLayer(measureLine);
-            measureLine = L.polyline(
-                [[measureStart.lat, measureStart.lng], [loc.lat, loc.lng]],
-                { color: '#ea4335', weight: 3, dashArray: '8,6' }
-            ).addTo(map);
-            showToast(`📏 ${(d/1000).toFixed(2)} km (${Math.round(d)} ม.)`);
-            measureStart = null;
-        }
+        measureStart = loc;
+        measureMode = true;
+        document.getElementById('measureBanner').classList.add('show');
+        document.getElementById('map').classList.add('measure-cursor');
+        closePlaceCard();
+    };
+
+    document.getElementById('btnCancelMeasure').onclick = cancelMeasureMode;
+    function cancelMeasureMode() {
+        measureMode = false; measureStart = null;
+        document.getElementById('measureBanner').classList.remove('show');
+        document.getElementById('map').classList.remove('measure-cursor');
+    }
+
+    // Measure: คลิกที่ marker อีกตัว
+    document.getElementById('measureModalClose').onclick = () => document.getElementById('measureModalOverlay').classList.remove('open');
+    document.getElementById('measureModalClear').onclick = () => {
+        if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+        document.getElementById('measureModalOverlay').classList.remove('open');
+    };
+    document.getElementById('measureModalOverlay').onclick = e => {
+        if (e.target === document.getElementById('measureModalOverlay')) document.getElementById('measureModalOverlay').classList.remove('open');
     };
 
     // ════════════════════════════════════════════
@@ -1587,9 +1761,9 @@
                 listCount[l.list] = (listCount[l.list]||0) + 1;
                 if (l.city) cityCount[l.city] = (cityCount[l.city]||0) + 1;
             });
-            const maxL = Math.max(...Object.values(listCount));
-            const sortedL = Object.entries(listCount).sort((a, b) => b[1] - a[1]);
-            const sortedC = Object.entries(cityCount).sort((a, b) => b[1] - a[1]);
+            const maxL = Math.max(...Object.values(listCount), 1);
+            const sortedL = Object.entries(listCount).sort((a,b) => b[1]-a[1]);
+            const sortedC = Object.entries(cityCount).sort((a,b) => b[1]-a[1]);
             body.innerHTML = `
                 <div class="stats-section">
                     <div style="font-size:28px;font-weight:700;color:var(--blue);margin-bottom:4px;">${locations.length}</div>
@@ -1604,7 +1778,9 @@
                     ${sortedC.length ? `
                     <div class="stats-header" style="margin-top:20px;">ตามเขต</div>
                     ${sortedC.map(([n, c]) => `<div class="stats-row">
+                        <span class="stats-dot" style="background:var(--blue)"></span>
                         <span class="stats-name">${n}</span>
+                        <div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/Math.max(...sortedC.map(x=>x[1]))*100}%"></div></div>
                         <span class="stats-count">${c}</span>
                     </div>`).join('')}` : ''}
                 </div>`;
@@ -1614,14 +1790,14 @@
                 <div style="padding:16px;">
                     <div style="font-size:14px;color:var(--text2);margin-bottom:20px;">แผนที่จุด BT Locations · ${locations.length} สถานที่</div>
                     ${[
-                        ['📤', 'Export JSON',            'omExportM', ''],
-                        ['📥', 'Import JSON',            'omImportM', ''],
-                        ['📊', 'สถิติ',                  'omStatsM',  ''],
+                        ['📤', 'Export JSON',                        'omExportM', ''],
+                        ['📥', 'Import JSON',                        'omImportM', ''],
+                        ['📊', 'สถิติ',                              'omStatsM',  ''],
                         ['🔥', heatmapMode ? 'ปิด Heatmap' : 'เปิด Heatmap', 'omHeatmapM', ''],
-                        ['🌙', 'Dark mode',              'omDarkM',   ''],
-                        ['↩',  'Undo',                   'omUndoM',   ''],
-                        ['🗑️', 'ลบที่กรอง (Bulk)',       'omBulkDelM','red'],
-                        ['🔄', 'รีเซ็ตข้อมูล',           'omResetM',  'red'],
+                        ['🌙', 'Dark mode',                          'omDarkM',   ''],
+                        ['↩',  'Undo',                               'omUndoM',   ''],
+                        ['🗑️', 'ลบที่กรอง (Bulk)',                   'omBulkDelM','red'],
+                        ['🔄', 'รีเซ็ตข้อมูล',                       'omResetM',  'red'],
                     ].map(([icon, label, id, cls]) =>
                         `<button class="om-item ${cls}" id="${id}" style="border-radius:12px;">
                             <span style="font-size:18px;width:20px;">${icon}</span>${label}
@@ -1671,8 +1847,7 @@
                 });
             } catch { showToast('JSON ไม่ถูกต้อง', true); }
         };
-        reader.readAsText(file);
-        e.target.value = '';
+        reader.readAsText(file); e.target.value = '';
     };
 
     function doUndo() {
@@ -1682,7 +1857,7 @@
 
     function doBulkDel() {
         const filtered = getFiltered();
-        if (!filterList && !filterCity && !document.getElementById('search').value) {
+        if (!filterList && !filterCity && !document.getElementById('search').value && !nearbyMode) {
             showToast('กรุณา filter ก่อน', true); return;
         }
         if (!filtered.length) { showToast('ไม่มีจุดในตัวกรอง', true); return; }
@@ -1714,7 +1889,7 @@
     }
 
     // ════════════════════════════════════════════
-    // GITHUB SAVE — sequential เพื่อป้องกัน SHA mismatch
+    // GITHUB SAVE
     // ════════════════════════════════════════════
     function getToken() { return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; }
     function setToken(t) { localStorage.setItem(GITHUB_TOKEN_KEY, t); }
@@ -1782,7 +1957,7 @@
             const f3 = await githubFile('docs/locations.js', token);
             await githubPut('docs/locations.js', locJs, f3.sha, token, 'Sync locations.js');
 
-            showToast('✅ บันทึก GitHub สำเร็จ');
+            showToast('✅ บันทึก GitHub สำเร็จ', false, true);
         } catch(err) {
             if (err.message.includes('401') || err.message.includes('credentials') || err.message.includes('Bad credentials')) {
                 localStorage.removeItem(GITHUB_TOKEN_KEY);
@@ -1820,13 +1995,13 @@
     };
 
     // ════════════════════════════════════════════
-    // TOAST
+    // TOAST (แก้ bug: success ใช้ green color)
     // ════════════════════════════════════════════
     let toastTimer;
-    function showToast(msg, isError = false) {
+    function showToast(msg, isError = false, isSuccess = false) {
         const t = document.getElementById('saveToast');
         t.textContent = msg;
-        t.className = 'save-toast show' + (isError ? ' error' : '');
+        t.className = 'save-toast show' + (isError ? ' error' : isSuccess ? ' success' : '');
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
     }
@@ -1834,7 +2009,7 @@
     // ════════════════════════════════════════════
     // BACKDROP CLOSE
     // ════════════════════════════════════════════
-    map.on('click', () => { if (!addMode) closePlaceCard(); closeListPanel(); });
+    map.on('click', () => { if (!addMode && !measureMode) closePlaceCard(); closeListPanel(); });
 
     window.showPlaceCard  = showPlaceCard;
     window.closeListPanel = closeListPanel;
@@ -1844,7 +2019,7 @@
     // ════════════════════════════════════════════
     update();
 
-    // Tooltip style injection
+    // Tooltip style
     const style = document.createElement('style');
     style.textContent = `.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#fff!important;border:none!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;white-space:nowrap!important;font-family:inherit!important;}`;
     document.head.appendChild(style);
