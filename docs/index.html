@@ -245,8 +245,10 @@
             border: none; background: var(--surface2); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             color: var(--text2); font-size: 18px; transition: background 0.15s, transform 0.15s;
+            z-index: 10; pointer-events: auto;
         }
         .place-card-close:hover { background: var(--border); transform: scale(1.1); }
+        .place-card-close:active { transform: scale(0.95); }
         .place-card-content { padding: 8px 16px 24px; }
         .place-card-name { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 4px; padding-right: 40px; }
         .place-card-meta { font-size: 14px; color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -308,8 +310,11 @@
             border: none; background: none; font-size: 20px; cursor: pointer; color: var(--text2);
             width: 32px; height: 32px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
+            position: relative; z-index: 10; pointer-events: auto;
+            flex-shrink: 0; margin-left: 8px;
         }
         .list-panel-close:hover { background: var(--surface2); }
+        .list-panel-close:active { transform: scale(0.9); }
         .list-body { overflow-y: auto; flex: 1; }
         .list-sort-bar {
             display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border);
@@ -1833,11 +1838,51 @@
     }
 
     // ════════════════════════════════════════════
-    // BACKDROP
+    // BACKDROP & KEYBOARD
     // ════════════════════════════════════════════
     map.on('click',()=>{if(!addMode&&!measureMode)closePlaceCard();closeListPanel();});
     window.showPlaceCard=showPlaceCard;
     window.closeListPanel=closeListPanel;
+
+    // ESC key ปิด panels
+    document.addEventListener('keydown',(e)=>{
+        if(e.key==='Escape'){
+            closeInfo();
+            closePlaceCard();
+            closeListPanel();
+            document.getElementById('shareModalOverlay').classList.remove('open');
+            document.getElementById('tokenModalOverlay').classList.remove('open');
+            document.getElementById('listFilterModalOverlay').classList.remove('open');
+            document.getElementById('cityFilterModalOverlay').classList.remove('open');
+            document.getElementById('editModalOverlay').classList.remove('open');
+            document.getElementById('confirmModalOverlay').classList.remove('open');
+        }
+    });
+
+    // Desktop: ปิด listPanel/placeCard เมื่อคลิกนอก (backdrop behavior)
+    document.addEventListener('click',(e)=>{
+        const listPanel=document.getElementById('listPanel');
+        const placeCard=document.getElementById('placeCard');
+        const searchBar=document.getElementById('searchBar');
+        const target=e.target;
+
+        // ปิด listPanel เมื่อคลิกนอก
+        if(listPanel.classList.contains('open') &&
+           !listPanel.contains(target) &&
+           !searchBar.contains(target) &&
+           !target.closest('.chip')){
+            closeListPanel();
+        }
+
+        // ปิด placeCard เมื่อคลิกนอก (ยกเว้นตอน add/measure mode)
+        if(!addMode && !measureMode &&
+           placeCard.classList.contains('open') &&
+           !placeCard.contains(target) &&
+           !target.closest('.leaflet-marker-icon') &&
+           !target.closest('.search-result-item')){
+            closePlaceCard();
+        }
+    });
 
     // ════════════════════════════════════════════
     // INIT
