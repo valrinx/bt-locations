@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.4.5';
+const APP_VERSION = 'v5.4.6';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -399,6 +399,8 @@ function _buildMarkerCache() {
 }
 
 function renderMarkers(filtered) {
+    // Hide normal markers in route mode to avoid overlap with route stops
+    if (routeMode) { if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster); return; }
     // build cache ถ้าตัวแรกหรือ locations เปลี่ยน
     if (_markerCache.size === 0 || _clusterDirty) _buildMarkerCache();
 
@@ -1592,8 +1594,10 @@ function clearRoute(){
     routeMode=false;
     _routeStops=[];
     document.getElementById('chipRoute').classList.remove('active');
-    // Restore sort bar
+    // Restore sort bar + markers
     document.getElementById('listSortBar').style.display='';
+    _lastFilteredKey=null; // force marker re-render
+    update();
 }
 
 // ── TSP solver: Nearest-Neighbor + 2-opt improvement ──
