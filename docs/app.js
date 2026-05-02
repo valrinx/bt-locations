@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.3.3';
+const APP_VERSION = 'v5.3.4';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -636,39 +636,40 @@ searchInput.addEventListener('input',()=>{
 });
 btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_lastFilteredKey=null;update();};
 
-// Normalize Unicode chars from Google Maps: smart quotes → ASCII
+// Normalize ALL Unicode degree/quote variants → ASCII
 function _normDMS(s){
-    return s.replace(/[°º]/g,'°')
-            .replace(/[''ʼ′]/g,"'")
-            .replace(/[""″]/g,'"')
+    return s.replace(/[°ºᵒ˚]/g,'D')
+            .replace(/[''ʼ′‛`]/g,'M')
+            .replace(/[""″‟˝]/g,'S')
             .replace(/\s+/g,' ').trim();
 }
+// Parse single DMS component: 13D45M40.4SN → decimal
 function _parseDMS(str){
-    // Parse DMS like: 13°45'40.4"N or 100°32'55.3"E
-    const m=str.match(/(\d+)°\s*(\d+)'\s*([\d.]+)"?\s*([NSEWnsew])?/);
+    const m=str.match(/(\d+)\s*D\s*(\d+)\s*M\s*([\d.]+)\s*S?\s*([NSEWnsew])?/);
     if(!m)return null;
     let val=parseInt(m[1])+parseInt(m[2])/60+parseFloat(m[3])/3600;
     if(m[4]&&/[SsWw]/.test(m[4]))val=-val;
-    return val;
+    return {val, dir:(m[4]||'').toUpperCase()};
 }
 function parseLatLng(q) {
-    const s=_normDMS(q);
+    const raw=q.replace(/\s+/g,' ').trim();
     // Decimal format: 13.761, 100.548
-    const m=s.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+    const m=raw.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
     if(m){const lat=parseFloat(m[1]),lng=parseFloat(m[2]);if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180)return{lat,lng};}
-    // DMS format: 13°45'40.4"N 100°32'55.3"E
-    const parts=s.match(/\d+°[\s\d'".NSEWnsew]+/g);
-    if(parts&&parts.length===2){
-        let a=_parseDMS(parts[0]),b=_parseDMS(parts[1]);
-        if(a!==null&&b!==null){
-            const dirA=(parts[0].match(/[NSEWnsew]\s*$/)||[''])[0].trim().toUpperCase();
-            const dirB=(parts[1].match(/[NSEWnsew]\s*$/)||[''])[0].trim().toUpperCase();
+    // DMS format — normalize then parse
+    const s=_normDMS(raw);
+    // Match two DMS groups
+    const dmsRe=/(\d+\s*D\s*\d+\s*M\s*[\d.]+\s*S?\s*[NSEWnsew]?)/g;
+    const groups=s.match(dmsRe);
+    if(groups&&groups.length>=2){
+        const a=_parseDMS(groups[0]),b=_parseDMS(groups[1]);
+        if(a&&b){
             let lat,lng;
-            if(dirA==='N'||dirA==='S'){lat=a;lng=b;}
-            else if(dirA==='E'||dirA==='W'){lat=b;lng=a;}
-            else if(dirB==='N'||dirB==='S'){lat=b;lng=a;}
-            else if(dirB==='E'||dirB==='W'){lat=a;lng=b;}
-            else{lat=Math.abs(a)<=90?a:b;lng=Math.abs(a)<=90?b:a;}
+            if(a.dir==='N'||a.dir==='S'){lat=a.val;lng=b.val;}
+            else if(a.dir==='E'||a.dir==='W'){lat=b.val;lng=a.val;}
+            else if(b.dir==='N'||b.dir==='S'){lat=b.val;lng=a.val;}
+            else if(b.dir==='E'||b.dir==='W'){lat=a.val;lng=b.val;}
+            else{lat=Math.abs(a.val)<=90?a.val:b.val;lng=Math.abs(a.val)<=90?b.val:a.val;}
             if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180)return{lat,lng};
         }
     }
