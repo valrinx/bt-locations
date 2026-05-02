@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.4.7';
+const APP_VERSION = 'v5.5';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -494,9 +494,14 @@ function updateChipLabels() {
     document.getElementById('chipCityLabel').textContent=filterCity||'เขต';
     document.getElementById('chipList').classList.toggle('active',!!filterList);
     document.getElementById('chipCity').classList.toggle('active',!!filterCity);
-    document.getElementById('chipAll').classList.toggle('active',!filterList&&!filterCity&&!nearbyMode);
+    // Dropdown items
+    document.getElementById('chipAll').classList.toggle('active',!filterList&&!filterCity&&!nearbyMode&&!filterFavorites);
     document.getElementById('chipNearby').classList.toggle('active',nearbyMode);
     document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);
+    document.getElementById('chipFav').classList.toggle('active',filterFavorites);
+    // Highlight "more" button if any dropdown item is active
+    const anyDropActive=nearbyMode||heatmapMode||filterFavorites;
+    document.getElementById('chipMore').classList.toggle('active',anyDropActive);
 }
 
 // ════════════════════════════════════════════
@@ -739,6 +744,19 @@ function renderSearchResults() {
 // ════════════════════════════════════════════
 // FILTER CHIPS
 // ════════════════════════════════════════════
+
+// Dropdown toggle for "more" chip
+const _chipDropdown=document.getElementById('chipDropdown');
+document.getElementById('chipMore').addEventListener('click',e=>{
+    e.stopPropagation();
+    _chipDropdown.classList.toggle('open');
+});
+document.addEventListener('click',e=>{
+    if(!e.target.closest('.chip-more-wrap'))_chipDropdown.classList.remove('open');
+});
+// Close dropdown when any item inside is clicked
+_chipDropdown.addEventListener('click',()=>{_chipDropdown.classList.remove('open');});
+
 document.getElementById('chipAll').onclick=()=>{filterList='';filterCity='';nearbyMode=false;update();};
 
 document.getElementById('chipFav').onclick=()=>{filterFavorites=!filterFavorites;document.getElementById('chipFav').classList.toggle('active',filterFavorites);update();};
