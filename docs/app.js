@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.4';
+const APP_VERSION = 'v5.6.5';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -192,54 +192,47 @@ function _updateSyncBadge() {
 // Auto-refresh badge every 10s to keep "ago" current
 setInterval(_updateSyncBadge, 10000);
 
-let _pushInFlight = false;
-function _canSync(){return true;} // Supabase always available
-const _debouncedPush = debounce(async () => {
-    if (_pushInFlight) return;
-    _pushInFlight = true;
-    _setSyncStatus('syncing');
-    try {
-        const rows = locations.map(l => ({
-            name: _cleanDMSName(l.name)||'',
-            lat: l.lat, lng: l.lng,
-            list: l.list||'', city: l.city||'',
-            note: l.note||'',
-            tags: Array.isArray(l.tags)?l.tags.join(','):(l.tags||''),
-            photo: l.photo||'',
-            added_by: localStorage.getItem('bt_username')||'',
-            updated_at: new Date(l.updatedAt||Date.now()).toISOString(),
-            id: l.sb_id||undefined,
-        }));
-        // Upsert by id if exists, otherwise insert
-        const toUpsert = rows.filter(r=>r.id);
-        const toInsert = rows.filter(r=>!r.id);
-        if(toUpsert.length){
-            const {error} = await _sb.from('locations').upsert(toUpsert,{onConflict:'id'});
-            if(error)throw new Error(error.message);
-        }
-        if(toInsert.length){
-            const {data,error} = await _sb.from('locations').insert(toInsert.map(({id,...r})=>r)).select('id,lat,lng');
-            if(error)throw new Error(error.message);
-            // Attach returned Supabase IDs back to local locations
-            if(data){data.forEach(row=>{const loc=locations.find(l=>l.lat===row.lat&&l.lng===row.lng);if(loc)loc.sb_id=row.id;});}
-        }
-        _clearDirty();
-        _setSyncStatus('ok');
-        _lastSyncTime = Date.now();
-        _writeCache();
-    } catch (err) {
-        console.warn('Supabase push failed:', err.message);
-        _setSyncStatus('error');
-    } finally { _pushInFlight = false; }
-}, 2000);
+function _canSync(){return true;}
+function _locRow(l){
+    return {
+        name: _cleanDMSName(l.name)||'',
+        lat: l.lat, lng: l.lng,
+        list: l.list||'', city: l.city||'',
+        note: l.note||'',
+        tags: Array.isArray(l.tags)?l.tags.join(','):(l.tags||''),
+        photo: l.photo||'',
+        added_by: localStorage.getItem('bt_username')||'',
+        updated_at: new Date(l.updatedAt||Date.now()).toISOString(),
+    };
+}
+async function sbInsert(loc){
+    const {data,error}=await _sb.from('locations').insert(_locRow(loc)).select('id').single();
+    if(error){console.warn('sbInsert failed:',error.message);_setSyncStatus('error');return;}
+    loc.sb_id=data.id;
+    _writeCache();
+    _setSyncStatus('ok');_lastSyncTime=Date.now();
+}
+async function sbUpdate(loc){
+    if(!loc.sb_id){await sbInsert(loc);return;}
+    const {error}=await _sb.from('locations').update(_locRow(loc)).eq('id',loc.sb_id);
+    if(error){console.warn('sbUpdate failed:',error.message);_setSyncStatus('error');return;}
+    _setSyncStatus('ok');_lastSyncTime=Date.now();
+}
+async function sbDelete(loc){
+    if(!loc.sb_id)return;
+    const {error}=await _sb.from('locations').delete().eq('id',loc.sb_id);
+    if(error){console.warn('sbDelete failed:',error.message);_setSyncStatus('error');return;}
+    _setSyncStatus('ok');_lastSyncTime=Date.now();
+}
+async function sbBulkUpdate(locs){
+    // used for rename list/city — update each changed loc
+    for(const loc of locs){await sbUpdate(loc);}
+}
 
-let _sbLoaded = false; // true only after initial Supabase load completes
+let _sbLoaded = false;
 const saveLocations = debounce(() => {
     if (!_validateBeforeSave()) return;
-    _writeCache();
-    if (!_sbLoaded) return; // don't push during initial load
-    _markDirty();
-    _debouncedPush();
+    _writeCache(); // localStorage only — Supabase push done via sbInsert/sbUpdate/sbDelete
 }, 300);
 
 // ── index map: O(1) lookup แทน locations.indexOf() O(n) ──
@@ -833,10 +826,12 @@ document.getElementById('listRenameBtn').onclick=()=>{
     const trimmed=newName.trim();
     pushUndo();
     let count=0;
-    locations.forEach(l=>{if(l.list===filterList){l.list=trimmed;l.updatedAt=Date.now();count++;}});
+    const changedList=[];
+    locations.forEach(l=>{if(l.list===filterList){l.list=trimmed;l.updatedAt=Date.now();count++;changedList.push(l);}});
     showToast(`✏️ เปลี่ยนชื่อ ${count} จุด → "${trimmed}"`);
     filterList=trimmed;
     saveLocations();invalidateCache();
+    if(_sbLoaded)sbBulkUpdate(changedList);
     document.getElementById('listFilterModalOverlay').classList.remove('open');
     update();
 };
@@ -864,10 +859,12 @@ document.getElementById('listMergeBtn').onclick=()=>{
         const toList=document.getElementById('_mergeListTarget').value;
         pushUndo();
         let count=0;
-        locations.forEach(l=>{if(l.list===filterList){l.list=toList;l.updatedAt=Date.now();count++;}});
+        const changedMergeList=[];
+        locations.forEach(l=>{if(l.list===filterList){l.list=toList;l.updatedAt=Date.now();count++;changedMergeList.push(l);}});
         showToast(`🔗 รวม "${filterList}" (${count} จุด) → "${toList}"`);
         filterList=toList;
         saveLocations();invalidateCache();
+        if(_sbLoaded)sbBulkUpdate(changedMergeList);
         document.getElementById('listFilterModalOverlay').classList.remove('open');
         update();
     };
@@ -901,10 +898,12 @@ document.getElementById('cityRenameBtn').onclick=()=>{
     const trimmed=newName.trim();
     pushUndo();
     let count=0;
-    locations.forEach(l=>{if(l.city===filterCity){l.city=trimmed;l.updatedAt=Date.now();count++;}});
+    const changedCity=[];
+    locations.forEach(l=>{if(l.city===filterCity){l.city=trimmed;l.updatedAt=Date.now();count++;changedCity.push(l);}});
     showToast(`✏️ เปลี่ยนชื่อเขต ${count} จุด → "${trimmed}"`);
     filterCity=trimmed;
     saveLocations();invalidateCache();
+    if(_sbLoaded)sbBulkUpdate(changedCity);
     document.getElementById('cityFilterModalOverlay').classList.remove('open');
     update();
 };
@@ -931,10 +930,12 @@ document.getElementById('cityMergeBtn').onclick=()=>{
         const toCity=document.getElementById('_mergeCityTarget').value;
         pushUndo();
         let count=0;
-        locations.forEach(l=>{if(l.city===filterCity){l.city=toCity;l.updatedAt=Date.now();count++;}});
+        const changedMergeCity=[];
+        locations.forEach(l=>{if(l.city===filterCity){l.city=toCity;l.updatedAt=Date.now();count++;changedMergeCity.push(l);}});
         showToast(`🔗 รวม "${filterCity}" (${count} จุด) → "${toCity}"`);
         filterCity=toCity;
         saveLocations();invalidateCache();
+        if(_sbLoaded)sbBulkUpdate(changedMergeCity);
         document.getElementById('cityFilterModalOverlay').classList.remove('open');
         update();
     };
@@ -1323,8 +1324,13 @@ document.getElementById('editModalSave').onclick=()=>{
     const entry={name,lat,lng,list,city,note,updatedAt:Date.now()};
     if(tags.length)entry.tags=tags;
     if(photo)entry.photo=photo;
-    if(editingIndex>=0){locations[editingIndex]=entry;addChangelogEntry('edit',entry);}
-    else{locations.push(entry);addChangelogEntry('add',entry);}
+    if(editingIndex>=0){
+        locations[editingIndex]=entry;addChangelogEntry('edit',entry);
+        if(_sbLoaded)sbUpdate(entry);
+    } else {
+        locations.push(entry);addChangelogEntry('add',entry);
+        if(_sbLoaded)sbInsert(entry);
+    }
     saveLocations(); invalidateCache();
     document.getElementById('editModalOverlay').classList.remove('open');
     update();
@@ -1340,6 +1346,7 @@ window.doConfirmDelete=function(idx){
     showConfirm('🗑️','ลบสถานที่?',`"${loc.name||loc.list}" จะถูกลบ (Undo ได้)`,()=>{
         addChangelogEntry('delete',loc);
         pushUndo();locations.splice(idx,1);saveLocations();invalidateCache();closePlaceCard();update();showToast('ลบแล้ว');
+        if(_sbLoaded)sbDelete(loc);
     });
 };
 
@@ -2301,7 +2308,8 @@ function doBulkDel(){
     if(!filterList&&!filterCity&&!document.getElementById('search').value&&!nearbyMode){showToast('กรุณา filter ก่อน',true);return;}
     if(!f.length){showToast('ไม่มีจุดในตัวกรอง',true);return;}
     showConfirm('🗑️',`ลบ ${f.length} จุด?`,'จุดที่อยู่ในตัวกรองปัจจุบันจะถูกลบทั้งหมด',()=>{
-        pushUndo();const rm=new Set(f);locations=locations.filter(l=>!rm.has(l));saveLocations();invalidateCache();update();showToast(`ลบ ${f.length} จุดแล้ว`);
+        pushUndo();const rm=new Set(f);const toDelSb=[...rm];locations=locations.filter(l=>!rm.has(l));saveLocations();invalidateCache();update();showToast(`ลบ ${f.length} จุดแล้ว`);
+        if(_sbLoaded)toDelSb.forEach(l=>sbDelete(l));
     });
     closeInfo();
 }
