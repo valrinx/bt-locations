@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.1';
+const APP_VERSION = 'v5.6.2';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -2509,8 +2509,16 @@ async function doSync(silent=true){
     _syncing=true;
     _setSyncStatus('syncing');
     try{
-        const {data,error}=await _sb.from('locations').select('*').order('created_at',{ascending:true});
-        if(error)throw new Error(error.message);
+        // Paginate: Supabase default limit = 1000 rows per request
+        let allData=[], from=0, pageSize=1000;
+        while(true){
+            const {data,error}=await _sb.from('locations').select('*').order('created_at',{ascending:true}).range(from,from+pageSize-1);
+            if(error)throw new Error(error.message);
+            allData=allData.concat(data);
+            if(data.length<pageSize)break;
+            from+=pageSize;
+        }
+        const data=allData;
         const loaded=data.map(r=>normalizeLocation({
             sb_id:r.id, name:r.name||'', lat:r.lat, lng:r.lng,
             list:r.list||'', city:r.city||'', note:r.note||'',
