@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.8.0';
+const APP_VERSION = 'v5.8.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -286,10 +286,24 @@ document.getElementById('topSearch').addEventListener('input', debounce(()=>{
 // Add button
 document.getElementById('btnAddLocation').onclick = () => openAddMode();
 
-// Menu button toggle sidebar
-document.getElementById('btnMenu').onclick = () => {
-    document.getElementById('sidebar').classList.toggle('open');
+// Export/Import buttons
+document.getElementById('btnUpload').onclick = () => doExport();
+document.getElementById('btnDownload').onclick = () => document.getElementById('fileImport').click();
+
+// Sidebar toggle with backdrop
+function toggleSidebar(){
+    const sb = document.getElementById('sidebar');
+    const bd = document.getElementById('sidebarBackdrop');
+    const isOpen = sb.classList.toggle('open');
+    if(bd) bd.classList.toggle('show', isOpen);
+}
+window.closeSidebar = function(){
+    const sb = document.getElementById('sidebar');
+    const bd = document.getElementById('sidebarBackdrop');
+    sb.classList.remove('open');
+    if(bd) bd.classList.remove('show');
 };
+document.getElementById('btnMenu').onclick = toggleSidebar;
 
 function favKey(loc) { return `${loc.lat.toFixed(6)},${loc.lng.toFixed(6)}`; }
 function toggleFavorite(loc) { const k = favKey(loc); if (favorites.has(k)) favorites.delete(k); else favorites.add(k); saveFavorites(); }
@@ -2234,15 +2248,8 @@ document.getElementById('chipRoute').onclick=()=>{
 };
 
 // ════════════════════════════════════════════
-// INFO PANEL
+// INFO PANEL (kept for compatibility)
 // ════════════════════════════════════════════
-document.getElementById('btnMenu').onclick=()=>{
-    if(window.innerWidth<600){
-        document.getElementById('sidebar').classList.toggle('open');
-    } else {
-        try { openInfoPanel('menu'); } catch(e) { alert('Menu error: '+e.message); console.error('Menu error:',e); }
-    }
-};
 document.getElementById('infoPanelClose').onclick = closeInfo;
 document.getElementById('infoPanelBackdrop').onclick = closeInfo;
 

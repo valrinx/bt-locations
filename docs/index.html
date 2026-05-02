@@ -166,11 +166,11 @@
         .ppb.p { background: var(--bl); border-color: var(--bl); color: white; font-weight: 700; }
         .ppb.p:hover { opacity: 0.85; }
 
-        /* Map stats */
-        .map-stats { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 5px; z-index: 50; }
-        .msc { background: rgba(18,19,26,0.9); border: 0.5px solid var(--bd2); border-radius: 9px; padding: 7px 11px; min-width: 88px; }
-        .msv { font-size: 17px; font-weight: 700; }
-        .msl { font-size: 10px; color: var(--tx3); margin-top: 1px; }
+        /* Map stats - concept style */
+        .map-stats { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 50; }
+        .msc { background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 10px; padding: 10px 14px; min-width: 88px; }
+        .msv { font-size: 20px; font-weight: 700; line-height: 1; }
+        .msl { font-size: 10px; color: var(--tx3); margin-top: 3px; letter-spacing: 0.02em; }
 
         /* Zoom controls */
         .zoom-c { position: absolute; right: 14px; bottom: 58px; display: flex; flex-direction: column; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 8px; overflow: hidden; z-index: 50; }
@@ -743,24 +743,60 @@
         }
         /* ══ MOBILE ══ */
         @media (max-width: 767px) {
-            .body { flex-direction: column; }
-            .sidebar { position: absolute; top: 50px; left: 0; width: 260px; transform: translateX(-110%); z-index: 300; }
+            .body { flex-direction: column; position: relative; }
+            .sidebar { 
+                position: fixed; top: 50px; left: 0; bottom: 0; width: 280px; 
+                transform: translateX(-110%); z-index: 500; 
+                box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+            }
             .sidebar.open { transform: translateX(0); }
-            .main { position: relative; }
-            .vtabs { overflow-x: auto; }
-            .btbar { bottom: 8px; padding: 3px 5px; }
-            .bt { padding: 5px 9px; font-size: 11px; }
-            .zoom-c { right: 8px; bottom: 52px; }
-            .map-stats { left: 8px; top: 8px; }
-            .map-popup { right: 8px; top: 8px; width: 200px; }
-            .sv-grid { grid-template-columns: repeat(2,1fr); }
+            .sidebar-backdrop { 
+                display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
+                z-index: 400; backdrop-filter: blur(2px);
+            }
+            .sidebar-backdrop.show { display: block; }
+            .main { position: relative; flex: 1; }
+            .vtabs { overflow-x: auto; scrollbar-width: none; }
+            .vtabs::-webkit-scrollbar { display: none; }
+            .vt { white-space: nowrap; padding: 5px 10px; }
+            .btbar { bottom: env(safe-area-inset-bottom, 8px); padding: 3px 5px; }
+            .bt { padding: 6px 10px; font-size: 11px; min-height: 32px; }
+            .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 52px); }
+            .zb { width: 36px; height: 36px; font-size: 18px; }
+            .map-stats { left: 10px; top: 10px; gap: 6px; }
+            .msc { padding: 10px 14px; min-width: 80px; }
+            .msv { font-size: 20px; }
+            .map-popup { 
+                right: 8px; top: 8px; width: calc(100vw - 130px); max-width: 240px; 
+                max-height: calc(100vh - 150px); overflow-y: auto;
+            }
+            .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
             .sv-row { grid-template-columns: 1fr; }
-            .modal { width: calc(100vw - 28px); max-height: 70vh; border-radius: 14px; }
-            .topbar { padding: 0 10px; gap: 8px; }
-            .search-box { max-width: none; }
+            .sv-inner { padding: 12px; }
+            .modal { width: calc(100vw - 24px); max-height: 80vh; border-radius: 14px; }
+            .topbar { padding: 0 12px; gap: 8px; height: 48px; }
+            .search-box { max-width: none; height: 32px; }
+            .si { font-size: 14px; }
             .logo-txt { display: none; }
             .pill-badge, .live-p span, .tb-sep:last-of-type, #btnUpload, #btnDownload { display: none; }
-            .tb-right { gap: 5px; }
+            .tb-right { gap: 6px; }
+            .av { width: 26px; height: 26px; font-size: 8px; }
+            .tb-icon-btn { width: 32px; height: 32px; font-size: 15px; }
+            .list-view { position: fixed; inset: 50px 0 0 0; }
+            .stats-view { position: fixed; inset: 50px 0 0 0; }
+            .lv-toolbar { padding: 0 10px; gap: 6px; }
+            .lv-tb-btn { font-size: 11px; padding: 0 8px; height: 28px; }
+            #crosshair { font-size: 32px; }
+        }
+        /* Small phones */
+        @media (max-width: 380px) {
+            .btbar { padding: 2px 4px; gap: 2px; }
+            .bt { padding: 5px 8px; font-size: 10px; }
+            .bt-i { display: none; }
+            .vt { padding: 4px 8px; font-size: 11px; }
+            .map-stats { left: 6px; top: 6px; }
+            .msc { padding: 8px 10px; min-width: 70px; }
+            .msv { font-size: 18px; }
         }
 
         /* Leaflet overrides */
@@ -881,6 +917,9 @@
             <div class="tb-icon-btn" id="btnDownload" title="Import">↓</div>
         </div>
     </div>
+
+    <!-- ══ SIDEBAR BACKDROP (mobile) ══ -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
     <!-- ══ BODY ══ -->
     <div class="body">
