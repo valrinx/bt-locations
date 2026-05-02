@@ -132,13 +132,13 @@ python -m http.server 8080
 ### 🔴 สำคัญ (ควรทำก่อน)
 
 - [x] **PWA / Offline support** — ✅ เสร็จแล้ว
-- [ ] **รองรับ import หลายรูปแบบ** — นอกจาก GeoJSON: KML, GPX, CSV with lat/lng columns
+- [x] **รองรับ import หลายรูปแบบ** — ✅ เสร็จแล้ว (JSON/CSV/KML/GPX/GeoJSON + Merge/Replace)
 - [x] **ป้องกัน token หลุด** — ✅ เสร็จแล้ว (sessionStorage)
 
 ### 🟡 น่าทำ (ปรับปรุง UX)
 
 - [ ] **Mobile UX ปรับปรุงต่อ** — panel collapsible, ปุ่มใหญ่ขึ้น (base responsive เสร็จแล้ว)
-- [ ] **Cluster click → zoom + แสดง list** — กด cluster แล้วดู popup รายชื่อจุดทั้งหมดใน cluster
+- [x] **Cluster click → zoom + แสดง list** — ✅ เสร็จแล้ว
 - [x] **ค้นหาตามพิกัด** — ✅ เสร็จแล้ว
 - [x] **Permalink per location** — ✅ เสร็จแล้ว
 - [ ] **Photo/attachment support** — แนบรูปภาพให้แต่ละจุดได้
