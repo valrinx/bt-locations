@@ -17,10 +17,9 @@ lists = sorted(set(l['list'] for l in locs))
 
 js_entries = []
 for l in locs:
-    name = l['name'].replace('"', '\\"') if l['name'] else ''
-    lst = l['list'].replace('"', '\\"')
-    city = l.get('city', '').replace('"', '\\"')
-    js_entries.append(f'{{name:"{name}",lat:{l["lat"]},lng:{l["lng"]},list:"{lst}",city:"{city}"}}')
+    entry = json.dumps({"name": l["name"] or "", "lat": l["lat"], "lng": l["lng"],
+                         "list": l["list"], "city": l.get("city", "")}, ensure_ascii=False)
+    js_entries.append(entry)
 
 js_array = ',\n            '.join(js_entries)
 
@@ -938,7 +937,7 @@ html = f'''<!DOCTYPE html>
                 const docsInfo = await githubGetFile('docs/all_locations.json', token);
                 await githubPutFile('docs/all_locations.json', jsonContent, docsInfo.sha, token, 'Sync docs/all_locations.json');
                 // 3) Update docs/locations.js
-                const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';\n';
+                const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';\\n';
                 const jsInfo = await githubGetFile('docs/locations.js', token);
                 await githubPutFile('docs/locations.js', jsContent, jsInfo.sha, token, 'Sync docs/locations.js');
                 showSaveStatus('บันทึกสำเร็จ! (3 ไฟล์)', false);

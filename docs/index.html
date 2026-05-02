@@ -913,8 +913,7 @@
                 const docsInfo = await githubGetFile('docs/all_locations.json', token);
                 await githubPutFile('docs/all_locations.json', jsonContent, docsInfo.sha, token, 'Sync docs/all_locations.json');
                 // 3) Update docs/locations.js
-                const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';
-';
+                const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';\n';
                 const jsInfo = await githubGetFile('docs/locations.js', token);
                 await githubPutFile('docs/locations.js', jsContent, jsInfo.sha, token, 'Sync docs/locations.js');
                 showSaveStatus('บันทึกสำเร็จ! (3 ไฟล์)', false);
