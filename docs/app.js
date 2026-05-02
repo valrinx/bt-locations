@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.3';
+const APP_VERSION = 'v5.3.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1119,8 +1119,11 @@ async function _reverseGeocodeCity(lat,lng){
         const data=await res.json();
         if(data.address){
             // Priority: suburb → city_district → district → city → town → county
-            return data.address.suburb||data.address.city_district||data.address.district||
+            let name=data.address.suburb||data.address.city_district||data.address.district||
                    data.address.city||data.address.town||data.address.county||'';
+            // Strip Thai admin prefixes: เขต, อำเภอ, แขวง, ตำบล, อ., ต.
+            name=name.replace(/^(เขต|อำเภอ|แขวง|ตำบล|อ\.|ต\.)\s*/,'').trim();
+            return name;
         }
     }catch(e){console.warn('Reverse geocode failed:',e);}
     return '';
