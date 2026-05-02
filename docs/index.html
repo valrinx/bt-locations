@@ -853,7 +853,16 @@
     }
     function createClusterGroup() {
         return L.markerClusterGroup({
-            maxClusterRadius: 50,
+            maxClusterRadius: function(zoom) {
+                if (zoom >= 18) return 10;
+                if (zoom >= 16) return 20;
+                if (zoom >= 14) return 35;
+                if (zoom >= 12) return 50;
+                return 80;
+            },
+            disableClusteringAtZoom: 18,
+            spiderfyOnMaxZoom: true,
+            zoomToBoundsOnClick: true,
             iconCreateFunction(cluster) {
                 const count = cluster.getChildCount();
                 return L.divIcon({ html: `<div><span>${count}</span></div>`, className: `marker-cluster ${getDensityClass(count)}`, iconSize: L.point(40,40) });
