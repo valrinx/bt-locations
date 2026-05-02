@@ -514,26 +514,52 @@
         .leaflet-control-attribution { font-size: 10px; }
 
         /* Cluster */
-        .marker-cluster { background-clip: padding-box; border-radius: 20px; }
-        .marker-cluster div { width: 30px; height: 30px; margin-left: 5px; margin-top: 5px; text-align: center; border-radius: 15px; font: bold 12px 'Noto Sans Thai', sans-serif; color: #fff; display: flex; align-items: center; justify-content: center; }
-        .cluster-density-low { background: rgba(52,168,83,0.25) !important; }
-        .cluster-density-low div { background: rgba(52,168,83,0.9) !important; }
-        .cluster-density-medium { background: rgba(251,188,4,0.25) !important; }
-        .cluster-density-medium div { background: rgba(251,188,4,0.9) !important; color: #333 !important; }
-        .cluster-density-high { background: rgba(234,67,53,0.25) !important; }
-        .cluster-density-high div { background: rgba(234,67,53,0.9) !important; }
-        .cluster-density-extreme { background: rgba(103,58,183,0.25) !important; }
-        .cluster-density-extreme div { background: rgba(103,58,183,0.9) !important; }
+        .marker-cluster {
+            background-clip: padding-box;
+            border-radius: 50%;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+            will-change: transform;
+        }
+        .marker-cluster div {
+            width: 30px; height: 30px;
+            margin: 5px;
+            text-align: center; border-radius: 50%;
+            font: bold 13px 'Noto Sans Thai', sans-serif;
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .cluster-density-low    { background: rgba(52,168,83,0.2)  !important; }
+        .cluster-density-low div    { background: rgba(52,168,83,0.95)  !important; }
+        .cluster-density-medium { background: rgba(251,188,4,0.2)  !important; }
+        .cluster-density-medium div { background: rgba(251,188,4,0.95)  !important; color:#333 !important; }
+        .cluster-density-high   { background: rgba(234,67,53,0.2)  !important; }
+        .cluster-density-high div   { background: rgba(234,67,53,0.95)  !important; }
+        .cluster-density-extreme{ background: rgba(103,58,183,0.2) !important; }
+        .cluster-density-extreme div{ background: rgba(103,58,183,0.95) !important; }
+        /* Leaflet cluster default animation override */
+        .leaflet-cluster-anim .leaflet-marker-icon,
+        .leaflet-cluster-anim .leaflet-marker-shadow {
+            transition: left 0.25s ease, top 0.25s ease, opacity 0.2s ease !important;
+        }
+        /* dot marker smooth */
+        .leaflet-marker-icon div[data-idx] {
+            transition: transform 0.15s ease;
+        }
 
         /* ══ PERFORMANCE HINTS ══ */
-        #map { will-change: transform; }
-        .info-panel { will-change: transform; contain: layout style; }
-        .place-card { will-change: transform, opacity; }
-        .list-panel { will-change: transform; contain: layout style; }
+        .leaflet-map-pane,
+        .leaflet-tile-pane,
+        .leaflet-overlay-pane { will-change: transform; }
+        .info-panel  { will-change: transform; contain: layout style; }
+        .place-card  { will-change: transform, opacity; }
+        .list-panel  { will-change: transform; contain: layout style; }
         .modal-overlay { contain: layout style; }
-        .save-toast { will-change: opacity; }
-        /* GPU-accelerated transitions แทน bottom/top */
-        .place-card { transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.34,1.2,0.64,1); }
+        .save-toast  { will-change: opacity; }
+        /* place-card GPU transition */
+        .place-card {
+            transition: opacity 0.28s cubic-bezier(0.4,0,0.2,1),
+                        transform 0.32s cubic-bezier(0.34,1.2,0.64,1);
+        }
         @media (max-width: 599px) {
             .place-card { transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); }
             .place-card.open { transform: translateY(0) !important; bottom: 0 !important; }
@@ -852,18 +878,15 @@
     // ════════════════════════════════════════════
     // MAP
     // ════════════════════════════════════════════
-    // ใช้ Canvas renderer — เร็วกว่า SVG มากเมื่อมีหมุดเยอะ
-    const canvasRenderer = L.canvas({ padding: 0.5, tolerance: 5 });
     const map = L.map('map', {
         zoomControl: false,
-        zoomAnimation: true,
-        fadeAnimation: false,      // ปิด tile fade — ลด composite layer
-        markerZoomAnimation: true,
-        preferCanvas: true,
-        renderer: canvasRenderer,
-        zoomSnap: 1,               // snap ทีละ 1 — cluster ทำงานถูกต้องกว่า 0.5
+        zoomAnimation: true,       // เปิด — ทำให้ zoom smooth
+        fadeAnimation: true,       // เปิด — tile transition smooth
+        markerZoomAnimation: true, // marker เคลื่อนกับ zoom
+        preferCanvas: false,       // ปิด — ใช้ SVG เพราะ DivIcon ไม่ใช้ canvas
+        zoomSnap: 0.25,            // sub-integer zoom — smooth มาก
         zoomDelta: 1,
-        wheelPxPerZoomLevel: 60,
+        wheelPxPerZoomLevel: 80,
         tap: true,
         tapTolerance: 15,
     }).setView([13.75, 100.5], 11);
@@ -899,11 +922,11 @@
             disableClusteringAtZoom: 18,
             spiderfyOnMaxZoom: true,
             zoomToBoundsOnClick: true,
-            animate: false,               // ปิด cluster animation — ลด jank ตอนซูม
+            animate: true,
             animateAddingMarkers: false,
             chunkedLoading: true,
-            chunkInterval: 50,
-            chunkDelay: 0,
+            chunkInterval: 200,
+            chunkDelay: 50,
             removeOutsideVisibleBounds: true,
             iconCreateFunction(cluster) {
                 const count = cluster.getChildCount();
@@ -957,65 +980,98 @@
         return arr;
     }
 
+    // ══ Marker cache: สร้างครั้งเดียว, ไม่ rebuild ══
+    // key = index ใน locations[], value = L.Marker
+    let _markerCache = new Map(); // idx → marker
     let _lastFilteredKey = null;
+    let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 
-    function renderMarkers(filtered) {
-        const key = filtered.map(l => getLocIndex(l)).join(',') + '|' + heatmapMode;
-        if (key === _lastFilteredKey) return;
-        _lastFilteredKey = key;
-
-        map.removeLayer(markerCluster);
-        markerCluster = createClusterGroup();
-        currentMarkers = [];
-
-        const layers = [];
-        filtered.forEach(loc => {
-            const idx = getLocIndex(loc);
+    function _buildMarkerCache() {
+        // สร้าง marker ทุกตัวครั้งเดียว แล้ว cache ไว้ตลอด
+        _markerCache.clear();
+        locations.forEach((loc, idx) => {
             const color = getColor(loc.list);
-            const marker = L.circleMarker([loc.lat, loc.lng], {
-                renderer: canvasRenderer,
-                radius: 8,
-                fillColor: color,
-                color: '#fff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.9,
-                bubblingMouseEvents: false,
-                interactive: true,
+            // ใช้ DivIcon วงกลมแทน circleMarker — ทำงานกับ cluster ได้ 100%
+            const size = 18;
+            const icon = L.divIcon({
+                className: '',
+                html: `<div style="
+                    width:${size}px;height:${size}px;border-radius:50%;
+                    background:${color};border:2.5px solid #fff;
+                    box-shadow:0 1px 4px rgba(0,0,0,.35);
+                    box-sizing:border-box;
+                    will-change:transform;
+                " data-idx="${idx}"></div>`,
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2],
+                tooltipAnchor: [0, -size/2],
             });
-            // hover-only tooltip — ไม่สร้าง DOM ค้างไว้, ไม่ lag ตอน zoom
+            const marker = L.marker([loc.lat, loc.lng], {
+                icon,
+                title: loc.name || loc.list,
+                riseOnHover: false,
+                bubblingMouseEvents: false,
+            });
             marker.bindTooltip(loc.name || loc.list, {
-                permanent: false,   // ← KEY: ไม่ permanent = ไม่มี DOM ค้าง
-                sticky: false,
+                permanent: false,
                 direction: 'top',
-                offset: [0, -8],
+                offset: [0, -2],
                 className: 'bt-tooltip',
                 opacity: 0.95,
             });
             marker.on('click', () => showPlaceCard(loc, idx));
-            layers.push(marker);
-            currentMarkers.push({loc, marker, idx});
+            _markerCache.set(idx, marker);
+        });
+        _clusterDirty = false;
+    }
+
+    function renderMarkers(filtered) {
+        // build cache ถ้าตัวแรกหรือ locations เปลี่ยน
+        if (_markerCache.size === 0 || _clusterDirty) _buildMarkerCache();
+
+        const filteredIdxSet = new Set(filtered.map(l => getLocIndex(l)));
+        const key = [...filteredIdxSet].sort().join(',') + '|' + heatmapMode;
+        if (key === _lastFilteredKey) return;
+        _lastFilteredKey = key;
+
+        // ── heatmap mode ──
+        if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
+        if (heatmapMode) {
+            if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+            heatLayer = L.heatLayer(filtered.map(l=>[l.lat,l.lng,1]),{radius:25,blur:15}).addTo(map);
+            document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
+            document.getElementById('countPill').classList.add('show');
+            return;
+        }
+
+        // ── cluster mode: เอาแค่ filtered markers เข้า cluster ──
+        // ถ้า filtered = ทั้งหมด ไม่ต้อง diff — addLayers ใหม่เลย
+        map.removeLayer(markerCluster);
+        markerCluster = createClusterGroup();
+
+        const layers = [];
+        filteredIdxSet.forEach(idx => {
+            const m = _markerCache.get(idx);
+            if (m) layers.push(m);
         });
 
-        // addLayers bulk — เร็วที่สุด
-        markerCluster.addLayers(layers);
-
-        if (!heatmapMode) map.addLayer(markerCluster);
-        if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-        if (heatmapMode) heatLayer = L.heatLayer(
-            filtered.map(l => [l.lat, l.lng, 1]),
-            {radius: 25, blur: 15}
-        ).addTo(map);
-
-        document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
-        document.getElementById('countPill').classList.add('show');
+        // requestAnimationFrame — ให้ browser วาด frame นี้ให้เสร็จก่อน
+        requestAnimationFrame(() => {
+            markerCluster.addLayers(layers, { chunkedLoading: true });
+            map.addLayer(markerCluster);
+            document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
+            document.getElementById('countPill').classList.add('show');
+        });
     }
-    // ไม่มี zoomend handler สำหรับ tooltip — ไม่จำเป็นแล้วเพราะใช้ hover tooltip
+
+    // เรียกเมื่อ locations เปลี่ยน (add/edit/delete/import/reset)
+    function invalidateMarkerCache() { _clusterDirty = true; }
 
     function invalidateCache() {
         _lastFilteredKey = null;
         markDatalistDirty();
         rebuildIndexMap();
+        invalidateMarkerCache();
     }
 
     function update() {
