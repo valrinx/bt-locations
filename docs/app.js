@@ -75,6 +75,13 @@ function throttle(fn, ms) {
 // Flow: edit → mark dirty → push GitHub → if success: clear dirty + update cache
 //       if push fails (offline): keep dirty → resolve on next load
 const DIRTY_KEY = 'bt_dirty';
+const BACKUP_KEY = 'bt_backup';
+const BASE_SNAPSHOT_KEY = 'bt_base_snapshot';
+const BASE_SHA_KEY = 'bt_base_sha';
+
+// Sync status: 'idle' | 'syncing' | 'ok' | 'error' | 'dirty'
+let syncStatus = 'idle';
+
 function _validateBeforeSave() {
     if (!Array.isArray(locations)) { console.error('Save aborted: locations is not array'); return false; }
     if (locations.length === 0) return true;
@@ -82,23 +89,49 @@ function _validateBeforeSave() {
     if (typeof sample.lat !== 'number' || typeof sample.lng !== 'number') { console.error('Save aborted: invalid lat/lng in first item'); return false; }
     return true;
 }
-function _markDirty() { localStorage.setItem(DIRTY_KEY, '1'); }
+function _markDirty() { localStorage.setItem(DIRTY_KEY, '1'); _setSyncStatus('dirty'); }
 function _clearDirty() { localStorage.removeItem(DIRTY_KEY); }
 function _isDirty() { return localStorage.getItem(DIRTY_KEY) === '1'; }
+
+// Base snapshot: saved ONCE at load time — the "common ancestor" for 3-way merge
+function _saveBaseSnapshot(data, sha) {
+    localStorage.setItem(BASE_SNAPSHOT_KEY, JSON.stringify(data));
+    if (sha) localStorage.setItem(BASE_SHA_KEY, sha);
+}
+function _getBaseSnapshot() { try { return JSON.parse(localStorage.getItem(BASE_SNAPSHOT_KEY) || 'null'); } catch { return null; } }
+function _getBaseSha() { return localStorage.getItem(BASE_SHA_KEY) || ''; }
+
+// Crash-safe backup
+function _writeBackup() { localStorage.setItem(BACKUP_KEY, JSON.stringify(locations)); }
 
 // Write to localStorage cache (always, as offline fallback)
 function _writeCache() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+    _writeBackup(); // crash-safe
+}
+
+// Sync status UI
+function _setSyncStatus(status) {
+    syncStatus = status;
+    setSyncIndicator(status === 'dirty' ? 'pending' : status === 'ok' ? 'ok' : status === 'syncing' ? 'active' : status === 'error' ? 'error' : null);
+    _updateSyncBadge();
+}
+function _updateSyncBadge() {
+    let badge = document.getElementById('syncBadge');
+    if (!badge) return;
+    const map = { idle: '', ok: '🟢', syncing: '🟡', dirty: '🟡', error: '🔴' };
+    badge.textContent = map[syncStatus] || '';
+    badge.title = { idle: '', ok: 'Synced', syncing: 'กำลัง sync...', dirty: 'ยังไม่ sync', error: 'Sync ล้มเหลว' }[syncStatus] || '';
 }
 
 let _pushInFlight = false;
 const _debouncedPush = debounce(async () => {
     if (_pushInFlight) return;
     const token = getToken();
-    if (!token) return; // no token → cache-only mode
+    if (!token) return;
     _pushInFlight = true;
+    _setSyncStatus('syncing');
     try {
-        setSyncIndicator('active');
         const locs = locations.map(l => { const { photo, ...rest } = l; return rest; });
         const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' },
@@ -107,25 +140,21 @@ const _debouncedPush = debounce(async () => {
         if (!res.ok) throw new Error('GitHub fetch: ' + res.status);
         const data = await res.json();
         await _pushToGithub(token, locs, data.sha);
-        // Push succeeded → GitHub is now in sync → clear dirty
         _clearDirty();
-        setSyncIndicator('ok');
+        _saveBaseSnapshot(locs, null); // update base after push
+        _setSyncStatus('ok');
         _lastSyncTime = Date.now();
         console.log('Pushed to GitHub:', locs.length, 'locs');
     } catch (err) {
         console.warn('Push failed (will retry):', err.message);
-        setSyncIndicator('error');
-        // dirty flag stays → will resolve on next load or retry
+        _setSyncStatus('error');
     } finally { _pushInFlight = false; }
 }, 2000);
 
 const saveLocations = debounce(() => {
     if (!_validateBeforeSave()) return;
-    // 1. Mark dirty BEFORE anything
     _markDirty();
-    // 2. Write local cache (offline fallback)
     _writeCache();
-    // 3. Push to GitHub (async, will clear dirty on success)
     _debouncedPush();
 }, 300);
 
@@ -1642,8 +1671,7 @@ document.head.appendChild(style);
 function _locKey(l){return l.lat.toFixed(6)+','+l.lng.toFixed(6);}
 
 function mergeLocs(local, remote, base){
-    // 3-way merge: base = last known common state
-    // Build maps by coordinate key
+    // 3-way merge: base = last known common state (from _getBaseSnapshot)
     const bMap=new Map(), lMap=new Map(), rMap=new Map();
     (base||[]).forEach(l=>bMap.set(_locKey(l),l));
     local.forEach(l=>lMap.set(_locKey(l),l));
@@ -1651,32 +1679,47 @@ function mergeLocs(local, remote, base){
     const allKeys=new Set([...lMap.keys(),...rMap.keys()]);
     const merged=[];
     let conflicts=0, added=0, removed=0;
+    const conflictDetails=[];
     allKeys.forEach(key=>{
         const inBase=bMap.has(key), inLocal=lMap.has(key), inRemote=rMap.has(key);
         if(inLocal&&inRemote){
-            // Both have it — prefer most recently modified (local wins if equal)
             const ll=lMap.get(key), rl=rMap.get(key);
-            // If local changed from base, use local; else use remote
             if(inBase){
                 const bl=bMap.get(key);
                 const localChanged=JSON.stringify({...ll,photo:undefined})!==JSON.stringify({...bl,photo:undefined});
                 const remoteChanged=JSON.stringify(rl)!==JSON.stringify({...bl,photo:undefined});
-                if(localChanged){merged.push(ll);if(remoteChanged)conflicts++;}
-                else merged.push({...rl,photo:ll.photo||undefined});
+                if(localChanged&&remoteChanged){
+                    // TRUE CONFLICT: both sides changed same item
+                    conflicts++;
+                    conflictDetails.push({key, local:ll, remote:rl, base:bl, resolution:'local wins'});
+                    console.warn('CONFLICT at', key, '→ local wins', {local:ll, remote:rl, base:bl});
+                    merged.push(ll);
+                } else if(localChanged){
+                    merged.push(ll);
+                } else {
+                    merged.push({...rl,photo:ll.photo||undefined});
+                }
             } else {
                 merged.push(ll); // both added same coords — keep local
             }
         } else if(inLocal&&!inRemote){
-            // Only local has it
-            if(inBase){removed++;} // remote deleted it — respect delete
-            else{merged.push(lMap.get(key));added++;} // locally added
+            if(inBase){
+                console.warn('CONFLICT: remote deleted, local kept:', key, lMap.get(key).name);
+                removed++; // remote deleted → respect delete
+            } else {
+                merged.push(lMap.get(key)); added++; // locally added
+            }
         } else if(!inLocal&&inRemote){
-            // Only remote has it
-            if(inBase){/* local deleted it — respect delete */removed++;}
-            else{merged.push(rMap.get(key));added++;} // remotely added
+            if(inBase){
+                console.warn('CONFLICT: local deleted, remote kept:', key, rMap.get(key).name);
+                removed++; // local deleted → respect delete
+            } else {
+                merged.push(rMap.get(key)); added++; // remotely added
+            }
         }
     });
-    return {merged, conflicts, added, removed};
+    if(conflictDetails.length) console.warn('MERGE CONFLICTS:', conflictDetails.length, conflictDetails);
+    return {merged, conflicts, added, removed, conflictDetails};
 }
 
 function setSyncIndicator(state){
@@ -1691,50 +1734,48 @@ async function doSync(silent=true){
     const token=getToken();
     if(!token){if(!silent)showToast('กรุณาใส่ Token ก่อน',true);return;}
     _syncing=true;
-    setSyncIndicator('active');
+    _setSyncStatus('syncing');
     try{
-        // Fetch remote
         const res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`,{
             headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'},
             cache:'no-store'
         });
-        if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);setSyncIndicator('error');return;}
+        if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);_setSyncStatus('error');return;}
         const data=await res.json();
         const remoteSha=data.sha;
         const remoteContent=JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))));
 
-        // Get local snapshot (base for 3-way merge)
-        const localSha=localStorage.getItem(SYNC_SHA_KEY)||'';
-        let base=null;
-        try{base=JSON.parse(localStorage.getItem(SYNC_SNAPSHOT_KEY)||'null');}catch{}
-
+        // Use PROPER base snapshot (set at load time)
+        const base=_getBaseSnapshot();
+        const baseSha=_getBaseSha();
         const localStripped=locations.map(l=>{const{photo,...rest}=l;return rest;});
 
-        if(remoteSha===localSha){
-            // No remote changes — check if local changed
+        if(remoteSha===baseSha||remoteSha===localStorage.getItem(SYNC_SHA_KEY)){
+            // Remote unchanged since our base
             const localJson=JSON.stringify(localStripped);
-            const baseJson=JSON.stringify(base);
-            if(localJson!==baseJson){
-                // Local changes → push to GitHub
+            const baseJson=base?JSON.stringify(base):null;
+            if(localJson!==baseJson&&baseJson){
                 await _pushToGithub(token, localStripped, remoteSha);
+                _saveBaseSnapshot(localStripped, null);
+                _clearDirty();
                 if(!silent)showToast('⬆️ Pushed local changes',false,true);
             } else {
                 if(!silent)showToast('✅ ข้อมูลตรงกัน',false,true);
             }
-            setSyncIndicator('ok');
+            _setSyncStatus('ok');
         } else {
-            // Remote changed
+            // Remote changed since our base
             const localJson=JSON.stringify(localStripped);
-            const baseJson=JSON.stringify(base);
+            const baseJson=base?JSON.stringify(base):null;
             if(localJson===baseJson||!base){
-                // No local changes (or first sync) — just pull
+                // No local changes — just pull
                 _applyRemote(remoteContent, remoteSha);
                 if(!silent)showToast(`⬇️ ดึง ${remoteContent.length} จุดจาก GitHub`,false,true);
                 console.log('Sync: pulled',remoteContent.length,'locs');
             } else {
-                // Both changed — merge!
+                // BOTH changed — 3-way merge with REAL base
+                console.warn('3-WAY MERGE needed: base has', (base||[]).length, 'local has', localStripped.length, 'remote has', remoteContent.length);
                 const result=mergeLocs(localStripped, remoteContent, base);
-                // Restore local photos
                 const photoMap=new Map();
                 locations.forEach(l=>{if(l.photo)photoMap.set(_locKey(l),l.photo);});
                 result.merged.forEach(l=>{
@@ -1742,26 +1783,26 @@ async function doSync(silent=true){
                     if(p)l.photo=p;
                 });
                 locations=result.merged;
-                saveLocations();invalidateCache();update();
-                // Push merged result
+                _writeCache();invalidateCache();update();
                 const mergedStripped=locations.map(l=>{const{photo,...rest}=l;return rest;});
                 await _pushToGithub(token, mergedStripped, remoteSha);
+                _saveBaseSnapshot(mergedStripped, null);
+                _clearDirty();
                 const msg=`🔀 Merge: +${result.added} -${result.removed}${result.conflicts?' ⚠️'+result.conflicts+' conflicts':''}`;
-                if(!silent)showToast(msg,false,true);
+                if(!silent)showToast(msg,result.conflicts>0);
                 console.log('Sync: merged',msg);
             }
-            setSyncIndicator('ok');
+            _setSyncStatus('ok');
         }
         _lastSyncTime=Date.now();
     }catch(err){
         console.warn('Sync error:',err);
-        setSyncIndicator('error');
+        _setSyncStatus('error');
         if(!silent)showToast('❌ Sync: '+err.message,true);
     }finally{_syncing=false;}
 }
 
 function _applyRemote(remote, sha){
-    // Preserve local photos
     const photoMap=new Map();
     locations.forEach(l=>{if(l.photo)photoMap.set(_locKey(l),l.photo);});
     locations=remote.map(l=>{
@@ -1769,9 +1810,13 @@ function _applyRemote(remote, sha){
         const n=normalizeLocation(l);
         return p?{...n,photo:p}:n;
     });
-    saveLocations();invalidateCache();update();
+    _writeCache();invalidateCache();update();
+    // Save as new base snapshot
+    _saveBaseSnapshot(remote, sha);
     localStorage.setItem(SYNC_SHA_KEY,sha);
     localStorage.setItem(SYNC_SNAPSHOT_KEY,JSON.stringify(remote));
+    _clearDirty();
+    _setSyncStatus('ok');
 }
 
 async function _pushToGithub(token, locs, currentSha){
@@ -1801,12 +1846,23 @@ function startAutoSync(){
 }
 
 // Initial load: GitHub = SINGLE source of truth
-// If dirty (local changes not pushed) → detect conflict → resolve
+// Base snapshot = the version we loaded → used for 3-way merge later
 (async()=>{
     const token = getToken();
     let ghData = null, ghSha = null;
 
-    // 1. Try fetch from GitHub
+    // Crash recovery: check for backup if main cache is corrupted
+    if (!locations.length) {
+        try {
+            const backup = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
+            if (backup && backup.length) {
+                locations = backup.map(normalizeLocation);
+                console.warn('Crash recovery: restored', locations.length, 'locs from backup');
+            }
+        } catch (e) {}
+    }
+
+    // 1. Fetch from GitHub (source of truth)
     try {
         if (token) {
             const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
@@ -1825,21 +1881,19 @@ function startAutoSync(){
         }
     } catch (e) { console.warn('GitHub fetch failed:', e.message); }
 
-    // 2. Decide what to use
+    // 2. Resolve: dirty detection + conflict resolution
     if (ghData && ghData.length > 0) {
         if (_isDirty()) {
-            // Local has unsaved changes — check if GitHub also changed
-            const snapshot = (() => { try { return JSON.parse(localStorage.getItem(SYNC_SNAPSHOT_KEY) || 'null'); } catch { return null; } })();
+            const base = _getBaseSnapshot(); // REAL base from last load
             const localStripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
             const ghJson = JSON.stringify(ghData);
-            const snapJson = snapshot ? JSON.stringify(snapshot) : null;
+            const baseJson = base ? JSON.stringify(base) : null;
 
-            if (snapJson && ghJson !== snapJson) {
-                // CONFLICT: both local AND GitHub changed since last sync
-                console.warn('CONFLICT: local dirty + GitHub changed');
-                showToast('⚠️ มีข้อมูลขัดแย้ง — กรุณาเลือก', true);
-                // Use 3-way merge
-                const result = mergeLocs(localStripped, ghData, snapshot);
+            if (baseJson && ghJson !== baseJson) {
+                // CONFLICT: both local AND GitHub changed
+                console.warn('CONFLICT: local dirty + GitHub changed since base');
+                console.warn('Base:', (base||[]).length, 'Local:', localStripped.length, 'Remote:', ghData.length);
+                const result = mergeLocs(localStripped, ghData, base);
                 const photoMap = new Map();
                 locations.forEach(l => { if (l.photo) photoMap.set(_locKey(l), l.photo); });
                 locations = result.merged.map(l => {
@@ -1849,25 +1903,24 @@ function startAutoSync(){
                 });
                 _writeCache();
                 invalidateCache(); update();
-                // Push merged result to GitHub
                 if (token && ghSha) {
                     try {
                         const mergedStripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
                         await _pushToGithub(token, mergedStripped, ghSha);
+                        _saveBaseSnapshot(mergedStripped, null);
                         _clearDirty();
-                        setSyncIndicator('ok');
-                        showToast(`🔀 Merge สำเร็จ: +${result.added} -${result.removed}`, false, true);
-                    } catch (e) { console.warn('Merge push failed:', e); setSyncIndicator('error'); }
+                        _setSyncStatus('ok');
+                        const msg = `🔀 Merge: +${result.added} -${result.removed}${result.conflicts ? ' ⚠️' + result.conflicts + ' conflicts' : ''}`;
+                        showToast(msg, result.conflicts > 0);
+                    } catch (e) { console.warn('Merge push failed:', e); _setSyncStatus('error'); }
                 }
             } else {
                 // GitHub unchanged — local wins, push it
-                console.log('Dirty: pushing local changes to GitHub');
-                _writeCache();
+                console.log('Dirty: local changes, GitHub unchanged → pushing');
                 if (token) _debouncedPush();
-                invalidateCache(); update();
             }
         } else {
-            // Not dirty — GitHub wins (normal case)
+            // Not dirty — GitHub wins (normal load)
             const photoMap = new Map();
             locations.forEach(l => { if (l.photo) photoMap.set(_locKey(l), l.photo); });
             locations = ghData.map(l => {
@@ -1884,11 +1937,25 @@ function startAutoSync(){
             invalidateCache(); update();
             console.log('Loaded from GitHub:', locations.length, 'locs');
         }
+        // ★ SAVE BASE SNAPSHOT — the "common ancestor" for future merges
+        const stripped = locations.map(l => { const { photo, ...rest } = l; return rest; });
+        _saveBaseSnapshot(stripped, ghSha);
     } else {
         // GitHub unavailable — use cache
         console.log('GitHub unavailable, using cache:', locations.length, 'locs');
-        if (_isDirty()) showToast('⚠️ มีข้อมูลที่ยังไม่ได้ sync', true);
+        if (_isDirty()) {
+            showToast('⚠️ มีข้อมูลที่ยังไม่ได้ sync', true);
+            _setSyncStatus('dirty');
+        }
     }
+
+    // Background retry: if still dirty, retry push every 5s
+    setInterval(() => {
+        if (_isDirty() && getToken() && !_pushInFlight && document.visibilityState === 'visible') {
+            console.log('Background retry: pushing dirty changes...');
+            _debouncedPush();
+        }
+    }, 5000);
 
     if (token) startAutoSync();
 })();
