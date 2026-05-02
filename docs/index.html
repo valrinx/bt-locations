@@ -38,7 +38,6 @@
             height: 100vh;
         }
 
-        /* ══════════════════ MAP ══════════════════ */
         #map {
             position: fixed; inset: 0;
             z-index: 0;
@@ -46,7 +45,7 @@
         }
         #map.add-cursor { cursor: crosshair; }
 
-        /* ══════════════════ SEARCH BAR ══════════════════ */
+        /* ══ SEARCH BAR (Google Maps style) ══ */
         .search-bar {
             position: fixed;
             top: 12px; left: 12px;
@@ -100,10 +99,7 @@
         .search-clear.show { display: flex; }
         .search-clear:hover { background: var(--surface2); }
 
-        .search-divider {
-            width: 1px; height: 24px; background: var(--border);
-            flex-shrink: 0;
-        }
+        .search-divider { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
 
         .search-avatar {
             width: 32px; height: 32px; border-radius: 50%;
@@ -113,7 +109,6 @@
             cursor: pointer;
         }
 
-        /* Search Suggestions Dropdown */
         .search-results {
             display: none;
             background: var(--surface);
@@ -141,15 +136,9 @@
             font-size: 14px; font-weight: 500; color: var(--text);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .search-result-sub {
-            font-size: 12px; color: var(--text3);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .search-result-dist {
-            font-size: 12px; color: var(--text3); flex-shrink: 0;
-        }
+        .search-result-sub { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* ══════════════════ FILTER CHIPS ══════════════════ */
+        /* ══ FILTER CHIPS ══ */
         .filter-chips {
             display: flex; gap: 8px; align-items: center;
             padding: 8px 4px 4px;
@@ -168,13 +157,27 @@
             white-space: nowrap;
         }
         .chip:hover { box-shadow: var(--shadow-md); background: var(--surface2); }
-        .chip.active { background: var(--blue-light); color: var(--blue); }
+        .chip.active { background: var(--blue-light); color: var(--blue); border: 1.5px solid #a8c7fa; }
         .chip svg { width: 16px; height: 16px; }
 
-        /* ══════════════════ RIGHT SIDEBAR CONTROLS ══════════════════ */
+        /* ══ RIGHT-SIDE CONTROLS (Google Maps style) ══ */
+        /* GPS button — above FAB */
+        .gps-btn-wrap {
+            position: fixed;
+            right: 12px;
+            bottom: 96px;
+            z-index: 1000;
+        }
+
         .map-controls {
-            position: fixed; right: 12px; bottom: 120px;
-            z-index: 1000; display: flex; flex-direction: column; gap: 8px;
+            position: fixed;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .map-btn {
@@ -203,15 +206,7 @@
             border-bottom: 1px solid var(--border);
         }
 
-        /* GPS Button */
-        .gps-btn {
-            position: fixed; right: 12px; bottom: 180px;
-            z-index: 1000;
-        }
-        .gps-btn.locating { animation: spin 1s linear infinite; }
-        @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
-
-        /* ══════════════════ FAB (Add Pin) ══════════════════ */
+        /* ══ FAB ══ */
         .fab {
             position: fixed; right: 16px; bottom: 24px;
             z-index: 1001;
@@ -226,12 +221,10 @@
         }
         .fab:hover { box-shadow: 0 4px 16px rgba(60,64,67,.25); }
         .fab svg { color: var(--blue); width: 20px; height: 20px; }
-        .fab.add-mode {
-            background: var(--blue); color: white;
-        }
+        .fab.add-mode { background: var(--blue); color: white; }
         .fab.add-mode svg { color: white; }
 
-        /* ══════════════════ COUNT BADGE ══════════════════ */
+        /* ══ COUNT BADGE ══ */
         .count-pill {
             position: fixed;
             bottom: 90px; left: 50%; transform: translateX(-50%);
@@ -245,7 +238,7 @@
         }
         .count-pill.show { opacity: 1; }
 
-        /* ══════════════════ INFO PANEL (Sidebar) ══════════════════ */
+        /* ══ INFO PANEL ══ */
         .info-panel {
             position: fixed;
             top: 0; left: 0; bottom: 0;
@@ -280,10 +273,8 @@
         }
         .info-panel-close:hover { background: var(--surface2); }
         .info-panel-title { font-size: 18px; font-weight: 600; flex: 1; }
-
         .info-panel-body { flex: 1; overflow-y: auto; }
 
-        /* Stats inside panel */
         .stats-section { padding: 16px; }
         .stats-header { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
         .stats-row {
@@ -297,7 +288,7 @@
         .stats-bar-wrap { width: 60px; height: 4px; background: var(--border); border-radius: 2px; }
         .stats-bar { height: 100%; border-radius: 2px; background: var(--blue); }
 
-        /* ══════════════════ PLACE CARD (Bottom Sheet on Mobile) ══════════════════ */
+        /* ══ PLACE CARD ══ */
         .place-card {
             position: fixed;
             bottom: -100%; left: 0; right: 0;
@@ -310,7 +301,6 @@
         }
         .place-card.open { bottom: 0; }
 
-        /* Desktop: place card is a popup-like sidebar below search */
         @media (min-width: 600px) {
             .place-card {
                 position: fixed;
@@ -335,22 +325,12 @@
             color: var(--text2); font-size: 18px;
         }
         .place-card-close:hover { background: var(--border); }
-
         .place-card-content { padding: 8px 16px 20px; }
-
-        .place-card-name {
-            font-size: 22px; font-weight: 600; color: var(--text);
-            margin-bottom: 4px; padding-right: 40px;
-        }
-        .place-card-meta {
-            font-size: 14px; color: var(--text2); margin-bottom: 14px;
-            display: flex; align-items: center; gap: 6px;
-        }
+        .place-card-name { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 4px; padding-right: 40px; }
+        .place-card-meta { font-size: 14px; color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
         .place-card-meta .dot { color: var(--text3); }
 
-        .place-card-actions {
-            display: flex; gap: 8px; margin-bottom: 16px;
-        }
+        .place-card-actions { display: flex; gap: 8px; margin-bottom: 16px; }
         .place-action-btn {
             flex: 1; display: flex; flex-direction: column;
             align-items: center; gap: 4px; padding: 10px 4px;
@@ -371,16 +351,12 @@
         .place-action-btn.yellow .place-action-label { color: #b45309; }
 
         .place-card-divider { height: 1px; background: var(--border); margin: 12px 0; }
-
-        .place-card-row {
-            display: flex; align-items: flex-start; gap: 14px;
-            padding: 8px 0;
-        }
+        .place-card-row { display: flex; align-items: flex-start; gap: 14px; padding: 8px 0; }
         .place-card-row-icon { color: var(--text3); width: 20px; flex-shrink: 0; margin-top: 1px; }
         .place-card-row-text { flex: 1; font-size: 14px; color: var(--text); line-height: 1.5; }
         .place-card-row-text small { color: var(--text3); font-size: 12px; }
 
-        /* ══════════════════ LIST VIEW ══════════════════ */
+        /* ══ LIST PANEL ══ */
         .list-panel {
             position: fixed;
             bottom: -100%; left: 0; right: 0;
@@ -422,17 +398,13 @@
         }
         .list-item:hover { background: var(--surface2); }
         .list-item:last-child { border-bottom: none; }
-        .list-item-icon {
-            width: 40px; height: 40px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; font-size: 18px;
-        }
+        .list-item-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
         .list-item-text { flex: 1; min-width: 0; }
         .list-item-name { font-size: 14px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .list-item-sub { font-size: 12px; color: var(--text3); }
         .list-item-chevron { color: var(--text3); font-size: 18px; }
 
-        /* ══════════════════ MODAL (Add/Edit) ══════════════════ */
+        /* ══ MODAL ══ */
         .modal-overlay {
             display: none; position: fixed; inset: 0;
             background: rgba(32,33,36,0.5); z-index: 2000;
@@ -451,24 +423,18 @@
         }
         @keyframes modalIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:scale(1)} }
 
-        .modal-header {
-            padding: 24px 24px 0;
-            font-size: 22px; font-weight: 600; color: var(--text);
-        }
+        .modal-header { padding: 24px 24px 0; font-size: 22px; font-weight: 600; color: var(--text); }
         .modal-body { padding: 20px 24px; }
         .modal-field { margin-bottom: 16px; }
-        .modal-field label {
-            display: block; font-size: 12px; font-weight: 600;
-            color: var(--blue); margin-bottom: 4px; letter-spacing: 0.5px;
-        }
-        .modal-field input {
+        .modal-field label { display: block; font-size: 12px; font-weight: 600; color: var(--blue); margin-bottom: 4px; letter-spacing: 0.5px; }
+        .modal-field input, .modal-field select {
             width: 100%; padding: 12px 14px;
             border: 2px solid var(--border); border-radius: 12px;
             font-size: 15px; font-family: inherit; color: var(--text);
             outline: none; transition: border-color 0.15s;
             background: var(--surface);
         }
-        .modal-field input:focus { border-color: var(--blue); }
+        .modal-field input:focus, .modal-field select:focus { border-color: var(--blue); }
 
         .latlng-row { display: flex; gap: 10px; }
         .latlng-row .modal-field { flex: 1; }
@@ -482,27 +448,31 @@
         }
         .gps-modal-btn:hover { border-color: var(--blue); background: var(--blue-light); }
 
-        .modal-footer {
-            padding: 8px 16px 16px;
-            display: flex; gap: 8px; justify-content: flex-end;
-        }
-        .modal-btn {
-            padding: 10px 24px; border-radius: 20px; border: none;
-            font-size: 14px; font-weight: 600; font-family: inherit;
-            cursor: pointer; transition: all 0.15s;
-        }
+        .modal-footer { padding: 8px 16px 16px; display: flex; gap: 8px; justify-content: flex-end; }
+        .modal-btn { padding: 10px 24px; border-radius: 20px; border: none; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; }
         .modal-btn-cancel { background: none; color: var(--blue); }
         .modal-btn-cancel:hover { background: var(--blue-light); }
         .modal-btn-save { background: var(--blue); color: white; }
         .modal-btn-save:hover { background: #1557b0; box-shadow: 0 2px 8px rgba(26,115,232,.4); }
 
-        /* ══════════════════ TOKEN MODAL ══════════════════ */
+        /* ══ FILTER MODAL — single choice ══ */
+        .filter-choice-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; padding: 4px 0; }
+        .filter-choice-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px; border-radius: 12px; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.12s;
+            font-size: 14px; color: var(--text);
+        }
+        .filter-choice-item:hover { background: var(--surface2); }
+        .filter-choice-item.selected { background: var(--blue-light); border-color: #a8c7fa; color: var(--blue); font-weight: 600; }
+        .filter-choice-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .filter-choice-count { margin-left: auto; font-size: 12px; color: var(--text3); font-weight: 600; }
+
+        /* TOKEN, CONFIRM */
         .token-modal { max-width: 380px; }
         .token-icon { text-align: center; font-size: 48px; margin: 24px 0 8px; }
         .token-title { text-align: center; font-size: 20px; font-weight: 600; padding: 0 24px; }
         .token-sub { text-align: center; font-size: 14px; color: var(--text2); padding: 8px 24px 4px; line-height: 1.6; }
-
-        /* ══════════════════ CONFIRM DIALOG ══════════════════ */
         .confirm-modal { max-width: 320px; }
         .confirm-icon { text-align: center; font-size: 36px; padding: 24px 24px 8px; }
         .confirm-title { font-size: 20px; font-weight: 600; padding: 0 24px; }
@@ -511,7 +481,7 @@
         .btn-danger { background: var(--red) !important; }
         .btn-danger:hover { background: #b31412 !important; }
 
-        /* ══════════════════ ADD MODE BANNER ══════════════════ */
+        /* ══ ADD MODE BANNER ══ */
         .add-banner {
             position: fixed;
             top: 80px; left: 50%; transform: translateX(-50%);
@@ -531,7 +501,6 @@
         }
         .add-banner-cancel:hover { background: rgba(255,255,255,0.25); }
 
-        /* ══════════════════ CROSSHAIR ══════════════════ */
         #crosshair {
             display: none; position: fixed;
             pointer-events: none; z-index: 1600;
@@ -540,7 +509,6 @@
         }
         #crosshair.show { display: block; }
 
-        /* ══════════════════ LATLNG HINT ══════════════════ */
         .latlng-hint {
             position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
             z-index: 1200; background: rgba(32,33,36,0.8); color: white;
@@ -549,7 +517,6 @@
         }
         .latlng-hint.show { opacity: 1; }
 
-        /* ══════════════════ SAVE STATUS ══════════════════ */
         .save-toast {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
             z-index: 2100; background: #202124; color: white;
@@ -561,7 +528,7 @@
         .save-toast.show { opacity: 1; }
         .save-toast.error { background: var(--red); }
 
-        /* ══════════════════ OVERFLOW MENU ══════════════════ */
+        /* ══ OVERFLOW MENU ══ */
         .overflow-menu {
             position: fixed; right: 56px; bottom: 24px;
             background: var(--surface); border-radius: 16px;
@@ -586,21 +553,21 @@
         .om-item.red svg { color: var(--red); }
         .om-sep { height: 1px; background: var(--border); margin: 4px 0; }
 
-        /* ══════════════════ DARK MODE ══════════════════ */
+        /* ══ DARK MODE ══ */
         body.dark {
             --surface: #202124; --surface2: #303134; --border: #5f6368;
             --text: #e8eaed; --text2: #9aa0a6; --text3: #5f6368;
             --blue-light: #1a3a6b; background: #202124;
         }
 
-        /* ══════════════════ MOBILE ══════════════════ */
+        /* ══ MOBILE ══ */
         @media (max-width: 599px) {
             :root { --sidebar-w: 100vw; }
             .search-bar { top: 8px; left: 8px; right: 8px; width: auto; }
-            .map-controls { right: 8px; bottom: 110px; }
+            .map-controls { right: 8px; }
             .fab { right: 12px; bottom: 16px; }
             .count-pill { bottom: 80px; }
-            .gps-btn { right: 8px; bottom: 170px; }
+            .gps-btn-wrap { right: 8px; bottom: 88px; }
         }
 
         /* Leaflet overrides */
@@ -608,23 +575,40 @@
         .leaflet-popup-content-wrapper {
             border-radius: 12px !important;
             box-shadow: var(--shadow-lg) !important;
-            padding: 0 !important;
-            overflow: hidden;
+            padding: 0 !important; overflow: hidden;
         }
         .leaflet-popup-content { margin: 0 !important; }
         .leaflet-popup-tip-container { display: none; }
         .leaflet-control-attribution { font-size: 10px; }
 
-        /* Cluster colors */
-        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
-            background: rgba(26,115,232,.25) !important;
+        /* ══ DENSITY-BASED CLUSTER COLORS ══ */
+        /* Override default cluster CSS entirely */
+        .marker-cluster {
+            background-clip: padding-box;
+            border-radius: 20px;
         }
-        .marker-cluster-small div, .marker-cluster-medium div, .marker-cluster-large div {
-            background: rgba(26,115,232,.85) !important; color: white !important;
-            font-weight: 700 !important; font-family: inherit !important;
+        .marker-cluster div {
+            width: 30px; height: 30px;
+            margin-left: 5px; margin-top: 5px;
+            text-align: center; border-radius: 15px;
+            font: bold 12px 'Noto Sans Thai', sans-serif;
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
         }
+        /* density-low (< 10) */
+        .cluster-density-low { background: rgba(52, 168, 83, 0.25) !important; }
+        .cluster-density-low div { background: rgba(52, 168, 83, 0.9) !important; }
+        /* density-medium (10–49) */
+        .cluster-density-medium { background: rgba(251, 188, 4, 0.25) !important; }
+        .cluster-density-medium div { background: rgba(251, 188, 4, 0.9) !important; color: #333 !important; }
+        /* density-high (50–99) */
+        .cluster-density-high { background: rgba(234, 67, 53, 0.25) !important; }
+        .cluster-density-high div { background: rgba(234, 67, 53, 0.9) !important; }
+        /* density-extreme (100+) */
+        .cluster-density-extreme { background: rgba(103, 58, 183, 0.25) !important; }
+        .cluster-density-extreme div { background: rgba(103, 58, 183, 0.9) !important; }
 
-        /* You-are-here */
+        /* you-are-here */
         .you-are-here {
             width: 18px; height: 18px; border-radius: 50%;
             background: #1a73e8; border: 3px solid white;
@@ -637,7 +621,6 @@
             100% { box-shadow: 0 0 0 0 rgba(26,115,232,0); }
         }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -667,13 +650,15 @@
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                 ทั้งหมด
             </button>
+            <!-- รายการ chip — opens list-only picker -->
             <button class="chip" id="chipList">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
-                รายการ
+                <span id="chipListLabel">รายการ</span>
             </button>
+            <!-- เขต chip — opens city-only picker -->
             <button class="chip" id="chipCity">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 11V5l-3-3-3 3v2H3v14h18V11h-6zm-8 8H5v-2h2v2zm0-4H5v-2h2v2zm0-4H5V9h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V9h2v2zm0-4h-2V5h2v2zm6 12h-2v-2h2v2zm0-4h-2v-2h2v2z"/></svg>
-                เขต
+                <span id="chipCityLabel">เขต</span>
             </button>
             <button class="chip" id="chipHeatmap">🔥 Heatmap</button>
             <button class="chip" id="chipList2">☰ รายการ</button>
@@ -686,7 +671,7 @@
         <button class="add-banner-cancel" id="btnCancelAdd">ยกเลิก</button>
     </div>
 
-    <!-- ══ MAP CONTROLS ══ -->
+    <!-- ══ MAP CONTROLS (right, middle of screen) ══ -->
     <div class="map-controls">
         <div class="map-btn-group">
             <button class="map-btn" id="btnZoomIn" title="ซูมเข้า">
@@ -704,10 +689,12 @@
         </button>
     </div>
 
-    <!-- GPS Button -->
-    <button class="map-btn" style="position:fixed;right:12px;bottom:180px;z-index:1000;" id="btnGps" title="ตำแหน่งของฉัน">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
-    </button>
+    <!-- GPS Button (above FAB) -->
+    <div class="gps-btn-wrap">
+        <button class="map-btn" id="btnGps" title="ตำแหน่งของฉัน">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+        </button>
+    </div>
 
     <!-- Count Pill -->
     <div class="count-pill show" id="countPill">0 สถานที่</div>
@@ -756,7 +743,7 @@
         </button>
     </div>
 
-    <!-- ══ INFO PANEL (List) ══ -->
+    <!-- ══ INFO PANEL ══ -->
     <div class="info-panel-backdrop" id="infoPanelBackdrop"></div>
     <div class="info-panel" id="infoPanel">
         <div class="info-panel-header">
@@ -784,27 +771,30 @@
         <div class="list-body" id="listBody"></div>
     </div>
 
-    <!-- ══ LIST/CITY SELECT MODAL ══ -->
-    <div class="modal-overlay" id="filterModalOverlay">
-        <div class="modal">
-            <div class="modal-header" id="filterModalTitle">กรองรายการ</div>
+    <!-- ══ LIST FILTER MODAL (รายการ only) ══ -->
+    <div class="modal-overlay" id="listFilterModalOverlay">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-header">กรองตามรายการ</div>
             <div class="modal-body">
-                <div class="modal-field">
-                    <label>รายการ (List)</label>
-                    <select id="listFilter" style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-family:inherit;color:var(--text);outline:none;background:var(--surface);">
-                        <option value="">ทุกรายการ</option>
-                    </select>
-                </div>
-                <div class="modal-field">
-                    <label>เขต (City)</label>
-                    <select id="cityFilter" style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:12px;font-size:15px;font-family:inherit;color:var(--text);outline:none;background:var(--surface);">
-                        <option value="">ทุกเขต</option>
-                    </select>
-                </div>
+                <div class="filter-choice-list" id="listChoiceList"></div>
             </div>
             <div class="modal-footer">
-                <button class="modal-btn modal-btn-cancel" id="filterModalCancel">ยกเลิก</button>
-                <button class="modal-btn modal-btn-save" id="filterModalApply">กรอง</button>
+                <button class="modal-btn modal-btn-cancel" id="listFilterClear">ล้างตัวกรอง</button>
+                <button class="modal-btn modal-btn-save" id="listFilterClose">เสร็จ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ CITY FILTER MODAL (เขต only) ══ -->
+    <div class="modal-overlay" id="cityFilterModalOverlay">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-header">กรองตามเขต</div>
+            <div class="modal-body">
+                <div class="filter-choice-list" id="cityChoiceList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" id="cityFilterClear">ล้างตัวกรอง</button>
+                <button class="modal-btn modal-btn-save" id="cityFilterClose">เสร็จ</button>
             </div>
         </div>
     </div>
@@ -878,9 +868,7 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div class="save-toast" id="saveToast"></div>
-
     <input type="file" id="fileImport" accept=".json" style="display:none">
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -888,9 +876,9 @@
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="locations.js"></script>
     <script>
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // STATE
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     const STORAGE_KEY = 'bt_locations_data';
     const GITHUB_TOKEN_KEY = 'bt_github_token';
     const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
@@ -905,30 +893,54 @@
     let heatmapMode = false;
     let measureStart = null, measureLine = null;
     let myLocationMarker = null, myLocationCircle = null;
-    let searchPinMarker = null;
 
     function saveLocations() { localStorage.setItem(STORAGE_KEY, JSON.stringify(locations)); }
     function pushUndo() { undoStack.push(JSON.stringify(locations)); if (undoStack.length > MAX_UNDO) undoStack.shift(); }
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // MAP
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     const map = L.map('map', { zoomControl: false }).setView([13.75, 100.5], 11);
     const tileLayers = {
-        'Street': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 }),
+        'Street':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 }),
         'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 }),
-        'Terrain': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
-        'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19 })
+        'Terrain':   L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
+        'Dark':      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19 })
     };
     const tileNames = Object.keys(tileLayers);
     let currentTileIdx = 0;
     tileLayers[tileNames[0]].addTo(map);
 
-    let markerCluster = L.markerClusterGroup({ maxClusterRadius: 50 });
+    // ════════════════════════════════════════════
+    // CLUSTER with density-based coloring
+    // ════════════════════════════════════════════
+    function getDensityClass(count) {
+        if (count < 10)  return 'cluster-density-low';
+        if (count < 50)  return 'cluster-density-medium';
+        if (count < 100) return 'cluster-density-high';
+        return 'cluster-density-extreme';
+    }
+
+    function createClusterGroup() {
+        return L.markerClusterGroup({
+            maxClusterRadius: 50,
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                const cls = getDensityClass(count);
+                return L.divIcon({
+                    html: `<div><span>${count}</span></div>`,
+                    className: `marker-cluster ${cls}`,
+                    iconSize: L.point(40, 40)
+                });
+            }
+        });
+    }
+
+    let markerCluster = createClusterGroup();
     let currentMarkers = [];
     let heatLayer = null;
 
-    // Color
+    // Color palette for individual markers (by list)
     const colorPalette = ['#ea4335','#fbbc04','#34a853','#4285f4','#9334e6','#00897b','#e91e63','#ff6d00','#0097a7','#795548'];
     const listColors = {};
     function getColor(list) {
@@ -939,16 +951,15 @@
         return listColors[list];
     }
 
-    // Haversine
     function haversine(lat1,lng1,lat2,lng2) {
         const R=6371000,p1=lat1*Math.PI/180,p2=lat2*Math.PI/180,dp=(lat2-lat1)*Math.PI/180,dl=(lng2-lng1)*Math.PI/180;
         const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
         return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
     }
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // RENDER
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     function getFiltered() {
         const q = document.getElementById('search').value.toLowerCase();
         return locations.filter(l => {
@@ -961,7 +972,7 @@
 
     function renderMarkers(filtered) {
         map.removeLayer(markerCluster);
-        markerCluster = L.markerClusterGroup({ maxClusterRadius: 50 });
+        markerCluster = createClusterGroup();
         currentMarkers = [];
 
         filtered.forEach(loc => {
@@ -988,41 +999,39 @@
         }
 
         document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
-        document.getElementById('countPill').classList.toggle('show', true);
+        document.getElementById('countPill').classList.add('show');
     }
 
     map.on('zoomend', () => {
         const zoom = map.getZoom();
-        currentMarkers.forEach(({ marker, loc }) => {
-            const tt = marker.getTooltip();
-            if (tt) zoom >= 15 ? marker.openTooltip() : marker.closeTooltip();
+        currentMarkers.forEach(({ marker }) => {
+            zoom >= 15 ? marker.openTooltip() : marker.closeTooltip();
         });
     });
-
-    function updateFilterSelects() {
-        const lists = [...new Set(locations.map(l => l.list))].sort();
-        const sel = document.getElementById('listFilter');
-        const cv = sel.value;
-        sel.innerHTML = '<option value="">ทุกรายการ</option>' + lists.map(l => `<option value="${l}">${l}</option>`).join('');
-        sel.value = cv;
-
-        const cities = [...new Set(locations.map(l => l.city).filter(Boolean))].sort();
-        const cs = document.getElementById('cityFilter');
-        const cv2 = cs.value;
-        cs.innerHTML = '<option value="">ทุกเขต</option>' + cities.map(c => `<option value="${c}">${c}</option>`).join('');
-        cs.value = cv2;
-    }
 
     function update() {
         const filtered = getFiltered();
         renderMarkers(filtered);
-        updateFilterSelects();
         renderListPanel(filtered);
+        updateChipLabels();
     }
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
+    // CHIP LABEL SYNC
+    // ════════════════════════════════════════════
+    function updateChipLabels() {
+        const listLabel = document.getElementById('chipListLabel');
+        const cityLabel = document.getElementById('chipCityLabel');
+        listLabel.textContent = filterList ? filterList : 'รายการ';
+        cityLabel.textContent = filterCity ? filterCity : 'เขต';
+        document.getElementById('chipList').classList.toggle('active', !!filterList);
+        document.getElementById('chipCity').classList.toggle('active', !!filterCity);
+        document.getElementById('chipAll').classList.toggle('active', !filterList && !filterCity);
+    }
+
+    // ════════════════════════════════════════════
     // PLACE CARD
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     function showPlaceCard(loc, idx) {
         const color = getColor(loc.list);
         document.getElementById('placeCardContent').innerHTML = `
@@ -1070,15 +1079,16 @@
     function closePlaceCard() { document.getElementById('placeCard').classList.remove('open'); }
     document.getElementById('placeCardClose').onclick = closePlaceCard;
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // LIST PANEL
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     function renderListPanel(filtered) {
         const body = document.getElementById('listBody');
         document.getElementById('listPanelTitle').textContent = `${filtered.length} สถานที่`;
-        body.innerHTML = filtered.map((loc, i) => {
+        body.innerHTML = filtered.map((loc) => {
             const color = getColor(loc.list);
-            return `<div class="list-item" onclick="showPlaceCard(locations[${locations.indexOf(loc)}], ${locations.indexOf(loc)}); closeListPanel();">
+            const idx = locations.indexOf(loc);
+            return `<div class="list-item" onclick="showPlaceCard(locations[${idx}], ${idx}); closeListPanel();">
                 <div class="list-item-icon" style="background:${color}20;">
                     <span style="font-size:16px;">📍</span>
                 </div>
@@ -1093,26 +1103,21 @@
     window.closeListPanel = () => document.getElementById('listPanel').classList.remove('open');
     document.getElementById('listPanelClose').onclick = closeListPanel;
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // SEARCH
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     const searchInput = document.getElementById('search');
     const searchBox = document.getElementById('searchBox');
     const searchResults = document.getElementById('searchResults');
     const btnClearSearch = document.getElementById('btnClearSearch');
 
     searchInput.addEventListener('focus', () => { searchBox.classList.add('focused'); renderSearchResults(); });
-    searchInput.addEventListener('blur', () => setTimeout(() => { searchBox.classList.remove('focused'); }, 200));
+    searchInput.addEventListener('blur', () => setTimeout(() => searchBox.classList.remove('focused'), 200));
     searchInput.addEventListener('input', () => {
         btnClearSearch.classList.toggle('show', searchInput.value.length > 0);
         renderSearchResults(); update();
     });
-    btnClearSearch.onclick = () => {
-        searchInput.value = '';
-        btnClearSearch.classList.remove('show');
-        searchResults.innerHTML = '';
-        update();
-    };
+    btnClearSearch.onclick = () => { searchInput.value = ''; btnClearSearch.classList.remove('show'); searchResults.innerHTML = ''; update(); };
 
     function renderSearchResults() {
         const q = searchInput.value.toLowerCase();
@@ -1120,7 +1125,7 @@
         const matches = locations.filter(l =>
             (l.name||'').toLowerCase().includes(q) || l.list.toLowerCase().includes(q) || (l.city||'').toLowerCase().includes(q)
         ).slice(0, 8);
-        searchResults.innerHTML = matches.map((loc, i) => {
+        searchResults.innerHTML = matches.map((loc) => {
             const color = getColor(loc.list);
             const idx = locations.indexOf(loc);
             return `<div class="search-result-item" onclick="showPlaceCard(locations[${idx}],${idx});document.getElementById('search').blur();">
@@ -1133,17 +1138,112 @@
         }).join('');
     }
 
-    // ═══════════════════════════════════════════
-    // FILTER CHIPS
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
+    // FILTER CHIPS — separate modals
+    // ════════════════════════════════════════════
     document.getElementById('chipAll').onclick = () => {
         filterList = ''; filterCity = '';
-        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-        document.getElementById('chipAll').classList.add('active');
         update();
     };
-    document.getElementById('chipList').onclick = () => { updateFilterSelects(); document.getElementById('filterModalOverlay').classList.add('open'); };
-    document.getElementById('chipCity').onclick = () => { updateFilterSelects(); document.getElementById('filterModalOverlay').classList.add('open'); };
+
+    // ── รายการ chip ──
+    document.getElementById('chipList').onclick = () => {
+        // Build list choices
+        const counts = {};
+        locations.forEach(l => { counts[l.list] = (counts[l.list]||0)+1; });
+        const lists = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+        const container = document.getElementById('listChoiceList');
+        container.innerHTML = `
+            <div class="filter-choice-item ${!filterList ? 'selected' : ''}" data-val="">
+                <span class="filter-choice-dot" style="background:#9aa0a6"></span>
+                ทุกรายการ
+                <span class="filter-choice-count">${locations.length}</span>
+            </div>
+            ${lists.map(([name, cnt]) => `
+            <div class="filter-choice-item ${filterList===name ? 'selected' : ''}" data-val="${name}">
+                <span class="filter-choice-dot" style="background:${getColor(name)}"></span>
+                ${name}
+                <span class="filter-choice-count">${cnt}</span>
+            </div>`).join('')}
+        `;
+        container.querySelectorAll('.filter-choice-item').forEach(el => {
+            el.onclick = () => {
+                container.querySelectorAll('.filter-choice-item').forEach(x => x.classList.remove('selected'));
+                el.classList.add('selected');
+                filterList = el.dataset.val;
+            };
+        });
+        document.getElementById('listFilterModalOverlay').classList.add('open');
+    };
+    document.getElementById('listFilterClose').onclick = () => {
+        document.getElementById('listFilterModalOverlay').classList.remove('open');
+        update();
+        if (filterList) {
+            const filtered = getFiltered();
+            if (filtered.length > 0) map.fitBounds(L.latLngBounds(filtered.map(l=>[l.lat,l.lng])), {padding:[60,60]});
+        }
+    };
+    document.getElementById('listFilterClear').onclick = () => {
+        filterList = '';
+        document.getElementById('listFilterModalOverlay').classList.remove('open');
+        update();
+    };
+    document.getElementById('listFilterModalOverlay').onclick = e => {
+        if (e.target === document.getElementById('listFilterModalOverlay')) {
+            document.getElementById('listFilterModalOverlay').classList.remove('open');
+            update();
+        }
+    };
+
+    // ── เขต chip ──
+    document.getElementById('chipCity').onclick = () => {
+        const counts = {};
+        locations.forEach(l => { if(l.city) counts[l.city] = (counts[l.city]||0)+1; });
+        const cities = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+        const container = document.getElementById('cityChoiceList');
+        container.innerHTML = `
+            <div class="filter-choice-item ${!filterCity ? 'selected' : ''}" data-val="">
+                <span class="filter-choice-dot" style="background:#9aa0a6"></span>
+                ทุกเขต
+                <span class="filter-choice-count">${locations.length}</span>
+            </div>
+            ${cities.map(([name, cnt]) => `
+            <div class="filter-choice-item ${filterCity===name ? 'selected' : ''}" data-val="${name}">
+                <span class="filter-choice-dot" style="background:#1a73e8"></span>
+                ${name}
+                <span class="filter-choice-count">${cnt}</span>
+            </div>`).join('')}
+        `;
+        container.querySelectorAll('.filter-choice-item').forEach(el => {
+            el.onclick = () => {
+                container.querySelectorAll('.filter-choice-item').forEach(x => x.classList.remove('selected'));
+                el.classList.add('selected');
+                filterCity = el.dataset.val;
+            };
+        });
+        document.getElementById('cityFilterModalOverlay').classList.add('open');
+    };
+    document.getElementById('cityFilterClose').onclick = () => {
+        document.getElementById('cityFilterModalOverlay').classList.remove('open');
+        update();
+        if (filterCity) {
+            const filtered = getFiltered();
+            if (filtered.length > 0) map.fitBounds(L.latLngBounds(filtered.map(l=>[l.lat,l.lng])), {padding:[60,60]});
+        }
+    };
+    document.getElementById('cityFilterClear').onclick = () => {
+        filterCity = '';
+        document.getElementById('cityFilterModalOverlay').classList.remove('open');
+        update();
+    };
+    document.getElementById('cityFilterModalOverlay').onclick = e => {
+        if (e.target === document.getElementById('cityFilterModalOverlay')) {
+            document.getElementById('cityFilterModalOverlay').classList.remove('open');
+            update();
+        }
+    };
+
+    // heatmap & list2
     document.getElementById('chipHeatmap').onclick = () => {
         heatmapMode = !heatmapMode;
         document.getElementById('chipHeatmap').classList.toggle('active', heatmapMode);
@@ -1153,32 +1253,14 @@
         const lp = document.getElementById('listPanel');
         if (lp.classList.contains('open')) { closeListPanel(); } else { update(); lp.classList.add('open'); closePlaceCard(); }
     };
+
     document.getElementById('chipAll').classList.add('active');
 
-    // Filter Modal
-    document.getElementById('filterModalCancel').onclick = () => document.getElementById('filterModalOverlay').classList.remove('open');
-    document.getElementById('filterModalApply').onclick = () => {
-        filterList = document.getElementById('listFilter').value;
-        filterCity = document.getElementById('cityFilter').value;
-        document.getElementById('filterModalOverlay').classList.remove('open');
-        const hasFilter = filterList || filterCity;
-        document.getElementById('chipList').classList.toggle('active', !!filterList);
-        document.getElementById('chipCity').classList.toggle('active', !!filterCity);
-        document.getElementById('chipAll').classList.toggle('active', !hasFilter);
-        update();
-        if (hasFilter) {
-            const filtered = getFiltered();
-            if (filtered.length > 0) map.fitBounds(L.latLngBounds(filtered.map(l => [l.lat, l.lng])), { padding: [60, 60] });
-        }
-    };
-    document.getElementById('filterModalOverlay').onclick = (e) => { if (e.target === document.getElementById('filterModalOverlay')) document.getElementById('filterModalOverlay').classList.remove('open'); };
-
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // MAP CONTROLS
-    // ═══════════════════════════════════════════
-    document.getElementById('btnZoomIn').onclick = () => map.zoomIn();
+    // ════════════════════════════════════════════
+    document.getElementById('btnZoomIn').onclick  = () => map.zoomIn();
     document.getElementById('btnZoomOut').onclick = () => map.zoomOut();
-
     document.getElementById('btnTile').onclick = () => {
         map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
         currentTileIdx = (currentTileIdx + 1) % tileNames.length;
@@ -1186,15 +1268,12 @@
         showToast('แผนที่: ' + tileNames[currentTileIdx]);
     };
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // GPS
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     document.getElementById('btnGps').onclick = () => {
         if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS'); return; }
-        const btn = document.getElementById('btnGps');
-        btn.classList.add('locating');
         navigator.geolocation.getCurrentPosition(pos => {
-            btn.classList.remove('locating');
             const { latitude: lat, longitude: lng, accuracy } = pos.coords;
             if (myLocationMarker) map.removeLayer(myLocationMarker);
             if (myLocationCircle) map.removeLayer(myLocationCircle);
@@ -1206,10 +1285,7 @@
               .bindPopup(`<div style="padding:12px;font-size:13px;"><b>📍 ตำแหน่งของฉัน</b><br><small style="color:#5f6368;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:#1a73e8;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`)
               .openPopup();
             map.setView([lat, lng], 17);
-        }, () => {
-            btn.classList.remove('locating');
-            showToast('ไม่สามารถหาตำแหน่งได้');
-        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        }, () => showToast('ไม่สามารถหาตำแหน่งได้'), { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     };
 
     document.getElementById('btnUseGpsModal').onclick = () => {
@@ -1221,15 +1297,12 @@
             document.getElementById('modalLng').value = pos.coords.longitude.toFixed(6);
             btn.textContent = '✅ ได้ตำแหน่งแล้ว';
             setTimeout(() => btn.textContent = '📍 ใช้ตำแหน่งของฉัน', 2000);
-        }, () => {
-            btn.textContent = '📍 ใช้ตำแหน่งของฉัน';
-            showToast('ไม่สามารถหาตำแหน่งได้');
-        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+        }, () => { btn.textContent = '📍 ใช้ตำแหน่งของฉัน'; showToast('ไม่สามารถหาตำแหน่งได้'); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     };
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // ADD MODE
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     const crosshair = document.getElementById('crosshair');
     const addBanner = document.getElementById('addBanner');
     const fab = document.getElementById('btnFab');
@@ -1258,12 +1331,12 @@
     document.getElementById('map').addEventListener('mousemove', e => {
         if (!addMode) return;
         crosshair.style.left = e.clientX + 'px';
-        crosshair.style.top = e.clientY + 'px';
+        crosshair.style.top  = e.clientY + 'px';
     });
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // MAP CLICK
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     map.on('click', e => {
         const { lat, lng } = e.latlng;
         if (document.getElementById('editModalOverlay').classList.contains('open')) {
@@ -1293,20 +1366,15 @@
         document.getElementById('editModalOverlay').classList.add('open');
     };
 
-    // lat/lng hint on mousemove
     const latlngHint = document.getElementById('latlngHint');
-    map.on('mousemove', e => {
-        latlngHint.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
-        latlngHint.classList.add('show');
-    });
+    map.on('mousemove', e => { latlngHint.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`; latlngHint.classList.add('show'); });
     map.on('mouseout', () => latlngHint.classList.remove('show'));
 
-    // ═══════════════════════════════════════════
-    // EDIT
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
+    // EDIT / ADD MODAL
+    // ════════════════════════════════════════════
     window.openEdit = function(idx) {
-        const loc = locations[idx];
-        if (!loc) return;
+        const loc = locations[idx]; if (!loc) return;
         editingIndex = idx;
         document.getElementById('editModalTitle').textContent = 'แก้ไขสถานที่';
         document.getElementById('modalName').value = loc.name || '';
@@ -1325,8 +1393,8 @@
         const name = document.getElementById('modalName').value.trim();
         const list = document.getElementById('modalList').value.trim() || 'ไม่มีรายการ';
         const city = document.getElementById('modalCity').value.trim();
-        const lat = parseFloat(document.getElementById('modalLat').value);
-        const lng = parseFloat(document.getElementById('modalLng').value);
+        const lat  = parseFloat(document.getElementById('modalLat').value);
+        const lng  = parseFloat(document.getElementById('modalLng').value);
         if (isNaN(lat) || isNaN(lng)) { showToast('กรุณากรอก Lat/Lng', true); return; }
         pushUndo();
         if (editingIndex >= 0) locations[editingIndex] = { name, lat, lng, list, city };
@@ -1338,31 +1406,23 @@
         if (editingIndex < 0) map.setView([lat, lng], 15);
     };
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // DELETE
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     window.doConfirmDelete = function(idx) {
-        const loc = locations[idx];
-        if (!loc) return;
+        const loc = locations[idx]; if (!loc) return;
         showConfirm('🗑️', 'ลบสถานที่?', `"${loc.name || loc.list}" จะถูกลบ (Undo ได้)`, () => {
-            pushUndo();
-            locations.splice(idx, 1);
-            saveLocations();
-            closePlaceCard();
-            update();
-            showToast('ลบแล้ว');
+            pushUndo(); locations.splice(idx, 1); saveLocations(); closePlaceCard(); update(); showToast('ลบแล้ว');
         });
     };
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // MEASURE
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     window.startMeasure = function(idx) {
         const loc = locations[idx];
         if (!measureStart) {
-            measureStart = loc;
-            closePlaceCard();
-            showToast('เลือกจุดที่ 2 เพื่อวัดระยะ');
+            measureStart = loc; closePlaceCard(); showToast('เลือกจุดที่ 2 เพื่อวัดระยะ');
         } else {
             const d = haversine(measureStart.lat, measureStart.lng, loc.lat, loc.lng);
             if (measureLine) map.removeLayer(measureLine);
@@ -1372,22 +1432,16 @@
         }
     };
 
-    // ═══════════════════════════════════════════
-    // MENU (hamburger → info panel)
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
+    // MENU
+    // ════════════════════════════════════════════
     document.getElementById('btnMenu').onclick = () => openInfoPanel('menu');
-    document.getElementById('infoPanelClose').onclick = () => {
-        document.getElementById('infoPanel').classList.remove('open');
-        document.getElementById('infoPanelBackdrop').classList.remove('show');
-    };
-    document.getElementById('infoPanelBackdrop').onclick = () => {
-        document.getElementById('infoPanel').classList.remove('open');
-        document.getElementById('infoPanelBackdrop').classList.remove('show');
-    };
+    document.getElementById('infoPanelClose').onclick = closeInfo;
+    document.getElementById('infoPanelBackdrop').onclick = closeInfo;
 
     function openInfoPanel(mode) {
         const panel = document.getElementById('infoPanel');
-        const body = document.getElementById('infoPanelBody');
+        const body  = document.getElementById('infoPanelBody');
         if (mode === 'stats') {
             document.getElementById('infoPanelTitle').textContent = 'สถิติ';
             const listCount = {}, cityCount = {};
@@ -1410,32 +1464,28 @@
                 <div style="padding:16px;">
                     <div style="font-size:14px;color:var(--text2);margin-bottom:20px;">แผนที่จุด BT Locations</div>
                     ${[
-                        ['📤','Export JSON','omExport'],
-                        ['📥','Import JSON','omImport'],
-                        ['📊','สถิติ','omStats'],
-                        ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmap'],
-                        ['🌙','Dark mode','omDark'],
+                        ['📤','Export JSON','omExportM'],
+                        ['📥','Import JSON','omImportM'],
+                        ['📊','สถิติ','omStatsM'],
+                        ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmapM'],
+                        ['🌙','Dark mode','omDarkM'],
                         ['↩','Undo','omUndoM'],
                         ['🗑️','ลบที่กรอง (Bulk)','omBulkDelM'],
                         ['🔄','รีเซ็ตข้อมูล','omResetM'],
                     ].map(([icon,label,id])=>`<button class="om-item" id="${id}" style="border-radius:12px;"><span style="font-size:18px;width:20px;">${icon}</span>${label}</button>`).join('')}
                 </div>`;
-            bindMenuItems();
+            const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
+            b('omExportM', doExport);
+            b('omImportM', ()=>document.getElementById('fileImport').click());
+            b('omStatsM', ()=>openInfoPanel('stats'));
+            b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
+            b('omDarkM', toggleDark);
+            b('omUndoM', doUndo);
+            b('omBulkDelM', doBulkDel);
+            b('omResetM', doReset);
         }
         panel.classList.add('open');
         document.getElementById('infoPanelBackdrop').classList.add('show');
-    }
-
-    function bindMenuItems() {
-        const bind = (id, fn) => { const el = document.getElementById(id); if(el) el.onclick = fn; };
-        bind('omExport', doExport);
-        bind('omImport', () => document.getElementById('fileImport').click());
-        bind('omStats', () => openInfoPanel('stats'));
-        bind('omHeatmap', () => { heatmapMode = !heatmapMode; document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode); update(); closeInfo(); });
-        bind('omDark', toggleDark);
-        bind('omUndoM', doUndo);
-        bind('omBulkDelM', doBulkDel);
-        bind('omResetM', doReset);
     }
 
     function closeInfo() {
@@ -1443,23 +1493,22 @@
         document.getElementById('infoPanelBackdrop').classList.remove('show');
     }
 
-    // ═══════════════════════════════════════════
-    // OVERFLOW MENU (right side)
-    // ═══════════════════════════════════════════
-    // map controls overflow
+    // ════════════════════════════════════════════
+    // OVERFLOW MENU BUTTONS
+    // ════════════════════════════════════════════
     document.getElementById('btnGithubSave').onclick = doGithubSaveFlow;
-    document.getElementById('omStats').onclick = () => openInfoPanel('stats');
-    document.getElementById('omExport').onclick = doExport;
-    document.getElementById('omImport').onclick = () => document.getElementById('fileImport').click();
-    document.getElementById('omDark').onclick = toggleDark;
-    document.getElementById('omUndo').onclick = doUndo;
+    document.getElementById('omStats').onclick   = () => openInfoPanel('stats');
+    document.getElementById('omExport').onclick  = doExport;
+    document.getElementById('omImport').onclick  = () => document.getElementById('fileImport').click();
+    document.getElementById('omDark').onclick    = toggleDark;
+    document.getElementById('omUndo').onclick    = doUndo;
     document.getElementById('omBulkDel').onclick = doBulkDel;
-    document.getElementById('omReset').onclick = doReset;
-    document.getElementById('omLegend').onclick = () => openInfoPanel('stats');
+    document.getElementById('omReset').onclick   = doReset;
+    document.getElementById('omLegend').onclick  = () => openInfoPanel('stats');
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // ACTIONS
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     function doExport() {
         const blob = new Blob([JSON.stringify(locations,null,2)],{type:'application/json'});
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'bt_locations.json'; a.click();
@@ -1482,10 +1531,7 @@
         e.target.value = '';
     };
 
-    function doUndo() {
-        if (!undoStack.length) { showToast('ไม่มี Undo'); return; }
-        locations = JSON.parse(undoStack.pop()); saveLocations(); update(); showToast('Undo แล้ว'); closeInfo();
-    }
+    function doUndo() { if (!undoStack.length) { showToast('ไม่มี Undo'); return; } locations = JSON.parse(undoStack.pop()); saveLocations(); update(); showToast('Undo แล้ว'); closeInfo(); }
 
     function doBulkDel() {
         const filtered = getFiltered();
@@ -1508,16 +1554,11 @@
         }); closeInfo();
     }
 
-    function toggleDark() {
-        document.body.classList.toggle('dark');
-        const isDark = document.body.classList.contains('dark');
-        showToast(isDark ? 'Dark mode เปิดแล้ว' : 'Light mode');
-        closeInfo();
-    }
+    function toggleDark() { document.body.classList.toggle('dark'); showToast(document.body.classList.contains('dark') ? 'Dark mode เปิดแล้ว' : 'Light mode'); closeInfo(); }
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // GITHUB SAVE
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     function getToken() { return localStorage.getItem(GITHUB_TOKEN_KEY)||''; }
     function setToken(t) { localStorage.setItem(GITHUB_TOKEN_KEY,t); }
 
@@ -1562,18 +1603,14 @@
             ]);
             showToast('✅ บันทึก GitHub สำเร็จ');
         } catch(err) {
-            if (err.message.includes('401')||err.message.includes('credentials')) {
-                localStorage.removeItem(GITHUB_TOKEN_KEY);
-                showToast('Token ไม่ถูกต้อง',true);
-            } else showToast('ผิดพลาด: '+err.message,true);
-        } finally {
-            saveBtn.style.color='';
-        }
+            if (err.message.includes('401')||err.message.includes('credentials')) { localStorage.removeItem(GITHUB_TOKEN_KEY); showToast('Token ไม่ถูกต้อง',true); }
+            else showToast('ผิดพลาด: '+err.message,true);
+        } finally { saveBtn.style.color=''; }
     }
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // CONFIRM DIALOG
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     let confirmCallback = null;
     function showConfirm(icon, title, text, cb) {
         document.getElementById('confirmIcon').textContent = icon;
@@ -1589,9 +1626,9 @@
     };
     document.getElementById('confirmModalOverlay').onclick = e => { if(e.target===document.getElementById('confirmModalOverlay')) document.getElementById('confirmModalOverlay').classList.remove('open'); };
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // TOAST
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     let toastTimer;
     function showToast(msg, isError=false) {
         const t = document.getElementById('saveToast');
@@ -1601,21 +1638,17 @@
         toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
     }
 
-    // ═══════════════════════════════════════════
-    // CLOSE on backdrop click
-    // ═══════════════════════════════════════════
-    map.on('click', () => {
-        if (!addMode) closePlaceCard();
-        closeListPanel();
-    });
+    // ════════════════════════════════════════════
+    // BACKDROP
+    // ════════════════════════════════════════════
+    map.on('click', () => { if (!addMode) closePlaceCard(); closeListPanel(); });
 
-    // Expose for inline onclick
-    window.showPlaceCard = showPlaceCard;
+    window.showPlaceCard  = showPlaceCard;
     window.closeListPanel = closeListPanel;
 
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     // INIT
-    // ═══════════════════════════════════════════
+    // ════════════════════════════════════════════
     update();
 
     // Tooltip style
@@ -1623,13 +1656,13 @@
     style.textContent = `.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#fff!important;border:none!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;white-space:nowrap!important;font-family:inherit!important;}`;
     document.head.appendChild(style);
 
-    // Background sync
+    // Background sync from GitHub
     (async()=>{
         try {
-            const res=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
-            if(!res.ok)return;
-            const fresh=await res.json();
-            if(fresh.length>0&&fresh.length>=locations.length&&JSON.stringify(fresh)!==JSON.stringify(locations)){
+            const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
+            if(!res.ok) return;
+            const fresh = await res.json();
+            if(fresh.length>0 && fresh.length>=locations.length && JSON.stringify(fresh)!==JSON.stringify(locations)){
                 locations=fresh; saveLocations(); update();
                 console.log('Synced',fresh.length,'from GitHub');
             }
