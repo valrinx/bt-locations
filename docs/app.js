@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.7.0';
+const APP_VERSION = 'v5.8.0';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -35,6 +35,262 @@ let favorites = new Set((() => { try { return JSON.parse(localStorage.getItem(FA
 function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); }
 // Avatar init
 (function _initAvatar(){ const un=localStorage.getItem('bt_username')||''; const el=document.getElementById('searchAvatar'); if(el)el.textContent=(un[0]||'B').toUpperCase(); })();
+
+// ════════════════════════════════════════════
+// CONCEPT UI FUNCTIONS
+// ════════════════════════════════════════════
+let currentView = 'map';
+function switchView(view){
+    currentView = view;
+    document.querySelectorAll('.vt').forEach(v=>v.classList.remove('on'));
+    document.getElementById('vt-'+view).classList.add('on');
+    document.querySelectorAll('.map-view, .list-view, .stats-view').forEach(el=>el.classList.remove('show'));
+    document.getElementById('view-'+view).classList.add('show');
+    if(view==='stats') renderStatsView();
+    if(view==='list') renderListView();
+    if(view==='heat') { heatmapMode=true; update(); } else if(view!=='map') { heatmapMode=false; update(); }
+}
+
+// View tab click handlers
+document.querySelectorAll('.vt').forEach(v=>{
+    v.onclick = () => switchView(v.dataset.view);
+});
+
+// Bottom toolbar handlers
+document.getElementById('btMap').onclick = () => switchView('map');
+document.getElementById('btRoute').onclick = () => { routeMode ? clearRoute() : doRoute(); };
+document.getElementById('btHeat').onclick = () => switchView(heatmapMode ? 'map' : 'heat');
+document.getElementById('btAdd').onclick = () => openAddMode();
+
+// Updated sidebar rendering
+const _listColors=['#5b8fff','#2ecc90','#f5a623','#ff5c5c','#a78bfa','#ff7f5c','#40c0ff','#c0a060'];
+function _renderSidebar(){
+    const totalBadge = document.getElementById('totalBadge');
+    if(totalBadge) totalBadge.textContent = locations.length + ' จุด';
+
+    // Lists
+    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
+    const lists = Object.entries(lc).sort((a,b)=>b[1]-a[1]);
+    const listEl = document.getElementById('listContainer');
+    if(listEl){
+        let html = `<div class="fl ${!filterList?'on':''}" data-list=""><span class="fd" style="background:#5b8fff"></span><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
+        lists.forEach(([name,count],i)=>{
+            const col=_listColors[i % _listColors.length];
+            html += `<div class="fl ${filterList===name?'on':''}" data-list="${name}"><span class="fd" style="background:${col}"></span><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
+        });
+        listEl.innerHTML = html;
+        listEl.querySelectorAll('.fl').forEach(el=>{
+            el.onclick = () => {
+                filterList = el.dataset.list;
+                filterCity = '';
+                _lastFilteredKey = null;
+                update();
+                _renderSidebar();
+            };
+        });
+    }
+
+    // Cities
+    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
+    const cities = Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+    const cityEl = document.getElementById('cityContainer');
+    if(cityEl){
+        let html = '';
+        cities.forEach(([name,count],i)=>{
+            const col=_listColors[i % _listColors.length];
+            html += `<div class="cl ${filterCity===name?'on':''}" data-city="${name}"><span class="cd" style="background:${col}"></span><span class="cn">${name}</span><span class="cc">${count}</span></div>`;
+        });
+        cityEl.innerHTML = html;
+        cityEl.querySelectorAll('.cl').forEach(el=>{
+            el.onclick = () => {
+                filterCity = el.dataset.city;
+                filterList = '';
+                _lastFilteredKey = null;
+                update();
+                _renderSidebar();
+                const cityLocs = locations.filter(l=>l.city===filterCity);
+                if(cityLocs.length && map){
+                    const group = L.featureGroup(cityLocs.map(l=>L.marker([l.lat,l.lng])));
+                    map.fitBounds(group.getBounds().pad(0.15), {animate:false, maxZoom:16});
+                }
+            };
+        });
+    }
+
+    // Update map stats
+    const statTotal = document.getElementById('mapStatTotal');
+    if(statTotal) statTotal.textContent = locations.length;
+}
+
+// Stats view
+function renderStatsView(){
+    document.getElementById('svTotal').textContent = locations.length;
+    const cities = [...new Set(locations.map(l=>l.city).filter(Boolean))];
+    document.getElementById('svCities').textContent = cities.length;
+    const lists = [...new Set(locations.map(l=>l.list).filter(Boolean))];
+    document.getElementById('svLists').textContent = lists.length;
+
+    // City bars
+    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
+    const sortedCities = Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+    const maxC = Math.max(...sortedCities.map(x=>x[1]), 1);
+    let barsHtml = '';
+    sortedCities.slice(0,8).forEach(([name,count],i)=>{
+        const col=_listColors[i % _listColors.length];
+        barsHtml += `<div class="bar-row" style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;"><span style="width:80px;color:var(--tx2);">${name}</span><div style="flex:1;height:4px;background:var(--s3);border-radius:2px;"><div style="width:${(count/maxC*100)}%;height:100%;background:${col};border-radius:2px;"></div></div><span style="width:40px;text-align:right;color:var(--tx);">${count}</span></div>`;
+    });
+    document.getElementById('cityBars').innerHTML = barsHtml;
+
+    // Donut chart
+    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
+    const sortedLists = Object.entries(lc).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const total = locations.length;
+    let ang = -90;
+    let svg = `<circle cx="40" cy="40" r="25" fill="var(--s1)"/>`;
+    let legend = '';
+    sortedLists.forEach(([name,count],i)=>{
+        const col=_listColors[i % _listColors.length];
+        const pct = count/total;
+        const sweep = pct * 360;
+        const r=32, cx=40, cy=40;
+        const startRad=ang*Math.PI/180;
+        const endRad=(ang+sweep)*Math.PI/180;
+        const x1=cx+r*Math.cos(startRad);
+        const y1=cy+r*Math.sin(startRad);
+        const x2=cx+r*Math.cos(endRad);
+        const y2=cy+r*Math.sin(endRad);
+        const large=sweep>180?1:0;
+        const d=`M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z`;
+        svg += `<path d="${d}" fill="${col}" opacity="0.9"/>`;
+        legend += `<div class="dl-item"><div class="dl-dot" style="background:${col};"></div>${name}<span class="dl-val">${count}</span></div>`;
+        ang += sweep;
+    });
+    document.getElementById('donutSvg').innerHTML = svg;
+    document.getElementById('donutLegend').innerHTML = legend;
+
+    // Recent items
+    const recent = [...locations].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,5);
+    let recentHtml = '';
+    recent.forEach((r,i)=>{
+        const col=_listColors[i % _listColors.length];
+        recentHtml += `<div class="ri"><div class="ri-dot" style="background:${col};"></div><div class="ri-info"><div class="ri-name">${r.name||'ไม่มีชื่อ'}</div><div class="ri-meta">${r.list}${r.city?' · '+r.city:''}</div></div><span class="ri-tag" style="background:${col}22;color:${col};">${r.list}</span></div>`;
+    });
+    document.getElementById('recentList').innerHTML = recentHtml;
+}
+
+// List view table
+let selectedSet = new Set();
+function renderListView(){
+    const filtered = getFiltered();
+    const table = document.getElementById('listTable');
+    const countEl = document.getElementById('lvCount');
+    if(countEl) countEl.textContent = `แสดง ${filtered.length} จาก ${locations.length} จุด`;
+    if(!table) return;
+
+    let html = '';
+    filtered.forEach((loc,idx)=>{
+        const realIdx = getLocIndex(loc);
+        const col = getColor(loc.list);
+        const sel = selectedSet.has(realIdx) ? 'sel' : '';
+        const chk = selectedSet.has(realIdx) ? '✓' : '';
+        html += `<div class="lrow ${sel}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--bd);cursor:pointer;" onclick="toggleRowSel(${realIdx},this)">
+            <div style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${selectedSet.has(realIdx)?col:'var(--bd2)'};background:${selectedSet.has(realIdx)?col+'33':'none'};display:flex;align-items:center;justify-content:center;color:${col};font-size:10px;" id="chk-${realIdx}">${chk}</div>
+            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${loc.name||'ไม่มีชื่อ'}</div><div style="font-size:11px;color:var(--tx3);">${loc.list}${loc.city?' · '+loc.city:''}</div></div>
+            <div style="display:flex;gap:4px;"><span class="ri-tag" style="background:${col}22;color:${col};">${loc.list}</span></div>
+            <div style="font-size:11px;color:var(--tx3);width:60px;text-align:right;">${loc.city||'-'}</div>
+        </div>`;
+    });
+    table.innerHTML = html;
+
+    const bulkDel = document.getElementById('lvBulkDel');
+    const selCount = document.getElementById('selCount');
+    if(bulkDel && selCount){
+        selCount.textContent = selectedSet.size;
+        bulkDel.style.display = selectedSet.size > 0 ? 'flex' : 'none';
+    }
+}
+
+function toggleRowSel(idx,row){
+    if(selectedSet.has(idx)){
+        selectedSet.delete(idx);
+        row.classList.remove('sel');
+    } else {
+        selectedSet.add(idx);
+        row.classList.add('sel');
+    }
+    const chk = document.getElementById(`chk-${idx}`);
+    if(chk){
+        const col = getColor(locations[idx].list);
+        chk.style.borderColor = selectedSet.has(idx) ? col : 'var(--bd2)';
+        chk.style.background = selectedSet.has(idx) ? col+'33' : 'none';
+        chk.style.color = col;
+        chk.textContent = selectedSet.has(idx) ? '✓' : '';
+    }
+    const bulkDel = document.getElementById('lvBulkDel');
+    const selCount = document.getElementById('selCount');
+    if(bulkDel && selCount){
+        selCount.textContent = selectedSet.size;
+        bulkDel.style.display = selectedSet.size > 0 ? 'flex' : 'none';
+    }
+}
+
+// List view buttons
+document.getElementById('lvSelectAll').onclick = () => {
+    const filtered = getFiltered();
+    if(selectedSet.size === filtered.length){
+        selectedSet.clear();
+    } else {
+        filtered.forEach(l=>selectedSet.add(getLocIndex(l)));
+    }
+    renderListView();
+};
+document.getElementById('lvAdd').onclick = () => openAddMode();
+document.getElementById('lvExport').onclick = () => doExport();
+
+// Map popup
+function showMapPopup(loc,idx){
+    const popup = document.getElementById('mapPopup');
+    if(!popup) return;
+    const col = getColor(loc.list);
+    document.getElementById('ppTag').textContent = `${loc.list} · ${loc.city||'กรุงเทพฯ'}`;
+    document.getElementById('ppName').textContent = loc.name || 'ไม่มีชื่อ';
+    document.getElementById('ppSub').textContent = `${loc.city||''} · เพิ่มโดย ${loc.addedBy||'user'}`;
+    document.getElementById('ppList').textContent = loc.list;
+    document.getElementById('ppDist').textContent = loc.city || '-';
+    popup.classList.add('show');
+
+    document.getElementById('ppNav').onclick = () => doDirectionsTo(idx);
+    document.getElementById('ppEdit').onclick = () => openEdit(idx);
+    document.getElementById('ppRoute').onclick = () => { routeMode ? clearRoute() : _addToRoute(loc); };
+}
+
+function _addToRoute(loc){
+    if(!routeMode){
+        _routeStops = [loc];
+        routeMode = true;
+        document.getElementById('btRoute').classList.add('on');
+        _routeDraw();
+        showToast(`เพิ่ม "${loc.name||loc.list}" ในเส้นทาง`);
+    } else {
+        _routeStops.push(loc);
+        _routeDraw();
+        showToast(`เพิ่ม "${loc.name||loc.list}" ในเส้นทาง (${_routeStops.length} จุด)`);
+    }
+}
+
+// Topbar search
+document.getElementById('topSearch').addEventListener('input', debounce(()=>{
+    update();
+}, 150));
+
+// Add button
+document.getElementById('btnAddLocation').onclick = () => openAddMode();
+
+// Menu button toggle sidebar
+document.getElementById('btnMenu').onclick = () => {
+    document.getElementById('sidebar').classList.toggle('open');
+};
+
 function favKey(loc) { return `${loc.lat.toFixed(6)},${loc.lng.toFixed(6)}`; }
 function toggleFavorite(loc) { const k = favKey(loc); if (favorites.has(k)) favorites.delete(k); else favorites.add(k); saveFavorites(); }
 function isFavorite(loc) { return favorites.has(favKey(loc)); }
@@ -417,7 +673,7 @@ function _buildMarkerCache() {
             opacity: 0.95,
         });
         marker._locIdx = idx;
-        marker.on('click', () => showPlaceCard(loc, idx));
+        marker.on('click', () => showMapPopup(loc, idx));
         _markerCache.set(idx, marker);
     });
     _clusterDirty = false;
@@ -516,63 +772,12 @@ function update() {
     _renderSidebar();
 }
 
-// ── Sidebar (concept style) ──
-const _listColors=['#4f8aff','#2dffa0','#ffb830','#ff5f5f','#b06fff','#ff7a5c','#00d2ff','#ff6b9d'];
-function _renderSidebar(){
-    const sb=document.getElementById('sidebar'); if(!sb)return;
-    document.getElementById('sidebarBadge').textContent=locations.length+' จุด';
-    // Lists pills
-    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
-    const pills=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
-    const pillsHtml=[`<div class="sidebar-pill ${!filterList?'active':''}" data-list=""><span>ทั้งหมด</span><span class="sidebar-pill-count">${locations.length}</span></div>`];
-    pills.forEach(([name,count],i)=>{
-        pillsHtml.push(`<div class="sidebar-pill ${filterList===name?'active':''}" data-list="${name}"><span>${name}</span><span class="sidebar-pill-count">${count}</span></div>`);
-    });
-    document.getElementById('sidebarPills').innerHTML=pillsHtml.join('');
-    document.getElementById('sidebarPills').querySelectorAll('.sidebar-pill').forEach(el=>{
-        el.onclick=()=>{
-            filterList=el.dataset.list;
-            filterCity='';
-            _lastFilteredKey=null;update();
-        };
-    });
-    // Cities
-    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
-    const cities=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
-    const citiesHtml=cities.map(([name,count],i)=>{
-        const color=_listColors[i % _listColors.length];
-        return `<div class="sidebar-city ${filterCity===name?'active':''}" data-city="${name}"><div class="sidebar-city-dot" style="background:${color}"></div><span>${name}</span><span class="sidebar-city-count">${count}</span></div>`;
-    }).join('');
-    document.getElementById('sidebarCities').innerHTML=citiesHtml;
-    document.getElementById('sidebarCities').querySelectorAll('.sidebar-city').forEach(el=>{
-        el.onclick=()=>{
-            filterCity=el.dataset.city;
-            filterList='';
-            _lastFilteredKey=null;update();
-            // zoom to city bounds
-            const cityLocs=locations.filter(l=>l.city===filterCity);
-            if(cityLocs.length && map){
-                const group=L.featureGroup(cityLocs.map(l=>L.marker([l.lat,l.lng])));
-                map.fitBounds(group.getBounds().pad(0.15),{animate:false,maxZoom:16});
-            }
-        };
-    });
-}
-
-// Sidebar search
-(function _initSidebar(){
-    const ss=document.getElementById('sidebarSearch');
-    if(ss){
-        ss.addEventListener('input',e=>{
-            const si=document.getElementById('search');
-            if(si)si.value=e.target.value;
-            update();
-        });
-    }
-    const sa=document.getElementById('sidebarAddBtn');
-    if(sa)sa.onclick=()=>{document.getElementById('sidebar').classList.remove('open');openAddMode();};
-    const av=document.getElementById('sidebarAvatar');
-    if(av){ const un=localStorage.getItem('bt_username')||''; av.textContent=(un[0]||'B').toUpperCase(); }
+// Init
+(function _init(){
+    // Set avatar letters
+    const un=localStorage.getItem('bt_username')||'';
+    const a1=document.getElementById('av1');
+    if(a1) a1.textContent = (un[0]||'V').toUpperCase();
 })();
 
 function refreshDatalistSuggestions() {
