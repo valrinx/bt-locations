@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.4.2';
+const APP_VERSION = 'v5.4.3';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -12,6 +12,8 @@ const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
 const FAVORITES_KEY = 'bt_favorites';
 const TRACKING_KEY = 'bt_tracked_paths';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
+// Sanitize DMS coordinate names
+function _cleanDMSName(n){return(n&&/\d+[°ºᵒ˚]/.test(n))?'':n;}
 // Worker URL: default → Cloudflare Worker, override via localStorage
 const DEFAULT_WORKER_URL = 'https://bt-locations.teenson4.workers.dev';
 function getWorkerUrl(){return localStorage.getItem(WORKER_URL_KEY)||DEFAULT_WORKER_URL;}
@@ -97,6 +99,8 @@ let locations = (() => {
     try { const s = localStorage.getItem(STORAGE_KEY); const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); return raw.map(normalizeLocation); }
     catch(e) { return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)).map(normalizeLocation); }
 })();
+// Auto-clean DMS names from localStorage data on load
+(function(){let dirty=false;locations.forEach(l=>{const c=_cleanDMSName(l.name);if(c!==l.name){l.name=c||'';dirty=true;}});if(dirty){localStorage.setItem(STORAGE_KEY,JSON.stringify(locations));}})();
 
 let addMode = false, editingIndex = -1;
 let filterList = '', filterCity = '';
@@ -598,7 +602,7 @@ function renderListPanel(filtered) {
         return `<div class="list-item" onclick="showPlaceCard(locations[${idx}],${idx});closeListPanel();">
             <div class="list-item-icon" style="background:${color}20;"><span style="font-size:16px;">📍</span></div>
             <div class="list-item-text">
-                <div class="list-item-name">${loc.name||'ไม่มีชื่อ'}</div>
+                <div class="list-item-name">${_cleanDMSName(loc.name)||'ไม่มีชื่อ'}</div>
                 <div class="list-item-sub">${loc.list}${loc.city?' · '+loc.city:''}${distText}</div>
             </div>
             <span class="list-item-chevron">›</span>
@@ -1251,7 +1255,7 @@ document.getElementById('editModalCancel').onclick=()=>document.getElementById('
 document.getElementById('editModalOverlay').onclick=e=>{if(e.target===document.getElementById('editModalOverlay'))document.getElementById('editModalOverlay').classList.remove('open');};
 
 document.getElementById('editModalSave').onclick=()=>{
-    const name=document.getElementById('modalName').value.trim();
+    const name=_cleanDMSName(document.getElementById('modalName').value.trim());
     const list=document.getElementById('modalList').value.trim()||'ไม่มีรายการ';
     const city=document.getElementById('modalCity').value.trim();
     const note=document.getElementById('modalNote').value.trim();
@@ -1747,7 +1751,7 @@ function _renderRoutePanel(){
         html+=`<div class="rp-stop">
             <span class="rp-stop-num">${i+1}</span>
             <div class="rp-stop-info">
-                <div class="rp-stop-name">${s.name||s.list||'ไม่มีชื่อ'}</div>
+                <div class="rp-stop-name">${_cleanDMSName(s.name)||s.list||'ไม่มีชื่อ'}</div>
                 <div class="rp-stop-sub">${s.list||''}${s.city?' · '+s.city:''}</div>
             </div>
             <button class="rp-stop-btn" data-rp="up" data-idx="${i}" ${i===0?'disabled':''}>▲</button>
