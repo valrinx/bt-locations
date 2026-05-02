@@ -99,6 +99,13 @@ python -m http.server 8080
 ## ✅ ฟีเจอร์ที่เสร็จแล้ว
 
 ### 2026-05-02 (ล่าสุด)
+- [x] **PWA / Offline support** — Service Worker + manifest + cache map tiles
+- [x] **ค้นหาตามพิกัด** — paste lat,lng ในช่องค้นหาแล้ว jump ไปตำแหน่งนั้น
+- [x] **Permalink / แชร์จุด** — URL `#lat,lng,zoom` + ปุ่มแชร์ใน place card
+- [x] **ป้องกัน token หลุด** — ย้ายจาก localStorage เป็น sessionStorage
+- [x] **Cache-busting locations.js** — timestamp query string ทุกครั้งที่โหลด
+- [x] **แก้ UI bugs** — latlng-hint ย้ายมุมขวาล่าง, count-pill ไม่ทับ, ปุ่ม X list-panel กดได้
+- [x] **Import Takeout CSV** — 1676 จุดจาก Google Takeout + ดึงหมายเลขตู้จาก Note
 - [x] **Topup Locations Map** — แผนที่ standalone สำหรับจุด Topup
 - [x] **Export/Share API** — แก้ bug + รองรับ Share API ถูกต้อง
 - [x] **Export กรองตาม List/City** — Export เฉพาะข้อมูลที่กรองไว้
@@ -124,16 +131,16 @@ python -m http.server 8080
 
 ### 🔴 สำคัญ (ควรทำก่อน)
 
-- [ ] **PWA / Offline support** — ให้ใช้งานได้แม้ไม่มีอินเทอร์เน็ต (Service Worker + cache)
+- [x] **PWA / Offline support** — ✅ เสร็จแล้ว
 - [ ] **รองรับ import หลายรูปแบบ** — นอกจาก GeoJSON: KML, GPX, CSV with lat/lng columns
-- [ ] **ป้องกัน token หลุด** — ย้าย GitHub token ออกจาก localStorage ไปเป็น session-only หรือใช้ OAuth flow แทน
+- [x] **ป้องกัน token หลุด** — ✅ เสร็จแล้ว (sessionStorage)
 
 ### 🟡 น่าทำ (ปรับปรุง UX)
 
 - [ ] **Mobile UX ปรับปรุงต่อ** — panel collapsible, ปุ่มใหญ่ขึ้น (base responsive เสร็จแล้ว)
 - [ ] **Cluster click → zoom + แสดง list** — กด cluster แล้วดู popup รายชื่อจุดทั้งหมดใน cluster
-- [ ] **ค้นหาตามพิกัด** — ให้ผู้ใช้ paste lat,lng แล้ว jump ไปยังจุดนั้น
-- [ ] **Permalink per location** — URL ที่ share แล้ว zoom ตรงไปหมุดนั้นได้
+- [x] **ค้นหาตามพิกัด** — ✅ เสร็จแล้ว
+- [x] **Permalink per location** — ✅ เสร็จแล้ว
 - [ ] **Photo/attachment support** — แนบรูปภาพให้แต่ละจุดได้
 
 ### 🟢 Nice-to-have (ฟีเจอร์เพิ่ม)
@@ -149,7 +156,7 @@ python -m http.server 8080
 - [ ] **Unit test สำหรับ Python scripts** — ครอบ `validate_data.py`, `merge_sheet.py`, `auto_city.py`
 - [ ] **Lint + format** — เพิ่ม pre-commit hook (black, flake8 สำหรับ Python; ESLint สำหรับ JS)
 - [ ] **แยก JS ออกจาก HTML** — refactor `docs/index.html` ให้โหลด `app.js` แยก (ตอนนี้แยกแค่ data เป็น `locations.js`)
-- [ ] **Versioning สำหรับ locations.js** — เพิ่ม cache-busting query string เมื่อ build (`locations.js?v=<hash>`)
+- [x] **Versioning สำหรับ locations.js** — ✅ เสร็จแล้ว (timestamp cache-busting)
 
 ---
 
