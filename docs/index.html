@@ -184,11 +184,15 @@
             background: var(--surface); border: none; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             box-shadow: var(--shadow-md); color: var(--text2);
-            transition: all 0.15s; flex-shrink: 0;
+            transition: all 0.2s cubic-bezier(0.4,0,0.2,1); flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+            position: relative; overflow: hidden;
         }
         .map-btn:hover { background: var(--surface2); box-shadow: var(--shadow-lg); }
+        .map-btn:active { transform: scale(0.88); box-shadow: var(--shadow-sm); background: var(--border); }
         .map-btn.active { color: var(--blue); }
-        .map-btn svg { width: 20px; height: 20px; }
+        .map-btn svg { width: 20px; height: 20px; transition: transform 0.2s; }
+        .map-btn:active svg { transform: scale(0.9); }
 
         .map-btn-group {
             background: var(--surface);
@@ -951,18 +955,26 @@
     // ════════════════════════════════════════════
     // RENDER
     // ════════════════════════════════════════════
+    function matchCoords(l, q) {
+        const latStr = String(l.lat);
+        const lngStr = String(l.lng);
+        const qClean = q.replace(/\s/g, '');
+        return latStr.includes(q)
+            || lngStr.includes(q)
+            || (latStr + ',' + lngStr).includes(qClean)
+            || (latStr + ', ' + lngStr).includes(qClean);
+    }
+
     function getFiltered() {
         const q = document.getElementById('search').value.toLowerCase().trim();
         return locations.filter(l => {
             const ml = !filterList || l.list === filterList;
             const mc = !filterCity || l.city === filterCity;
-            // ✅ แก้ไข: เพิ่มการค้นหาด้วย lat และ lng
             const ms = !q
                 || (l.name||'').toLowerCase().includes(q)
                 || l.list.toLowerCase().includes(q)
                 || (l.city||'').toLowerCase().includes(q)
-                || String(l.lat).includes(q)
-                || String(l.lng).includes(q);
+                || matchCoords(l, q);
             return ml && mc && ms;
         });
     }
@@ -1119,13 +1131,11 @@
     function renderSearchResults() {
         const q = searchInput.value.toLowerCase().trim();
         if (!q) { searchResults.innerHTML = ''; return; }
-        // ✅ แก้ไข: เพิ่มการค้นหาด้วย lat และ lng
         const matches = locations.filter(l =>
             (l.name||'').toLowerCase().includes(q)
             || l.list.toLowerCase().includes(q)
             || (l.city||'').toLowerCase().includes(q)
-            || String(l.lat).includes(q)
-            || String(l.lng).includes(q)
+            || matchCoords(l, q)
         ).slice(0, 8);
         searchResults.innerHTML = matches.map((loc) => {
             const color = getColor(loc.list);
@@ -1134,7 +1144,7 @@
                 <div class="search-result-icon" style="background:${color}20;color:${color}">📍</div>
                 <div class="search-result-text">
                     <div class="search-result-name">${loc.name || 'ไม่มีชื่อ'}</div>
-                    <div class="search-result-sub">${loc.list}${loc.city ? ' · ' + loc.city : ''} · ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}</div>
+                    <div class="search-result-sub">${loc.list}${loc.city ? ' · ' + loc.city : ''} · ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}</div>
                 </div>
             </div>`;
         }).join('');
