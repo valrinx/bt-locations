@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.7';
+const APP_VERSION = 'v5.6.8';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -11,7 +11,14 @@ const SYNC_SHA_KEY = 'bt_sync_sha';
 const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
 const FAVORITES_KEY = 'bt_favorites';
 const TRACKING_KEY = 'bt_tracked_paths';
+const TAG_COLOR_KEY = 'bt_tag_colors';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
+// ── Tag Color System ──
+let tagColors = (() => { try { return JSON.parse(localStorage.getItem(TAG_COLOR_KEY)||'{}'); } catch { return {}; } })();
+function saveTagColors(){ localStorage.setItem(TAG_COLOR_KEY, JSON.stringify(tagColors)); }
+function getTagColor(tag){ return tagColors[tag]||null; }
+// Get first tag color for a location (used for marker override)
+function getLocTagColor(loc){ if(!loc.tags||!loc.tags.length)return null; for(const t of loc.tags){const c=getTagColor(t);if(c)return c;} return null; }
 // Sanitize DMS coordinate names
 function _cleanDMSName(n){return(n&&/\d+[°ºᵒ˚]/.test(n))?'':n;}
 // ── Supabase ──
@@ -377,7 +384,7 @@ function _buildMarkerCache() {
     // สร้าง marker ทุกตัวครั้งเดียว แล้ว cache ไว้ตลอด
     _markerCache.clear();
     locations.forEach((loc, idx) => {
-        const color = getColor(loc.list);
+        const color = getLocTagColor(loc) || getColor(loc.list);
         // ใช้ DivIcon วงกลมแทน circleMarker — ทำงานกับ cluster ได้ 100%
         const size = 18;
         const fav = isFavorite(loc);
@@ -414,6 +421,8 @@ function _buildMarkerCache() {
     _clusterDirty = false;
 }
 
+function _heatZoom(){ if(heatmapMode){_lastFilteredKey=null;update();} }
+
 function renderMarkers(filtered) {
     // Hide normal markers in route mode to avoid overlap with route stops
     if (routeMode) { if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster); return; }
@@ -429,7 +438,11 @@ function renderMarkers(filtered) {
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
     if (heatmapMode) {
         if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
-        heatLayer = L.heatLayer(filtered.map(l=>[l.lat,l.lng,1]),{radius:25,blur:15}).addTo(map);
+        const z=map.getZoom();
+        const hr=Math.max(8,Math.min(40, z<=10?10:z<=12?18:z<=14?28:40));
+        const hb=Math.round(hr*0.6);
+        heatLayer = L.heatLayer(filtered.map(l=>[l.lat,l.lng,1]),{radius:hr,blur:hb,gradient:{0.2:'#00f',0.5:'#0ff',0.7:'#0f0',0.85:'#ff0',1.0:'#f00'},minOpacity:0.4}).addTo(map);
+        map.off('zoomend',_heatZoom).on('zoomend',_heatZoom);
         document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
         document.getElementById('countPill').classList.add('show');
         return;
@@ -534,7 +547,7 @@ function showPlaceCard(loc, idx) {
             ${loc.city?`<span class="dot">·</span><span>${loc.city}</span>`:''}
             ${distHtml}
         </div>
-        ${loc.tags&&loc.tags.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t=>`<span style="display:inline-block;padding:3px 10px;background:var(--surface2);border-radius:12px;font-size:11px;color:var(--text2);font-weight:500;">🏷️ ${t}</span>`).join('')}</div>`:''}
+        ${loc.tags&&loc.tags.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t=>{const tc=getTagColor(t);return`<span data-tag="${t}" title="กดเพื่อตั้งสี tag" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:${tc||'var(--surface2)'};border-radius:12px;font-size:11px;color:${tc?'#fff':'var(--text2)'};font-weight:500;cursor:pointer;border:1px solid ${tc||'var(--border)'};">🏷️ ${t}</span>`;}).join('')}</div>`:''}
         ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--border);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
         ${loc.note?`<div style="font-size:13px;color:var(--text2);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>`:''}
         <div class="place-card-actions">
@@ -583,6 +596,26 @@ function showPlaceCard(loc, idx) {
         </div>
         ${loc.city?`<div class="place-card-row"><div class="place-card-row-icon">🏙️</div><div class="place-card-row-text">${loc.city}</div></div>`:''}
     `;
+    // Tag color click handler
+    document.getElementById('placeCardContent').querySelectorAll('[data-tag]').forEach(el=>{
+        el.onclick=e=>{
+            e.stopPropagation();
+            const tag=el.dataset.tag;
+            const cur=getTagColor(tag)||'#4caf50';
+            const inp=document.createElement('input'); inp.type='color'; inp.value=cur;
+            inp.style.cssText='position:fixed;opacity:0;width:0;height:0;';
+            document.body.appendChild(inp);
+            inp.addEventListener('change',()=>{
+                tagColors[tag]=inp.value; saveTagColors();
+                _clusterDirty=true; invalidateCache(); update();
+                showPlaceCard(loc,idx);
+                document.body.removeChild(inp);
+            });
+            inp.addEventListener('blur',()=>{ setTimeout(()=>{ if(document.body.contains(inp))document.body.removeChild(inp); },200); });
+            inp.click();
+        };
+        el.title='กดเพื่อตั้งสีให้ tag นี้ (ทุกจุดที่มี tag นี้จะเปลี่ยนสี)';
+    });
     closePlaceCard();
     setTimeout(()=>document.getElementById('placeCard').classList.add('open'),10);
     const targetZoom = Math.max(map.getZoom(), _mobile ? 16 : 15);
@@ -2443,7 +2476,7 @@ if (_mobile) {
                 if (navigator.vibrate) navigator.vibrate(30);
                 openAddAt(latlng.lat, latlng.lng);
             }
-        }, 600);
+        }, 400);
     }, {passive: true});
     map.getContainer().addEventListener('touchmove', e=>{
         if (_lpTimer && _lpStart) {
