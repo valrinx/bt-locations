@@ -368,7 +368,7 @@
         .modal-overlay.open { display: flex; }
         .modal {
             background: var(--surface); border-radius: 28px;
-            width: 100%; max-width: 420px; max-height: calc(100vh - 48px);
+            width: 100%; max-width: 420px; max-height: min(90dvh, calc(100vh - 48px));
             box-shadow: var(--shadow-lg); overflow: hidden;
             display: flex; flex-direction: column;
             animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
@@ -395,7 +395,7 @@
             cursor: pointer; transition: all 0.15s; margin-bottom: 16px;
         }
         .gps-modal-btn:hover { border-color: var(--blue); background: var(--blue-light); }
-        .modal-footer { padding: 8px 16px 16px; display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+        .modal-footer { padding: 8px 16px 16px; display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); }
         .modal-btn { padding: 10px 24px; border-radius: 20px; border: none; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; }
         .modal-btn-cancel { background: none; color: var(--blue); }
         .modal-btn-cancel:hover { background: var(--blue-light); }
