@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.3.5';
+const APP_VERSION = 'v5.3.6';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -631,6 +631,7 @@ searchInput.addEventListener('focus',()=>{searchBox.classList.add('focused');ren
 searchInput.addEventListener('blur',()=>setTimeout(()=>searchBox.classList.remove('focused'),200));
 searchInput.addEventListener('input',()=>{
     btnClearSearch.classList.toggle('show',searchInput.value.length>0);
+    if(!searchInput.value.trim())_clearSearchMarker();
     renderSearchResults();
     _debouncedUpdate(); // debounce 120ms — ไม่ re-render map ทุก keystroke
 });
