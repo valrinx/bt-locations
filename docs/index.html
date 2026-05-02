@@ -734,17 +734,45 @@
         </div>
     </div>
 
-    <!-- ══ SHARE/EXPORT MODAL (mobile-friendly) ══ -->
-    <div class="modal-overlay" id="shareModalOverlay">
-        <div class="modal confirm-modal">
-            <div class="confirm-icon">📤</div>
-            <div class="confirm-title">Export ข้อมูล</div>
-            <div class="confirm-text" id="shareModalText">เลือกวิธี export</div>
-            <div class="confirm-footer" style="flex-direction:column;gap:8px;">
-                <button class="modal-btn modal-btn-save" id="shareBtnDownload" style="width:100%;">💾 ดาวน์โหลดไฟล์ JSON</button>
-                <button class="modal-btn modal-btn-save" id="shareBtnShare" style="width:100%;background:#059669;" id="shareBtnShare">📱 แชร์ผ่าน (Share API)</button>
-                <button class="modal-btn modal-btn-save" id="shareBtnCopy" style="width:100%;background:#7b1fa2;">📋 คัดลอก JSON</button>
-                <button class="modal-btn modal-btn-cancel" id="shareBtnCancel">ยกเลิก</button>
+    <!-- ══ EXPORT FILTER MODAL ══ -->
+    <div class="modal-overlay" id="exportFilterModalOverlay">
+        <div class="modal" style="max-width:380px;">
+            <div class="modal-header">📤 Export ข้อมูล</div>
+            <div class="modal-body">
+                <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">เลือกขอบเขตที่ต้องการ export (ไม่เลือก = export ทั้งหมด)</p>
+                <div class="modal-field">
+                    <label>กรองตามรายการ (List)</label>
+                    <select id="exportFilterList" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--surface);color:var(--text);">
+                        <option value="">— ทุกรายการ —</option>
+                    </select>
+                </div>
+                <div class="modal-field">
+                    <label>กรองตามเขต (City)</label>
+                    <select id="exportFilterCity" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;background:var(--surface);color:var(--text);">
+                        <option value="">— ทุกเขต —</option>
+                    </select>
+                </div>
+                <div id="exportCountText" style="font-size:13px;color:var(--blue);font-weight:600;margin-top:4px;"></div>
+            </div>
+            <div class="modal-footer" style="flex-direction:column;gap:8px;align-items:stretch;">
+                <button class="modal-btn modal-btn-save" id="exportBtnDownload" style="width:100%;">💾 ดาวน์โหลดไฟล์ JSON</button>
+                <button class="modal-btn modal-btn-save" id="exportBtnShare" style="width:100%;background:#059669;">📱 แชร์ผ่านแอป (Share API)</button>
+                <button class="modal-btn modal-btn-save" id="exportBtnCopy" style="width:100%;background:#7b1fa2;">📋 คัดลอก JSON</button>
+                <button class="modal-btn modal-btn-cancel" id="exportBtnCancel">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ IMPORT MODE MODAL ══ -->
+    <div class="modal-overlay" id="importModeModalOverlay">
+        <div class="modal confirm-modal" style="max-width:360px;">
+            <div class="confirm-icon">📥</div>
+            <div class="confirm-title">Import ข้อมูล</div>
+            <div class="confirm-text" id="importModeText">เลือกวิธีการ import</div>
+            <div class="confirm-footer" style="flex-direction:column;gap:8px;align-items:stretch;">
+                <button class="modal-btn modal-btn-save" id="importBtnMerge" style="width:100%;">🔀 Merge (เพิ่มจุดใหม่ ไม่ลบของเดิม)</button>
+                <button class="modal-btn modal-btn-save" id="importBtnReplace" style="width:100%;background:#d93025;">🔄 Replace (แทนที่ทั้งหมด)</button>
+                <button class="modal-btn modal-btn-cancel" id="importBtnCancel">ยกเลิก</button>
             </div>
         </div>
     </div>
@@ -1396,71 +1424,123 @@
     function closeInfo(){document.getElementById('infoPanel').classList.remove('open');document.getElementById('infoPanelBackdrop').classList.remove('show');}
 
     // ════════════════════════════════════════════
-    // EXPORT — รองรับมือถือ ✅
+    // EXPORT — เลือกเขต/กลุ่มได้ + รองรับมือถือ
     // ════════════════════════════════════════════
     function doExport() {
         closeInfo();
-        const jsonStr = JSON.stringify(locations, null, 2);
-        const filename = `bt_locations_${new Date().toISOString().slice(0,10)}.json`;
+        // เติม dropdown ตัวเลือก
+        const listSel = document.getElementById('exportFilterList');
+        const citySel = document.getElementById('exportFilterCity');
+        const lists = [...new Set(locations.map(l=>l.list).filter(Boolean))].sort();
+        const cities = [...new Set(locations.map(l=>l.city).filter(Boolean))].sort();
+        listSel.innerHTML = '<option value="">— ทุกรายการ —</option>' + lists.map(l=>`<option value="${l}">${l}</option>`).join('');
+        citySel.innerHTML = '<option value="">— ทุกเขต —</option>' + cities.map(c=>`<option value="${c}">${c}</option>`).join('');
+        // รักษา filter ปัจจุบัน
+        if(filterList) listSel.value = filterList;
+        if(filterCity) citySel.value = filterCity;
+        updateExportCount();
+        document.getElementById('exportFilterModalOverlay').classList.add('open');
+    }
 
-        // ถ้า Share API รองรับ (มือถือ)
+    function getExportData() {
+        const fl = document.getElementById('exportFilterList').value;
+        const fc = document.getElementById('exportFilterCity').value;
+        return locations.filter(l => (!fl||l.list===fl) && (!fc||l.city===fc));
+    }
+
+    function updateExportCount() {
+        const d = getExportData();
+        document.getElementById('exportCountText').textContent = `จะ export ${d.length} จุด`;
+    }
+
+    document.getElementById('exportFilterList').onchange = updateExportCount;
+    document.getElementById('exportFilterCity').onchange = updateExportCount;
+
+    function doActualExport(data) {
+        document.getElementById('exportFilterModalOverlay').classList.remove('open');
+        const fl = document.getElementById('exportFilterList').value;
+        const fc = document.getElementById('exportFilterCity').value;
+        const suffix = [fl,fc].filter(Boolean).join('_') || 'all';
+        const filename = `bt_locations_${suffix}_${new Date().toISOString().slice(0,10)}.json`;
+        const jsonStr = JSON.stringify(data, null, 2);
+
+        // ลอง Share API (file share) ก่อน — มือถือ
         if (navigator.share && navigator.canShare) {
             const blob = new Blob([jsonStr], { type: 'application/json' });
             const file = new File([blob], filename, { type: 'application/json' });
             if (navigator.canShare({ files: [file] })) {
-                navigator.share({ files: [file], title: 'BT Locations Export', text: `ข้อมูล ${locations.length} สถานที่` })
+                navigator.share({ files: [file], title: 'BT Locations Export', text: `ข้อมูล ${data.length} สถานที่` })
                     .then(() => showToast('✅ แชร์สำเร็จ', false, true))
-                    .catch(() => fallbackExport(jsonStr, filename));
+                    .catch(err => { if(err.name!=='AbortError') downloadJson(jsonStr,filename); });
                 return;
             }
         }
-        fallbackExport(jsonStr, filename);
+        downloadJson(jsonStr, filename);
     }
 
-    function fallbackExport(jsonStr, filename) {
-        // แสดง modal เลือกวิธีบนมือถือ
-        document.getElementById('shareModalText').textContent = `${locations.length} สถานที่ · ${Math.round(jsonStr.length/1024)} KB`;
-        document.getElementById('shareModalOverlay').classList.add('open');
+    function downloadJson(jsonStr, filename) {
+        try {
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('✅ ดาวน์โหลดแล้ว', false, true);
+        } catch(e) {
+            const a = document.createElement('a');
+            a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
+            a.download = filename; a.click();
+            showToast('✅ ดาวน์โหลดแล้ว', false, true);
+        }
+    }
 
-        document.getElementById('shareBtnDownload').onclick = () => {
-            document.getElementById('shareModalOverlay').classList.remove('open');
-            // วิธีที่ 1: blob URL (Desktop)
-            try {
+    document.getElementById('exportBtnDownload').onclick = () => {
+        const data = getExportData(); doActualExport(data);
+    };
+    document.getElementById('exportBtnShare').onclick = () => {
+        const data = getExportData();
+        const fl = document.getElementById('exportFilterList').value;
+        const fc = document.getElementById('exportFilterCity').value;
+        const suffix = [fl,fc].filter(Boolean).join('_') || 'all';
+        const filename = `bt_locations_${suffix}_${new Date().toISOString().slice(0,10)}.json`;
+        const jsonStr = JSON.stringify(data, null, 2);
+        document.getElementById('exportFilterModalOverlay').classList.remove('open');
+        if (navigator.share) {
+            // ลอง file share ก่อน
+            if (navigator.canShare) {
                 const blob = new Blob([jsonStr], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = filename; a.click();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-                showToast('✅ ดาวน์โหลดแล้ว', false, true);
-            } catch(e) {
-                // วิธีที่ 2: data URI (มือถือ fallback)
-                const a = document.createElement('a');
-                a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
-                a.download = filename; a.click();
-                showToast('✅ ดาวน์โหลดแล้ว', false, true);
+                const file = new File([blob], filename, { type: 'application/json' });
+                if (navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file], title: 'BT Locations Export', text: `ข้อมูล ${data.length} สถานที่` })
+                        .then(() => showToast('✅ แชร์สำเร็จ', false, true))
+                        .catch(err => { if(err.name!=='AbortError') showToast('ยกเลิกการแชร์'); });
+                    return;
+                }
             }
-        };
+            // fallback: share as text (ถ้า file ไม่รองรับ)
+            navigator.share({ title: 'BT Locations', text: jsonStr })
+                .then(() => showToast('✅ แชร์แล้ว', false, true))
+                .catch(err => { if(err.name!=='AbortError') showToast('ยกเลิกการแชร์'); });
+        } else {
+            showToast('Browser ไม่รองรับ Share API', true);
+        }
+    };
+    document.getElementById('exportBtnCopy').onclick = () => {
+        const data = getExportData();
+        const jsonStr = JSON.stringify(data, null, 2);
+        document.getElementById('exportFilterModalOverlay').classList.remove('open');
+        fallbackCopy(jsonStr);
+    };
+    document.getElementById('exportBtnCancel').onclick = () => {
+        document.getElementById('exportFilterModalOverlay').classList.remove('open');
+    };
+    document.getElementById('exportFilterModalOverlay').onclick = e => {
+        if(e.target===document.getElementById('exportFilterModalOverlay'))
+            document.getElementById('exportFilterModalOverlay').classList.remove('open');
+    };
 
-        document.getElementById('shareBtnShare').onclick = () => {
-            document.getElementById('shareModalOverlay').classList.remove('open');
-            if (navigator.share) {
-                navigator.share({ title: 'BT Locations', text: jsonStr })
-                    .then(() => showToast('✅ แชร์แล้ว', false, true))
-                    .catch(() => showToast('ยกเลิกการแชร์'));
-            } else {
-                showToast('Browser ไม่รองรับ Share API');
-            }
-        };
-
-        document.getElementById('shareBtnCopy').onclick = () => {
-            document.getElementById('shareModalOverlay').classList.remove('open');
-            fallbackCopy(jsonStr);
-        };
-
-        document.getElementById('shareBtnCancel').onclick = () => {
-            document.getElementById('shareModalOverlay').classList.remove('open');
-        };
-    }
+    let _pendingImportData = null;
 
     document.getElementById('fileImport').onchange=e=>{
         const file=e.target.files[0]; if(!file)return;
@@ -1469,12 +1549,45 @@
             try {
                 const imp=JSON.parse(ev.target.result);
                 if(!Array.isArray(imp)){showToast('ไฟล์ไม่ถูกต้อง',true);return;}
-                showConfirm('📥','Import ข้อมูล?',`จะแทนที่ด้วย ${imp.length} จุด`,()=>{
-                    pushUndo();locations=imp;saveLocations();update();showToast(`Import ${imp.length} จุดสำเร็จ`,false,true);
-                });
+                _pendingImportData = imp;
+                document.getElementById('importModeText').textContent = `พบ ${imp.length} จุดในไฟล์ · ข้อมูลปัจจุบัน ${locations.length} จุด`;
+                document.getElementById('importModeModalOverlay').classList.add('open');
             }catch{showToast('JSON ไม่ถูกต้อง',true);}
         };
         reader.readAsText(file); e.target.value='';
+    };
+
+    document.getElementById('importBtnMerge').onclick = () => {
+        document.getElementById('importModeModalOverlay').classList.remove('open');
+        const imp = _pendingImportData; if(!imp) return;
+        // Merge: เพิ่มจุดที่ไม่มีในข้อมูลปัจจุบัน (ตรวจสอบด้วย lat+lng+name)
+        const existingKeys = new Set(locations.map(l=>`${l.lat}_${l.lng}_${l.name||''}`));
+        const newItems = imp.filter(l => !existingKeys.has(`${l.lat}_${l.lng}_${l.name||''}`));
+        if(!newItems.length){showToast('ไม่มีจุดใหม่ที่เพิ่ม (ซ้ำทั้งหมด)');return;}
+        pushUndo();
+        locations = [...locations, ...newItems];
+        saveLocations(); update();
+        showToast(`✅ Merge สำเร็จ เพิ่ม ${newItems.length} จุดใหม่ (ข้ามซ้ำ ${imp.length-newItems.length} จุด)`, false, true);
+        _pendingImportData = null;
+    };
+    document.getElementById('importBtnReplace').onclick = () => {
+        document.getElementById('importModeModalOverlay').classList.remove('open');
+        const imp = _pendingImportData; if(!imp) return;
+        showConfirm('🔄','Replace ทั้งหมด?',`ข้อมูลปัจจุบัน ${locations.length} จุดจะถูกลบ แทนด้วย ${imp.length} จุด`,()=>{
+            pushUndo(); locations=imp; saveLocations(); update();
+            showToast(`Import ${imp.length} จุดสำเร็จ`,false,true);
+        });
+        _pendingImportData = null;
+    };
+    document.getElementById('importBtnCancel').onclick = () => {
+        document.getElementById('importModeModalOverlay').classList.remove('open');
+        _pendingImportData = null;
+    };
+    document.getElementById('importModeModalOverlay').onclick = e => {
+        if(e.target===document.getElementById('importModeModalOverlay')){
+            document.getElementById('importModeModalOverlay').classList.remove('open');
+            _pendingImportData = null;
+        }
     };
 
     function doUndo(){if(!undoStack.length){showToast('ไม่มี Undo');return;}locations=JSON.parse(undoStack.pop());saveLocations();update();showToast('Undo แล้ว');closeInfo();}
