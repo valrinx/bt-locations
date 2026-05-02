@@ -21,6 +21,49 @@ const MAX_CHANGELOG = 200;
 const SYNC_INTERVAL = 30000; // 30 seconds
 let _syncTimer = null, _syncing = false, _lastSyncTime = 0;
 
+// Tracking & paths (referenced in menu)
+let trackingActive = false, _trackWatchId = null, _currentTrack = [];
+let savedPaths = (() => { try { return JSON.parse(localStorage.getItem(TRACKING_KEY) || '[]'); } catch { return []; } })();
+function startTracking() {
+    if (!navigator.geolocation) { showToast('GPS ไม่รองรับ'); return; }
+    trackingActive = true;
+    _currentTrack = [];
+    _trackWatchId = navigator.geolocation.watchPosition(pos => {
+        _currentTrack.push({ lat: pos.coords.latitude, lng: pos.coords.longitude, t: Date.now() });
+    }, err => console.warn('Track error:', err), { enableHighAccuracy: true, maximumAge: 5000 });
+    showToast('▶ เริ่มบันทึกเส้นทาง');
+}
+function stopTracking() {
+    if (_trackWatchId !== null) navigator.geolocation.clearWatch(_trackWatchId);
+    _trackWatchId = null;
+    trackingActive = false;
+    if (_currentTrack.length > 1) {
+        savedPaths.push({ points: _currentTrack, date: Date.now() });
+        localStorage.setItem(TRACKING_KEY, JSON.stringify(savedPaths));
+        showToast(`⏹ บันทึก ${_currentTrack.length} จุด`);
+    } else {
+        showToast('⏹ หยุดบันทึก (ไม่มีจุด)');
+    }
+    _currentTrack = [];
+}
+function showSavedPaths() {
+    if (!savedPaths.length) { showToast('ไม่มีเส้นทางที่บันทึก'); return; }
+    savedPaths.forEach((p, i) => {
+        const latlngs = p.points.map(pt => [pt.lat, pt.lng]);
+        L.polyline(latlngs, { color: '#4285f4', weight: 3, opacity: 0.7 }).addTo(map);
+    });
+    showToast(`แสดง ${savedPaths.length} เส้นทาง`);
+}
+function exportPaths() {
+    if (!savedPaths.length) { showToast('ไม่มีเส้นทาง'); return; }
+    const json = JSON.stringify(savedPaths, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `bt_paths_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    URL.revokeObjectURL(url);
+    showToast('📤 Export เส้นทางแล้ว');
+}
+
 function getChangelog(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
 function addChangelogEntry(action,loc){
     const log=getChangelog();
