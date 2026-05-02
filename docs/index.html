@@ -211,13 +211,13 @@
         /* Mobile: bottom sheet — ไม่บังแผนที่ */
         @media (max-width: 599px) {
             .info-panel {
-                top: auto; left: 0; right: 0; bottom: -100%;
+                top: auto; left: 0; right: 0; bottom: 0;
                 width: 100%; max-height: 75vh;
                 border-radius: 20px 20px 0 0;
-                transform: none;
-                transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+                transform: translateY(110%);
+                transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
             }
-            .info-panel.open { bottom: 0; transform: none; }
+            .info-panel.open { transform: translateY(0); }
             .info-panel-header { padding-top: 8px; }
             .info-panel-drag {
                 width: 36px; height: 4px; background: var(--border);
@@ -611,7 +611,7 @@
         .leaflet-map-pane,
         .leaflet-tile-pane,
         .leaflet-overlay-pane { will-change: transform; }
-        .info-panel  { will-change: transform; contain: layout style; }
+        .info-panel  { will-change: transform; }
         .place-card  { will-change: transform, opacity; }
         .list-panel  { will-change: transform; contain: layout style; }
         .modal-overlay { contain: layout style; }
