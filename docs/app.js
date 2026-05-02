@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.4.4';
+const APP_VERSION = 'v5.4.5';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1592,6 +1592,8 @@ function clearRoute(){
     routeMode=false;
     _routeStops=[];
     document.getElementById('chipRoute').classList.remove('active');
+    // Restore sort bar
+    document.getElementById('listSortBar').style.display='';
 }
 
 // ── TSP solver: Nearest-Neighbor + 2-opt improvement ──
@@ -1730,6 +1732,8 @@ async function _routeDraw(){
 function _renderRoutePanel(){
     const lp=document.getElementById('listPanel');
     lp.classList.add('open');
+    // Hide sort bar in route mode
+    document.getElementById('listSortBar').style.display='none';
     const distText=formatDist(_routeDist);
     const etaMins=_routeUseOSRM?Math.round(_routeDur/60):0;
     const modeText=_routeUseOSRM?'🛣️':'📏';
