@@ -168,10 +168,11 @@
         .count-pill.show { opacity: 1; }
 
         /* ══ INFO PANEL ══ */
+        /* Desktop: slide from left */
         .info-panel {
             position: fixed; top: 0; left: 0; bottom: 0;
-            width: var(--sidebar-w); background: var(--surface); z-index: 1100;
-            box-shadow: var(--shadow-lg); transform: translateX(-100%);
+            width: min(360px, 85vw); background: var(--surface); z-index: 1100;
+            box-shadow: var(--shadow-lg); transform: translateX(-110%);
             transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
             display: flex; flex-direction: column; overflow: hidden;
         }
@@ -189,6 +190,22 @@
         .info-panel-close:hover { background: var(--surface2); }
         .info-panel-title { font-size: 18px; font-weight: 600; flex: 1; }
         .info-panel-body { flex: 1; overflow-y: auto; }
+        /* Mobile: bottom sheet — ไม่บังแผนที่ */
+        @media (max-width: 599px) {
+            .info-panel {
+                top: auto; left: 0; right: 0; bottom: -100%;
+                width: 100%; max-height: 75vh;
+                border-radius: 20px 20px 0 0;
+                transform: none;
+                transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+            }
+            .info-panel.open { bottom: 0; transform: none; }
+            .info-panel-header { padding-top: 8px; }
+            .info-panel-drag {
+                width: 36px; height: 4px; background: var(--border);
+                border-radius: 2px; margin: 8px auto 4px; display: block;
+            }
+        }
 
         .stats-section { padding: 16px; }
         .stats-header { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
@@ -606,6 +623,7 @@
     <!-- ══ INFO PANEL ══ -->
     <div class="info-panel-backdrop" id="infoPanelBackdrop"></div>
     <div class="info-panel" id="infoPanel">
+        <span class="info-panel-drag"></span>
         <div class="info-panel-header">
             <button class="info-panel-close" id="infoPanelClose">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
@@ -839,11 +857,15 @@
     const map = L.map('map', {
         zoomControl: false,
         zoomAnimation: true,
-        fadeAnimation: true,
+        fadeAnimation: false,      // ปิด tile fade — ลด composite layer
+        markerZoomAnimation: true,
         preferCanvas: true,
         renderer: canvasRenderer,
-        zoomSnap: 0.5,        // snap ทีละ 0.5 — zoom สมูทขึ้น
-        wheelPxPerZoomLevel: 80, // mouse wheel สมูทขึ้น
+        zoomSnap: 1,               // snap ทีละ 1 — cluster ทำงานถูกต้องกว่า 0.5
+        zoomDelta: 1,
+        wheelPxPerZoomLevel: 60,
+        tap: true,
+        tapTolerance: 15,
     }).setView([13.75, 100.5], 11);
 
     const tileLayers = {
@@ -877,13 +899,12 @@
             disableClusteringAtZoom: 18,
             spiderfyOnMaxZoom: true,
             zoomToBoundsOnClick: true,
-            // ลด lag ตอนซูม: ปิด animation เมื่อหมุดเยอะ + chunked loading
-            animate: true,
-            animateAddingMarkers: false,  // ไม่ animate ตอน add — เร็วกว่ามาก
-            chunkedLoading: true,          // แบ่ง load เป็น chunk — UI ไม่ block
-            chunkInterval: 100,            // 100ms ต่อ chunk
-            chunkDelay: 50,                // หน่วง 50ms ก่อนเริ่ม chunk ถัดไป
-            removeOutsideVisibleBounds: true, // ลบ marker นอกจอออก — ลด DOM
+            animate: false,               // ปิด cluster animation — ลด jank ตอนซูม
+            animateAddingMarkers: false,
+            chunkedLoading: true,
+            chunkInterval: 50,
+            chunkDelay: 0,
+            removeOutsideVisibleBounds: true,
             iconCreateFunction(cluster) {
                 const count = cluster.getChildCount();
                 return L.divIcon({ html: `<div><span>${count}</span></div>`, className: `marker-cluster ${getDensityClass(count)}`, iconSize: L.point(40,40) });
@@ -947,45 +968,49 @@
         markerCluster = createClusterGroup();
         currentMarkers = [];
 
-        const z = map.getZoom();
         const layers = [];
         filtered.forEach(loc => {
             const idx = getLocIndex(loc);
             const color = getColor(loc.list);
-            const marker = L.circleMarker([loc.lat,loc.lng],{
+            const marker = L.circleMarker([loc.lat, loc.lng], {
                 renderer: canvasRenderer,
-                radius:9, fillColor:color, color:'#fff',
-                weight:2.5, opacity:1, fillOpacity:0.92,
-                bubblingMouseEvents:false
+                radius: 8,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9,
+                bubblingMouseEvents: false,
+                interactive: true,
             });
-            marker.bindTooltip(loc.name||loc.list,{permanent:z>=15,direction:'top',offset:[0,-8],className:'bt-tooltip'});
-            marker.on('click',()=>showPlaceCard(loc,idx));
+            // hover-only tooltip — ไม่สร้าง DOM ค้างไว้, ไม่ lag ตอน zoom
+            marker.bindTooltip(loc.name || loc.list, {
+                permanent: false,   // ← KEY: ไม่ permanent = ไม่มี DOM ค้าง
+                sticky: false,
+                direction: 'top',
+                offset: [0, -8],
+                className: 'bt-tooltip',
+                opacity: 0.95,
+            });
+            marker.on('click', () => showPlaceCard(loc, idx));
             layers.push(marker);
-            currentMarkers.push({loc,marker,idx});
+            currentMarkers.push({loc, marker, idx});
         });
+
+        // addLayers bulk — เร็วที่สุด
         markerCluster.addLayers(layers);
 
         if (!heatmapMode) map.addLayer(markerCluster);
         if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-        if (heatmapMode) heatLayer = L.heatLayer(filtered.map(l=>[l.lat,l.lng,1]),{radius:25,blur:15}).addTo(map);
+        if (heatmapMode) heatLayer = L.heatLayer(
+            filtered.map(l => [l.lat, l.lng, 1]),
+            {radius: 25, blur: 15}
+        ).addTo(map);
 
         document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
         document.getElementById('countPill').classList.add('show');
     }
-
-    // debounce tooltip toggle — ไม่ทำงานระหว่าง zoom animation
-    const _onZoomEnd = debounce(() => {
-        const z = map.getZoom();
-        currentMarkers.forEach(({marker}) => {
-            const tt = marker.getTooltip();
-            if (!tt) return;
-            const content = tt.getContent();
-            marker.unbindTooltip();
-            marker.bindTooltip(content, {permanent: z >= 15, direction:'top', offset:[0,-8], className:'bt-tooltip'});
-            if (z >= 15) marker.openTooltip();
-        });
-    }, 200);
-    map.on('zoomend', _onZoomEnd);
+    // ไม่มี zoomend handler สำหรับ tooltip — ไม่จำเป็นแล้วเพราะใช้ hover tooltip
 
     function invalidateCache() {
         _lastFilteredKey = null;
