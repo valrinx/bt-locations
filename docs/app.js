@@ -73,24 +73,33 @@ function pushUndo() { undoStack.push(JSON.stringify(locations)); if (undoStack.l
 // ════════════════════════════════════════════
 // MAP
 // ════════════════════════════════════════════
+const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 600;
 const map = L.map('map', {
     zoomControl: false,
-    zoomAnimation: true,       // เปิด — ทำให้ zoom smooth
-    fadeAnimation: true,       // เปิด — tile transition smooth
-    markerZoomAnimation: true, // marker เคลื่อนกับ zoom
-    preferCanvas: false,       // ปิด — ใช้ SVG เพราะ DivIcon ไม่ใช้ canvas
-    zoomSnap: 0.25,            // sub-integer zoom — smooth มาก
+    zoomAnimation: !_mobile,   // ปิดบน mobile เพื่อ performance
+    fadeAnimation: !_mobile,   // ปิดบน mobile
+    markerZoomAnimation: !_mobile,
+    preferCanvas: _mobile,     // Canvas renderer บน mobile — เร็วกว่า SVG
+    zoomSnap: _mobile ? 1 : 0.25,
     zoomDelta: 1,
     wheelPxPerZoomLevel: 80,
+    minZoom: 5,
+    maxZoom: 19,
     tap: true,
     tapTolerance: 15,
+    maxBoundsViscosity: 1.0,
 }).setView([13.75, 100.5], 11);
 
+const _tileOpts = {
+    updateWhenIdle: _mobile,      // mobile: load tiles only after pan/zoom ends
+    updateWhenZooming: false,     // don't load mid-zoom
+    keepBuffer: _mobile ? 2 : 4, // fewer buffer tiles on mobile
+};
 const tileLayers = {
-    'Street':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 }),
-    'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 }),
-    'Terrain':   L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
-    'Dark':      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19 })
+    'Street':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19, ..._tileOpts }),
+    'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19, ..._tileOpts }),
+    'Terrain':   L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17, ..._tileOpts }),
+    'Dark':      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19, ..._tileOpts })
 };
 const tileNames = Object.keys(tileLayers);
 let currentTileIdx = 0;
@@ -245,11 +254,15 @@ function renderMarkers(filtered) {
     map.removeLayer(markerCluster);
     markerCluster = createClusterGroup();
 
+    const MAX_MARKERS = _mobile ? 1000 : 2000;
     const layers = [];
+    let truncated = false;
     filteredIdxSet.forEach(idx => {
+        if (layers.length >= MAX_MARKERS) { truncated = true; return; }
         const m = _markerCache.get(idx);
         if (m) layers.push(m);
     });
+    if (truncated) console.warn(`Marker limit reached (${MAX_MARKERS}), showing partial`);
 
     // requestAnimationFrame — ให้ browser วาด frame นี้ให้เสร็จก่อน
     requestAnimationFrame(() => {
@@ -1255,7 +1268,7 @@ document.getElementById('fileImport').onchange=e=>{
                 imp=parseGeoJSON(obj);
             } else {
                 const obj=JSON.parse(text);
-                if(Array.isArray(obj))imp=obj;
+                if(Array.isArray(obj))imp=obj.filter(l=>l&&typeof l.lat==='number'&&typeof l.lng==='number'&&!isNaN(l.lat)&&!isNaN(l.lng)).map(l=>({name:l.name||'',lat:l.lat,lng:l.lng,list:l.list||l.category||l.group||'Imported',city:l.city||l.district||'',note:l.note||'',...(l.tags?{tags:l.tags}:{})}));
                 else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj);
                 else {showToast('รูปแบบ JSON ไม่ถูกต้อง',true);return;}
             }
@@ -1434,6 +1447,46 @@ document.addEventListener('click',(e)=>{
         closePlaceCard();
     }
 });
+
+// ════════════════════════════════════════════
+// MOBILE: LONG-PRESS TO ADD + SWIPE-CLOSE PLACE CARD
+// ════════════════════════════════════════════
+if (_mobile) {
+    // Long-press on map → add location
+    let _lpTimer=null, _lpStart=null;
+    map.getContainer().addEventListener('touchstart', e=>{
+        if (e.touches.length !== 1) return;
+        _lpStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        _lpTimer = setTimeout(()=>{
+            if (!addMode && !measureMode) {
+                const latlng = map.containerPointToLatLng([_lpStart.x, _lpStart.y]);
+                if (navigator.vibrate) navigator.vibrate(30);
+                openAddAt(latlng.lat, latlng.lng);
+            }
+        }, 600);
+    }, {passive: true});
+    map.getContainer().addEventListener('touchmove', e=>{
+        if (_lpTimer && _lpStart) {
+            const dx=e.touches[0].clientX-_lpStart.x, dy=e.touches[0].clientY-_lpStart.y;
+            if (Math.sqrt(dx*dx+dy*dy)>10) { clearTimeout(_lpTimer); _lpTimer=null; }
+        }
+    }, {passive: true});
+    map.getContainer().addEventListener('touchend', ()=>{ clearTimeout(_lpTimer); _lpTimer=null; }, {passive: true});
+
+    // Swipe-down on place card → close
+    const _pc = document.getElementById('placeCard');
+    let _swipeStartY=0, _swiping=false;
+    _pc.addEventListener('touchstart', e=>{
+        if (e.touches.length!==1) return;
+        _swipeStartY=e.touches[0].clientY; _swiping=true;
+    }, {passive: true});
+    _pc.addEventListener('touchmove', e=>{
+        if (!_swiping) return;
+        const dy=e.touches[0].clientY-_swipeStartY;
+        if (dy>60) { closePlaceCard(); _swiping=false; if(navigator.vibrate)navigator.vibrate(15); }
+    }, {passive: true});
+    _pc.addEventListener('touchend', ()=>{ _swiping=false; }, {passive: true});
+}
 
 // ════════════════════════════════════════════
 // SHARE / PERMALINK
@@ -1658,6 +1711,24 @@ function startAutoSync(){
         }catch(e){}
     }
 })();
+
+// ════════════════════════════════════════════
+// DEBUG MODE
+// ════════════════════════════════════════════
+window.btDebug = {
+    get locations() { return locations; },
+    get filtered() { return getFiltered(); },
+    get syncSha() { return localStorage.getItem(SYNC_SHA_KEY); },
+    get token() { return getToken() ? '✅ set' : '❌ none'; },
+    get stats() {
+        const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
+        return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,lastSync:new Date(_lastSyncTime).toLocaleString()};
+    },
+    forceSync: ()=>doSync(false),
+    clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
+    exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+};
+console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
 // PWA: register service worker
 if ('serviceWorker' in navigator) {
