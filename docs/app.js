@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.3';
+const APP_VERSION = 'v5.6.4';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -2529,8 +2529,10 @@ async function doSync(silent=true){
             updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now(),
         }));
         locations=loaded;
-        _writeCache();invalidateCache();update();
-        _clearDirty();_setSyncStatus('ok');_lastSyncTime=Date.now();
+        _clearDirty(); // clear BEFORE writeCache so saveLocations won't re-push
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(locations)); // bypass saveLocations
+        invalidateCache();update();
+        _setSyncStatus('ok');_lastSyncTime=Date.now();
         if(!silent)showToast(`✅ โหลด ${locations.length} จุดจาก Supabase`,false,true);
     }catch(err){
         _setSyncStatus('error');
