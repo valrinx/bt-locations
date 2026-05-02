@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bt-locations-v4';
+const CACHE_NAME = 'bt-locations-v5';
 // Only truly static assets (libs, icons) — NOT app code
 const STATIC_ASSETS = [
   './manifest.json',
@@ -89,7 +89,7 @@ self.addEventListener('fetch', event => {
         }
         return res;
       }).catch(() => {
-        return caches.match(event.request).then(cached => {
+        return caches.match(event.request, { ignoreSearch: true }).then(cached => {
           return cached || (event.request.mode === 'navigate' ? caches.match('./index.html') : new Response('Offline', { status: 503 }));
         });
       })

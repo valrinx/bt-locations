@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v4.1';
+const APP_VERSION = 'v5.0';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1870,15 +1870,19 @@ async function _pushToGithub(token, locs, currentSha){
     localStorage.setItem(SYNC_SNAPSHOT_KEY,JSON.stringify(locs));
 }
 
+let _visibilityBound = false;
 function startAutoSync(){
     if(_syncTimer)clearInterval(_syncTimer);
     _syncTimer=setInterval(()=>{
         if(getToken()&&document.visibilityState==='visible')doSync(true);
     },SYNC_INTERVAL);
-    // Also sync on visibility change
-    document.addEventListener('visibilitychange',()=>{
-        if(document.visibilityState==='visible'&&getToken()&&Date.now()-_lastSyncTime>10000)doSync(true);
-    });
+    // Bind visibility listener ONCE only
+    if (!_visibilityBound) {
+        _visibilityBound = true;
+        document.addEventListener('visibilitychange',()=>{
+            if(document.visibilityState==='visible'&&getToken()&&Date.now()-_lastSyncTime>10000)doSync(true);
+        });
+    }
 }
 
 // Initial load: GitHub = SINGLE source of truth
@@ -2049,5 +2053,13 @@ if ('serviceWorker' in navigator) {
         if (refreshing) return;
         refreshing = true;
         window.location.reload();
+    });
+    // Force SW update check when returning to tab (Android fix)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            navigator.serviceWorker.getRegistration().then(reg => {
+                if (reg) reg.update();
+            });
+        }
     });
 }
