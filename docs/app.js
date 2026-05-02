@@ -1996,8 +1996,8 @@ function openInfoPanel(mode){
                     ['🖼️','Export รูปแผนที่','omExportImgM',''],
                 ])}
                 ${_menuSection('แก้ไข',[
-                    ['↩️','Undo','omUndoM',''],
-                    ['↪️','Redo','omRedoM',''],
+                    ['↩️','เลิกทำ','omUndoM',''],
+                    ['↪️','ทำซ้ำ','omRedoM',''],
                     ['🗑️','ลบที่กรอง','omBulkDelM','red'],
                     ['⚠️','รีเซ็ตข้อมูล','omResetM','red'],
                 ])}
