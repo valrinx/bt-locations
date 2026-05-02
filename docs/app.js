@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.3.4';
+const APP_VERSION = 'v5.3.5';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -634,7 +634,7 @@ searchInput.addEventListener('input',()=>{
     renderSearchResults();
     _debouncedUpdate(); // debounce 120ms — ไม่ re-render map ทุก keystroke
 });
-btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_lastFilteredKey=null;update();};
+btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
 
 // Normalize ALL Unicode degree/quote variants → ASCII
 function _normDMS(s){
@@ -675,7 +675,18 @@ function parseLatLng(q) {
     }
     return null;
 }
-// Auto-convert DMS on paste → show decimal + fly to location
+// Temp search marker
+let _searchMarker=null;
+function _showSearchMarker(lat,lng){
+    if(_searchMarker)map.removeLayer(_searchMarker);
+    _searchMarker=L.marker([lat,lng],{icon:L.divIcon({className:'search-pin',html:'<div style="width:20px;height:20px;background:#e53935;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.4);animation:searchPulse 1.5s ease-in-out infinite"></div>',iconSize:[20,20],iconAnchor:[10,10]})}).addTo(map);
+    _searchMarker.bindPopup(`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`).openPopup();
+}
+function _clearSearchMarker(){if(_searchMarker){map.removeLayer(_searchMarker);_searchMarker=null;}}
+// Inject pulse animation CSS
+(function(){const st=document.createElement('style');st.textContent='@keyframes searchPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}';document.head.appendChild(st);})();
+
+// Auto-convert DMS on paste → show decimal + fly to location + marker
 searchInput.addEventListener('paste',e=>{
     setTimeout(()=>{
         const coords=parseLatLng(searchInput.value.trim());
@@ -683,6 +694,7 @@ searchInput.addEventListener('paste',e=>{
             searchInput.value=`${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
             renderSearchResults();
             map.flyTo([coords.lat,coords.lng],16,{animate:true,duration:0.8});
+            _showSearchMarker(coords.lat,coords.lng);
             showToast(`📍 ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,false,true);
         }
     },50);
@@ -694,7 +706,7 @@ function renderSearchResults() {
     let html='';
     const coords=parseLatLng(searchInput.value.trim());
     if(coords){
-        html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});document.getElementById('search').blur();">
+        html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});_showSearchMarker(${coords.lat},${coords.lng});document.getElementById('search').blur();">
             <div class="search-result-icon" style="background:#e8f0fe;color:#1a73e8">🎯</div>
             <div class="search-result-text">
                 <div class="search-result-name">ไปที่พิกัด ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}</div>
