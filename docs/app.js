@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.5.5';
+const APP_VERSION = 'v5.5.6';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1437,12 +1437,6 @@ window.clearDirections=clearDirections;
 // Escape key / map click to cancel nav
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_navState.active){clearDirections();showToast('ยกเลิกการนำทาง');}});
 
-function _trafficLabel(){
-    if(_navState.trafficFactor>=1.5)return '🔴 รถติดมาก';
-    if(_navState.trafficFactor>=1.2)return '🟡 รถติดเล็กน้อย';
-    return '🟢 ปกติ';
-}
-
 function _updateNavBanner(){
     if(!_navState.active)return;
     // Remove old banner to prevent duplicates
@@ -1454,25 +1448,16 @@ function _updateNavBanner(){
     document.body.appendChild(banner);
 
     const distKm=(_navState.totalDist/1000).toFixed(1);
-    const etaMins=Math.round((_navState.totalDur*_navState.trafficFactor)/60);
+    const etaMins=Math.round(_navState.totalDur/60);
     const destName=_navState.dest?.name||'ปลายทาง';
     const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--text2);margin-top:4px;">📍 ${_navState.waypoints.length} จุดแวะ</div>`:'';
-    banner.innerHTML=`<div class="nav-row"><span style="font-size:18px;">🧭</span><strong style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${destName}</strong><span style="font-size:11px;white-space:nowrap;">${_trafficLabel()}</span></div><div class="nav-stats"><span>📏 ${distKm} km</span><span>⏱️ ~${etaMins} นาที</span></div>${wpText}<div class="nav-btns"><button class="nav-btn" id="_nbTraffic">🚗 จราจร</button><button class="nav-btn" id="_nbWaypoint">📍 จุดแวะ</button><button class="nav-btn" id="_nbAvoid">⚙️ หลีกเลี่ยง</button><button class="nav-btn" id="_nbMaps">🗺️ Maps</button><button class="nav-close" id="_nbClose">✕</button></div>`;
+    banner.innerHTML=`<div class="nav-row"><span style="font-size:18px;">🧭</span><strong style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${destName}</strong></div><div class="nav-stats"><span>📏 ${distKm} km</span><span>⏱️ ~${etaMins} นาที</span></div>${wpText}<div class="nav-btns"><button class="nav-btn" id="_nbWaypoint">📍 จุดแวะ</button><button class="nav-btn" id="_nbAvoid">⚙️ หลีกเลี่ยง</button><button class="nav-btn" id="_nbMaps">🗺️ Maps</button><button class="nav-close" id="_nbClose">✕</button></div>`;
 
     // Bind buttons with addEventListener (reliable, no scope issues)
-    document.getElementById('_nbTraffic').addEventListener('click',_navSetTraffic);
     document.getElementById('_nbWaypoint').addEventListener('click',_navAddWaypoint);
     document.getElementById('_nbAvoid').addEventListener('click',_showAvoidSettings);
     document.getElementById('_nbMaps').addEventListener('click',_navOpenMaps);
     document.getElementById('_nbClose').addEventListener('click',()=>{clearDirections();showToast('ยกเลิกการนำทาง');});
-}
-
-function _navSetTraffic(){
-    if(_navState.trafficFactor<1.2)_navState.trafficFactor=1.3;
-    else if(_navState.trafficFactor<1.5)_navState.trafficFactor=1.6;
-    else _navState.trafficFactor=1.0;
-    _updateNavBanner();
-    showToast(`สภาพจราจร: ${_trafficLabel()}`);
 }
 
 function _navOpenMaps(){
