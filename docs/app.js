@@ -134,18 +134,10 @@ function _updateSyncBadge() {
 setInterval(_updateSyncBadge, 10000);
 
 let _pushInFlight = false;
-let _pushRetryCount = 0;
-const MAX_PUSH_RETRIES = 3;
 const _debouncedPush = debounce(async () => {
     if (_pushInFlight) return;
     const token = getToken();
     if (!token) return;
-    if (_pushRetryCount >= MAX_PUSH_RETRIES) {
-        console.warn('Push: max retries reached, waiting for manual sync');
-        _setSyncStatus('error');
-        showToast('⚠️ Sync ล้มเหลว ' + MAX_PUSH_RETRIES + ' ครั้ง — กด Sync ด้วยตนเอง', true);
-        return;
-    }
     _pushInFlight = true;
     _setSyncStatus('syncing');
     try {
@@ -158,18 +150,13 @@ const _debouncedPush = debounce(async () => {
         const data = await res.json();
         await _pushToGithub(token, locs, data.sha);
         _clearDirty();
-        _saveBaseSnapshot(locs, null);
+        _saveBaseSnapshot(locs, null); // update base after push
         _setSyncStatus('ok');
         _lastSyncTime = Date.now();
-        _pushRetryCount = 0; // reset on success
         console.log('Pushed to GitHub:', locs.length, 'locs');
     } catch (err) {
-        _pushRetryCount++;
-        console.warn(`Push failed (attempt ${_pushRetryCount}/${MAX_PUSH_RETRIES}):`, err.message);
+        console.warn('Push failed (will retry):', err.message);
         _setSyncStatus('error');
-        if (_pushRetryCount >= MAX_PUSH_RETRIES) {
-            showToast('❌ Push ล้มเหลว: ' + err.message, true);
-        }
     } finally { _pushInFlight = false; }
 }, 2000);
 
@@ -1509,7 +1496,6 @@ async function githubPut(path,content,sha,token,msg){
 }
 
 async function doGithubSave(token){
-    _pushRetryCount = 0; // reset on manual sync
     const btn=document.getElementById('btnGithubSave'); btn.style.color='#fbbc04';
     showToast('⏳ กำลังซิงค์...');
     try{
@@ -1868,14 +1854,17 @@ function _applyRemote(remote, sha){
 
 async function _pushToGithub(token, locs, currentSha){
     const json=JSON.stringify(locs,null,2);
-    // Push ONLY all_locations.json — GitHub Actions will rebuild docs/
-    // Pushing docs/ directly caused SHA conflicts with the Actions workflow
-    const putRes = await githubPut('all_locations.json',json,currentSha,token,'Sync from web');
-    // Get updated SHA after push
+    const locJs='const DEFAULT_LOCATIONS='+JSON.stringify(locs)+';\n';
+    // Push all 3 files
+    await githubPut('all_locations.json',json,currentSha,token,'Sync from web');
+    const f2=await githubFile('docs/all_locations.json',token);
+    await githubPut('docs/all_locations.json',json,f2.sha,token,'Sync docs');
+    const f3=await githubFile('docs/locations.js',token);
+    await githubPut('docs/locations.js',locJs,f3.sha,token,'Sync locations.js');
+    // Update local snapshot
     const f1=await githubFile('all_locations.json',token);
     localStorage.setItem(SYNC_SHA_KEY,f1.sha);
     localStorage.setItem(SYNC_SNAPSHOT_KEY,JSON.stringify(locs));
-    console.log('Pushed all_locations.json, new SHA:', f1.sha);
 }
 
 function startAutoSync(){
