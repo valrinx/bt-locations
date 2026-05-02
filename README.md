@@ -189,10 +189,10 @@ python -m http.server 8080
 ### 🚀 Production TODO (ยังไม่ทำ)
 
 #### PHASE 1: Stability & Safety
-- [ ] **Redo system** — เพิ่ม redo ต่อจาก undo ที่มี
+- [x] **Redo system** — ✅ เสร็จแล้ว (redo stack + Ctrl+Shift+Z + ปุ่มใน Menu)
 - [ ] **Auto backup to cloud** — snapshot ไป GitHub อัตโนมัติตามเวลา
-- [ ] **Normalize data on load** — ป้องกัน missing fields ตอนโหลดครั้งแรก (ไม่ใช่แค่ตอน import)
-- [ ] **Prevent data corruption** — ตรวจ integrity ก่อน save ทุกครั้ง
+- [x] **Normalize data on load** — ✅ เสร็จแล้ว (normalizeLocation ทุกครั้งที่โหลด)
+- [x] **Prevent data corruption** — ✅ เสร็จแล้ว (integrity check ก่อน save)
 
 #### PHASE 2: Architecture (scale ได้จริง)
 - [ ] **Refactor `app.js` → modules** — แยก map.js / ui.js / data.js
@@ -211,7 +211,7 @@ python -m http.server 8080
 - [ ] **Schema migration support** — auto-upgrade เมื่อ version เปลี่ยน
 
 #### PHASE 5: Mobile UX
-- [ ] **Tap marker → zoom + focus** — auto-zoom เข้าหา marker ที่กด
+- [x] **Tap marker → zoom + focus** — ✅ เสร็จแล้ว (zoom 16 mobile / 15 desktop)
 - [ ] **Improve touch responsiveness** — ลด delay, ปรับ hit area
 
 #### PHASE 6: Advanced Map

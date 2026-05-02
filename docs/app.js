@@ -7,7 +7,7 @@ const GITHUB_TOKEN_KEY = 'bt_github_token';
 const SYNC_SHA_KEY = 'bt_sync_sha';
 const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
-const undoStack = [], MAX_UNDO = 20;
+const undoStack = [], redoStack = [], MAX_UNDO = 20;
 const MAX_CHANGELOG = 200;
 const SYNC_INTERVAL = 30000; // 30 seconds
 let _syncTimer = null, _syncing = false, _lastSyncTime = 0;
@@ -20,9 +20,22 @@ function addChangelogEntry(action,loc){
     localStorage.setItem(CHANGELOG_KEY,JSON.stringify(log));
 }
 
+function normalizeLocation(l) {
+    return {
+        name: l.name || '',
+        lat: typeof l.lat === 'number' ? l.lat : parseFloat(l.lat) || 0,
+        lng: typeof l.lng === 'number' ? l.lng : parseFloat(l.lng) || 0,
+        list: l.list || 'Uncategorized',
+        city: l.city || '',
+        note: l.note || '',
+        ...(l.tags && l.tags.length ? { tags: l.tags } : {}),
+        ...(l.photo ? { photo: l.photo } : {}),
+    };
+}
+
 let locations = (() => {
-    try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); }
-    catch(e) { return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); }
+    try { const s = localStorage.getItem(STORAGE_KEY); const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); return raw.map(normalizeLocation); }
+    catch(e) { return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)).map(normalizeLocation); }
 })();
 
 let addMode = false, editingIndex = -1;
@@ -48,8 +61,16 @@ function throttle(fn, ms) {
     let last = 0; return (...a) => { const now = Date.now(); if (now - last >= ms) { last = now; fn(...a); } };
 }
 
-// ── save: debounced — ไม่ stringify/write ทุกครั้ง ──
+// ── save: debounced + integrity check ──
+function _validateBeforeSave() {
+    if (!Array.isArray(locations)) { console.error('Save aborted: locations is not array'); return false; }
+    if (locations.length === 0) return true; // allow empty
+    const sample = locations[0];
+    if (typeof sample.lat !== 'number' || typeof sample.lng !== 'number') { console.error('Save aborted: invalid lat/lng in first item'); return false; }
+    return true;
+}
 const saveLocations = debounce(() => {
+    if (!_validateBeforeSave()) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
 }, 300);
 
@@ -68,7 +89,7 @@ function refreshDatalistSuggestions() {
     _datalistDirty = false;
 }
 
-function pushUndo() { undoStack.push(JSON.stringify(locations)); if (undoStack.length > MAX_UNDO) undoStack.shift(); }
+function pushUndo() { undoStack.push(JSON.stringify(locations)); if (undoStack.length > MAX_UNDO) undoStack.shift(); redoStack.length = 0; }
 
 // ════════════════════════════════════════════
 // MAP
@@ -383,7 +404,8 @@ function showPlaceCard(loc, idx) {
     `;
     closePlaceCard();
     setTimeout(()=>document.getElementById('placeCard').classList.add('open'),10);
-    map.flyTo([loc.lat,loc.lng],Math.max(map.getZoom(),14),{animate:true,duration:0.6});
+    const targetZoom = Math.max(map.getZoom(), _mobile ? 16 : 15);
+    map.flyTo([loc.lat,loc.lng], targetZoom, {animate: !_mobile, duration: _mobile ? 0.3 : 0.6});
     closeListPanel();
 }
 
@@ -1022,6 +1044,7 @@ function openInfoPanel(mode){
                 ['�','Sync Now'+(getToken()?` (${Math.round((Date.now()-_lastSyncTime)/1000)}s ago)`:''),'omSyncM',''],
                 ['🌙','Dark mode','omDarkM',''],
                 ['↩','Undo','omUndoM',''],
+                ['↪','Redo','omRedoM',''],
                 ['🗑️','ลบที่กรอง (Bulk)','omBulkDelM','red'],
                 ['🔄','รีเซ็ตข้อมูล','omResetM','red'],
             ].map(([icon,label,id,cls])=>`<button class="om-item ${cls}" id="${id}" style="border-radius:12px;"><span style="font-size:18px;width:20px;">${icon}</span>${label}</button>`).join('<div class="om-sep" style="margin:2px 0;"></div>')}
@@ -1036,6 +1059,7 @@ function openInfoPanel(mode){
         b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
         b('omDarkM',    toggleDark);
         b('omUndoM',    doUndo);
+        b('omRedoM',    doRedo);
         b('omBulkDelM', doBulkDel);
         b('omResetM',   doReset);
     }
@@ -1304,7 +1328,8 @@ document.getElementById('fileImport').onchange=e=>{
     reader.readAsText(file); e.target.value='';
 };
 
-function doUndo(){if(!undoStack.length){showToast('ไม่มี Undo');return;}locations=JSON.parse(undoStack.pop());saveLocations();invalidateCache();update();showToast('Undo แล้ว');closeInfo();}
+function doUndo(){if(!undoStack.length){showToast('ไม่มี Undo');return;}redoStack.push(JSON.stringify(locations));locations=JSON.parse(undoStack.pop());saveLocations();invalidateCache();update();showToast('Undo แล้ว');closeInfo();}
+function doRedo(){if(!redoStack.length){showToast('ไม่มี Redo');return;}undoStack.push(JSON.stringify(locations));locations=JSON.parse(redoStack.pop());saveLocations();invalidateCache();update();showToast('Redo แล้ว');closeInfo();}
 
 function doBulkDel(){
     const f=getFiltered();
@@ -1408,8 +1433,12 @@ map.on('click',()=>{if(!addMode&&!measureMode)closePlaceCard();closeListPanel();
 window.showPlaceCard=showPlaceCard;
 window.closeListPanel=closeListPanel;
 
-// ESC key ปิด panels
+// Keyboard shortcuts: Undo/Redo + ESC
 document.addEventListener('keydown',(e)=>{
+    if((e.ctrlKey||e.metaKey)&&!e.altKey){
+        if(e.key==='z'&&!e.shiftKey){e.preventDefault();doUndo();return;}
+        if((e.key==='z'&&e.shiftKey)||e.key==='y'){e.preventDefault();doRedo();return;}
+    }
     if(e.key==='Escape'){
         closeInfo();
         closePlaceCard();
@@ -1722,7 +1751,7 @@ window.btDebug = {
     get token() { return getToken() ? '✅ set' : '❌ none'; },
     get stats() {
         const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
-        return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,lastSync:new Date(_lastSyncTime).toLocaleString()};
+        return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};
     },
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
