@@ -44,9 +44,15 @@ html = f'''<!DOCTYPE html>
         #map {{ width: 100%; height: 100vh; }}
         .controls {{
             position: absolute; top: 10px; left: 50px; z-index: 1000;
-            background: white; border-radius: 8px; padding: 8px 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; gap: 8px; align-items: center;
-            flex-wrap: wrap; max-width: 90vw;
+            background: white; border-radius: 10px; padding: 8px 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 6px;
+            max-width: 90vw;
+        }}
+        .ctrl-row {{
+            display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+        }}
+        .ctrl-sep {{
+            width: 1px; height: 20px; background: #ddd; margin: 0 2px;
         }}
         .controls input, .controls select {{
             border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px;
@@ -205,6 +211,7 @@ html = f'''<!DOCTYPE html>
         body.dark .modal input {{ background: #2a2a4a; color: #e0e0e0; border-color: #444; }}
         body.dark .modal-btns {{ background: #252550; }}
         body.dark .count-badge {{ background: #2a2a6a; color: #8ab4f8; }}
+        body.dark .ctrl-sep {{ background: #444; }}
 
         @media (max-width: 600px) {{
             .controls {{
@@ -225,29 +232,37 @@ html = f'''<!DOCTYPE html>
 <body>
     <div id="map"></div>
     <div class="controls">
-        <input type="text" id="search" placeholder="ค้นหา...">
-        <select id="listFilter">
-            <option value="">ทุกรายการ</option>
-            {filter_options}
-        </select>
-        <select id="cityFilter">
-            <option value="">ทุกเขต</option>
-            {city_options}
-        </select>
-        <span class="count-badge" id="count">0 จุด</span>
-        <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
-        <button class="btn btn-github" id="btnGithub">Save to GitHub</button>
-        <span class="save-status" id="saveStatus"></span>
-        <button class="btn btn-export" id="btnExport">Export</button>
-        <button class="btn btn-import" id="btnImport">Import</button>
-        <button class="btn btn-reset" id="btnReset">Reset</button>
-        <button class="btn btn-export" id="btnStats" style="background:#0d9488;">Stats</button>
-        <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>Undo</button>
-        <button class="btn btn-delete" id="btnBulkDel">ลบที่กรอง</button>
-        <button class="btn" id="btnHeatmap" style="background:#f97316;color:white;">Heatmap</button>
-        <button class="btn" id="btnLegend" style="background:#8b5cf6;color:white;">Legend</button>
-        <button class="btn" id="btnDark" style="background:#334155;color:white;">🌙</button>
-        <button class="btn" id="btnTile" style="background:#059669;color:white;">🗺️</button>
+        <!-- แถว 1: ค้นหา + กรอง -->
+        <div class="ctrl-row">
+            <input type="text" id="search" placeholder="ค้นหา...">
+            <select id="listFilter">
+                <option value="">ทุกรายการ</option>
+                {filter_options}
+            </select>
+            <select id="cityFilter">
+                <option value="">ทุกเขต</option>
+                {city_options}
+            </select>
+            <span class="count-badge" id="count">0 จุด</span>
+        </div>
+        <!-- แถว 2: ปุ่มฟังก์ชัน -->
+        <div class="ctrl-row">
+            <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
+            <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>↩ Undo</button>
+            <button class="btn btn-delete" id="btnBulkDel">🗑 ลบที่กรอง</button>
+            <span class="ctrl-sep"></span>
+            <button class="btn btn-github" id="btnGithub">Save to GitHub</button>
+            <span class="save-status" id="saveStatus"></span>
+            <button class="btn btn-export" id="btnExport">📤 Export</button>
+            <button class="btn btn-import" id="btnImport">📥 Import</button>
+            <button class="btn btn-reset" id="btnReset">Reset</button>
+            <span class="ctrl-sep"></span>
+            <button class="btn" id="btnStats" style="background:#0d9488;color:white;">📊 Stats</button>
+            <button class="btn" id="btnHeatmap" style="background:#f97316;color:white;">🔥 Heatmap</button>
+            <button class="btn" id="btnLegend" style="background:#8b5cf6;color:white;">🎨 Legend</button>
+            <button class="btn" id="btnDark" style="background:#334155;color:white;">🌙</button>
+            <button class="btn" id="btnTile" style="background:#059669;color:white;">🗺️</button>
+        </div>
     </div>
     <div class="legend-panel" id="legendPanel"></div>
     <div class="add-mode-banner" id="addBanner">

@@ -13,9 +13,15 @@
         #map { width: 100%; height: 100vh; }
         .controls {
             position: absolute; top: 10px; left: 50px; z-index: 1000;
-            background: white; border-radius: 8px; padding: 8px 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: flex; gap: 8px; align-items: center;
-            flex-wrap: wrap; max-width: 90vw;
+            background: white; border-radius: 10px; padding: 8px 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 6px;
+            max-width: 90vw;
+        }
+        .ctrl-row {
+            display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+        }
+        .ctrl-sep {
+            width: 1px; height: 20px; background: #ddd; margin: 0 2px;
         }
         .controls input, .controls select {
             border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px;
@@ -174,6 +180,7 @@
         body.dark .modal input { background: #2a2a4a; color: #e0e0e0; border-color: #444; }
         body.dark .modal-btns { background: #252550; }
         body.dark .count-badge { background: #2a2a6a; color: #8ab4f8; }
+        body.dark .ctrl-sep { background: #444; }
 
         @media (max-width: 600px) {
             .controls {
@@ -194,29 +201,37 @@
 <body>
     <div id="map"></div>
     <div class="controls">
-        <input type="text" id="search" placeholder="ค้นหา...">
-        <select id="listFilter">
-            <option value="">ทุกรายการ</option>
-            <option value="Home">Home</option><option value="คลองสาน">คลองสาน</option><option value="คลองสามวา">คลองสามวา</option><option value="คลองเตย">คลองเตย</option><option value="คันนายาว">คันนายาว</option><option value="จอมทอง">จอมทอง</option><option value="ดินแดง">ดินแดง</option><option value="ดุสิต">ดุสิต</option><option value="ตลิ่งชัน">ตลิ่งชัน</option><option value="ทุ่งครุ">ทุ่งครุ</option><option value="ธนบุรี">ธนบุรี</option><option value="บางกะปิ">บางกะปิ</option><option value="บางกะปิ 2">บางกะปิ 2</option><option value="บางขุนเทียน">บางขุนเทียน</option><option value="บางขุนเทียน 2">บางขุนเทียน 2</option><option value="บางขุนเทียน 3">บางขุนเทียน 3</option><option value="บางซื่อ">บางซื่อ</option><option value="บางนา">บางนา</option><option value="บางบัวทอง">บางบัวทอง</option><option value="บางบัวทอง2">บางบัวทอง2</option><option value="บางพลี">บางพลี</option><option value="บางรัก">บางรัก</option><option value="บึงกุ่ม">บึงกุ่ม</option><option value="ปทุมธานี">ปทุมธานี</option><option value="ปทุมวัน">ปทุมวัน</option><option value="ประเวศ">ประเวศ</option><option value="ประเวศ 1">ประเวศ 1</option><option value="ปากเกร็ด">ปากเกร็ด</option><option value="ป้อมปราบ">ป้อมปราบ</option><option value="พญาไท">พญาไท</option><option value="พระนคร">พระนคร</option><option value="ภาษีเจริญ">ภาษีเจริญ</option><option value="มีนบุรี">มีนบุรี</option><option value="มีนบุรี 2">มีนบุรี 2</option><option value="ยกกลับ">ยกกลับ</option><option value="ยังไม่ได้ทำ">ยังไม่ได้ทำ</option><option value="ยานนาวา">ยานนาวา</option><option value="ราชบูรณะ">ราชบูรณะ</option><option value="ราชเทวี">ราชเทวี</option><option value="ลาดกระบัง">ลาดกระบัง</option><option value="ลาดกระบัง 2">ลาดกระบัง 2</option><option value="ลาดกระบัง 3">ลาดกระบัง 3</option><option value="ลาดพร้าว- จตุจักร">ลาดพร้าว- จตุจักร</option><option value="วังทองหลาง">วังทองหลาง</option><option value="วัฒนา">วัฒนา</option><option value="สวนหลวง">สวนหลวง</option><option value="สะพานสูง">สะพานสูง</option><option value="สัมพันธวงศ์">สัมพันธวงศ์</option><option value="สาทร">สาทร</option><option value="สายไหม">สายไหม</option><option value="หนองจอก">หนองจอก</option><option value="หมอชิต - จตุจักร">หมอชิต - จตุจักร</option><option value="ห้วยขวาง">ห้วยขวาง</option><option value="เมืองนนทบุรี">เมืองนนทบุรี</option>
-        </select>
-        <select id="cityFilter">
-            <option value="">ทุกเขต</option>
-            <option value="Home">Home</option><option value="คลองสาน">คลองสาน</option><option value="คลองสามวา">คลองสามวา</option><option value="คลองเตย">คลองเตย</option><option value="คันนายาว">คันนายาว</option><option value="จอมทอง">จอมทอง</option><option value="ดินแดง">ดินแดง</option><option value="ดุสิต">ดุสิต</option><option value="ตลิ่งชัน">ตลิ่งชัน</option><option value="ทุ่งครุ">ทุ่งครุ</option><option value="ธนบุรี">ธนบุรี</option><option value="บางกะปิ">บางกะปิ</option><option value="บางขุนเทียน">บางขุนเทียน</option><option value="บางซื่อ">บางซื่อ</option><option value="บางนา">บางนา</option><option value="บางบัวทอง">บางบัวทอง</option><option value="บางพลี">บางพลี</option><option value="บางรัก">บางรัก</option><option value="บึงกุ่ม">บึงกุ่ม</option><option value="ปทุมธานี">ปทุมธานี</option><option value="ปทุมวัน">ปทุมวัน</option><option value="ประเวศ">ประเวศ</option><option value="ปากเกร็ด">ปากเกร็ด</option><option value="ป้อมปราบ">ป้อมปราบ</option><option value="พญาไท">พญาไท</option><option value="พระนคร">พระนคร</option><option value="ภาษีเจริญ">ภาษีเจริญ</option><option value="มีนบุรี">มีนบุรี</option><option value="ยกกลับ">ยกกลับ</option><option value="ยังไม่ได้ทำ">ยังไม่ได้ทำ</option><option value="ยานนาวา">ยานนาวา</option><option value="ราชบูรณะ">ราชบูรณะ</option><option value="ราชเทวี">ราชเทวี</option><option value="ลาดกระบัง">ลาดกระบัง</option><option value="ลาดพร้าว- จตุจักร">ลาดพร้าว- จตุจักร</option><option value="วังทองหลาง">วังทองหลาง</option><option value="วัฒนา">วัฒนา</option><option value="สวนหลวง">สวนหลวง</option><option value="สะพานสูง">สะพานสูง</option><option value="สัมพันธวงศ์">สัมพันธวงศ์</option><option value="สาทร">สาทร</option><option value="สายไหม">สายไหม</option><option value="หนองจอก">หนองจอก</option><option value="หมอชิต - จตุจักร">หมอชิต - จตุจักร</option><option value="ห้วยขวาง">ห้วยขวาง</option><option value="เมืองนนทบุรี">เมืองนนทบุรี</option>
-        </select>
-        <span class="count-badge" id="count">0 จุด</span>
-        <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
-        <button class="btn btn-github" id="btnGithub">Save to GitHub</button>
-        <span class="save-status" id="saveStatus"></span>
-        <button class="btn btn-export" id="btnExport">Export</button>
-        <button class="btn btn-import" id="btnImport">Import</button>
-        <button class="btn btn-reset" id="btnReset">Reset</button>
-        <button class="btn btn-export" id="btnStats" style="background:#0d9488;">Stats</button>
-        <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>Undo</button>
-        <button class="btn btn-delete" id="btnBulkDel">ลบที่กรอง</button>
-        <button class="btn" id="btnHeatmap" style="background:#f97316;color:white;">Heatmap</button>
-        <button class="btn" id="btnLegend" style="background:#8b5cf6;color:white;">Legend</button>
-        <button class="btn" id="btnDark" style="background:#334155;color:white;">🌙</button>
-        <button class="btn" id="btnTile" style="background:#059669;color:white;">🗺️</button>
+        <!-- แถว 1: ค้นหา + กรอง -->
+        <div class="ctrl-row">
+            <input type="text" id="search" placeholder="ค้นหา...">
+            <select id="listFilter">
+                <option value="">ทุกรายการ</option>
+                <option value="Home">Home</option><option value="คลองสาน">คลองสาน</option><option value="คลองสามวา">คลองสามวา</option><option value="คลองเตย">คลองเตย</option><option value="คันนายาว">คันนายาว</option><option value="จอมทอง">จอมทอง</option><option value="ดินแดง">ดินแดง</option><option value="ดุสิต">ดุสิต</option><option value="ตลิ่งชัน">ตลิ่งชัน</option><option value="ทุ่งครุ">ทุ่งครุ</option><option value="ธนบุรี">ธนบุรี</option><option value="บางกะปิ">บางกะปิ</option><option value="บางกะปิ 2">บางกะปิ 2</option><option value="บางขุนเทียน">บางขุนเทียน</option><option value="บางขุนเทียน 2">บางขุนเทียน 2</option><option value="บางขุนเทียน 3">บางขุนเทียน 3</option><option value="บางซื่อ">บางซื่อ</option><option value="บางนา">บางนา</option><option value="บางบัวทอง">บางบัวทอง</option><option value="บางบัวทอง2">บางบัวทอง2</option><option value="บางพลี">บางพลี</option><option value="บางรัก">บางรัก</option><option value="บึงกุ่ม">บึงกุ่ม</option><option value="ปทุมธานี">ปทุมธานี</option><option value="ปทุมวัน">ปทุมวัน</option><option value="ประเวศ">ประเวศ</option><option value="ประเวศ 1">ประเวศ 1</option><option value="ปากเกร็ด">ปากเกร็ด</option><option value="ป้อมปราบ">ป้อมปราบ</option><option value="พญาไท">พญาไท</option><option value="พระนคร">พระนคร</option><option value="ภาษีเจริญ">ภาษีเจริญ</option><option value="มีนบุรี">มีนบุรี</option><option value="มีนบุรี 2">มีนบุรี 2</option><option value="ยกกลับ">ยกกลับ</option><option value="ยังไม่ได้ทำ">ยังไม่ได้ทำ</option><option value="ยานนาวา">ยานนาวา</option><option value="ราชบูรณะ">ราชบูรณะ</option><option value="ราชเทวี">ราชเทวี</option><option value="ลาดกระบัง">ลาดกระบัง</option><option value="ลาดกระบัง 2">ลาดกระบัง 2</option><option value="ลาดกระบัง 3">ลาดกระบัง 3</option><option value="ลาดพร้าว- จตุจักร">ลาดพร้าว- จตุจักร</option><option value="วังทองหลาง">วังทองหลาง</option><option value="วัฒนา">วัฒนา</option><option value="สวนหลวง">สวนหลวง</option><option value="สะพานสูง">สะพานสูง</option><option value="สัมพันธวงศ์">สัมพันธวงศ์</option><option value="สาทร">สาทร</option><option value="สายไหม">สายไหม</option><option value="หนองจอก">หนองจอก</option><option value="หมอชิต - จตุจักร">หมอชิต - จตุจักร</option><option value="ห้วยขวาง">ห้วยขวาง</option><option value="เมืองนนทบุรี">เมืองนนทบุรี</option>
+            </select>
+            <select id="cityFilter">
+                <option value="">ทุกเขต</option>
+                <option value="Home">Home</option><option value="คลองสาน">คลองสาน</option><option value="คลองสามวา">คลองสามวา</option><option value="คลองเตย">คลองเตย</option><option value="คันนายาว">คันนายาว</option><option value="จอมทอง">จอมทอง</option><option value="ดินแดง">ดินแดง</option><option value="ดุสิต">ดุสิต</option><option value="ตลิ่งชัน">ตลิ่งชัน</option><option value="ทุ่งครุ">ทุ่งครุ</option><option value="ธนบุรี">ธนบุรี</option><option value="บางกะปิ">บางกะปิ</option><option value="บางขุนเทียน">บางขุนเทียน</option><option value="บางซื่อ">บางซื่อ</option><option value="บางนา">บางนา</option><option value="บางบัวทอง">บางบัวทอง</option><option value="บางพลี">บางพลี</option><option value="บางรัก">บางรัก</option><option value="บึงกุ่ม">บึงกุ่ม</option><option value="ปทุมธานี">ปทุมธานี</option><option value="ปทุมวัน">ปทุมวัน</option><option value="ประเวศ">ประเวศ</option><option value="ปากเกร็ด">ปากเกร็ด</option><option value="ป้อมปราบ">ป้อมปราบ</option><option value="พญาไท">พญาไท</option><option value="พระนคร">พระนคร</option><option value="ภาษีเจริญ">ภาษีเจริญ</option><option value="มีนบุรี">มีนบุรี</option><option value="ยกกลับ">ยกกลับ</option><option value="ยังไม่ได้ทำ">ยังไม่ได้ทำ</option><option value="ยานนาวา">ยานนาวา</option><option value="ราชบูรณะ">ราชบูรณะ</option><option value="ราชเทวี">ราชเทวี</option><option value="ลาดกระบัง">ลาดกระบัง</option><option value="ลาดพร้าว- จตุจักร">ลาดพร้าว- จตุจักร</option><option value="วังทองหลาง">วังทองหลาง</option><option value="วัฒนา">วัฒนา</option><option value="สวนหลวง">สวนหลวง</option><option value="สะพานสูง">สะพานสูง</option><option value="สัมพันธวงศ์">สัมพันธวงศ์</option><option value="สาทร">สาทร</option><option value="สายไหม">สายไหม</option><option value="หนองจอก">หนองจอก</option><option value="หมอชิต - จตุจักร">หมอชิต - จตุจักร</option><option value="ห้วยขวาง">ห้วยขวาง</option><option value="เมืองนนทบุรี">เมืองนนทบุรี</option>
+            </select>
+            <span class="count-badge" id="count">0 จุด</span>
+        </div>
+        <!-- แถว 2: ปุ่มฟังก์ชัน -->
+        <div class="ctrl-row">
+            <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
+            <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>↩ Undo</button>
+            <button class="btn btn-delete" id="btnBulkDel">🗑 ลบที่กรอง</button>
+            <span class="ctrl-sep"></span>
+            <button class="btn btn-github" id="btnGithub">Save to GitHub</button>
+            <span class="save-status" id="saveStatus"></span>
+            <button class="btn btn-export" id="btnExport">📤 Export</button>
+            <button class="btn btn-import" id="btnImport">📥 Import</button>
+            <button class="btn btn-reset" id="btnReset">Reset</button>
+            <span class="ctrl-sep"></span>
+            <button class="btn" id="btnStats" style="background:#0d9488;color:white;">📊 Stats</button>
+            <button class="btn" id="btnHeatmap" style="background:#f97316;color:white;">🔥 Heatmap</button>
+            <button class="btn" id="btnLegend" style="background:#8b5cf6;color:white;">🎨 Legend</button>
+            <button class="btn" id="btnDark" style="background:#334155;color:white;">🌙</button>
+            <button class="btn" id="btnTile" style="background:#059669;color:white;">🗺️</button>
+        </div>
     </div>
     <div class="legend-panel" id="legendPanel"></div>
     <div class="add-mode-banner" id="addBanner">
