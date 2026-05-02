@@ -2011,9 +2011,29 @@ window.btDebug = {
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
-// PWA: register service worker
+// PWA: register service worker + force update
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(reg => {
         console.log('SW registered:', reg.scope);
+        // Check for updates immediately
+        reg.update();
+        // When new SW found → activate immediately + reload
+        reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            if (!newSW) return;
+            newSW.addEventListener('statechange', () => {
+                if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
+                    console.log('New SW activated, reloading...');
+                    window.location.reload();
+                }
+            });
+        });
     }).catch(err => console.warn('SW failed:', err));
+    // Also reload when controller changes (SW takeover)
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
 }
