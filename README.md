@@ -81,7 +81,8 @@ python -m http.server 8080
    git push origin main
    ```
 
-3. **หลัง push → restart server**
+3. **หลัง push → รอ GitHub Actions build เสร็จ** (~30 วินาที) แล้ว hard refresh
+   - หรือถ้า run local server: restart server แล้ว refresh
 
    ```bash
    # หยุด server เดิม แล้วรันใหม่
@@ -90,6 +91,32 @@ python -m http.server 8080
    ```
 
 4. **เปิด preview → Ctrl+Shift+R (hard refresh)** เพื่อเลี่ยง cache
+
+> 💡 **Tip:** GitHub Actions จะ auto build + deploy หลัง push ไป `main` — ดูสถานะที่ Actions tab ใน repo
+
+---
+
+## ✅ ฟีเจอร์ที่เสร็จแล้ว
+
+### 2026-05-02 (ล่าสุด)
+- [x] **Topup Locations Map** — แผนที่ standalone สำหรับจุด Topup
+- [x] **Export/Share API** — แก้ bug + รองรับ Share API ถูกต้อง
+- [x] **Export กรองตาม List/City** — Export เฉพาะข้อมูลที่กรองไว้
+- [x] **Import Merge/Replace** — เลือก mode ได้: Merge (ไม่ทับ) หรือ Replace
+
+### ก่อนหน้านี้
+- [x] **Mobile responsive** — ใช้งานบนมือถือได้ดี (base)
+- [x] **Multi-filter** — กรองตาม list + city พร้อมกัน
+- [x] **Stats dashboard** — สถิติจำนวนจุด
+- [x] **Undo (20 ครั้ง)** — ย้อนกลับการแก้ไข
+- [x] **CircleMarker + สีตาม list** — แยกสีตามรายการ
+- [x] **Bulk delete** — ลบจุดที่กรองอยู่ทั้งหมด
+- [x] **Heatmap mode** — แสดงความหนาแน่น
+- [x] **Legend + Dark mode** — 4 map tiles (Street/Satellite/Terrain/Dark)
+- [x] **วัดระยะทาง** — ระหว่าง 2 จุด
+- [x] **GitHub Actions + Backup** — Auto build & deploy
+- [x] **Save to GitHub** — ผ่าน API token
+- [x] **CRUD + Background sync** — เพิ่ม/แก้ไข/ลบ/ซิงค์ข้ามเครื่อง
 
 ---
 
@@ -103,7 +130,7 @@ python -m http.server 8080
 
 ### 🟡 น่าทำ (ปรับปรุง UX)
 
-- [ ] **Mobile UX ปรับปรุงต่อ** — panel กรอง/ค้นหาควร collapsible บนหน้าจอเล็ก, ปุ่มใหญ่ขึ้น
+- [ ] **Mobile UX ปรับปรุงต่อ** — panel collapsible, ปุ่มใหญ่ขึ้น (base responsive เสร็จแล้ว)
 - [ ] **Cluster click → zoom + แสดง list** — กด cluster แล้วดู popup รายชื่อจุดทั้งหมดใน cluster
 - [ ] **ค้นหาตามพิกัด** — ให้ผู้ใช้ paste lat,lng แล้ว jump ไปยังจุดนั้น
 - [ ] **Permalink per location** — URL ที่ share แล้ว zoom ตรงไปหมุดนั้นได้
@@ -121,7 +148,7 @@ python -m http.server 8080
 
 - [ ] **Unit test สำหรับ Python scripts** — ครอบ `validate_data.py`, `merge_sheet.py`, `auto_city.py`
 - [ ] **Lint + format** — เพิ่ม pre-commit hook (black, flake8 สำหรับ Python; ESLint สำหรับ JS)
-- [ ] **แยก JS ออกจาก HTML** — refactor `docs/index.html` ให้โหลด `app.js` แยก เพื่อบำรุงรักษาง่ายขึ้น
+- [ ] **แยก JS ออกจาก HTML** — refactor `docs/index.html` ให้โหลด `app.js` แยก (ตอนนี้แยกแค่ data เป็น `locations.js`)
 - [ ] **Versioning สำหรับ locations.js** — เพิ่ม cache-busting query string เมื่อ build (`locations.js?v=<hash>`)
 
 ---
