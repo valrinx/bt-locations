@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.3.6';
+const APP_VERSION = 'v5.4';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1368,17 +1368,40 @@ const REROUTE_THRESHOLD = 80; // meters off-route to trigger reroute
 const REROUTE_COOLDOWN = 15000; // ms between reroutes
 const ARRIVAL_THRESHOLD = 50; // meters to consider "arrived"
 
+// Inject nav banner CSS once
+(function(){const s=document.createElement('style');s.textContent=`
+#directionsBanner{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:1500;
+  background:var(--surface);padding:12px 16px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.3);
+  font-size:13px;font-family:inherit;min-width:220px;max-width:92vw;width:340px;color:var(--text);}
+#directionsBanner .nav-row{display:flex;align-items:center;gap:8px;}
+#directionsBanner .nav-stats{display:flex;gap:12px;font-size:13px;margin:6px 0;}
+#directionsBanner .nav-btns{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;}
+#directionsBanner .nav-btn{flex:1;padding:6px 2px;border:1px solid var(--border);border-radius:8px;
+  background:var(--surface);cursor:pointer;font-size:11px;min-width:0;color:var(--text);transition:background .15s;}
+#directionsBanner .nav-btn:active{background:var(--border);}
+#directionsBanner .nav-close{padding:6px 10px;border:none;background:#ea4335;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;}
+#directionsBanner .nav-close:active{background:#c62828;}
+`;document.head.appendChild(s);})();
+
+let _navDestMarker=null;
 function clearDirections(){
     if(_navState.line){map.removeLayer(_navState.line);_navState.line=null;}
     if(_navState.watchId!==null){navigator.geolocation.clearWatch(_navState.watchId);_navState.watchId=null;}
     if(_navState.myMarker){map.removeLayer(_navState.myMarker);_navState.myMarker=null;}
+    if(_navDestMarker){map.removeLayer(_navDestMarker);_navDestMarker=null;}
     _navState.active=false;
     _navState.waypoints=[];
     _navState.routeCoords=[];
+    _navState.dest=null;
+    _navState.totalDist=0;
+    _navState.totalDur=0;
     const banner=document.getElementById('directionsBanner');
     if(banner)banner.remove();
 }
 window.clearDirections=clearDirections;
+
+// Escape key / map click to cancel nav
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_navState.active){clearDirections();showToast('ยกเลิกการนำทาง');}});
 
 function _trafficLabel(){
     if(_navState.trafficFactor>=1.5)return '🔴 รถติดมาก';
@@ -1388,46 +1411,37 @@ function _trafficLabel(){
 
 function _updateNavBanner(){
     if(!_navState.active)return;
-    let banner=document.getElementById('directionsBanner');
-    if(!banner){
-        banner=document.createElement('div');
-        banner.id='directionsBanner';
-        banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:1500;background:var(--surface);padding:10px 14px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.35);font-size:13px;font-family:inherit;min-width:200px;max-width:90vw;';
-        document.body.appendChild(banner);
-    }
+    // Remove old banner to prevent duplicates
+    let old=document.getElementById('directionsBanner');
+    if(old)old.remove();
+
+    const banner=document.createElement('div');
+    banner.id='directionsBanner';
+    document.body.appendChild(banner);
+
     const distKm=(_navState.totalDist/1000).toFixed(1);
     const etaMins=Math.round((_navState.totalDur*_navState.trafficFactor)/60);
     const destName=_navState.dest?.name||'ปลายทาง';
     const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--text2);margin-top:4px;">📍 ${_navState.waypoints.length} จุดแวะ</div>`:'';
-    banner.innerHTML=`
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <span style="font-size:16px;">🧭</span>
-            <strong>${destName}</strong>
-            <span style="margin-left:auto;font-size:11px;">${_trafficLabel()}</span>
-        </div>
-        <div style="display:flex;gap:12px;font-size:13px;">
-            <span>📏 ${distKm} km</span>
-            <span>⏱️ ~${etaMins} นาที</span>
-        </div>
-        ${wpText}
-        <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
-            <button onclick="_navSetTraffic()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">🚗 จราจร</button>
-            <button onclick="_navAddWaypoint()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">📍 จุดแวะ</button>
-            <button onclick="_showAvoidSettings()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">⚙️ หลีกเลี่ยง</button>
-            <button onclick="_navOpenMaps()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">🗺️ Maps</button>
-            <button onclick="clearDirections()" style="padding:5px 8px;border:none;background:#ea4335;color:#fff;border-radius:8px;cursor:pointer;font-size:10px;">✕</button>
-        </div>`;
+    banner.innerHTML=`<div class="nav-row"><span style="font-size:18px;">🧭</span><strong style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${destName}</strong><span style="font-size:11px;white-space:nowrap;">${_trafficLabel()}</span></div><div class="nav-stats"><span>📏 ${distKm} km</span><span>⏱️ ~${etaMins} นาที</span></div>${wpText}<div class="nav-btns"><button class="nav-btn" id="_nbTraffic">🚗 จราจร</button><button class="nav-btn" id="_nbWaypoint">📍 จุดแวะ</button><button class="nav-btn" id="_nbAvoid">⚙️ หลีกเลี่ยง</button><button class="nav-btn" id="_nbMaps">🗺️ Maps</button><button class="nav-close" id="_nbClose">✕</button></div>`;
+
+    // Bind buttons with addEventListener (reliable, no scope issues)
+    document.getElementById('_nbTraffic').addEventListener('click',_navSetTraffic);
+    document.getElementById('_nbWaypoint').addEventListener('click',_navAddWaypoint);
+    document.getElementById('_nbAvoid').addEventListener('click',_showAvoidSettings);
+    document.getElementById('_nbMaps').addEventListener('click',_navOpenMaps);
+    document.getElementById('_nbClose').addEventListener('click',()=>{clearDirections();showToast('ยกเลิกการนำทาง');});
 }
 
-window._navSetTraffic=function(){
+function _navSetTraffic(){
     if(_navState.trafficFactor<1.2)_navState.trafficFactor=1.3;
     else if(_navState.trafficFactor<1.5)_navState.trafficFactor=1.6;
     else _navState.trafficFactor=1.0;
     _updateNavBanner();
     showToast(`สภาพจราจร: ${_trafficLabel()}`);
-};
+}
 
-window._navOpenMaps=function(){
+function _navOpenMaps(){
     if(!_navState.dest)return;
     const d=_navState.dest;
     let url=`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
@@ -1435,18 +1449,17 @@ window._navOpenMaps=function(){
         url+=`&waypoints=${_navState.waypoints.map(w=>`${w.lat},${w.lng}`).join('|')}`;
     }
     window.open(url,'_blank');
-};
+}
 
-window._navAddWaypoint=function(){
-    // Use map center as waypoint
+function _navAddWaypoint(){
+    if(!_navState.active)return;
     const c=map.getCenter();
     const name=prompt('ชื่อจุดแวะ (หรือเว้นว่าง):','');
     if(name===null)return;
     _navState.waypoints.push({lat:c.lat,lng:c.lng,name:name||`จุดแวะ ${_navState.waypoints.length+1}`});
     showToast(`📍 เพิ่มจุดแวะ: ${_navState.waypoints[_navState.waypoints.length-1].name}`);
-    // Reroute with new waypoints
     if(myLatLng)_navReroute(myLatLng.lat,myLatLng.lng);
-};
+}
 
 async function _navFetchRoute(fromLat,fromLng){
     // Build coordinates: from → waypoints → dest
@@ -1505,6 +1518,8 @@ window.doDirectionsTo = function(idx) {
     _navState.active=true;
     _navState.trafficFactor=1.0;
     _navState.waypoints=[];
+    // Add destination marker
+    _navDestMarker=L.marker([dest.lat,dest.lng]).addTo(map).bindPopup(`🏁 ${dest.name||'ปลายทาง'}`);
     showToast('📍 กำลังหาตำแหน่งและคำนวณเส้นทาง...');
 
     navigator.geolocation.getCurrentPosition(async pos => {
