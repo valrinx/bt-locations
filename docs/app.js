@@ -704,10 +704,10 @@ document.getElementById('listFilterClose').onclick=()=>{
 document.getElementById('listFilterClear').onclick=()=>{filterList='';document.getElementById('listFilterModalOverlay').classList.remove('open');update();};
 document.getElementById('listFilterModalOverlay').onclick=e=>{if(e.target===document.getElementById('listFilterModalOverlay')){document.getElementById('listFilterModalOverlay').classList.remove('open');update();}};
 
-// Rename list
+// Rename list — rename the currently selected list
 document.getElementById('listRenameBtn').onclick=()=>{
     if(!filterList){showToast('เลือกรายการก่อน',true);return;}
-    const newName=prompt(`เปลี่ยนชื่อรายการ "${filterList}" เป็น:`,filterList);
+    const newName=prompt(`เปลี่ยนชื่อ "${filterList}" เป็น:`,filterList);
     if(!newName||newName.trim()===filterList)return;
     const trimmed=newName.trim();
     pushUndo();
@@ -719,28 +719,37 @@ document.getElementById('listRenameBtn').onclick=()=>{
     document.getElementById('listFilterModalOverlay').classList.remove('open');
     update();
 };
-// Merge lists
+// Merge list — selected list → choose target from dropdown
 document.getElementById('listMergeBtn').onclick=()=>{
+    if(!filterList){showToast('เลือกรายการที่ต้องการรวมก่อน',true);return;}
     const counts={};locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
-    const lists=Object.keys(counts).sort();
-    if(lists.length<2){showToast('มีแค่รายการเดียว',true);return;}
-    const msg=lists.map((n,i)=>`${i+1}. ${n} (${counts[n]})`).join('\n');
-    const fromIdx=prompt(`รวมรายการไหน → ไปไหน?\n\nรายการทั้งหมด:\n${msg}\n\nใส่เลขรายการ "ต้นทาง" ที่จะรวม:`);
-    if(!fromIdx)return;
-    const toIdx=prompt('ใส่เลขรายการ "ปลายทาง" ที่จะรวมเข้า:');
-    if(!toIdx)return;
-    const fromList=lists[parseInt(fromIdx)-1];
-    const toList=lists[parseInt(toIdx)-1];
-    if(!fromList||!toList){showToast('เลขไม่ถูกต้อง',true);return;}
-    if(fromList===toList){showToast('เลือกคนละรายการ',true);return;}
-    pushUndo();
-    let count=0;
-    locations.forEach(l=>{if(l.list===fromList){l.list=toList;l.updatedAt=Date.now();count++;}});
-    showToast(`🔗 รวม "${fromList}" (${count} จุด) → "${toList}"`);
-    filterList=toList;
-    saveLocations();invalidateCache();
-    document.getElementById('listFilterModalOverlay').classList.remove('open');
-    update();
+    const others=Object.keys(counts).filter(n=>n!==filterList).sort();
+    if(!others.length){showToast('ไม่มีรายการอื่นให้รวม',true);return;}
+    // Build inline dropdown in the modal body
+    const container=document.getElementById('listChoiceList');
+    container.innerHTML=`
+        <div style="padding:12px;">
+            <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterList}" (${counts[filterList]} จุด) → ไปรายการไหน?</div>
+            <select id="_mergeListTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px;background:var(--surface);">
+                ${others.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button id="_mergeListConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
+                <button id="_mergeListCancel" style="flex:1;padding:10px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
+            </div>
+        </div>`;
+    document.getElementById('_mergeListCancel').onclick=()=>{document.getElementById('chipList').click();};
+    document.getElementById('_mergeListConfirm').onclick=()=>{
+        const toList=document.getElementById('_mergeListTarget').value;
+        pushUndo();
+        let count=0;
+        locations.forEach(l=>{if(l.list===filterList){l.list=toList;l.updatedAt=Date.now();count++;}});
+        showToast(`🔗 รวม "${filterList}" (${count} จุด) → "${toList}"`);
+        filterList=toList;
+        saveLocations();invalidateCache();
+        document.getElementById('listFilterModalOverlay').classList.remove('open');
+        update();
+    };
 };
 
 document.getElementById('chipCity').onclick=()=>{
@@ -763,10 +772,10 @@ document.getElementById('cityFilterClose').onclick=()=>{
 document.getElementById('cityFilterClear').onclick=()=>{filterCity='';document.getElementById('cityFilterModalOverlay').classList.remove('open');update();};
 document.getElementById('cityFilterModalOverlay').onclick=e=>{if(e.target===document.getElementById('cityFilterModalOverlay')){document.getElementById('cityFilterModalOverlay').classList.remove('open');update();}};
 
-// Rename city
+// Rename city — rename the currently selected city
 document.getElementById('cityRenameBtn').onclick=()=>{
     if(!filterCity){showToast('เลือกเขตก่อน',true);return;}
-    const newName=prompt(`เปลี่ยนชื่อเขต "${filterCity}" เป็น:`,filterCity);
+    const newName=prompt(`เปลี่ยนชื่อ "${filterCity}" เป็น:`,filterCity);
     if(!newName||newName.trim()===filterCity)return;
     const trimmed=newName.trim();
     pushUndo();
@@ -778,28 +787,36 @@ document.getElementById('cityRenameBtn').onclick=()=>{
     document.getElementById('cityFilterModalOverlay').classList.remove('open');
     update();
 };
-// Merge cities
+// Merge city — selected city → choose target from dropdown
 document.getElementById('cityMergeBtn').onclick=()=>{
+    if(!filterCity){showToast('เลือกเขตที่ต้องการรวมก่อน',true);return;}
     const counts={};locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
-    const cities=Object.keys(counts).sort();
-    if(cities.length<2){showToast('มีแค่เขตเดียว',true);return;}
-    const msg=cities.map((n,i)=>`${i+1}. ${n} (${counts[n]})`).join('\n');
-    const fromIdx=prompt(`รวมเขตไหน → ไปไหน?\n\nเขตทั้งหมด:\n${msg}\n\nใส่เลขเขต "ต้นทาง" ที่จะรวม:`);
-    if(!fromIdx)return;
-    const toIdx=prompt('ใส่เลขเขต "ปลายทาง" ที่จะรวมเข้า:');
-    if(!toIdx)return;
-    const fromCity=cities[parseInt(fromIdx)-1];
-    const toCity=cities[parseInt(toIdx)-1];
-    if(!fromCity||!toCity){showToast('เลขไม่ถูกต้อง',true);return;}
-    if(fromCity===toCity){showToast('เลือกคนละเขต',true);return;}
-    pushUndo();
-    let count=0;
-    locations.forEach(l=>{if(l.city===fromCity){l.city=toCity;l.updatedAt=Date.now();count++;}});
-    showToast(`🔗 รวม "${fromCity}" (${count} จุด) → "${toCity}"`);
-    filterCity=toCity;
-    saveLocations();invalidateCache();
-    document.getElementById('cityFilterModalOverlay').classList.remove('open');
-    update();
+    const others=Object.keys(counts).filter(n=>n!==filterCity).sort();
+    if(!others.length){showToast('ไม่มีเขตอื่นให้รวม',true);return;}
+    const container=document.getElementById('cityChoiceList');
+    container.innerHTML=`
+        <div style="padding:12px;">
+            <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterCity}" (${counts[filterCity]} จุด) → ไปเขตไหน?</div>
+            <select id="_mergeCityTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:14px;background:var(--surface);">
+                ${others.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
+            </select>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button id="_mergeCityConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
+                <button id="_mergeCityCancel" style="flex:1;padding:10px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
+            </div>
+        </div>`;
+    document.getElementById('_mergeCityCancel').onclick=()=>{document.getElementById('chipCity').click();};
+    document.getElementById('_mergeCityConfirm').onclick=()=>{
+        const toCity=document.getElementById('_mergeCityTarget').value;
+        pushUndo();
+        let count=0;
+        locations.forEach(l=>{if(l.city===filterCity){l.city=toCity;l.updatedAt=Date.now();count++;}});
+        showToast(`🔗 รวม "${filterCity}" (${count} จุด) → "${toCity}"`);
+        filterCity=toCity;
+        saveLocations();invalidateCache();
+        document.getElementById('cityFilterModalOverlay').classList.remove('open');
+        update();
+    };
 };
 
 document.getElementById('chipHeatmap').onclick=()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();};
@@ -1183,15 +1200,146 @@ document.getElementById('measureModalClear').onclick=()=>{if(measureLine){map.re
 document.getElementById('measureModalOverlay').onclick=e=>{if(e.target===document.getElementById('measureModalOverlay'))document.getElementById('measureModalOverlay').classList.remove('open');};
 
 // ════════════════════════════════════════════
-// DIRECTIONS (OSRM routing from current location)
+// DIRECTIONS (Live navigation + auto-reroute)
 // ════════════════════════════════════════════
-let _directionsLine = null;
+let _navState = {
+    active: false,
+    line: null,           // polyline on map
+    routeCoords: [],      // [[lat,lng],...]
+    dest: null,           // destination location
+    waypoints: [],        // intermediate waypoints [{lat,lng,name?}]
+    watchId: null,        // GPS watch
+    myMarker: null,       // position marker
+    totalDist: 0,         // route distance (m)
+    totalDur: 0,          // route duration (s)
+    lastReroute: 0,       // timestamp of last reroute
+    trafficFactor: 1.0,   // 1.0=normal, 1.3=moderate, 1.6=heavy
+};
+const REROUTE_THRESHOLD = 80; // meters off-route to trigger reroute
+const REROUTE_COOLDOWN = 15000; // ms between reroutes
+const ARRIVAL_THRESHOLD = 50; // meters to consider "arrived"
+
 function clearDirections(){
-    if(_directionsLine){map.removeLayer(_directionsLine);_directionsLine=null;}
+    if(_navState.line){map.removeLayer(_navState.line);_navState.line=null;}
+    if(_navState.watchId!==null){navigator.geolocation.clearWatch(_navState.watchId);_navState.watchId=null;}
+    if(_navState.myMarker){map.removeLayer(_navState.myMarker);_navState.myMarker=null;}
+    _navState.active=false;
+    _navState.waypoints=[];
+    _navState.routeCoords=[];
     const banner=document.getElementById('directionsBanner');
     if(banner)banner.remove();
 }
 window.clearDirections=clearDirections;
+
+function _trafficLabel(){
+    if(_navState.trafficFactor>=1.5)return '🔴 รถติดมาก';
+    if(_navState.trafficFactor>=1.2)return '🟡 รถติดเล็กน้อย';
+    return '🟢 ปกติ';
+}
+
+function _updateNavBanner(){
+    if(!_navState.active)return;
+    let banner=document.getElementById('directionsBanner');
+    if(!banner){
+        banner=document.createElement('div');
+        banner.id='directionsBanner';
+        banner.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:1500;background:var(--surface);padding:10px 14px;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.35);font-size:13px;font-family:inherit;min-width:200px;max-width:90vw;';
+        document.body.appendChild(banner);
+    }
+    const distKm=(_navState.totalDist/1000).toFixed(1);
+    const etaMins=Math.round((_navState.totalDur*_navState.trafficFactor)/60);
+    const destName=_navState.dest?.name||'ปลายทาง';
+    const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--text2);margin-top:4px;">📍 ${_navState.waypoints.length} จุดแวะ</div>`:'';
+    banner.innerHTML=`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-size:16px;">🧭</span>
+            <strong>${destName}</strong>
+            <span style="margin-left:auto;font-size:11px;">${_trafficLabel()}</span>
+        </div>
+        <div style="display:flex;gap:12px;font-size:13px;">
+            <span>📏 ${distKm} km</span>
+            <span>⏱️ ~${etaMins} นาที</span>
+        </div>
+        ${wpText}
+        <div style="display:flex;gap:6px;margin-top:8px;">
+            <button onclick="_navSetTraffic()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;">🚗 สภาพจราจร</button>
+            <button onclick="_navAddWaypoint()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;">📍 เพิ่มจุดแวะ</button>
+            <button onclick="_navOpenMaps()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;">🗺️ Maps</button>
+            <button onclick="clearDirections()" style="padding:6px 10px;border:none;background:#ea4335;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;">✕ หยุด</button>
+        </div>`;
+}
+
+window._navSetTraffic=function(){
+    if(_navState.trafficFactor<1.2)_navState.trafficFactor=1.3;
+    else if(_navState.trafficFactor<1.5)_navState.trafficFactor=1.6;
+    else _navState.trafficFactor=1.0;
+    _updateNavBanner();
+    showToast(`สภาพจราจร: ${_trafficLabel()}`);
+};
+
+window._navOpenMaps=function(){
+    if(!_navState.dest)return;
+    const d=_navState.dest;
+    let url=`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
+    if(_navState.waypoints.length){
+        url+=`&waypoints=${_navState.waypoints.map(w=>`${w.lat},${w.lng}`).join('|')}`;
+    }
+    window.open(url,'_blank');
+};
+
+window._navAddWaypoint=function(){
+    // Use map center as waypoint
+    const c=map.getCenter();
+    const name=prompt('ชื่อจุดแวะ (หรือเว้นว่าง):','');
+    if(name===null)return;
+    _navState.waypoints.push({lat:c.lat,lng:c.lng,name:name||`จุดแวะ ${_navState.waypoints.length+1}`});
+    showToast(`📍 เพิ่มจุดแวะ: ${_navState.waypoints[_navState.waypoints.length-1].name}`);
+    // Reroute with new waypoints
+    if(myLatLng)_navReroute(myLatLng.lat,myLatLng.lng);
+};
+
+async function _navFetchRoute(fromLat,fromLng){
+    // Build coordinates: from → waypoints → dest
+    const points=[[fromLng,fromLat]];
+    _navState.waypoints.forEach(w=>points.push([w.lng,w.lat]));
+    points.push([_navState.dest.lng,_navState.dest.lat]);
+
+    const coordStr=points.map(c=>c[0]+','+c[1]).join(';');
+    const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true`;
+    const res=await fetch(url);
+    const data=await res.json();
+    if(!data.routes||!data.routes.length)throw new Error('No route');
+    return data.routes[0];
+}
+
+async function _navReroute(lat,lng){
+    _navState.lastReroute=Date.now();
+    try{
+        const route=await _navFetchRoute(lat,lng);
+        const coords=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+        _navState.routeCoords=coords;
+        _navState.totalDist=route.distance;
+        _navState.totalDur=route.duration;
+        if(_navState.line)map.removeLayer(_navState.line);
+        _navState.line=L.polyline(coords,{color:'#1a73e8',weight:5,opacity:0.85}).addTo(map);
+        _updateNavBanner();
+    }catch(e){
+        console.warn('Reroute failed:',e);
+    }
+}
+
+function _distToRoute(lat,lng,routeCoords){
+    // Min distance from point to any segment in route
+    let minD=Infinity;
+    // Sample every ~5th point for performance
+    const step=Math.max(1,Math.floor(routeCoords.length/200));
+    for(let i=0;i<routeCoords.length;i+=step){
+        const d=haversine(lat,lng,routeCoords[i][0],routeCoords[i][1]);
+        if(d<minD)minD=d;
+    }
+    return minD;
+}
+
 window.doDirectionsTo = function(idx) {
     const dest = locations[idx];
     if (!dest) { showToast('ไม่พบสถานที่', true); return; }
@@ -1203,45 +1351,63 @@ window.doDirectionsTo = function(idx) {
         return;
     }
 
-    showToast('📍 กำลังหาตำแหน่งของคุณ...');
-    navigator.geolocation.getCurrentPosition(pos => {
-        const from = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
+    _navState.dest=dest;
+    _navState.active=true;
+    _navState.trafficFactor=1.0;
+    _navState.waypoints=[];
+    showToast('📍 กำลังหาตำแหน่งและคำนวณเส้นทาง...');
 
-        fetch(url).then(r => r.json()).then(data => {
-            if (!data.routes || !data.routes.length) {
-                showToast('❌ หาเส้นทางไม่ได้', true);
-                window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-                return;
-            }
-            const route = data.routes[0];
-            const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-            const distKm = (route.distance / 1000).toFixed(1);
-            const mins = Math.round(route.duration / 60);
+    navigator.geolocation.getCurrentPosition(async pos => {
+        const fromLat=pos.coords.latitude, fromLng=pos.coords.longitude;
+        myLatLng={lat:fromLat,lng:fromLng};
 
-            if (_directionsLine) map.removeLayer(_directionsLine);
-            _directionsLine = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.8 }).addTo(map);
-            map.fitBounds(_directionsLine.getBounds(), { padding: [60, 60] });
+        try{
+            await _navReroute(fromLat,fromLng);
+            map.fitBounds(_navState.line.getBounds(),{padding:[80,80]});
 
-            showToast(`🧭 ${dest.name || 'ปลายทาง'}: ${distKm} km · ~${mins} นาที`, false, true);
-            // Show dismissible banner
-            let banner=document.getElementById('directionsBanner');
-            if(!banner){
-                banner=document.createElement('div');
-                banner.id='directionsBanner';
-                banner.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:1500;background:var(--surface);padding:10px 16px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;font-size:13px;font-family:inherit;';
-                document.body.appendChild(banner);
-            }
-            banner.innerHTML=`<span>🧭 ${dest.name||'ปลายทาง'}: ${distKm} km · ~${mins} นาที</span><button onclick="clearDirections()" style="border:none;background:none;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>`;
-            banner.classList.add('show');
-        }).catch(() => {
-            showToast('❌ OSRM ล้มเหลว — เปิด Google Maps', true);
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-        });
+            // Start live tracking
+            _navState.watchId=navigator.geolocation.watchPosition(p=>{
+                const lat=p.coords.latitude, lng=p.coords.longitude;
+                myLatLng={lat,lng};
+
+                // Update position marker
+                if(!_navState.myMarker){
+                    _navState.myMarker=L.circleMarker([lat,lng],{radius:8,color:'#fff',fillColor:'#4285f4',fillOpacity:1,weight:3}).addTo(map);
+                }else{
+                    _navState.myMarker.setLatLng([lat,lng]);
+                }
+
+                // Check arrival
+                const distToDest=haversine(lat,lng,dest.lat,dest.lng);
+                if(distToDest<ARRIVAL_THRESHOLD){
+                    showToast(`🎉 ถึงแล้ว! ${dest.name||'ปลายทาง'}`,false,true);
+                    clearDirections();
+                    return;
+                }
+
+                // Check if off-route → reroute
+                if(_navState.routeCoords.length>0){
+                    const distOff=_distToRoute(lat,lng,_navState.routeCoords);
+                    if(distOff>REROUTE_THRESHOLD && Date.now()-_navState.lastReroute>REROUTE_COOLDOWN){
+                        showToast('🔄 ออกนอกเส้นทาง — กำลังหาเส้นทางใหม่...');
+                        _navReroute(lat,lng);
+                    }
+                }
+
+                // Follow user position
+                map.panTo([lat,lng],{animate:true,duration:0.5});
+            }, err=>console.warn('Nav GPS error:',err), {enableHighAccuracy:true,maximumAge:3000,timeout:10000});
+
+        }catch(e){
+            showToast('❌ หาเส้นทางไม่ได้ — เปิด Google Maps',true);
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`,'_blank');
+            _navState.active=false;
+        }
     }, err => {
         console.warn('GPS error:', err);
         showToast('📍 ไม่สามารถหาตำแหน่ง — เปิด Google Maps');
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
+        _navState.active=false;
     }, { enableHighAccuracy: true, timeout: 10000 });
 };
 
