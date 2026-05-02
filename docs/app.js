@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.4.6';
+const APP_VERSION = 'v5.4.7';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1668,6 +1668,8 @@ async function _routeFetchOSRM(waypoints){
 async function _routeDraw(){
     if(routeLine){map.removeLayer(routeLine);}
     if(_routeStops.length<1)return;
+    // Remove normal markers/clusters
+    if(map.hasLayer(markerCluster))map.removeLayer(markerCluster);
 
     const group=L.layerGroup();
     const waypoints=[];
