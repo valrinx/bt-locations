@@ -1202,6 +1202,50 @@ document.getElementById('measureModalOverlay').onclick=e=>{if(e.target===documen
 // ════════════════════════════════════════════
 // DIRECTIONS (Live navigation + auto-reroute)
 // ════════════════════════════════════════════
+// Route avoidance preferences (shared by nav + route planning)
+let _routeAvoid = JSON.parse(localStorage.getItem('routeAvoid')||'{}');
+// Keys: toll, ferry, motorway  (OSRM exclude values)
+function _saveRouteAvoid(){localStorage.setItem('routeAvoid',JSON.stringify(_routeAvoid));}
+function _osrmExcludeParam(){
+    const ex=[];
+    if(_routeAvoid.toll)ex.push('toll');
+    if(_routeAvoid.ferry)ex.push('ferry');
+    if(_routeAvoid.motorway)ex.push('motorway');
+    return ex.length?`&exclude=${ex.join(',')}`:'';
+}
+window._showAvoidSettings=function(){
+    const html=`
+        <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2000;background:var(--surface);padding:20px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.4);min-width:260px;font-family:inherit;" id="_avoidModal">
+            <div style="font-weight:600;font-size:15px;margin-bottom:12px;">⚙️ ตั้งค่าเส้นทาง</div>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;cursor:pointer;">
+                <input type="checkbox" id="_avToll" ${_routeAvoid.toll?'checked':''}> 🚧 หลีกเลี่ยงทางด่วน/เก็บเงิน
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;cursor:pointer;">
+                <input type="checkbox" id="_avFerry" ${_routeAvoid.ferry?'checked':''}> ⛴️ หลีกเลี่ยงทางเรือ/เรือข้ามฟาก
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;cursor:pointer;">
+                <input type="checkbox" id="_avMotorway" ${_routeAvoid.motorway?'checked':''}> 🛣️ หลีกเลี่ยงทางหลวง/มอเตอร์เวย์
+            </label>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button onclick="_applyAvoidSettings()" style="flex:1;padding:8px;border:none;background:#1a73e8;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ บันทึก</button>
+                <button onclick="document.getElementById('_avoidModal').remove();document.getElementById('_avoidBackdrop').remove();" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
+            </div>
+        </div>
+        <div id="_avoidBackdrop" onclick="document.getElementById('_avoidModal').remove();this.remove();" style="position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,.3);"></div>`;
+    document.body.insertAdjacentHTML('beforeend',html);
+};
+window._applyAvoidSettings=function(){
+    _routeAvoid.toll=document.getElementById('_avToll').checked;
+    _routeAvoid.ferry=document.getElementById('_avFerry').checked;
+    _routeAvoid.motorway=document.getElementById('_avMotorway').checked;
+    _saveRouteAvoid();
+    document.getElementById('_avoidModal').remove();
+    document.getElementById('_avoidBackdrop').remove();
+    showToast('⚙️ บันทึกการตั้งค่าเส้นทางแล้ว');
+    // Reroute if nav active
+    if(_navState.active&&myLatLng)_navReroute(myLatLng.lat,myLatLng.lng);
+};
+
 let _navState = {
     active: false,
     line: null,           // polyline on map
@@ -1261,11 +1305,12 @@ function _updateNavBanner(){
             <span>⏱️ ~${etaMins} นาที</span>
         </div>
         ${wpText}
-        <div style="display:flex;gap:6px;margin-top:8px;">
-            <button onclick="_navSetTraffic()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;">🚗 สภาพจราจร</button>
-            <button onclick="_navAddWaypoint()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;">📍 เพิ่มจุดแวะ</button>
-            <button onclick="_navOpenMaps()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;">🗺️ Maps</button>
-            <button onclick="clearDirections()" style="padding:6px 10px;border:none;background:#ea4335;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;">✕ หยุด</button>
+        <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;">
+            <button onclick="_navSetTraffic()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">🚗 จราจร</button>
+            <button onclick="_navAddWaypoint()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">📍 จุดแวะ</button>
+            <button onclick="_showAvoidSettings()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">⚙️ หลีกเลี่ยง</button>
+            <button onclick="_navOpenMaps()" style="flex:1;padding:5px 2px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:10px;min-width:0;">🗺️ Maps</button>
+            <button onclick="clearDirections()" style="padding:5px 8px;border:none;background:#ea4335;color:#fff;border-radius:8px;cursor:pointer;font-size:10px;">✕</button>
         </div>`;
 }
 
@@ -1305,7 +1350,7 @@ async function _navFetchRoute(fromLat,fromLng){
     points.push([_navState.dest.lng,_navState.dest.lat]);
 
     const coordStr=points.map(c=>c[0]+','+c[1]).join(';');
-    const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true`;
+    const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
     const res=await fetch(url);
     const data=await res.json();
     if(!data.routes||!data.routes.length)throw new Error('No route');
@@ -1412,109 +1457,121 @@ window.doDirectionsTo = function(idx) {
 };
 
 // ════════════════════════════════════════════
-// ROUTE PLANNING (Nearest-Neighbor TSP)
+// ROUTE PLANNING (Smart TSP + Interactive Editor)
 // ════════════════════════════════════════════
 let routeLine=null, routeMode=false;
+let _routeStops=[]; // ordered stops [{lat,lng,name,list,city,...}]
+let _routeDist=0, _routeDur=0, _routeUseOSRM=false;
 
 function clearRoute(){
     if(routeLine){map.removeLayer(routeLine);routeLine=null;}
     routeMode=false;
+    _routeStops=[];
     document.getElementById('chipRoute').classList.remove('active');
 }
 
-async function doRoute(){
-    const filtered=getFiltered();
-    if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
-    if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
-
-    showToast('🛤️ กำลังวางแผนเส้นทาง...');
-
-    // Start from GPS location or first point
-    let startLat=myLatLng?myLatLng.lat:filtered[0].lat;
-    let startLng=myLatLng?myLatLng.lng:filtered[0].lng;
-
-    // Nearest-neighbor TSP ordering
-    const remaining=[...filtered];
+// ── TSP solver: Nearest-Neighbor + 2-opt improvement ──
+function _tspSolve(points, startLat, startLng){
+    // Nearest-neighbor initial solution
+    const remaining=[...points];
     const ordered=[];
-    let curLat=startLat, curLng=startLng;
+    let cLat=startLat, cLng=startLng;
     while(remaining.length>0){
-        let bestIdx=0, bestDist=Infinity;
+        let bi=0, bd=Infinity;
         for(let i=0;i<remaining.length;i++){
-            const d=haversine(curLat,curLng,remaining[i].lat,remaining[i].lng);
-            if(d<bestDist){bestDist=d;bestIdx=i;}
+            const d=haversine(cLat,cLng,remaining[i].lat,remaining[i].lng);
+            if(d<bd){bd=d;bi=i;}
         }
-        const next=remaining.splice(bestIdx,1)[0];
+        const next=remaining.splice(bi,1)[0];
         ordered.push(next);
-        curLat=next.lat;curLng=next.lng;
+        cLat=next.lat;cLng=next.lng;
     }
+    // 2-opt improvement (up to 50 points for performance)
+    if(ordered.length<=50){
+        const dist=(a,b)=>haversine(a.lat,a.lng,b.lat,b.lng);
+        let improved=true, iter=0;
+        while(improved&&iter<500){
+            improved=false;iter++;
+            for(let i=0;i<ordered.length-1;i++){
+                for(let j=i+2;j<ordered.length;j++){
+                    const a=i===0?{lat:startLat,lng:startLng}:ordered[i-1];
+                    const d1=dist(a,ordered[i])+dist(ordered[j],j+1<ordered.length?ordered[j+1]:{lat:ordered[j].lat,lng:ordered[j].lng});
+                    const d2=dist(a,ordered[j])+dist(ordered[i],j+1<ordered.length?ordered[j+1]:{lat:ordered[j].lat,lng:ordered[j].lng});
+                    if(d2<d1-0.001){
+                        // Reverse segment i..j
+                        const seg=ordered.slice(i,j+1).reverse();
+                        ordered.splice(i,j-i+1,...seg);
+                        improved=true;
+                    }
+                }
+            }
+        }
+    }
+    return ordered;
+}
 
-    // Build waypoints: [GPS] + ordered stops
+// ── OSRM fetch for route planning (chunked, with avoidance) ──
+async function _routeFetchOSRM(waypoints){
+    const CHUNK=25;
+    const allCoords=[];
+    let totalDist=0, totalDur=0;
+    for(let i=0;i<waypoints.length-1;i+=CHUNK-1){
+        const chunk=waypoints.slice(i, Math.min(i+CHUNK, waypoints.length));
+        if(chunk.length<2)break;
+        const coordStr=chunk.map(c=>c[0]+','+c[1]).join(';');
+        const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson${_osrmExcludeParam()}`;
+        const res=await fetch(url);
+        const data=await res.json();
+        if(data.routes&&data.routes.length){
+            const r=data.routes[0];
+            const coords=r.geometry.coordinates.map(c=>[c[1],c[0]]);
+            if(allCoords.length&&coords.length)coords.shift();
+            allCoords.push(...coords);
+            totalDist+=r.distance;
+            totalDur+=r.duration;
+        }else{throw new Error('No route');}
+    }
+    return {coords:allCoords,distance:totalDist,duration:totalDur};
+}
+
+// ── Draw route on map ──
+async function _routeDraw(){
+    if(routeLine){map.removeLayer(routeLine);}
+    if(_routeStops.length<1)return;
+
+    const group=L.layerGroup();
     const waypoints=[];
     if(myLatLng)waypoints.push([myLatLng.lng,myLatLng.lat]);
-    ordered.forEach(l=>waypoints.push([l.lng,l.lat]));
+    _routeStops.forEach(l=>waypoints.push([l.lng,l.lat]));
 
-    // Try OSRM real road routing (max ~100 waypoints per request)
-    let roadCoords=null, totalDistM=0, totalDurS=0, useOSRM=false;
-    const OSRM_LIMIT = 100;
-
-    if(waypoints.length <= OSRM_LIMIT){
+    _routeUseOSRM=false;
+    if(waypoints.length<=100){
         try{
-            // Split into chunks of 25 waypoints (OSRM performs better)
-            const CHUNK=25;
-            const allCoords=[];
-            totalDistM=0; totalDurS=0;
-            for(let i=0;i<waypoints.length-1;i+=CHUNK-1){
-                const chunk=waypoints.slice(i, Math.min(i+CHUNK, waypoints.length));
-                if(chunk.length<2)break;
-                const coordStr=chunk.map(c=>c[0]+','+c[1]).join(';');
-                const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson`;
-                const res=await fetch(url);
-                const data=await res.json();
-                if(data.routes&&data.routes.length){
-                    const r=data.routes[0];
-                    const coords=r.geometry.coordinates.map(c=>[c[1],c[0]]);
-                    // Avoid duplicate point at chunk boundaries
-                    if(allCoords.length&&coords.length)coords.shift();
-                    allCoords.push(...coords);
-                    totalDistM+=r.distance;
-                    totalDurS+=r.duration;
-                }else{throw new Error('No route');}
-            }
-            roadCoords=allCoords;
-            useOSRM=true;
+            const result=await _routeFetchOSRM(waypoints);
+            L.polyline(result.coords,{color:'#4285f4',weight:4,opacity:0.85}).addTo(group);
+            _routeDist=result.distance;
+            _routeDur=result.duration;
+            _routeUseOSRM=true;
         }catch(e){
-            console.warn('OSRM route failed, using straight lines:',e.message);
+            console.warn('OSRM route failed:',e.message);
         }
     }
 
-    // Fallback: straight-line distance
-    if(!useOSRM){
-        totalDistM=0;
-        if(myLatLng)totalDistM+=haversine(myLatLng.lat,myLatLng.lng,ordered[0].lat,ordered[0].lng);
-        for(let i=0;i<ordered.length-1;i++){
-            totalDistM+=haversine(ordered[i].lat,ordered[i].lng,ordered[i+1].lat,ordered[i+1].lng);
-        }
-    }
-
-    // Draw on map
-    if(routeLine){map.removeLayer(routeLine);}
-    const group=L.layerGroup();
-
-    if(useOSRM&&roadCoords){
-        // Real road polyline
-        L.polyline(roadCoords,{color:'#4285f4',weight:4,opacity:0.85}).addTo(group);
-    }else{
-        // Straight-line fallback (dashed)
+    if(!_routeUseOSRM){
+        _routeDist=0;
         const pts=[];
-        if(myLatLng)pts.push([myLatLng.lat,myLatLng.lng]);
-        ordered.forEach(l=>pts.push([l.lat,l.lng]));
+        if(myLatLng){pts.push([myLatLng.lat,myLatLng.lng]);_routeDist+=haversine(myLatLng.lat,myLatLng.lng,_routeStops[0].lat,_routeStops[0].lng);}
+        _routeStops.forEach((l,i)=>{
+            pts.push([l.lat,l.lng]);
+            if(i>0)_routeDist+=haversine(_routeStops[i-1].lat,_routeStops[i-1].lng,l.lat,l.lng);
+        });
         L.polyline(pts,{color:'#4285f4',weight:3,opacity:0.8,dashArray:'8,6'}).addTo(group);
+        _routeDur=0;
     }
 
-    // Numbered markers
     const allPts=[];
     if(myLatLng)allPts.push([myLatLng.lat,myLatLng.lng]);
-    ordered.forEach((loc,i)=>{
+    _routeStops.forEach((loc,i)=>{
         allPts.push([loc.lat,loc.lng]);
         L.circleMarker([loc.lat,loc.lng],{radius:10,color:'#fff',fillColor:'#4285f4',fillOpacity:1,weight:2})
             .bindTooltip(String(i+1),{permanent:true,direction:'center',className:'route-number-tooltip'})
@@ -1523,24 +1580,134 @@ async function doRoute(){
 
     routeLine=group.addTo(map);
     map.fitBounds(L.latLngBounds(allPts),{padding:[60,60]});
-    routeMode=true;
-    document.getElementById('chipRoute').classList.add('active');
+    _renderRoutePanel();
+}
 
-    // Format summary
-    const distText=formatDist(totalDistM);
-    const etaText=useOSRM?` · ~${Math.round(totalDurS/60)} นาที`:'';
-    const modeText=useOSRM?'🛣️':'📏';
-    showToast(`${modeText} เส้นทาง ${ordered.length} จุด · ${distText}${etaText}`,false,true);
-
-    // Show list panel with route order
+// ── Interactive route panel (replaces list panel) ──
+function _renderRoutePanel(){
     const lp=document.getElementById('listPanel');
     lp.classList.add('open');
-    renderListPanel(ordered);
-    document.getElementById('listPanelTitle').textContent=`${modeText} เส้นทาง · ${distText}${etaText}`;
+    const distText=formatDist(_routeDist);
+    const etaMins=_routeUseOSRM?Math.round(_routeDur/60):0;
+    const etaTraffic=_routeUseOSRM?Math.round((_routeDur*(_navState.trafficFactor||1))/60):0;
+    const modeText=_routeUseOSRM?'🛣️':'📏';
+    const etaText=_routeUseOSRM?` · ~${etaMins} นาที`:'';
+
+    document.getElementById('listPanelTitle').textContent=`${modeText} เส้นทาง ${_routeStops.length} จุด · ${distText}${etaText}`;
+
+    const body=document.getElementById('listBody');
+    body.innerHTML=`
+        <div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="_routeOptimize()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;min-width:0;">🧠 จัดลำดับฉลาด</button>
+            <button onclick="_showAvoidSettings()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;min-width:0;">⚙️ หลีกเลี่ยง</button>
+            <button onclick="_routeAddStop()" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:11px;min-width:0;">➕ เพิ่มจุด</button>
+            <button onclick="_routeNavigate()" style="flex:1;padding:6px;border:none;background:#1a73e8;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;min-width:0;">🧭 นำทาง</button>
+        </div>
+        <div id="_routeStopList" style="padding:0 8px 8px;">
+            ${_routeStops.map((s,i)=>`
+                <div style="display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid var(--border);">
+                    <span style="font-size:14px;font-weight:700;color:#4285f4;min-width:22px;text-align:center;">${i+1}</span>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name||'ไม่มีชื่อ'}</div>
+                        <div style="font-size:11px;color:var(--text3);">${s.list||''}${s.city?' · '+s.city:''}</div>
+                    </div>
+                    <button onclick="_routeMoveStop(${i},-1)" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;" ${i===0?'disabled':''}>▲</button>
+                    <button onclick="_routeMoveStop(${i},1)" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;" ${i===_routeStops.length-1?'disabled':''}>▼</button>
+                    <button onclick="_routeRemoveStop(${i})" style="border:none;background:none;cursor:pointer;font-size:14px;padding:2px;color:#ea4335;">✕</button>
+                </div>
+            `).join('')}
+        </div>`;
+}
+
+// ── Route actions ──
+window._routeOptimize=async function(){
+    if(_routeStops.length<3){showToast('ต้องมีอย่างน้อย 3 จุดถึงจะจัดลำดับได้',true);return;}
+    showToast('🧠 กำลังคำนวณเส้นทางที่ดีที่สุด...');
+    const startLat=myLatLng?myLatLng.lat:_routeStops[0].lat;
+    const startLng=myLatLng?myLatLng.lng:_routeStops[0].lng;
+    _routeStops=_tspSolve(_routeStops, startLat, startLng);
+    await _routeDraw();
+    showToast('🧠 จัดลำดับเส้นทางใหม่แล้ว!',false,true);
+};
+
+window._routeMoveStop=async function(idx,dir){
+    const newIdx=idx+dir;
+    if(newIdx<0||newIdx>=_routeStops.length)return;
+    const tmp=_routeStops[idx];
+    _routeStops[idx]=_routeStops[newIdx];
+    _routeStops[newIdx]=tmp;
+    await _routeDraw();
+};
+
+window._routeRemoveStop=async function(idx){
+    _routeStops.splice(idx,1);
+    if(_routeStops.length<1){clearRoute();closeListPanel();showToast('ล้างเส้นทาง');return;}
+    await _routeDraw();
+};
+
+window._routeAddStop=function(){
+    // Show search-like UI for picking a stop
+    const q=prompt('พิมพ์ชื่อสถานที่หรือพิกัด (lat,lng):','');
+    if(!q)return;
+    // Try coords
+    const coords=parseLatLng(q);
+    if(coords){
+        _routeStops.push({lat:coords.lat,lng:coords.lng,name:`จุดกำหนด (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,list:'',city:''});
+        _routeDraw();
+        return;
+    }
+    // Search locations
+    const matches=locations.filter(l=>(l.name||'').toLowerCase().includes(q.toLowerCase())||l.list.toLowerCase().includes(q.toLowerCase()));
+    if(!matches.length){showToast('ไม่พบสถานที่',true);return;}
+    if(matches.length===1){
+        _routeStops.push(matches[0]);
+        _routeDraw();
+        showToast(`➕ เพิ่ม "${matches[0].name||matches[0].list}"`);
+        return;
+    }
+    // Multiple matches → pick from list
+    const msg=matches.slice(0,10).map((m,i)=>`${i+1}. ${m.name||m.list}`).join('\n');
+    const pick=prompt(`พบ ${matches.length} จุด เลือกเลข:\n${msg}`);
+    if(!pick)return;
+    const sel=matches[parseInt(pick)-1];
+    if(sel){
+        _routeStops.push(sel);
+        _routeDraw();
+        showToast(`➕ เพิ่ม "${sel.name||sel.list}"`);
+    }
+};
+
+window._routeNavigate=function(){
+    // Open Google Maps with all stops
+    if(!_routeStops.length)return;
+    const last=_routeStops[_routeStops.length-1];
+    let url=`https://www.google.com/maps/dir/?api=1&destination=${last.lat},${last.lng}`;
+    if(_routeStops.length>1){
+        const wps=_routeStops.slice(0,-1).map(s=>`${s.lat},${s.lng}`).join('|');
+        url+=`&waypoints=${wps}`;
+    }
+    if(myLatLng)url+=`&origin=${myLatLng.lat},${myLatLng.lng}`;
+    window.open(url,'_blank');
+};
+
+async function doRoute(){
+    const filtered=getFiltered();
+    if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
+    if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
+
+    showToast('🛤️ กำลังวางแผนเส้นทาง...');
+
+    const startLat=myLatLng?myLatLng.lat:filtered[0].lat;
+    const startLng=myLatLng?myLatLng.lng:filtered[0].lng;
+
+    _routeStops=_tspSolve(filtered, startLat, startLng);
+    routeMode=true;
+    document.getElementById('chipRoute').classList.add('active');
+    await _routeDraw();
 }
 
 document.getElementById('chipRoute').onclick=()=>{
-    if(routeMode){clearRoute();showToast('ปิดเส้นทาง');}
+    if(routeMode){clearRoute();closeListPanel();showToast('ปิดเส้นทาง');}
     else doRoute();
 };
 
