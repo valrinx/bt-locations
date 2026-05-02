@@ -352,13 +352,14 @@ html = f'''<!DOCTYPE html>
             }}),
             'Terrain': L.tileLayer('https://{{s}}.tile.opentopomap.org/{{z}}/{{x}}/{{y}}.png', {{
                 attribution: '&copy; OpenTopoMap', maxZoom: 17
-            }}),
-            'Dark': L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
-                attribution: '&copy; CartoDB', maxZoom: 19
             }})
         }};
+        const darkTile = L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+            attribution: '&copy; CartoDB', maxZoom: 19
+        }});
         const tileNames = Object.keys(tileLayers);
         let currentTileIdx = 0;
+        let savedTileIdx = 0;
         tileLayers[tileNames[0]].addTo(map);
 
         let markerCluster = L.markerClusterGroup();
@@ -657,14 +658,29 @@ html = f'''<!DOCTYPE html>
 
         // === DARK MODE ===
         document.getElementById('btnDark').onclick = () => {{
-            document.body.classList.toggle('dark');
-            const isDark = document.body.classList.contains('dark');
+            const isDark = !document.body.classList.contains('dark');
+            document.body.classList.toggle('dark', isDark);
             document.getElementById('btnDark').textContent = isDark ? '☀️' : '🌙';
+            if (isDark) {{
+                savedTileIdx = currentTileIdx;
+                map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
+                darkTile.addTo(map);
+            }} else {{
+                map.removeLayer(darkTile);
+                tileLayers[tileNames[savedTileIdx]].addTo(map);
+                currentTileIdx = savedTileIdx;
+            }}
         }};
 
         // === MAP TILE ===
         document.getElementById('btnTile').onclick = () => {{
-            map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
+            if (document.body.classList.contains('dark')) {{
+                map.removeLayer(darkTile);
+                document.body.classList.remove('dark');
+                document.getElementById('btnDark').textContent = '🌙';
+            }} else {{
+                map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
+            }}
             currentTileIdx = (currentTileIdx + 1) % tileNames.length;
             tileLayers[tileNames[currentTileIdx]].addTo(map);
             document.getElementById('btnTile').textContent = tileNames[currentTileIdx];
