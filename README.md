@@ -141,20 +141,20 @@ python -m http.server 8080
 - [x] **Cluster click → zoom + แสดง list** — ✅ เสร็จแล้ว
 - [x] **ค้นหาตามพิกัด** — ✅ เสร็จแล้ว
 - [x] **Permalink per location** — ✅ เสร็จแล้ว
-- [ ] **Photo/attachment support** — แนบรูปภาพให้แต่ละจุดได้
+- [x] **Photo/attachment support** — ✅ เสร็จแล้ว (แนบรูป + resize + แสดงใน place card)
 
 ### 🟢 Nice-to-have (ฟีเจอร์เพิ่ม)
 
 - [x] **Export เป็น image** — ✅ เสร็จแล้ว (PNG พร้อม overlay ข้อมูล)
 - [ ] **Route planning** — เลือกหลายจุดแล้วคำนวณเส้นทางที่สั้นที่สุด (TSP แบบง่าย)
-- [ ] **Tag/label system** — เพิ่ม tag อิสระต่อจุด นอกเหนือจาก list/city
+- [x] **Tag/label system** — ✅ เสร็จแล้ว (tags ต่อจุด + ค้นหาได้)
 - [ ] **Changelog UI** — ดู history การแก้ไขข้อมูลแต่ละจุดในหน้าเว็บ
 - [ ] **Multi-user collaboration** — sync แบบ realtime ผ่าน GitHub หรือ backend
 
 ### 🔧 ด้านระบบ / code quality
 
 - [x] **Unit test สำหรับ Python scripts** — ✅ เสร็จแล้ว (9 tests, validate_data + auto_city)
-- [ ] **Lint + format** — เพิ่ม pre-commit hook (black, flake8 สำหรับ Python; ESLint สำหรับ JS)
+- [x] **Lint + format** — ✅ เสร็จแล้ว (pre-commit: black, flake8, trailing-whitespace, check-json)
 - [ ] **แยก JS ออกจาก HTML** — refactor `docs/index.html` ให้โหลด `app.js` แยก (ตอนนี้แยกแค่ data เป็น `locations.js`)
 - [x] **Versioning สำหรับ locations.js** — ✅ เสร็จแล้ว (timestamp cache-busting)
 
