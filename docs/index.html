@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BT Locations</title>
+    <meta name="theme-color" content="#1a73e8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -820,7 +826,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="locations.js"></script>
+    <script>document.write('<scr'+'ipt src="locations.js?v='+Date.now()+'"><\/scr'+'ipt>');</script>
     <script>
     // ════════════════════════════════════════════
     // STATE
@@ -1139,6 +1145,10 @@
                     <span class="place-action-icon">📏</span>
                     <span class="place-action-label">วัดระยะ</span>
                 </button>
+                <button class="place-action-btn" onclick="shareLocation(${loc.lat},${loc.lng},'${(loc.name||'BT').replace(/'/g,'\\&#39;')}')">
+                    <span class="place-action-icon">🔗</span>
+                    <span class="place-action-label">แชร์</span>
+                </button>
                 <button class="place-action-btn red" onclick="doConfirmDelete(${idx})">
                     <span class="place-action-icon">🗑️</span>
                     <span class="place-action-label">ลบ</span>
@@ -1234,11 +1244,28 @@
     });
     btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_lastFilteredKey=null;update();};
 
+    function parseLatLng(q) {
+        const m=q.replace(/\s+/g,' ').trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+        if(m){const lat=parseFloat(m[1]),lng=parseFloat(m[2]);if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180)return{lat,lng};}
+        return null;
+    }
+
     function renderSearchResults() {
         const q=searchInput.value.toLowerCase().trim();
         if(!q){searchResults.innerHTML='';return;}
+        let html='';
+        const coords=parseLatLng(searchInput.value.trim());
+        if(coords){
+            html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});document.getElementById('search').blur();">
+                <div class="search-result-icon" style="background:#e8f0fe;color:#1a73e8">🎯</div>
+                <div class="search-result-text">
+                    <div class="search-result-name">ไปที่พิกัด ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}</div>
+                    <div class="search-result-sub">กดเพื่อ zoom ไปยังตำแหน่งนี้</div>
+                </div>
+            </div>`;
+        }
         const matches=locations.filter(l=>(l.name||'').toLowerCase().includes(q)||l.list.toLowerCase().includes(q)||(l.city||'').toLowerCase().includes(q)||matchCoords(l,q)).slice(0,8);
-        searchResults.innerHTML=matches.map(loc=>{
+        html+=matches.map(loc=>{
             const color=getColor(loc.list);
             const idx=getLocIndex(loc);
             return `<div class="search-result-item" onclick="showPlaceCard(locations[${idx}],${idx});document.getElementById('search').blur();">
@@ -1249,6 +1276,7 @@
                 </div>
             </div>`;
         }).join('');
+        searchResults.innerHTML=html;
     }
 
     // ════════════════════════════════════════════
@@ -1764,8 +1792,8 @@
     // ════════════════════════════════════════════
     // GITHUB SAVE
     // ════════════════════════════════════════════
-    function getToken(){return localStorage.getItem(GITHUB_TOKEN_KEY)||'';}
-    function setToken(t){localStorage.setItem(GITHUB_TOKEN_KEY,t);}
+    function getToken(){return sessionStorage.getItem(GITHUB_TOKEN_KEY)||'';}
+    function setToken(t){sessionStorage.setItem(GITHUB_TOKEN_KEY,t);}
 
     document.getElementById('btnGithubSave').onclick=doGithubSaveFlow;
 
@@ -1802,7 +1830,7 @@
             showToast('⏳ 3/3...');const f3=await githubFile('docs/locations.js',token);await githubPut('docs/locations.js',locJs,f3.sha,token,'Sync locations.js');
             showToast('✅ บันทึก GitHub สำเร็จ',false,true);
         }catch(err){
-            if(err.message.includes('401')||err.message.includes('credentials')){localStorage.removeItem(GITHUB_TOKEN_KEY);showToast('🔑 Token ไม่ถูกต้อง',true);}
+            if(err.message.includes('401')||err.message.includes('credentials')){sessionStorage.removeItem(GITHUB_TOKEN_KEY);showToast('🔑 Token ไม่ถูกต้อง',true);}
             else if(err.message.includes('404')){showToast('❌ ไม่พบ repo หรือไฟล์',true);}
             else if(err.message.includes('422')){showToast('❌ SHA ไม่ตรง ลอง Reset',true);}
             else showToast('❌ '+err.message,true);
@@ -1885,9 +1913,44 @@
     });
 
     // ════════════════════════════════════════════
+    // SHARE / PERMALINK
+    // ════════════════════════════════════════════
+    window.shareLocation=function(lat,lng,name){
+        const url=location.origin+location.pathname+'#'+lat.toFixed(6)+','+lng.toFixed(6)+',17';
+        if(navigator.share){
+            navigator.share({title:name||'BT Location',text:name+' ('+lat.toFixed(5)+', '+lng.toFixed(5)+')',url:url}).catch(()=>{});
+        } else {
+            navigator.clipboard.writeText(url).then(()=>showToast('📋 คัดลอกลิงก์แล้ว')).catch(()=>{
+                prompt('คัดลอกลิงก์:',url);
+            });
+        }
+    };
+
+    // ════════════════════════════════════════════
     // INIT
     // ════════════════════════════════════════════
-    rebuildIndexMap(); // สร้าง index map ครั้งแรก
+    rebuildIndexMap();
+
+    // Handle permalink hash: #lat,lng,zoom
+    (function(){
+        const h=location.hash.replace('#','');
+        if(!h)return;
+        const parts=h.split(',').map(Number);
+        if(parts.length>=2&&!isNaN(parts[0])&&!isNaN(parts[1])){
+            const lat=parts[0],lng=parts[1],zoom=parts[2]||17;
+            setTimeout(()=>{
+                map.setView([lat,lng],zoom);
+                // Find nearest location within 50m and open its card
+                let nearest=null,minD=50;
+                locations.forEach((l,i)=>{
+                    const d=haversine(lat,lng,l.lat,l.lng);
+                    if(d<minD){minD=d;nearest={loc:l,idx:i};}
+                });
+                if(nearest) showPlaceCard(nearest.loc,nearest.idx);
+            },500);
+        }
+    })();
+
     update();
 
     const style=document.createElement('style');
@@ -1904,6 +1967,13 @@
             }
         }catch(e){}
     })();
+
+    // PWA: register service worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            console.log('SW registered:', reg.scope);
+        }).catch(err => console.warn('SW failed:', err));
+    }
     </script>
 </body>
 </html>
