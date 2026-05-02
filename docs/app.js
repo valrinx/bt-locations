@@ -948,11 +948,26 @@ map.on('click',e=>{
         return;
     }
     if(measureMode&&measureStart){
-        const d=haversine(measureStart.lat,measureStart.lng,lat,lng);
+        const straightDist=haversine(measureStart.lat,measureStart.lng,lat,lng);
         if(measureLine)map.removeLayer(measureLine);
+        // Draw straight line immediately
         measureLine=L.polyline([[measureStart.lat,measureStart.lng],[lat,lng]],{color:'#7b1fa2',weight:3,dashArray:'8,6'}).addTo(map);
-        document.getElementById('measureResultText').textContent=`${formatDist(d)}\n(จาก: ${measureStart.name||measureStart.list} → พิกัดที่เลือก)`;
+        const fromName=measureStart.name||measureStart.list||'จุดเริ่ม';
+        document.getElementById('measureResultText').textContent=`📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
         document.getElementById('measureModalOverlay').classList.add('open');
+        // Try OSRM for road distance
+        const osrmUrl=`https://router.project-osrm.org/route/v1/driving/${measureStart.lng},${measureStart.lat};${lng},${lat}?overview=full&geometries=geojson`;
+        fetch(osrmUrl).then(r=>r.json()).then(data=>{
+            if(data.routes&&data.routes.length){
+                const route=data.routes[0];
+                const roadDist=route.distance;
+                const mins=Math.round(route.duration/60);
+                const coords=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+                if(measureLine)map.removeLayer(measureLine);
+                measureLine=L.polyline(coords,{color:'#7b1fa2',weight:4,opacity:0.85}).addTo(map);
+                document.getElementById('measureResultText').textContent=`🛣️ ${formatDist(roadDist)} · ~${mins} นาที (ถนน)\n📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
+            }
+        }).catch(()=>{});
         cancelMeasureMode(); return;
     }
     if(!addMode)return;
@@ -1093,10 +1108,17 @@ document.getElementById('measureModalOverlay').onclick=e=>{if(e.target===documen
 // DIRECTIONS (OSRM routing from current location)
 // ════════════════════════════════════════════
 let _directionsLine = null;
+function clearDirections(){
+    if(_directionsLine){map.removeLayer(_directionsLine);_directionsLine=null;}
+    const banner=document.getElementById('directionsBanner');
+    if(banner)banner.classList.remove('show');
+}
+window.clearDirections=clearDirections;
 window.doDirectionsTo = function(idx) {
     const dest = locations[idx];
     if (!dest) { showToast('ไม่พบสถานที่', true); return; }
     closePlaceCard();
+    clearDirections();
 
     if (!navigator.geolocation) {
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
@@ -1124,6 +1146,16 @@ window.doDirectionsTo = function(idx) {
             map.fitBounds(_directionsLine.getBounds(), { padding: [60, 60] });
 
             showToast(`🧭 ${dest.name || 'ปลายทาง'}: ${distKm} km · ~${mins} นาที`, false, true);
+            // Show dismissible banner
+            let banner=document.getElementById('directionsBanner');
+            if(!banner){
+                banner=document.createElement('div');
+                banner.id='directionsBanner';
+                banner.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:1500;background:var(--surface);padding:10px 16px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;font-size:13px;font-family:inherit;';
+                document.body.appendChild(banner);
+            }
+            banner.innerHTML=`<span>🧭 ${dest.name||'ปลายทาง'}: ${distKm} km · ~${mins} นาที</span><button onclick="clearDirections()" style="border:none;background:none;font-size:18px;cursor:pointer;padding:0 4px;">✕</button>`;
+            banner.classList.add('show');
         }).catch(() => {
             showToast('❌ OSRM ล้มเหลว — เปิด Google Maps', true);
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
@@ -1718,7 +1750,7 @@ function showToast(msg,isError=false,isSuccess=false){
 // ════════════════════════════════════════════
 // BACKDROP & KEYBOARD
 // ════════════════════════════════════════════
-map.on('click',()=>{if(!addMode&&!measureMode)closePlaceCard();closeListPanel();});
+map.on('click',()=>{if(!addMode&&!measureMode)closePlaceCard();closeListPanel();clearDirections();});
 window.showPlaceCard=showPlaceCard;
 window.closeListPanel=closeListPanel;
 
@@ -1732,6 +1764,7 @@ document.addEventListener('keydown',(e)=>{
         closeInfo();
         closePlaceCard();
         closeListPanel();
+        clearDirections();
         document.getElementById('shareModalOverlay').classList.remove('open');
         document.getElementById('tokenModalOverlay').classList.remove('open');
         document.getElementById('listFilterModalOverlay').classList.remove('open');
