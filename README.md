@@ -228,6 +228,209 @@ python -m http.server 8080
 - [ ] **Offline mode** — limited map usage โดยไม่ต้องมี internet
 - [ ] **AI search** — ค้นหาด้วยภาษาธรรมชาติ
 
+#### 🚀 โครงโปรเจกต์ใหม่ (ยังใช้ไฟล์เดิมได้ แต่เริ่มแยก)
+/src
+  /core
+    store.js
+    events.js
+  /map
+    map.js
+    markers.js
+    layers.js
+  /ui
+    ui.js
+    panels.js
+    modal.js
+  /data
+    data.js
+    import.js
+    export.js
+  /features
+    favorites.js
+    tracking.js
+    directions.js
+/app.js
+/index.html
+
+👉 ไม่ต้องย้ายทีเดียว — ค่อย ๆ ย้ายจาก app.js 
+
+#### 🧠 1. CORE: State + Store (หัวใจใหม่) 
+/src/core/store.js
+
+export const store = {
+  locations: [],
+  filtered: [],
+  selected: null,
+  favorites: new Set(),
+  history: [],
+  future: []
+};
+
+export function setState(patch) {
+  Object.assign(store, patch);
+  window.dispatchEvent(new Event("statechange"));
+}
+
+#### 🧨 Undo / Redo
+
+export function pushHistory() {
+  store.history.push(JSON.stringify(store.locations));
+  store.future = [];
+}
+
+export function undo() {
+  if (!store.history.length) return;
+  store.future.push(JSON.stringify(store.locations));
+  store.locations = JSON.parse(store.history.pop());
+  setState({});
+}
+
+export function redo() {
+  if (!store.future.length) return;
+  store.history.push(JSON.stringify(store.locations));
+  store.locations = JSON.parse(store.future.pop());
+  setState({});
+}
+
+#### 🗺 2. MAP ENGINE (ลื่นขึ้นทันที)
+/src/map/map.js
+
+import { renderMarkers } from "./markers.js";
+
+export const map = L.map('map', {
+  preferCanvas: true,
+  maxZoom: 18,
+  minZoom: 5
+}).setView([13.75, 100.5], 11);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  updateWhenIdle: true,
+  updateWhenZooming: false,
+  keepBuffer: 2
+}).addTo(map);
+
+map.on('moveend', renderMarkers);
+
+#### 📍 Marker Virtualization (ตัวโหด)
+/src/map/markers.js
+
+import { map } from "./map.js";
+import { store } from "../core/store.js";
+
+let layer = L.layerGroup().addTo(map);
+
+export function renderMarkers() {
+  layer.clearLayers();
+
+  const bounds = map.getBounds();
+
+  const visible = store.locations.filter(l =>
+    bounds.contains([l.lat, l.lng])
+  );
+
+  visible.slice(0, 2000).forEach(l => {
+    const marker = L.marker([l.lat, l.lng]);
+    marker.bindPopup(l.name || "-");
+    layer.addLayer(marker);
+  });
+}
+
+#### ⭐ 3. FAVORITE SYSTEM
+/src/features/favorites.js
+
+import { store, setState } from "../core/store.js";
+
+export function toggleFavorite(id) {
+  if (store.favorites.has(id)) {
+    store.favorites.delete(id);
+  } else {
+    store.favorites.add(id);
+  }
+  setState({});
+}
+
+#### 📍 4. PATH TRACKING
+/src/features/tracking.js
+
+import { map } from "../map/map.js";
+
+let path = [];
+let polyline = L.polyline([], { color: 'red' }).addTo(map);
+
+export function startTracking() {
+  navigator.geolocation.watchPosition(pos => {
+    const latlng = [pos.coords.latitude, pos.coords.longitude];
+    path.push(latlng);
+    polyline.setLatLngs(path);
+  });
+}
+
+#### 🧭 5. DIRECTIONS (OSRM)
+/src/features/directions.js
+
+export async function getRoute(a, b) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  return data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+}
+
+#### 📦 6. DATA SYSTEM
+/src/data/data.js
+
+export function normalize(l) {
+  return {
+    lat: l.lat,
+    lng: l.lng,
+    name: l.name || "",
+    city: l.city || "",
+    note: l.note || "",
+    list: l.list || ""
+  };
+}
+
+#### 📊 Versioning
+
+export function exportData(data) {
+  return JSON.stringify({
+    version: 2,
+    data
+  });
+}
+
+#### 📱 7. MOBILE UX
+Long press
+
+let timer;
+
+map.on('mousedown', e => {
+  timer = setTimeout(() => {
+    addLocation(e.latlng);
+    navigator.vibrate?.(50);
+  }, 600);
+});
+
+map.on('mouseup', () => clearTimeout(timer));
+
+#### ⚡ 8. PERFORMANCE BOOST สุดท้าย
+เพิ่ม: L.Marker.prototype.options.keyboard = false;
+
+#### 🧪 9. DEBUG MODE
+
+window.debug = {
+  get count() {
+    return store.locations.length;
+  }
+};
+
+#### 🔥 วิธีใช้ (สำคัญ)
+Step-by-step
+1. สร้างโฟลเดอร์ /src
+2. ย้าย logic จาก app.js ไปทีละส่วน
+3. ใช้ store แทน global
+4. ใช้ renderMarkers() แทน render เดิม
 ---
 
 ## บันทึกการเปลี่ยนแปลง (Changelog)
