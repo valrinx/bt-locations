@@ -15,7 +15,7 @@
 | `backups/` | Backup อัตโนมัติก่อนทุก build |
 | `.github/workflows/build.yml` | GitHub Actions auto build+deploy |
 | `docs/index.html` | หน้าเว็บ (generated) — UI, map, CRUD, GitHub save |
-| `docs/locations.js` | ข้อมูลหมุดแยกไฟล์ (generated จาก build + GitHub save) |
+| `docs/locations.js` | ข้อมูลหมุดแยกไฟล์ (generated จาก build) |
 | `docs/all_locations.json` | สำเนา JSON สำหรับ GitHub Pages |
 
 ## ฟีเจอร์ปัจจุบัน
@@ -27,15 +27,18 @@
 * Export / Import JSON
 * Heatmap mode แสดงความหนาแน่นของจุด
 * Stats dashboard (สถิติจำนวนจุดตามรายการ/เขต)
-* Reset พร้อม popup คำเตือน + ดึงข้อมูลใหม่จาก GitHub
-* Save to GitHub ผ่าน API (เก็บ token ใน localStorage) — อัปเดท 3 ไฟล์แบบ sequential
-* Background sync ข้อมูลข้ามเครื่อง (fetch `all_locations.json` ตอนโหลด)
+* Reset พร้อม popup คำเตือน
+* Save to GitHub ผ่าน API (เก็บ token ใน localStorage)
+* Background sync ข้อมูลข้ามเครื่อง
 * Legend สีอธิบาย list + Dark mode + 4 map tiles (Street/Satellite/Terrain/Dark)
 * วัดระยะทางระหว่าง 2 จุด (haversine)
 * Zoom to filtered อัตโนมัติเมื่อเลือก filter
 * Backup อัตโนมัติก่อนทุก build + GitHub Actions auto build
 * ข้อมูลหมุดแยกไฟล์ `locations.js` เพื่อให้ `index.html` เบาลง
-* Tooltip ชื่อจุดแสดงอัตโนมัติเมื่อ zoom ≥ 15
+* **GPS 2-Phase** — coarse (IP) ก่อนเสมอ (<2 วิ) แล้ว refine ด้วย high-accuracy watchPosition อัตโนมัติ
+* **Triple-ring pulse marker** — แสดงตำแหน่งด้วยวง ripple 3 ชั้น + แสดงความแม่นยำ ±Xม. ใน popup
+* **Smooth flyTo/flyToBounds** — map เคลื่อนไหวลื่นทุกจุด (ไม่กระโดด)
+* **Animated modals & cards** — place card fade+slide, modal spring bounce, action button hover lift
 
 ## วิธี Build
 
@@ -43,7 +46,7 @@
 python build_html.py
 ```
 
-จะสร้าง `docs/index.html`, `docs/locations.js`, และ `docs/all_locations.json` ใหม่จาก `all_locations.json`
+จะสร้าง `docs/index.html` และ `docs/locations.js` ใหม่จาก `all_locations.json`
 
 ## วิธีรัน local
 
@@ -68,7 +71,6 @@ python -m http.server 8080
 3. **หลัง push → restart server**
 
    ```
-   # หยุด server เดิม แล้วรันใหม่
    cd docs
    python -m http.server 8080
    ```
@@ -76,21 +78,54 @@ python -m http.server 8080
 
 ## สิ่งที่ต้องทำในอนาคต (TODO)
 
-**ยังค้างอยู่:**
+### 🔴 ควรทำเร็ว
 
-* ปรับปรุง UI ของ popup / modal ให้สวยขึ้นต่อเนื่อง
-* ปรับ Mobile responsive ให้ใช้งานง่ายขึ้น (โดยเฉพาะ list panel บนมือถือ)
-* เพิ่ม route/ทิศทางระหว่าง 2 จุด (ปัจจุบันวัดเฉพาะระยะทาง)
+* **GPS: แสดง accuracy circle แบบ animated** — fade-in เมื่อเริ่มต้น, ค่อยๆ หดลงเมื่อ refine
+* **GPS: หยุด watchPosition อัตโนมัติ** เมื่อ accuracy ดีพอ (< 30ม.) เพื่อประหยัดแบต
+* **build_html.py: generate `docs/locations.js` อัตโนมัติ** — ตอนนี้ต้อง copy มือ
+* **ลบไฟล์ test** ที่ยังค้างอยู่ใน repo
 
-**Nice-to-have:**
+### 🟡 ควรทำ
 
-* รองรับ import หลายรูปแบบ (CSV, KML)
-* Share link พร้อม filter ที่เลือกอยู่ (URL params)
-* ค้นหาชื่อสถานที่จาก Nominatim (geocoding)
+* **Offline mode** — cache ข้อมูลด้วย Service Worker ให้ใช้ได้แม้ไม่มีเน็ต
+* **GPS: track ต่อเนื่อง (live tracking)** — marker เคลื่อนตามตำแหน่งจริงแบบ real-time
+* **Share จุด** — generate link ที่เปิดแผนที่แล้ว fly ไปจุดนั้นทันที (`?id=xxx`)
+* **ค้นหาด้วยเสียง** — Web Speech API กด mic แล้วพูดชื่อสถานที่
+* **Cluster click → zoom to bounds** — กด cluster แล้ว map zoom ไปแสดงทุกจุดในกลุ่ม
+* **Import จาก Google Maps URL** — วาง URL แล้วดึง lat/lng อัตโนมัติ
+
+### 🟢 น่าทำ (nice-to-have)
+
+* **ปรับ Mobile responsive** ให้ดีขึ้น — โดยเฉพาะ filter chips และ place card บน iOS Safari
+* **Drag marker** เพื่อย้ายตำแหน่งโดยตรงบนแผนที่ (แทนการพิมพ์ lat/lng)
+* **รูปภาพต่อจุด** — แนบรูปสถานที่ใน popup (store เป็น base64 หรือ URL)
+* **Route planning** — เลือกหลายจุด แล้ว generate Google Maps Directions URL
+* **Print / Export PNG** — สั่งพิมพ์แผนที่พร้อม legend เป็น PDF หรือรูปภาพ
+* **Tag system** — เพิ่ม tags หลายอันต่อจุด (นอกเหนือจาก list และ city)
+* **Autocomplete** ช่อง list และ city จากข้อมูลที่มีอยู่แล้ว
+
+### 🔵 ด้านระบบ/ข้อมูล
+
+* **Conflict resolution** เมื่อ sync จาก GitHub แล้วข้อมูลต่างกัน (ตอนนี้ใช้ last-write-wins)
+* **Versioning** — เก็บ history การเปลี่ยนแปลงต่อจุด (ใครแก้ เมื่อไหร่)
+* **Multi-user support** — lock จุดเมื่อมีคนกำลังแก้ไขอยู่
+* **validate_data.py** — เพิ่มตรวจจุดที่อยู่นอกไทย และจุดที่ lat/lng = 0
 
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
-### 2026-05-02
+### 2026-05-02 (ล่าสุด)
+
+* **GPS 2-Phase เร็วขึ้นมาก** — Phase 1 ใช้ low-accuracy (IP-based) แสดงผลภายใน 1-2 วิ, Phase 2 refine ด้วย watchPosition high-accuracy อัตโนมัติในเบื้องหลัง
+* **Triple-ring pulse marker** — แทนที่ dot เดิมด้วยวง ripple 3 ชั้น เหลื่อมกัน, popup แสดง ±Xม.
+* **GPS button state** — icon หมุน (searching) → สีน้ำเงิน (found), กดซ้ำ = fly กลับไปตำแหน่ง
+* **GPS ใน Modal เร็วขึ้น** — ใช้ low-accuracy ก่อน ได้พิกัดเร็ว แล้ว refine เงียบๆ ถ้า accuracy หยาบ
+* **flyTo/flyToBounds แทน setView/fitBounds** ทุกจุด — map เคลื่อนไหวลื่นตลอด
+* **Place card desktop** — เพิ่ม fade+translateY transition แทน bottom slide
+* **Modal animation** — spring bounce (scale + translateY) + backdrop blur
+* **Action buttons** — hover ลอยขึ้น 2px, active scale(0.95)
+* **Place card close button** — hover scale + สีเปลี่ยน smooth
+
+### 2026-05-02 (ก่อนหน้า)
 
 * สร้าง `import_takeout.py` สำหรับ import GeoJSON จาก Google Takeout
 * เพิ่ม multi-filter: กรองตามรายการ + เขต พร้อมกัน
@@ -108,11 +143,9 @@ python -m http.server 8080
 * `build_html.py` สร้าง `docs/locations.js` + copy `all_locations.json` อัตโนมัติ
 * เพิ่ม background sync: fetch `all_locations.json` เพื่อ sync ข้อมูลข้ามเครื่อง
 * ปรับ UI: popup มี gradient header, modal มี animation + backdrop blur + gradient buttons
-* แยกข้อมูลหมุดออกจาก `index.html` → `locations.js` (ลดจาก 1,664 เหลือ ~535 บรรทัด)
-* เพิ่ม popup คำเตือนตอนกด Reset + ดึงข้อมูลล่าสุดจาก GitHub หลัง reset
-* เพิ่มปุ่ม Save to GitHub (sequential PUT ป้องกัน SHA mismatch)
+* แยกข้อมูลหมุดออกจาก `index.html` → `locations.js`
+* เพิ่ม popup คำเตือนตอนกด Reset
+* เพิ่มปุ่ม Save to GitHub + Token modal
 * เพิ่ม CRUD (เพิ่ม/แก้ไข/ลบ จุด) + Export/Import JSON
 * เพิ่ม city field ใน location data
 * สร้าง `merge_sheet.py` สำหรับรวมข้อมูลจาก Google Sheet
-* Tooltip ชื่อจุดแสดงอัตโนมัติเมื่อ zoom ≥ 15
-* แก้ไข GitHub Save ให้ทำงานแบบ sequential เพื่อป้องกัน SHA mismatch
