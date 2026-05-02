@@ -54,6 +54,19 @@ html = f'''<!DOCTYPE html>
         .ctrl-sep {{
             width: 1px; height: 20px; background: #ddd; margin: 0 2px;
         }}
+        .more-wrap {{ position: relative; }}
+        .more-menu {{
+            display: none; position: absolute; top: 100%; right: 0; margin-top: 6px;
+            background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            min-width: 180px; padding: 6px 0; z-index: 2000;
+        }}
+        .more-menu.show {{ display: block; }}
+        .mm-item {{
+            display: block; width: 100%; text-align: left; border: none; background: none;
+            padding: 8px 16px; font-size: 13px; cursor: pointer; color: #333;
+        }}
+        .mm-item:hover {{ background: #f0f0f0; }}
+        .mm-sep {{ border: none; border-top: 1px solid #eee; margin: 4px 0; }}
         .controls input, .controls select {{
             border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px;
             font-size: 13px; outline: none;
@@ -212,6 +225,10 @@ html = f'''<!DOCTYPE html>
         body.dark .modal-btns {{ background: #252550; }}
         body.dark .count-badge {{ background: #2a2a6a; color: #8ab4f8; }}
         body.dark .ctrl-sep {{ background: #444; }}
+        body.dark .more-menu {{ background: #1e1e3e; }}
+        body.dark .mm-item {{ color: #e0e0e0; }}
+        body.dark .mm-item:hover {{ background: #2a2a5a; }}
+        body.dark .mm-sep {{ border-color: #333; }}
 
         @media (max-width: 600px) {{
             .controls {{
@@ -232,7 +249,6 @@ html = f'''<!DOCTYPE html>
 <body>
     <div id="map"></div>
     <div class="controls">
-        <!-- แถว 1: ค้นหา + กรอง -->
         <div class="ctrl-row">
             <input type="text" id="search" placeholder="ค้นหา...">
             <select id="listFilter">
@@ -244,24 +260,26 @@ html = f'''<!DOCTYPE html>
                 {city_options}
             </select>
             <span class="count-badge" id="count">0 จุด</span>
-        </div>
-        <!-- แถว 2: ปุ่มฟังก์ชัน -->
-        <div class="ctrl-row">
             <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
-            <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>↩ Undo</button>
-            <button class="btn btn-delete" id="btnBulkDel">🗑 ลบที่กรอง</button>
-            <span class="ctrl-sep"></span>
-            <button class="btn btn-github" id="btnGithub">Save to GitHub</button>
+            <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>↩</button>
+            <button class="btn btn-github" id="btnGithub">� GitHub</button>
             <span class="save-status" id="saveStatus"></span>
-            <button class="btn btn-export" id="btnExport">📤 Export</button>
-            <button class="btn btn-import" id="btnImport">📥 Import</button>
-            <button class="btn btn-reset" id="btnReset">Reset</button>
-            <span class="ctrl-sep"></span>
-            <button class="btn" id="btnStats" style="background:#0d9488;color:white;">📊 Stats</button>
-            <button class="btn" id="btnHeatmap" style="background:#f97316;color:white;">🔥 Heatmap</button>
-            <button class="btn" id="btnLegend" style="background:#8b5cf6;color:white;">🎨 Legend</button>
-            <button class="btn" id="btnDark" style="background:#334155;color:white;">🌙</button>
-            <button class="btn" id="btnTile" style="background:#059669;color:white;">🗺️</button>
+            <div class="more-wrap">
+                <button class="btn" id="btnMore" style="background:#475569;color:white;">⋯ เพิ่มเติม</button>
+                <div class="more-menu" id="moreMenu">
+                    <button class="mm-item" id="btnExport">📤 Export JSON</button>
+                    <button class="mm-item" id="btnImport">📥 Import JSON</button>
+                    <button class="mm-item" id="btnBulkDel" style="color:#ef4444;">🗑 ลบที่กรอง</button>
+                    <button class="mm-item" id="btnReset" style="color:#ef4444;">🔄 Reset</button>
+                    <hr class="mm-sep">
+                    <button class="mm-item" id="btnStats">📊 Stats</button>
+                    <button class="mm-item" id="btnHeatmap">🔥 Heatmap</button>
+                    <button class="mm-item" id="btnLegend">🎨 Legend</button>
+                    <hr class="mm-sep">
+                    <button class="mm-item" id="btnDark">🌙 Dark mode</button>
+                    <button class="mm-item" id="btnTile">🗺️ เปลี่ยนแผนที่</button>
+                </div>
+            </div>
         </div>
     </div>
     <div class="legend-panel" id="legendPanel"></div>
@@ -657,6 +675,20 @@ html = f'''<!DOCTYPE html>
             e.target.value = '';
         }};
 
+        // === MORE MENU ===
+        document.getElementById('btnMore').onclick = (e) => {{
+            e.stopPropagation();
+            document.getElementById('moreMenu').classList.toggle('show');
+        }};
+        document.addEventListener('click', () => {{
+            document.getElementById('moreMenu').classList.remove('show');
+        }});
+        document.getElementById('moreMenu').onclick = (e) => {{
+            if (e.target.classList.contains('mm-item')) {{
+                document.getElementById('moreMenu').classList.remove('show');
+            }}
+        }};
+
         // === LEGEND ===
         function updateLegend() {{
             const panel = document.getElementById('legendPanel');
@@ -675,7 +707,7 @@ html = f'''<!DOCTYPE html>
         document.getElementById('btnDark').onclick = () => {{
             const isDark = !document.body.classList.contains('dark');
             document.body.classList.toggle('dark', isDark);
-            document.getElementById('btnDark').textContent = isDark ? '☀️' : '🌙';
+            document.getElementById('btnDark').textContent = isDark ? '☀️ Light mode' : '🌙 Dark mode';
             if (isDark) {{
                 savedTileIdx = currentTileIdx;
                 map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
@@ -692,13 +724,13 @@ html = f'''<!DOCTYPE html>
             if (document.body.classList.contains('dark')) {{
                 map.removeLayer(darkTile);
                 document.body.classList.remove('dark');
-                document.getElementById('btnDark').textContent = '🌙';
+                document.getElementById('btnDark').textContent = '🌙 Dark mode';
             }} else {{
                 map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
             }}
             currentTileIdx = (currentTileIdx + 1) % tileNames.length;
             tileLayers[tileNames[currentTileIdx]].addTo(map);
-            document.getElementById('btnTile').textContent = tileNames[currentTileIdx];
+            document.getElementById('btnTile').textContent = '🗺️ ' + tileNames[currentTileIdx];
         }};
 
         // === ZOOM TO FILTERED ===
