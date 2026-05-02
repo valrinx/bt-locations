@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.1';
+const APP_VERSION = 'v5.0';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -376,7 +376,7 @@ function _buildMarkerCache() {
             bubblingMouseEvents: false,
         });
         marker.bindTooltip(loc.name || loc.list, {
-            permanent: true,
+            permanent: false,
             direction: 'top',
             offset: [0, -2],
             className: 'bt-tooltip',
@@ -789,6 +789,25 @@ function updateGpsMarker(lat, lng, accuracy) {
 }
 
 // หยุดติดตามกล้องเมื่อผู้ใช้ลาก map
+// แสดง tooltip ถาวรเฉพาะตอน zoom >= 16
+const TOOLTIP_ZOOM = 16;
+function _updateTooltipVisibility() {
+    const showPermanent = map.getZoom() >= TOOLTIP_ZOOM;
+    _markerCache.forEach(marker => {
+        const tt = marker.getTooltip();
+        if (!tt) return;
+        if (showPermanent && !tt.options.permanent) {
+            marker.unbindTooltip();
+            marker.bindTooltip(tt._content || tt.getContent(), { permanent: true, direction: 'top', offset: [0, -2], className: 'bt-tooltip', opacity: 0.95 });
+            if (marker._map) marker.openTooltip();
+        } else if (!showPermanent && tt.options.permanent) {
+            marker.unbindTooltip();
+            marker.bindTooltip(tt._content || tt.getContent(), { permanent: false, direction: 'top', offset: [0, -2], className: 'bt-tooltip', opacity: 0.95 });
+        }
+    });
+}
+map.on('zoomend', _updateTooltipVisibility);
+
 map.on('dragstart', () => {
     if (gpsTracking) {
         gpsTracking = false;
