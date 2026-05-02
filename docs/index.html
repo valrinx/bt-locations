@@ -821,7 +821,7 @@
     </div>
 
     <div class="save-toast" id="saveToast"></div>
-    <input type="file" id="fileImport" accept=".json" style="display:none">
+    <input type="file" id="fileImport" accept=".json,.csv,.kml,.gpx,.geojson" style="display:none">
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -1030,6 +1030,7 @@
                 className: 'bt-tooltip',
                 opacity: 0.95,
             });
+            marker._locIdx = idx;
             marker.on('click', () => showPlaceCard(loc, idx));
             _markerCache.set(idx, marker);
         });
@@ -1072,6 +1073,21 @@
             map.addLayer(markerCluster);
             document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
             document.getElementById('countPill').classList.add('show');
+
+            // Cluster click → show list of locations in that cluster
+            markerCluster.on('clusterclick', function(e) {
+                const childMarkers = e.layer.getAllChildMarkers();
+                const clusterLocs = childMarkers.map(m => {
+                    const idx = m._locIdx;
+                    return (idx !== undefined && locations[idx]) ? locations[idx] : null;
+                }).filter(Boolean);
+                if (clusterLocs.length > 0) {
+                    const lp = document.getElementById('listPanel');
+                    lp.classList.add('open');
+                    closePlaceCard();
+                    renderListPanel(clusterLocs);
+                }
+            });
         });
     }
 
@@ -1659,7 +1675,7 @@
                 <div style="font-size:14px;color:var(--text2);margin-bottom:20px;">แผนที่จุด BT Locations · ${locations.length} สถานที่</div>
                 ${[
                     ['📤','Export JSON','omExportM',''],
-                    ['📥','Import JSON','omImportM',''],
+                    ['📥','Import (JSON/CSV/KML/GPX)','omImportM',''],
                     ['📊','สถิติ','omStatsM',''],
                     ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmapM',''],
                     ['🌙','Dark mode','omDarkM',''],
@@ -1750,17 +1766,135 @@
         };
     }
 
+    // ════════════════════════════════════════════
+    // MULTI-FORMAT IMPORT (JSON/CSV/KML/GPX/GeoJSON)
+    // ════════════════════════════════════════════
+    function parseCSV(text) {
+        const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+        if(lines.length<2)return[];
+        const header=lines[0].split(',').map(h=>h.trim().toLowerCase());
+        const iLat=header.findIndex(h=>h==='lat'||h==='latitude');
+        const iLng=header.findIndex(h=>h==='lng'||h==='lon'||h==='longitude');
+        const iName=header.findIndex(h=>h==='name'||h==='title');
+        const iList=header.findIndex(h=>h==='list'||h==='category'||h==='group');
+        const iCity=header.findIndex(h=>h==='city'||h==='district');
+        const iUrl=header.findIndex(h=>h==='url');
+        if(iLat<0&&iLng<0&&iUrl<0)return[];
+        const result=[];
+        for(let i=1;i<lines.length;i++){
+            const cols=lines[i].split(',').map(c=>c.trim());
+            let lat,lng;
+            if(iLat>=0&&iLng>=0){lat=parseFloat(cols[iLat]);lng=parseFloat(cols[iLng]);}
+            else if(iUrl>=0){
+                const m=cols[iUrl].match(/[/@]([-\d.]+),([-\d.]+)/);
+                if(m){lat=parseFloat(m[1]);lng=parseFloat(m[2]);}
+            }
+            if(!lat||!lng||isNaN(lat)||isNaN(lng))continue;
+            result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||'Imported',city:cols[iCity]||''});
+        }
+        return result;
+    }
+    function parseKML(text) {
+        const parser=new DOMParser();
+        const doc=parser.parseFromString(text,'text/xml');
+        const placemarks=doc.querySelectorAll('Placemark');
+        const result=[];
+        placemarks.forEach(pm=>{
+            const nameEl=pm.querySelector('name');
+            const coordEl=pm.querySelector('coordinates');
+            if(!coordEl)return;
+            const parts=coordEl.textContent.trim().split(',');
+            if(parts.length<2)return;
+            const lng=parseFloat(parts[0]),lat=parseFloat(parts[1]);
+            if(isNaN(lat)||isNaN(lng))return;
+            result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:'KML Import',city:''});
+        });
+        return result;
+    }
+    function parseGPX(text) {
+        const parser=new DOMParser();
+        const doc=parser.parseFromString(text,'text/xml');
+        const wpts=doc.querySelectorAll('wpt');
+        const result=[];
+        wpts.forEach(wpt=>{
+            const lat=parseFloat(wpt.getAttribute('lat'));
+            const lng=parseFloat(wpt.getAttribute('lon'));
+            if(isNaN(lat)||isNaN(lng))return;
+            const nameEl=wpt.querySelector('name');
+            result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:'GPX Import',city:''});
+        });
+        // Also parse trk > trkseg > trkpt
+        doc.querySelectorAll('trkpt').forEach(pt=>{
+            const lat=parseFloat(pt.getAttribute('lat'));
+            const lng=parseFloat(pt.getAttribute('lon'));
+            if(!isNaN(lat)&&!isNaN(lng))result.push({name:'',lat,lng,list:'GPX Track',city:''});
+        });
+        return result;
+    }
+    function parseGeoJSON(obj) {
+        const result=[];
+        const features=obj.features||[obj];
+        features.forEach(f=>{
+            if(!f.geometry||f.geometry.type!=='Point')return;
+            const [lng,lat]=f.geometry.coordinates;
+            if(isNaN(lat)||isNaN(lng))return;
+            const props=f.properties||{};
+            result.push({name:props.name||props.title||'',lat,lng,list:props.list||'GeoJSON Import',city:props.city||''});
+        });
+        return result;
+    }
+
     document.getElementById('fileImport').onchange=e=>{
         const file=e.target.files[0]; if(!file)return;
+        const ext=file.name.split('.').pop().toLowerCase();
         const reader=new FileReader();
         reader.onload=ev=>{
+            const text=ev.target.result;
+            let imp=[];
             try {
-                const imp=JSON.parse(ev.target.result);
-                if(!Array.isArray(imp)){showToast('ไฟล์ไม่ถูกต้อง',true);return;}
-                showConfirm('📥','Import ข้อมูล?',`จะแทนที่ด้วย ${imp.length} จุด`,()=>{
-                    pushUndo();locations=imp;saveLocations();invalidateCache();update();showToast(`Import ${imp.length} จุดสำเร็จ`,false,true);
-                });
-            }catch{showToast('JSON ไม่ถูกต้อง',true);}
+                if(ext==='csv'){
+                    imp=parseCSV(text);
+                } else if(ext==='kml'){
+                    imp=parseKML(text);
+                } else if(ext==='gpx'){
+                    imp=parseGPX(text);
+                } else if(ext==='geojson'){
+                    const obj=JSON.parse(text);
+                    imp=parseGeoJSON(obj);
+                } else {
+                    const obj=JSON.parse(text);
+                    if(Array.isArray(obj))imp=obj;
+                    else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj);
+                    else {showToast('รูปแบบ JSON ไม่ถูกต้อง',true);return;}
+                }
+            }catch(err){showToast('ไฟล์ไม่ถูกต้อง: '+err.message,true);return;}
+            if(!imp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
+            showConfirm('📥',`Import ${imp.length} จุด?`,`จากไฟล์ ${file.name} (.${ext})\nเลือก Merge หรือ Replace`,()=>{
+                pushUndo();locations=imp;saveLocations();invalidateCache();update();showToast(`Replace: ${imp.length} จุด`,false,true);
+            });
+            // Add merge button to confirm dialog
+            setTimeout(()=>{
+                const footer=document.querySelector('.confirm-footer');
+                if(!footer||footer.querySelector('#btnMergeImport'))return;
+                const mergeBtn=document.createElement('button');
+                mergeBtn.id='btnMergeImport';
+                mergeBtn.className='modal-btn modal-btn-save';
+                mergeBtn.style.cssText='background:#059669;';
+                mergeBtn.textContent='🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
+                mergeBtn.onclick=()=>{
+                    pushUndo();
+                    const existing=new Set(locations.map(l=>l.lat.toFixed(5)+','+l.lng.toFixed(5)));
+                    let added=0;
+                    imp.forEach(loc=>{
+                        const key=loc.lat.toFixed(5)+','+loc.lng.toFixed(5);
+                        if(!existing.has(key)){locations.push(loc);existing.add(key);added++;}
+                    });
+                    saveLocations();invalidateCache();update();
+                    showToast(`Merge: เพิ่ม ${added} จุดใหม่ (ข้าม ${imp.length-added} ซ้ำ)`,false,true);
+                    document.getElementById('confirmModalOverlay').classList.remove('open');
+                };
+                footer.insertBefore(mergeBtn,footer.firstChild);
+            },100);
         };
         reader.readAsText(file); e.target.value='';
     };
