@@ -513,7 +513,67 @@ function update() {
     }
     updateChipLabels();
     refreshDatalistSuggestions();
+    _renderSidebar();
 }
+
+// ── Sidebar (concept style) ──
+const _listColors=['#4f8aff','#2dffa0','#ffb830','#ff5f5f','#b06fff','#ff7a5c','#00d2ff','#ff6b9d'];
+function _renderSidebar(){
+    const sb=document.getElementById('sidebar'); if(!sb)return;
+    document.getElementById('sidebarBadge').textContent=locations.length+' จุด';
+    // Lists pills
+    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
+    const pills=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
+    const pillsHtml=[`<div class="sidebar-pill ${!filterList?'active':''}" data-list=""><span>ทั้งหมด</span><span class="sidebar-pill-count">${locations.length}</span></div>`];
+    pills.forEach(([name,count],i)=>{
+        pillsHtml.push(`<div class="sidebar-pill ${filterList===name?'active':''}" data-list="${name}"><span>${name}</span><span class="sidebar-pill-count">${count}</span></div>`);
+    });
+    document.getElementById('sidebarPills').innerHTML=pillsHtml.join('');
+    document.getElementById('sidebarPills').querySelectorAll('.sidebar-pill').forEach(el=>{
+        el.onclick=()=>{
+            filterList=el.dataset.list;
+            filterCity='';
+            _lastFilteredKey=null;update();
+        };
+    });
+    // Cities
+    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
+    const cities=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+    const citiesHtml=cities.map(([name,count],i)=>{
+        const color=_listColors[i % _listColors.length];
+        return `<div class="sidebar-city ${filterCity===name?'active':''}" data-city="${name}"><div class="sidebar-city-dot" style="background:${color}"></div><span>${name}</span><span class="sidebar-city-count">${count}</span></div>`;
+    }).join('');
+    document.getElementById('sidebarCities').innerHTML=citiesHtml;
+    document.getElementById('sidebarCities').querySelectorAll('.sidebar-city').forEach(el=>{
+        el.onclick=()=>{
+            filterCity=el.dataset.city;
+            filterList='';
+            _lastFilteredKey=null;update();
+            // zoom to city bounds
+            const cityLocs=locations.filter(l=>l.city===filterCity);
+            if(cityLocs.length && map){
+                const group=L.featureGroup(cityLocs.map(l=>L.marker([l.lat,l.lng])));
+                map.fitBounds(group.getBounds().pad(0.15),{animate:false,maxZoom:16});
+            }
+        };
+    });
+}
+
+// Sidebar search
+(function _initSidebar(){
+    const ss=document.getElementById('sidebarSearch');
+    if(ss){
+        ss.addEventListener('input',e=>{
+            const si=document.getElementById('search');
+            if(si)si.value=e.target.value;
+            update();
+        });
+    }
+    const sa=document.getElementById('sidebarAddBtn');
+    if(sa)sa.onclick=()=>{document.getElementById('sidebar').classList.remove('open');openAddMode();};
+    const av=document.getElementById('sidebarAvatar');
+    if(av){ const un=localStorage.getItem('bt_username')||''; av.textContent=(un[0]||'B').toUpperCase(); }
+})();
 
 function refreshDatalistSuggestions() {
     document.getElementById('listSuggestions').innerHTML=[...new Set(locations.map(l=>l.list).filter(Boolean))].map(l=>`<option value="${l}">`).join('');
@@ -555,7 +615,7 @@ function showPlaceCard(loc, idx) {
         <div class="place-card-actions">
             <a class="place-action-btn" href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank">
                 <span class="place-action-icon">🗺️</span>
-                <span class="place-action-label" style="color:#1a73e8;">Maps</span>
+                <span class="place-action-label" style="color:var(--accent);">Maps</span>
             </a>
             <a class="place-action-btn green" href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank">
                 <span class="place-action-icon">🚗</span>
@@ -770,7 +830,7 @@ function renderSearchResults() {
     const coords=parseLatLng(searchInput.value.trim());
     if(coords){
         html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});_showSearchMarker(${coords.lat},${coords.lng});document.getElementById('search').blur();">
-            <div class="search-result-icon" style="background:#e8f0fe;color:#1a73e8">🎯</div>
+            <div class="search-result-icon" style="background:var(--pill);color:var(--accent)">🎯</div>
             <div class="search-result-text">
                 <div class="search-result-name">ไปที่พิกัด ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}</div>
                 <div class="search-result-sub">กดเพื่อ zoom ไปยังตำแหน่งนี้</div>
@@ -909,9 +969,9 @@ document.getElementById('chipCity').onclick=()=>{
     const cities=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
     const container=document.getElementById('cityChoiceList');
     container.innerHTML=`<div class="filter-choice-item ${!filterCity?'selected':''}" data-val="">
-        <span class="filter-choice-dot" style="background:#9aa0a6"></span>ทุกเขต<span class="filter-choice-count">${locations.length}</span></div>
+        <span class="filter-choice-dot" style="background:var(--text3)"></span>ทุกเขต<span class="filter-choice-count">${locations.length}</span></div>
         ${cities.map(([n,c])=>`<div class="filter-choice-item ${filterCity===n?'selected':''}" data-val="${n}">
-        <span class="filter-choice-dot" style="background:#1a73e8"></span>${n}<span class="filter-choice-count">${c}</span></div>`).join('')}`;
+        <span class="filter-choice-dot" style="background:var(--accent)"></span>${n}<span class="filter-choice-count">${c}</span></div>`).join('')}`;
     container.querySelectorAll('.filter-choice-item').forEach(el=>{
         el.onclick=()=>{container.querySelectorAll('.filter-choice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');filterCity=el.dataset.val;};
     });
@@ -1030,14 +1090,14 @@ function updateGpsMarker(lat, lng, accuracy) {
         myLocationMarker = L.marker([lat, lng], {icon, zIndexOffset:1000, interactive:true}).addTo(map)
             .bindPopup(`<div style="padding:12px;font-size:13px;min-width:180px;">
                 <b>📍 ตำแหน่งของฉัน</b><br>
-                <small style="color:#5f6368;">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
-                <small style="color:#5f6368;">±${Math.round(accuracy)}ม.</small><br><br>
-                <button onclick="openAddAt(${lat},${lng})" style="background:#1a73e8;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
+                <small style="color:var(--text3);">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
+                <small style="color:var(--text3);">±${Math.round(accuracy)}ม.</small><br><br>
+                <button onclick="openAddAt(${lat},${lng})" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
             </div>`);
     }
     myLatLng = {lat, lng};
     if (myLocationMarker.isPopupOpen()) {
-        myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:#1a73e8;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
+        myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:var(--accent);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
     }
     _smoothFollow(lat, lng);
     if (listSortMode==='near' || nearbyMode) update();
@@ -1441,7 +1501,7 @@ window._showAvoidSettings=function(){
                 <input type="checkbox" id="_avMotorway" ${_routeAvoid.motorway?'checked':''}> 🛣️ หลีกเลี่ยงทางหลวง/มอเตอร์เวย์
             </label>
             <div style="display:flex;gap:8px;margin-top:12px;">
-                <button onclick="_applyAvoidSettings()" style="flex:1;padding:8px;border:none;background:#1a73e8;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ บันทึก</button>
+                <button onclick="_applyAvoidSettings()" style="flex:1;padding:8px;border:none;background:var(--accent);color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ บันทึก</button>
                 <button onclick="document.getElementById('_avoidModal').remove();document.getElementById('_avoidBackdrop').remove();" style="flex:1;padding:8px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>
@@ -1809,9 +1869,9 @@ async function _routeDraw(){
 .rp-btn{flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:8px;background:var(--surface);
   cursor:pointer;font-size:11px;min-width:0;color:var(--text);transition:background .15s;}
 .rp-btn:active{background:var(--border);}
-.rp-btn-nav{flex:1;padding:7px 4px;border:none;background:#1a73e8;color:#fff;border-radius:8px;
+.rp-btn-nav{flex:1;padding:7px 4px;border:none;background:var(--accent);color:#fff;border-radius:8px;
   cursor:pointer;font-size:11px;min-width:0;font-weight:600;}
-.rp-btn-nav:active{background:#1558b0;}
+.rp-btn-nav:active{background:var(--accent);}
 .rp-stop{display:flex;align-items:center;gap:6px;padding:8px 4px;border-bottom:1px solid var(--border);}
 .rp-stop-num{font-size:14px;font-weight:700;color:#4285f4;min-width:22px;text-align:center;}
 .rp-stop-info{flex:1;min-width:0;}
@@ -1971,7 +2031,11 @@ document.getElementById('chipRoute').onclick=()=>{
 // INFO PANEL
 // ════════════════════════════════════════════
 document.getElementById('btnMenu').onclick=()=>{
-    try { openInfoPanel('menu'); } catch(e) { alert('Menu error: '+e.message); console.error('Menu error:',e); }
+    if(window.innerWidth<600){
+        document.getElementById('sidebar').classList.toggle('open');
+    } else {
+        try { openInfoPanel('menu'); } catch(e) { alert('Menu error: '+e.message); console.error('Menu error:',e); }
+    }
 };
 document.getElementById('infoPanelClose').onclick=closeInfo;
 document.getElementById('infoPanelBackdrop').onclick=closeInfo;

@@ -58,6 +58,107 @@
         #map.add-cursor { cursor: crosshair; }
         #map.measure-cursor { cursor: crosshair; }
 
+        /* ══ MAP GRID BACKGROUND (concept style) ══ */
+        .map-bg {
+            position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* ══ SIDEBAR (concept style) ══ */
+        .sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: 260px; z-index: var(--z-controls);
+            background: var(--surface); border-right: 0.5px solid var(--border);
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .sidebar-header {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; height: 48px;
+            background: var(--surface); border-bottom: 0.5px solid var(--border);
+            flex-shrink: 0;
+        }
+        .sidebar-logo {
+            font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+            color: var(--accent); text-transform: uppercase; flex-shrink: 0;
+        }
+        .sidebar-logo-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); flex-shrink: 0; }
+        .sidebar-search {
+            flex: 1; display: flex; align-items: center; gap: 6px;
+            background: var(--surface2); border: 0.5px solid var(--border);
+            border-radius: 8px; padding: 5px 9px; min-width: 0;
+        }
+        .sidebar-search-icon { color: var(--text3); font-size: 12px; flex-shrink: 0; }
+        .sidebar-search-input {
+            background: none; border: none; outline: none;
+            color: var(--text); font-size: 12px; width: 100%; font-family: inherit;
+        }
+        .sidebar-search-input::placeholder { color: var(--text3); }
+        .sidebar-badge {
+            flex-shrink: 0;
+            background: var(--pill); border: 0.5px solid var(--pill-border);
+            color: var(--accent); font-size: 10px; font-weight: 600;
+            padding: 2px 8px; border-radius: 20px;
+        }
+        .sidebar-body { flex: 1; overflow-y: auto; padding: 0; }
+        .sidebar-section {
+            padding: 12px 14px 6px;
+            font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--text3);
+        }
+        .sidebar-pills { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 2px; }
+        .sidebar-pill {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 7px 10px; border-radius: 8px;
+            font-size: 12px; cursor: pointer; transition: background 0.12s;
+            color: var(--text2); border: 0.5px solid transparent;
+        }
+        .sidebar-pill:hover { background: var(--surface2); color: var(--text); }
+        .sidebar-pill.active { background: var(--pill); color: var(--accent); border-color: var(--pill-border); font-weight: 600; }
+        .sidebar-pill-count {
+            font-size: 10px; background: var(--surface2);
+            padding: 1px 7px; border-radius: 10px; color: var(--text3);
+        }
+        .sidebar-pill.active .sidebar-pill-count { background: rgba(79,138,255,0.2); color: var(--accent); }
+        .sidebar-divider { height: 0.5px; background: var(--border); margin: 4px 14px 6px; }
+        .sidebar-cities { padding: 0 10px; display: flex; flex-direction: column; gap: 1px; flex: 1; overflow-y: auto; }
+        .sidebar-city {
+            display: flex; align-items: center; gap: 8px;
+            padding: 5px 10px; border-radius: 6px;
+            font-size: 12px; color: var(--text2); cursor: pointer;
+            transition: background 0.12s;
+        }
+        .sidebar-city:hover { background: var(--surface2); color: var(--text); }
+        .sidebar-city-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .sidebar-city-count { margin-left: auto; font-size: 10px; color: var(--text3); }
+        .sidebar-bottom {
+            padding: 10px 14px; border-top: 0.5px solid var(--border); flex-shrink: 0;
+        }
+        .sidebar-online {
+            display: flex; align-items: center; gap: 6px;
+            margin-top: 8px; font-size: 11px; color: var(--text3);
+        }
+        .online-dots { display: flex; gap: 3px; }
+        .online-dot {
+            width: 20px; height: 20px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 8px; font-weight: 700; color: #0d0d0f;
+        }
+        .online-label { font-size: 11px; color: var(--text3); }
+        .btn-add {
+            width: 100%; padding: 9px;
+            background: var(--accent); color: white;
+            border: none; border-radius: 8px;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            transition: filter 0.15s;
+        }
+        .btn-add:hover { filter: brightness(1.1); }
+        .btn-add:active { transform: scale(0.98); }
+
         /* ══ SEARCH BAR ══ */
         .search-bar {
             position: fixed; top: 10px; left: 10px;
@@ -568,10 +669,24 @@
         body.light .search-input { color: var(--text); }
         body.light .modal-field input, body.light .modal-field select, body.light .modal-field textarea { background: var(--surface2); color: var(--text); }
 
+        /* ══ DESKTOP: sidebar visible, search bar hidden ══ */
+        @media (min-width: 600px) {
+            #map { left: 260px; }
+            .search-bar { display: none !important; }
+            .sidebar { transform: translateX(0) !important; }
+            .place-card { left: 274px !important; }
+            .list-panel { left: 274px !important; }
+            .count-pill { left: calc(260px + 50%); transform: translateX(-50%); }
+            .map-controls { right: 12px; }
+            .gps-btn-wrap { right: 12px; }
+            .fab { right: 14px; }
+        }
         /* ══ MOBILE ══ */
         @media (max-width: 599px) {
+            .sidebar { transform: translateX(-110%); }
+            .sidebar.open { transform: translateX(0); }
             :root { --sidebar-w: 100vw; --radius: 14px; }
-            .search-bar { top: 8px; left: 8px; right: 8px; width: auto; }
+            .search-bar { top: 8px; left: 8px; right: 8px; width: auto; display: flex !important; }
             .search-box { height: 44px; padding: 0 10px 0 8px; }
             .search-input { font-size: 14px; }
             .filter-chips { padding: 5px 2px 2px; gap: 5px; }
@@ -683,11 +798,53 @@
     </style>
 </head>
 <body>
+    <!-- ══ MAP BACKGROUND GRID (concept style) ══ -->
+    <div class="map-bg" id="mapBg"></div>
     <div id="map"></div>
     <div id="crosshair">📍</div>
     <div class="latlng-hint" id="latlngHint"></div>
 
-    <!-- ══ SEARCH BAR ══ -->
+    <!-- ══ SIDEBAR (concept style) ══ -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">BT</div>
+            <div class="sidebar-logo-dot"></div>
+            <div class="sidebar-search">
+                <span class="sidebar-search-icon">⌕</span>
+                <input type="text" id="sidebarSearch" class="sidebar-search-input" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+            </div>
+            <div class="sidebar-badge" id="sidebarBadge">0 จุด</div>
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                <span class="live-label">live</span>
+            </div>
+            <div class="search-avatar" id="sidebarAvatar" title="บัญชี">B</div>
+        </div>
+
+        <div class="sidebar-body">
+            <div class="sidebar-section">Lists</div>
+            <div class="sidebar-pills" id="sidebarPills"></div>
+
+            <div class="sidebar-divider"></div>
+
+            <div class="sidebar-section">เมือง</div>
+            <div class="sidebar-cities" id="sidebarCities"></div>
+        </div>
+
+        <div class="sidebar-bottom">
+            <button class="btn-add" id="sidebarAddBtn">
+                <span style="font-size:14px;">+</span> เพิ่มจุดใหม่
+            </button>
+            <div class="sidebar-online">
+                <div class="online-dots" id="onlineDots">
+                    <div class="online-dot" style="background:linear-gradient(135deg,var(--accent),var(--accent2));">V</div>
+                </div>
+                <span class="online-label">live sync</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SEARCH BAR (mobile fallback + topbar style) ══ -->
     <div class="search-bar" id="searchBar">
         <div class="search-box" id="searchBox">
             <button class="search-menu-btn" id="btnMenu" title="เมนู">
