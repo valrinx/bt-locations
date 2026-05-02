@@ -187,8 +187,7 @@ const _debouncedPush = debounce(async () => {
     try {
         const locs = locations.map(l => { const { photo, ...rest } = l; return rest; });
         const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
-            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' },
-            cache: 'no-store'
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
         if (!res.ok) throw new Error('GitHub fetch: ' + res.status);
         const data = await res.json();
@@ -1816,8 +1815,7 @@ async function doSync(silent=true){
     _setSyncStatus('syncing');
     try{
         const res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`,{
-            headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'},
-            cache:'no-store'
+            headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}
         });
         if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);_setSyncStatus('error');return;}
         const data=await res.json();
@@ -1949,8 +1947,7 @@ function startAutoSync(){
     try {
         if (token) {
             const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
-                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' },
-                cache: 'no-store'
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
             });
             if (res.ok) {
                 const d = await res.json();
@@ -1959,7 +1956,7 @@ function startAutoSync(){
             }
         }
         if (!ghData) {
-            const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`, { cache: 'no-store' });
+            const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
             if (res.ok) ghData = await res.json();
         }
     } catch (e) { console.warn('GitHub fetch failed:', e.message); }
