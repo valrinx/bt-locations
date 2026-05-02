@@ -836,17 +836,28 @@ html = f'''<!DOCTYPE html>
         }};
 
         // === RESET ===
-        document.getElementById('btnReset').onclick = () => {{
+        document.getElementById('btnReset').onclick = async () => {{
             const msg = '⚠️ ยืนยันการรีเซ็ต?\\n\\n'
                 + '• ข้อมูลที่แก้ไขจะหายทั้งหมด\\n'
-                + '• กลับเป็นข้อมูลเริ่มต้น\\n\\n'
+                + '• ระบบจะดึงข้อมูลล่าสุดจาก GitHub\\n\\n'
                 + 'แนะนำ: กด Export สำรองข้อมูลก่อน';
             if (!confirm(msg)) return;
             pushUndo();
             localStorage.removeItem(STORAGE_KEY);
+            try {{
+                const res = await fetch(`https://raw.githubusercontent.com/${{REPO_OWNER}}/${{REPO_NAME}}/main/all_locations.json?t=${{Date.now()}}`);
+                if (res.ok) {{
+                    locations = await res.json();
+                    saveLocations();
+                    update();
+                    alert(`รีเซ็ตสำเร็จ! โหลด ${{locations.length}} จุดจาก GitHub`);
+                    return;
+                }}
+            }} catch(e) {{ console.warn('Fetch from GitHub failed', e); }}
             locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+            saveLocations();
             update();
-            alert('รีเซ็ตสำเร็จ!');
+            alert('รีเซ็ตสำเร็จ (ใช้ข้อมูลเริ่มต้น)');
         }};
 
         // === SAVE TO GITHUB ===
@@ -920,9 +931,17 @@ html = f'''<!DOCTYPE html>
             btn.textContent = 'กำลังบันทึก...';
             try {{
                 const jsonContent = JSON.stringify(locations, null, 2);
+                // 1) Save all_locations.json
                 const fileInfo = await githubGetFile('all_locations.json', token);
                 await githubPutFile('all_locations.json', jsonContent, fileInfo.sha, token, 'Update locations from web app');
-                showSaveStatus('บันทึกสำเร็จ!', false);
+                // 2) Also update docs/all_locations.json for GitHub Pages
+                const docsInfo = await githubGetFile('docs/all_locations.json', token);
+                await githubPutFile('docs/all_locations.json', jsonContent, docsInfo.sha, token, 'Sync docs/all_locations.json');
+                // 3) Update docs/locations.js
+                const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';\n';
+                const jsInfo = await githubGetFile('docs/locations.js', token);
+                await githubPutFile('docs/locations.js', jsContent, jsInfo.sha, token, 'Sync docs/locations.js');
+                showSaveStatus('บันทึกสำเร็จ! (3 ไฟล์)', false);
             }} catch(err) {{
                 console.error(err);
                 if (err.message.includes('401') || err.message.includes('Bad credentials')) {{
@@ -933,26 +952,26 @@ html = f'''<!DOCTYPE html>
                 }}
             }} finally {{
                 btn.classList.remove('saving');
-                btn.textContent = 'Save to GitHub';
+                btn.textContent = '💾 GitHub';
             }}
         }}
 
         // Init
         update();
 
-        // Background sync: fetch latest data from server
+        // Background sync: fetch latest data from GitHub
         (async () => {{
             try {{
-                const res = await fetch('./all_locations.json?t=' + Date.now());
+                const res = await fetch(`https://raw.githubusercontent.com/${{REPO_OWNER}}/${{REPO_NAME}}/main/all_locations.json?t=${{Date.now()}}`);
                 if (!res.ok) return;
                 const text = await res.text();
                 if (!text.startsWith('[')) return;
                 const fresh = JSON.parse(text);
-                if (fresh.length > 0 && JSON.stringify(fresh) !== JSON.stringify(locations)) {{
+                if (fresh.length > 0 && fresh.length >= locations.length && JSON.stringify(fresh) !== JSON.stringify(locations)) {{
                     locations = fresh;
                     saveLocations();
                     update();
-                    console.log('Synced', fresh.length, 'locations from server');
+                    console.log('Synced', fresh.length, 'locations from GitHub');
                 }}
             }} catch(e) {{}}
         }})();
