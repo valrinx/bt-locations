@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.8';
+const APP_VERSION = 'v5.6.9';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -33,6 +33,8 @@ function useWorker(){return !!getWorkerUrl();}
 const undoStack = [], redoStack = [], MAX_UNDO = 20;
 let favorites = new Set((() => { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; } })());
 function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); }
+// Avatar init
+(function _initAvatar(){ const un=localStorage.getItem('bt_username')||''; const el=document.getElementById('searchAvatar'); if(el)el.textContent=(un[0]||'B').toUpperCase(); })();
 function favKey(loc) { return `${loc.lat.toFixed(6)},${loc.lng.toFixed(6)}`; }
 function toggleFavorite(loc) { const k = favKey(loc); if (favorites.has(k)) favorites.delete(k); else favorites.add(k); saveFavorites(); }
 function isFavorite(loc) { return favorites.has(favKey(loc)); }
@@ -592,7 +594,7 @@ function showPlaceCard(loc, idx) {
                 <small>พิกัด GPS</small>
             </div>
             <button onclick="copyCoords(${loc.lat},${loc.lng})"
-                style="border:none;background:none;cursor:pointer;color:var(--blue);font-size:13px;font-weight:500;padding:4px 8px;border-radius:8px;flex-shrink:0;">คัดลอก</button>
+                style="border:none;background:none;cursor:pointer;color:var(--accent);font-size:13px;font-weight:500;padding:4px 8px;border-radius:8px;flex-shrink:0;">คัดลอก</button>
         </div>
         ${loc.city?`<div class="place-card-row"><div class="place-card-row-icon">🏙️</div><div class="place-card-row-text">${loc.city}</div></div>`:''}
     `;
@@ -2004,16 +2006,16 @@ function openInfoPanel(mode){
         const sl=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
         const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
         body.innerHTML=`<div class="stats-section">
-            <div style="font-size:28px;font-weight:700;color:var(--blue);margin-bottom:4px;">${locations.length}</div>
+            <div style="font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px;">${locations.length}</div>
             <div style="font-size:13px;color:var(--text3);margin-bottom:20px;">สถานที่ทั้งหมด</div>
             <div class="stats-header">ตามรายการ</div>
             ${sl.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:${getColor(n)}"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/maxL*100}%;background:${getColor(n)}"></div></div><span class="stats-count">${c}</span></div>`).join('')}
-            ${sc.length?`<div class="stats-header" style="margin-top:20px;">ตามเขต</div>${sc.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:var(--blue)"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/Math.max(...sc.map(x=>x[1]))*100}%"></div></div><span class="stats-count">${c}</span></div>`).join('')}`:''}
+            ${sc.length?`<div class="stats-header" style="margin-top:20px;">ตามเขต</div>${sc.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:var(--accent)"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/Math.max(...sc.map(x=>x[1]))*100}%"></div></div><span class="stats-count">${c}</span></div>`).join('')}`:''}
         </div>`;
     } else {
         document.getElementById('infoPanelTitle').textContent='BT Locations';
         const _syncAgo=getToken()?` · ${Math.round((Date.now()-_lastSyncTime)/1000)}s ago`:'';
-        const _darkLabel=document.body.classList.contains('dark')?'☀️ Light mode':'🌙 Dark mode';
+        const _darkLabel=document.body.classList.contains('light')?'🌙 Dark mode':'☀️ Light mode';
         const _trackLabel=trackingActive?'⏹ หยุดบันทึก':'▶ บันทึกเส้นทาง';
         const _menuSection=(title,items)=>`
             <div style="margin-bottom:8px;">
@@ -2031,7 +2033,7 @@ function openInfoPanel(mode){
         body.innerHTML=`
             <div style="padding:8px 4px 4px;">
                 <div style="padding:16px 16px 8px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:var(--blue);display:flex;align-items:center;justify-content:center;">
+                    <div style="width:44px;height:44px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center;">
                         <span style="font-size:22px;color:#fff;">📍</span>
                     </div>
                     <div>
@@ -2364,7 +2366,7 @@ async function doReset(){
     closeInfo();
 }
 
-function toggleDark(){document.body.classList.toggle('dark');showToast(document.body.classList.contains('dark')?'Dark mode':'Light mode');closeInfo();}
+function toggleDark(){document.body.classList.toggle('light');const isLight=document.body.classList.contains('light');showToast(isLight?'Light mode':'Dark mode');closeInfo();}
 
 // ════════════════════════════════════════════
 // SUPABASE SAVE (replaces GitHub save)
