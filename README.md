@@ -21,6 +21,9 @@
 | `docs/index.html` | หน้าเว็บ (generated) — UI, map, CRUD, GitHub save |
 | `docs/locations.js` | ข้อมูลหมุดแยกไฟล์ (generated จาก build) |
 | `docs/all_locations.json` | สำเนา JSON สำหรับ GitHub Pages |
+| `topup_map.html` | แผนที่ Topup Locations แบบ standalone |
+| `topup_locations.csv` | ข้อมูล Topup Locations (CSV) |
+| `topup-map-site/` | Topup Locations Map site สำหรับ deploy |
 
 ---
 
@@ -126,6 +129,13 @@ python -m http.server 8080
 ## บันทึกการเปลี่ยนแปลง (Changelog)
 
 ### 2026-05-02 (ล่าสุด)
+
+- **เพิ่ม Topup Locations Map** — แผนที่แสดงจุด Topup แบบ standalone (`topup_map.html`)
+  - ค้นหาจุด BT ได้แบบ real-time
+  - MarkerCluster + แสดงชื่อบน marker
+  - รายการจุดแบบ side panel กดเลือกแล้ว jump ไปจุดนั้น
+  - Mobile responsive
+  - เปิด Google Maps ได้จาก popup
 
 - **แก้ไข Export/Share API** — แก้ bug `id` ซ้ำใน Share modal, จัดการ `AbortError` ถูกต้อง, ส่งไฟล์เป็น File object แทน text string
 - **Export เลือกขอบเขตได้** — เปิด modal Export แล้วกรองตาม **รายการ (List)** และ/หรือ **เขต (City)** ก่อน export พร้อมแสดงจำนวนจุดแบบ real-time
