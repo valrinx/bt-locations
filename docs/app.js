@@ -4,9 +4,13 @@
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
+const SYNC_SHA_KEY = 'bt_sync_sha';
+const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
 const undoStack = [], MAX_UNDO = 20;
 const MAX_CHANGELOG = 200;
+const SYNC_INTERVAL = 30000; // 30 seconds
+let _syncTimer = null, _syncing = false, _lastSyncTime = 0;
 
 function getChangelog(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
 function addChangelogEntry(action,loc){
@@ -1002,6 +1006,7 @@ function openInfoPanel(mode){
                 ['📊','สถิติ','omStatsM',''],
                 ['🔥',heatmapMode?'ปิด Heatmap':'เปิด Heatmap','omHeatmapM',''],
                 ['📝','Changelog','omChangelogM',''],
+                ['�','Sync Now'+(getToken()?` (${Math.round((Date.now()-_lastSyncTime)/1000)}s ago)`:''),'omSyncM',''],
                 ['🌙','Dark mode','omDarkM',''],
                 ['↩','Undo','omUndoM',''],
                 ['🗑️','ลบที่กรอง (Bulk)','omBulkDelM','red'],
@@ -1014,6 +1019,7 @@ function openInfoPanel(mode){
         b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
         b('omStatsM',   ()=>openInfoPanel('stats'));
         b('omChangelogM',()=>openInfoPanel('changelog'));
+        b('omSyncM',    ()=>{closeInfo();doSync(false);});
         b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
         b('omDarkM',    toggleDark);
         b('omUndoM',    doUndo);
@@ -1341,20 +1347,15 @@ async function githubPut(path,content,sha,token,msg){
 
 async function doGithubSave(token){
     const btn=document.getElementById('btnGithubSave'); btn.style.color='#fbbc04';
-    showToast('⏳ กำลังบันทึก...');
+    showToast('⏳ กำลังซิงค์...');
     try{
-        // Strip photos before GitHub save (photos stored locally only)
-        const locsForGithub=locations.map(l=>{const{photo,...rest}=l;return rest;});
-        const json=JSON.stringify(locsForGithub,null,2);
-        const locJs='const DEFAULT_LOCATIONS='+JSON.stringify(locsForGithub)+';\n';
-        showToast('⏳ 1/3...');const f1=await githubFile('all_locations.json',token);await githubPut('all_locations.json',json,f1.sha,token,'Update from web');
-        showToast('⏳ 2/3...');const f2=await githubFile('docs/all_locations.json',token);await githubPut('docs/all_locations.json',json,f2.sha,token,'Sync docs');
-        showToast('⏳ 3/3...');const f3=await githubFile('docs/locations.js',token);await githubPut('docs/locations.js',locJs,f3.sha,token,'Sync locations.js');
-        showToast('✅ บันทึก GitHub สำเร็จ',false,true);
+        await doSync(false);
+        showToast('✅ Sync สำเร็จ',false,true);
+        startAutoSync(); // Ensure auto-sync is running after first manual save
     }catch(err){
         if(err.message.includes('401')||err.message.includes('credentials')){sessionStorage.removeItem(GITHUB_TOKEN_KEY);showToast('🔑 Token ไม่ถูกต้อง',true);}
         else if(err.message.includes('404')){showToast('❌ ไม่พบ repo หรือไฟล์',true);}
-        else if(err.message.includes('422')){showToast('❌ SHA ไม่ตรง ลอง Reset',true);}
+        else if(err.message.includes('422')){showToast('❌ SHA ไม่ตรง ลอง Sync อีกครั้ง',true);}
         else showToast('❌ '+err.message,true);
     }finally{btn.style.color='';}
 }
@@ -1479,15 +1480,183 @@ const style=document.createElement('style');
 style.textContent=`.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#fff!important;border:none!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;white-space:nowrap!important;font-family:inherit!important;}`;
 document.head.appendChild(style);
 
-// Background sync
-(async()=>{
-    try{
-        const res=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
-        if(!res.ok)return;const fresh=await res.json();
-        if(fresh.length>0&&fresh.length>=locations.length&&JSON.stringify(fresh)!==JSON.stringify(locations)){
-            locations=fresh;saveLocations();invalidateCache();update();console.log('Synced',fresh.length,'locs');
+// ════════════════════════════════════════════
+// MULTI-USER SYNC (GitHub-based polling + merge)
+// ════════════════════════════════════════════
+function _locKey(l){return l.lat.toFixed(6)+','+l.lng.toFixed(6);}
+
+function mergeLocs(local, remote, base){
+    // 3-way merge: base = last known common state
+    // Build maps by coordinate key
+    const bMap=new Map(), lMap=new Map(), rMap=new Map();
+    (base||[]).forEach(l=>bMap.set(_locKey(l),l));
+    local.forEach(l=>lMap.set(_locKey(l),l));
+    remote.forEach(l=>rMap.set(_locKey(l),l));
+    const allKeys=new Set([...lMap.keys(),...rMap.keys()]);
+    const merged=[];
+    let conflicts=0, added=0, removed=0;
+    allKeys.forEach(key=>{
+        const inBase=bMap.has(key), inLocal=lMap.has(key), inRemote=rMap.has(key);
+        if(inLocal&&inRemote){
+            // Both have it — prefer most recently modified (local wins if equal)
+            const ll=lMap.get(key), rl=rMap.get(key);
+            // If local changed from base, use local; else use remote
+            if(inBase){
+                const bl=bMap.get(key);
+                const localChanged=JSON.stringify({...ll,photo:undefined})!==JSON.stringify({...bl,photo:undefined});
+                const remoteChanged=JSON.stringify(rl)!==JSON.stringify({...bl,photo:undefined});
+                if(localChanged){merged.push(ll);if(remoteChanged)conflicts++;}
+                else merged.push({...rl,photo:ll.photo||undefined});
+            } else {
+                merged.push(ll); // both added same coords — keep local
+            }
+        } else if(inLocal&&!inRemote){
+            // Only local has it
+            if(inBase){removed++;} // remote deleted it — respect delete
+            else{merged.push(lMap.get(key));added++;} // locally added
+        } else if(!inLocal&&inRemote){
+            // Only remote has it
+            if(inBase){/* local deleted it — respect delete */removed++;}
+            else{merged.push(rMap.get(key));added++;} // remotely added
         }
-    }catch(e){}
+    });
+    return {merged, conflicts, added, removed};
+}
+
+function setSyncIndicator(state){
+    const btn=document.getElementById('btnGithubSave');
+    if(!btn)return;
+    btn.classList.remove('sync-ok','sync-pending','sync-error','sync-active');
+    if(state)btn.classList.add('sync-'+state);
+}
+
+async function doSync(silent=true){
+    if(_syncing)return;
+    const token=getToken();
+    if(!token){if(!silent)showToast('กรุณาใส่ Token ก่อน',true);return;}
+    _syncing=true;
+    setSyncIndicator('active');
+    try{
+        // Fetch remote
+        const res=await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`,{
+            headers:{'Authorization':`token ${token}`,'Accept':'application/vnd.github.v3+json'}
+        });
+        if(!res.ok){if(!silent)showToast('Sync ล้มเหลว: '+res.status,true);setSyncIndicator('error');return;}
+        const data=await res.json();
+        const remoteSha=data.sha;
+        const remoteContent=JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g,'')))));
+
+        // Get local snapshot (base for 3-way merge)
+        const localSha=localStorage.getItem(SYNC_SHA_KEY)||'';
+        let base=null;
+        try{base=JSON.parse(localStorage.getItem(SYNC_SNAPSHOT_KEY)||'null');}catch{}
+
+        const localStripped=locations.map(l=>{const{photo,...rest}=l;return rest;});
+
+        if(remoteSha===localSha){
+            // No remote changes — check if local changed
+            const localJson=JSON.stringify(localStripped);
+            const baseJson=JSON.stringify(base);
+            if(localJson!==baseJson){
+                // Local changes → push to GitHub
+                await _pushToGithub(token, localStripped, remoteSha);
+                if(!silent)showToast('⬆️ Pushed local changes',false,true);
+            } else {
+                if(!silent)showToast('✅ ข้อมูลตรงกัน',false,true);
+            }
+            setSyncIndicator('ok');
+        } else {
+            // Remote changed
+            const localJson=JSON.stringify(localStripped);
+            const baseJson=JSON.stringify(base);
+            if(localJson===baseJson||!base){
+                // No local changes (or first sync) — just pull
+                _applyRemote(remoteContent, remoteSha);
+                if(!silent)showToast(`⬇️ ดึง ${remoteContent.length} จุดจาก GitHub`,false,true);
+                console.log('Sync: pulled',remoteContent.length,'locs');
+            } else {
+                // Both changed — merge!
+                const result=mergeLocs(localStripped, remoteContent, base);
+                // Restore local photos
+                const photoMap=new Map();
+                locations.forEach(l=>{if(l.photo)photoMap.set(_locKey(l),l.photo);});
+                result.merged.forEach(l=>{
+                    const p=photoMap.get(_locKey(l));
+                    if(p)l.photo=p;
+                });
+                locations=result.merged;
+                saveLocations();invalidateCache();update();
+                // Push merged result
+                const mergedStripped=locations.map(l=>{const{photo,...rest}=l;return rest;});
+                await _pushToGithub(token, mergedStripped, remoteSha);
+                const msg=`🔀 Merge: +${result.added} -${result.removed}${result.conflicts?' ⚠️'+result.conflicts+' conflicts':''}`;
+                if(!silent)showToast(msg,false,true);
+                console.log('Sync: merged',msg);
+            }
+            setSyncIndicator('ok');
+        }
+        _lastSyncTime=Date.now();
+    }catch(err){
+        console.warn('Sync error:',err);
+        setSyncIndicator('error');
+        if(!silent)showToast('❌ Sync: '+err.message,true);
+    }finally{_syncing=false;}
+}
+
+function _applyRemote(remote, sha){
+    // Preserve local photos
+    const photoMap=new Map();
+    locations.forEach(l=>{if(l.photo)photoMap.set(_locKey(l),l.photo);});
+    locations=remote.map(l=>{
+        const p=photoMap.get(_locKey(l));
+        return p?{...l,photo:p}:l;
+    });
+    saveLocations();invalidateCache();update();
+    localStorage.setItem(SYNC_SHA_KEY,sha);
+    localStorage.setItem(SYNC_SNAPSHOT_KEY,JSON.stringify(remote));
+}
+
+async function _pushToGithub(token, locs, currentSha){
+    const json=JSON.stringify(locs,null,2);
+    const locJs='const DEFAULT_LOCATIONS='+JSON.stringify(locs)+';\n';
+    // Push all 3 files
+    await githubPut('all_locations.json',json,currentSha,token,'Sync from web');
+    const f2=await githubFile('docs/all_locations.json',token);
+    await githubPut('docs/all_locations.json',json,f2.sha,token,'Sync docs');
+    const f3=await githubFile('docs/locations.js',token);
+    await githubPut('docs/locations.js',locJs,f3.sha,token,'Sync locations.js');
+    // Update local snapshot
+    const f1=await githubFile('all_locations.json',token);
+    localStorage.setItem(SYNC_SHA_KEY,f1.sha);
+    localStorage.setItem(SYNC_SNAPSHOT_KEY,JSON.stringify(locs));
+}
+
+function startAutoSync(){
+    if(_syncTimer)clearInterval(_syncTimer);
+    _syncTimer=setInterval(()=>{
+        if(getToken()&&document.visibilityState==='visible')doSync(true);
+    },SYNC_INTERVAL);
+    // Also sync on visibility change
+    document.addEventListener('visibilitychange',()=>{
+        if(document.visibilityState==='visible'&&getToken()&&Date.now()-_lastSyncTime>10000)doSync(true);
+    });
+}
+
+// Initial sync + start polling
+(async()=>{
+    if(getToken()){
+        await doSync(true);
+        startAutoSync();
+    } else {
+        // No token — just pull from raw (public read)
+        try{
+            const res=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
+            if(!res.ok)return;const fresh=await res.json();
+            if(fresh.length>0&&JSON.stringify(fresh)!==JSON.stringify(locations)){
+                locations=fresh;saveLocations();invalidateCache();update();console.log('Synced',fresh.length,'locs');
+            }
+        }catch(e){}
+    }
 })();
 
 // PWA: register service worker

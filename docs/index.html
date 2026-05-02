@@ -551,6 +551,13 @@
         }
         .route-number-tooltip::before { display: none !important; }
 
+        /* Sync indicator */
+        .sync-ok { color: #34a853 !important; }
+        .sync-pending { color: #fbbc04 !important; }
+        .sync-error { color: #ea4335 !important; }
+        .sync-active { color: #4285f4 !important; animation: sync-spin 1s linear infinite; }
+        @keyframes sync-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
         /* Cluster */
         .marker-cluster {
             background-clip: padding-box;

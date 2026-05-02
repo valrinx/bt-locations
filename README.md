@@ -149,7 +149,7 @@ python -m http.server 8080
 - [x] **Route planning** — ✅ เสร็จแล้ว (Nearest-neighbor TSP + polyline + numbered stops)
 - [x] **Tag/label system** — ✅ เสร็จแล้ว (tags ต่อจุด + ค้นหาได้)
 - [x] **Changelog UI** — ✅ เสร็จแล้ว (เก็บประวัติ add/edit/delete + แสดงใน info panel)
-- [ ] **Multi-user collaboration** — sync แบบ realtime ผ่าน GitHub หรือ backend
+- [x] **Multi-user collaboration** — ✅ เสร็จแล้ว (GitHub-based: 3-way merge, auto-sync ทุก 30 วิ, conflict resolution, sync indicator)
 
 ### 🔧 ด้านระบบ / code quality
 
