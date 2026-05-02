@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.6.5';
+const APP_VERSION = 'v5.6.6';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -205,27 +205,26 @@ function _locRow(l){
         updated_at: new Date(l.updatedAt||Date.now()).toISOString(),
     };
 }
+// Supabase write-only helpers — do NOT touch local array or render.
+// Realtime subscription is the ONLY place that updates locations[] and calls update().
 async function sbInsert(loc){
-    const {data,error}=await _sb.from('locations').insert(_locRow(loc)).select('id').single();
-    if(error){console.warn('sbInsert failed:',error.message);_setSyncStatus('error');return;}
-    loc.sb_id=data.id;
-    _writeCache();
-    _setSyncStatus('ok');_lastSyncTime=Date.now();
+    const {error}=await _sb.from('locations').insert(_locRow(loc));
+    if(error){console.warn('sbInsert failed:',error.message);_setSyncStatus('error');}
+    // Realtime INSERT event will add to locations[] and render
 }
 async function sbUpdate(loc){
     if(!loc.sb_id){await sbInsert(loc);return;}
     const {error}=await _sb.from('locations').update(_locRow(loc)).eq('id',loc.sb_id);
-    if(error){console.warn('sbUpdate failed:',error.message);_setSyncStatus('error');return;}
-    _setSyncStatus('ok');_lastSyncTime=Date.now();
+    if(error){console.warn('sbUpdate failed:',error.message);_setSyncStatus('error');}
+    // Realtime UPDATE event will update locations[] and render
 }
 async function sbDelete(loc){
     if(!loc.sb_id)return;
     const {error}=await _sb.from('locations').delete().eq('id',loc.sb_id);
-    if(error){console.warn('sbDelete failed:',error.message);_setSyncStatus('error');return;}
-    _setSyncStatus('ok');_lastSyncTime=Date.now();
+    if(error){console.warn('sbDelete failed:',error.message);_setSyncStatus('error');}
+    // Realtime DELETE event will remove from locations[] and render
 }
 async function sbBulkUpdate(locs){
-    // used for rename list/city — update each changed loc
     for(const loc of locs){await sbUpdate(loc);}
 }
 
@@ -1324,18 +1323,24 @@ document.getElementById('editModalSave').onclick=()=>{
     const entry={name,lat,lng,list,city,note,updatedAt:Date.now()};
     if(tags.length)entry.tags=tags;
     if(photo)entry.photo=photo;
-    if(editingIndex>=0){
-        locations[editingIndex]=entry;addChangelogEntry('edit',entry);
-        if(_sbLoaded)sbUpdate(entry);
-    } else {
-        locations.push(entry);addChangelogEntry('add',entry);
-        if(_sbLoaded)sbInsert(entry);
-    }
-    saveLocations(); invalidateCache();
+    addChangelogEntry(editingIndex>=0?'edit':'add',entry);
     document.getElementById('editModalOverlay').classList.remove('open');
-    update();
     showToast(editingIndex>=0?'บันทึกสำเร็จ':'เพิ่มสถานที่แล้ว',false,true);
-    if(editingIndex<0)map.flyTo([lat,lng],15,{animate:true,duration:0.7});
+    if(_sbLoaded){
+        // Realtime will update locations[] and render for everyone including self
+        if(editingIndex>=0){
+            const existing=locations[editingIndex];
+            entry.sb_id=existing.sb_id;
+            sbUpdate(entry);
+        } else {
+            if(editingIndex<0)map.flyTo([lat,lng],15,{animate:true,duration:0.7});
+            sbInsert(entry);
+        }
+    } else {
+        // Offline fallback
+        if(editingIndex>=0){locations[editingIndex]=entry;}else{locations.push(entry);}
+        saveLocations();invalidateCache();update();
+    }
 };
 
 // ════════════════════════════════════════════
