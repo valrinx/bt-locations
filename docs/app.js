@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.5.2';
+const APP_VERSION = 'v5.5.3';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -751,11 +751,21 @@ document.getElementById('chipMore').addEventListener('click',e=>{
     e.stopPropagation();
     _chipDropdown.classList.toggle('open');
 });
-document.addEventListener('click',e=>{
-    if(!e.target.closest('.chip-more-wrap'))_chipDropdown.classList.remove('open');
+// Close on outside touch/click (mousedown fires before click, avoids timing issue)
+document.addEventListener('mousedown',e=>{
+    if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
+        _chipDropdown.classList.remove('open');
 });
-// Close dropdown after item handler fires (delay to let onclick run first)
-_chipDropdown.addEventListener('click',()=>{setTimeout(()=>_chipDropdown.classList.remove('open'),50);});
+document.addEventListener('touchstart',e=>{
+    if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
+        _chipDropdown.classList.remove('open');
+},{passive:true});
+// Each dropdown item closes menu after its handler runs
+document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
+    item.addEventListener('click',()=>{
+        setTimeout(()=>_chipDropdown.classList.remove('open'),100);
+    });
+});
 
 document.getElementById('chipAll').onclick=()=>{filterList='';filterCity='';nearbyMode=false;update();};
 
