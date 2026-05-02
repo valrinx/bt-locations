@@ -12,8 +12,9 @@ const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
 const FAVORITES_KEY = 'bt_favorites';
 const TRACKING_KEY = 'bt_tracked_paths';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
-// Worker URL: if set, all GitHub API calls go through Cloudflare Worker
-function getWorkerUrl(){return localStorage.getItem(WORKER_URL_KEY)||'';}
+// Worker URL: default → Cloudflare Worker, override via localStorage
+const DEFAULT_WORKER_URL = 'https://bt-locations.teenson4.workers.dev';
+function getWorkerUrl(){return localStorage.getItem(WORKER_URL_KEY)||DEFAULT_WORKER_URL;}
 function getApiKey(){return localStorage.getItem(API_KEY_KEY)||'';}
 function useWorker(){return !!getWorkerUrl();}
 const undoStack = [], redoStack = [], MAX_UNDO = 20;
