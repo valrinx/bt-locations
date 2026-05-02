@@ -276,19 +276,19 @@ function createClusterGroup() {
         maxClusterRadius: function(zoom) {
             if (zoom >= 18) return 10;
             if (zoom >= 16) return 20;
-            if (zoom >= 14) return 40;
-            if (zoom >= 12) return 70;
-            if (zoom >= 10) return 100;
-            return 120;
+            if (zoom >= 14) return 30;
+            if (zoom >= 12) return 50;
+            if (zoom >= 10) return 70;
+            return 90;
         },
         disableClusteringAtZoom: 17,
         spiderfyOnMaxZoom: true,
         zoomToBoundsOnClick: true,
-        animate: false,
+        animate: true,
         animateAddingMarkers: false,
         chunkedLoading: true,
-        chunkInterval: 50,
-        chunkDelay: 10,
+        chunkInterval: 100,
+        chunkDelay: 20,
         removeOutsideVisibleBounds: true,
         iconCreateFunction(cluster) {
             const count = cluster.getChildCount();
@@ -416,8 +416,8 @@ function renderMarkers(filtered) {
 
     const zoom = map.getZoom();
     const MAX_MARKERS = _mobile
-        ? (zoom >= 15 ? 300 : zoom >= 13 ? 150 : 80)
-        : (zoom >= 15 ? 800 : zoom >= 13 ? 400 : 200);
+        ? (zoom >= 15 ? 600 : zoom >= 13 ? 400 : 250)
+        : (zoom >= 15 ? 2000 : zoom >= 13 ? 1200 : 600);
     const layers = [];
     let truncated = false;
     filteredIdxSet.forEach(idx => {
@@ -1848,7 +1848,14 @@ rebuildIndexMap();
 update();
 
 const style=document.createElement('style');
-style.textContent=`.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#fff!important;border:none!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;white-space:nowrap!important;font-family:inherit!important;}`;
+style.textContent=`.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#fff!important;border:none!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;white-space:nowrap!important;font-family:inherit!important;}
+.leaflet-marker-icon div { transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease !important; }
+.leaflet-marker-icon:hover div { transform: scale(1.35) !important; }
+.marker-cluster { transition: transform 0.25s cubic-bezier(0.34,1.4,0.64,1), opacity 0.2s ease !important; }
+.marker-cluster:hover { transform: scale(1.15) !important; }
+.leaflet-cluster-anim .leaflet-marker-icon,
+.leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
+`;
 document.head.appendChild(style);
 
 // ════════════════════════════════════════════
