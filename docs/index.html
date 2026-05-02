@@ -757,6 +757,10 @@
                     <textarea id="modalNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
                 </div>
                 <div class="modal-field">
+                    <label>แท็ก (ไม่บังคับ, คั่นด้วย ,)</label>
+                    <input type="text" id="modalTags" placeholder="เช่น 7-11, ปั๊ม, ร้านชำ">
+                </div>
+                <div class="modal-field">
                     <label>รูปภาพ (ไม่บังคับ)</label>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         <label for="modalPhotoInput" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--surface2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border:1.5px dashed var(--border);transition:all .15s;">
@@ -1003,7 +1007,7 @@
         return locations.filter(l => {
             const ml = !filterList || l.list===filterList;
             const mc = !filterCity || l.city===filterCity;
-            const ms = !q||(l.name||'').toLowerCase().includes(q)||l.list.toLowerCase().includes(q)||(l.city||'').toLowerCase().includes(q)||matchCoords(l,q);
+            const ms = !q||(l.name||'').toLowerCase().includes(q)||l.list.toLowerCase().includes(q)||(l.city||'').toLowerCase().includes(q)||(l.tags||[]).some(t=>t.toLowerCase().includes(q))||matchCoords(l,q);
             const mn = !nearbyMode||!myLatLng||haversine(myLatLng.lat,myLatLng.lng,l.lat,l.lng)<=nearbyRadius;
             return ml&&mc&&ms&&mn;
         });
@@ -1170,6 +1174,7 @@
                 ${loc.city?`<span class="dot">·</span><span>${loc.city}</span>`:''}
                 ${distHtml}
             </div>
+            ${loc.tags&&loc.tags.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t=>`<span style="display:inline-block;padding:3px 10px;background:var(--surface2);border-radius:12px;font-size:11px;color:var(--text2);font-weight:500;">🏷️ ${t}</span>`).join('')}</div>`:''}
             ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--border);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
             ${loc.note?`<div style="font-size:13px;color:var(--text2);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>`:''}
             <div class="place-card-actions">
@@ -1597,6 +1602,7 @@
         document.getElementById('modalList').value=filterList||'';
         document.getElementById('modalCity').value=filterCity||'';
         document.getElementById('modalNote').value='';
+        document.getElementById('modalTags').value='';
         setPhotoPreview('');
         document.getElementById('modalLat').value=parseFloat(lat).toFixed(6);
         document.getElementById('modalLng').value=parseFloat(lng).toFixed(6);
@@ -1654,6 +1660,7 @@
         document.getElementById('modalList').value=loc.list||'';
         document.getElementById('modalCity').value=loc.city||'';
         document.getElementById('modalNote').value=loc.note||'';
+        document.getElementById('modalTags').value=(loc.tags||[]).join(', ');
         document.getElementById('modalLat').value=loc.lat;
         document.getElementById('modalLng').value=loc.lng;
         setPhotoPreview(loc.photo||'');
@@ -1674,7 +1681,10 @@
         if(isNaN(lat)||isNaN(lng)){showToast('กรุณากรอก Lat/Lng',true);return;}
         pushUndo();
         const photo=_modalPhoto||'';
+        const tagsRaw=document.getElementById('modalTags').value;
+        const tags=tagsRaw?tagsRaw.split(',').map(t=>t.trim()).filter(Boolean):[];
         const entry={name,lat,lng,list,city,note};
+        if(tags.length)entry.tags=tags;
         if(photo)entry.photo=photo;
         if(editingIndex>=0) locations[editingIndex]=entry;
         else locations.push(entry);
