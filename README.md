@@ -55,9 +55,10 @@
 - Data validation + schema normalization ตอน import
 
 ### ☁️ Sync + Multi-user
-- Multi-user collaboration — GitHub-based 3-way merge, auto-sync ทุก 30 วิ
-- Conflict resolution อัตโนมัติ + sync indicator
-- Save to GitHub ผ่าน API (token ใน sessionStorage)
+- Multi-user collaboration — **Supabase Realtime** (8 คน live sync ทันที)
+- Supabase PostgreSQL เป็น single source of truth
+- Realtime INSERT/UPDATE/DELETE broadcast ให้ทุกคนพร้อมกัน
+- Periodic pull ทุก 60 วิ เป็น fallback
 - Permalink / แชร์จุด — URL `#lat,lng,zoom`
 
 ### 📱 Mobile + Performance
@@ -136,6 +137,17 @@ python -m http.server 8080
 
 ## ✅ ฟีเจอร์ที่เสร็จแล้ว
 
+### 2026-05-03 (ล่าสุด)
+
+- **Supabase Migration (v5.6.x)** — ย้าย backend จาก GitHub API / Cloudflare Worker → Supabase
+  - Supabase PostgreSQL เป็น single source of truth (1,678 จุด)
+  - Realtime subscription — INSERT/UPDATE/DELETE live sync ทุกคน
+  - `sbInsert` / `sbUpdate` / `sbDelete` แทน bulk push ทั้งหมด
+  - `saveLocations()` = localStorage only, Supabase push ผ่าน targeted functions
+  - `doSync()` = pull-only (paginate 1000 rows ต่อ page)
+  - `_sbLoaded` gate ป้องกัน push ระหว่าง initial load
+  - Auto-fill list ตอนเพิ่มจุด: nearest 10km → most-used fallback
+
 ### 2026-05-02 (ล่าสุด)
 - [x] **PWA / Offline support** — Service Worker + manifest + cache map tiles
 - [x] **ค้นหาตามพิกัด** — paste lat,lng ในช่องค้นหาแล้ว jump ไปตำแหน่งนั้น
@@ -187,7 +199,7 @@ python -m http.server 8080
 - [x] **Route planning** — ✅ เสร็จแล้ว (Nearest-neighbor TSP + polyline + numbered stops)
 - [x] **Tag/label system** — ✅ เสร็จแล้ว (tags ต่อจุด + ค้นหาได้)
 - [x] **Changelog UI** — ✅ เสร็จแล้ว (เก็บประวัติ add/edit/delete + แสดงใน info panel)
-- [x] **Multi-user collaboration** — ✅ เสร็จแล้ว (GitHub-based: 3-way merge, auto-sync ทุก 30 วิ, conflict resolution, sync indicator)
+- [x] **Multi-user collaboration** — ✅ เสร็จแล้ว (Supabase Realtime: live sync ทันที, ไม่มี merge conflict)
 
 ### 🔧 ด้านระบบ / code quality
 
@@ -201,7 +213,7 @@ python -m http.server 8080
 
 #### PHASE 1: Stability & Safety
 - [x] **Redo system** — ✅ เสร็จแล้ว (redo stack + Ctrl+Shift+Z + ปุ่มใน Menu)
-- [ ] **Auto backup to cloud** — snapshot ไป GitHub อัตโนมัติตามเวลา
+- [x] **Auto backup to cloud** — ✅ Supabase เป็น cloud storage แล้ว
 - [x] **Normalize data on load** — ✅ เสร็จแล้ว (normalizeLocation ทุกครั้งที่โหลด)
 - [x] **Prevent data corruption** — ✅ เสร็จแล้ว (integrity check ก่อน save)
 
