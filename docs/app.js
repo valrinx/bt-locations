@@ -1077,15 +1077,54 @@ window.openAddAt=function(lat,lng){
     map.closePopup(); editingIndex=-1;
     document.getElementById('editModalTitle').textContent='เพิ่มสถานที่';
     document.getElementById('modalName').value='';
-    document.getElementById('modalList').value=filterList||'';
-    document.getElementById('modalCity').value=filterCity||'';
     document.getElementById('modalNote').value='';
     document.getElementById('modalTags').value='';
     setPhotoPreview('');
     document.getElementById('modalLat').value=parseFloat(lat).toFixed(6);
     document.getElementById('modalLng').value=parseFloat(lng).toFixed(6);
+
+    // Auto-fill list: use filter or nearest location's list
+    let autoList=filterList||'';
+    let autoCity=filterCity||'';
+    if(!autoList||!autoCity){
+        // Find nearest existing location to guess list/city
+        let bestDist=Infinity, bestLoc=null;
+        locations.forEach(l=>{
+            const d=haversine(lat,lng,l.lat,l.lng);
+            if(d<bestDist){bestDist=d;bestLoc=l;}
+        });
+        if(bestLoc&&bestDist<3000){ // within 3km
+            if(!autoList)autoList=bestLoc.list||'';
+            if(!autoCity)autoCity=bestLoc.city||'';
+        }
+    }
+    document.getElementById('modalList').value=autoList;
+    document.getElementById('modalCity').value=autoCity;
+
+    // Reverse geocode for city/district name
+    _reverseGeocodeCity(lat,lng).then(city=>{
+        if(city&&!filterCity){
+            document.getElementById('modalCity').value=city;
+        }
+    });
+
     document.getElementById('editModalOverlay').classList.add('open');
 };
+
+// Reverse geocode: get district/city name from coordinates
+async function _reverseGeocodeCity(lat,lng){
+    try{
+        const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1&accept-language=th`;
+        const res=await fetch(url);
+        const data=await res.json();
+        if(data.address){
+            // Priority: suburb → city_district → district → city → town → county
+            return data.address.suburb||data.address.city_district||data.address.district||
+                   data.address.city||data.address.town||data.address.county||'';
+        }
+    }catch(e){console.warn('Reverse geocode failed:',e);}
+    return '';
+}
 
 // lat/lng hint — desktop only (ซ่อนบนมือถือผ่าน CSS)
 const latlngHint=document.getElementById('latlngHint');
