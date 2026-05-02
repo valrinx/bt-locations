@@ -1,9 +1,6 @@
-const CACHE_NAME = 'bt-locations-v2';
+const CACHE_NAME = 'bt-locations-v3';
+// Only truly static assets (libs, icons) — NOT app code
 const STATIC_ASSETS = [
-  './',
-  './index.html',
-  './locations.js',
-  './app.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -15,6 +12,8 @@ const STATIC_ASSETS = [
   'https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&display=swap'
 ];
+// App code files — always network-first (never serve stale)
+const APP_FILES = ['index.html', 'app.js', 'locations.js'];
 
 // Install: cache static assets
 self.addEventListener('install', event => {
@@ -78,7 +77,27 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Static assets: cache-first
+  // App code (index.html, app.js, locations.js): NETWORK-FIRST
+  // This is critical — ensures Android Chrome always gets latest code
+  const isAppFile = APP_FILES.some(f => url.pathname.endsWith(f)) || event.request.mode === 'navigate';
+  if (isAppFile) {
+    event.respondWith(
+      fetch(event.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+        }
+        return res;
+      }).catch(() => {
+        return caches.match(event.request).then(cached => {
+          return cached || (event.request.mode === 'navigate' ? caches.match('./index.html') : new Response('Offline', { status: 503 }));
+        });
+      })
+    );
+    return;
+  }
+
+  // Static assets (libs, icons): cache-first
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
@@ -90,7 +109,6 @@ self.addEventListener('fetch', event => {
         return res;
       });
     }).catch(() => {
-      // Offline fallback for navigation
       if (event.request.mode === 'navigate') {
         return caches.match('./index.html');
       }
