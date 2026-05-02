@@ -186,12 +186,47 @@ python -m http.server 8080
 - [x] **Versioning สำหรับ locations.js** — ✅ เสร็จแล้ว (timestamp cache-busting)
 - [x] **Performance + UI stability** — ✅ เสร็จแล้ว (preferCanvas, tile opts, z-index system, marker limit, debug mode)
 
-### 🚀 อนาคต (Next Phase)
+### 🚀 Production TODO (ยังไม่ทำ)
 
-- [ ] **Refactor app.js เป็น modules** — แยก map / UI / data logic
-- [ ] **Favorite / pin system** — ปักหมุดจุดโปรด
-- [ ] **Path tracking** — บันทึกเส้นทางการเดินทาง
-- [ ] **Directions API** — นำทางจริงผ่าน Google/OSRM
+#### PHASE 1: Stability & Safety
+- [ ] **Redo system** — เพิ่ม redo ต่อจาก undo ที่มี
+- [ ] **Auto backup to cloud** — snapshot ไป GitHub อัตโนมัติตามเวลา
+- [ ] **Normalize data on load** — ป้องกัน missing fields ตอนโหลดครั้งแรก (ไม่ใช่แค่ตอน import)
+- [ ] **Prevent data corruption** — ตรวจ integrity ก่อน save ทุกครั้ง
+
+#### PHASE 2: Architecture (scale ได้จริง)
+- [ ] **Refactor `app.js` → modules** — แยก map.js / ui.js / data.js
+- [ ] **Reduce global state** — ลด global variables
+- [ ] **Separate rendering logic from data logic**
+- [ ] **Add central state manager** — simple store pattern
+
+#### PHASE 3: Core Features
+- [ ] **Favorite / pin system** — ⭐ flag + filter favorites + highlight markers
+- [ ] **Color tags** — สีต่อ tag (แทน list เดิม)
+- [ ] **Path tracking** — บันทึกเส้นทาง + draw polyline + save/export path
+- [ ] **Directions API** — OSRM / Google Directions + multi-point routing + distance + ETA
+
+#### PHASE 4: Data System
+- [ ] **Data versioning** — `{ "version": 2, "data": [...] }`
+- [ ] **Schema migration support** — auto-upgrade เมื่อ version เปลี่ยน
+
+#### PHASE 5: Mobile UX
+- [ ] **Tap marker → zoom + focus** — auto-zoom เข้าหา marker ที่กด
+- [ ] **Improve touch responsiveness** — ลด delay, ปรับ hit area
+
+#### PHASE 6: Advanced Map
+- [ ] **Heatmap improvements** — ปรับ radius/blur ตาม zoom, color scale
+- [ ] **Polygon area calculation** — วาดพื้นที่ + คำนวณ
+
+#### PHASE 7: Debug & Dev Tools
+- [ ] **Show render time / FPS** — performance monitor
+- [ ] **Error logging system** — เก็บ error log + แสดงใน debug panel
+
+#### BONUS (ถ้าจะทำให้เทพจริง)
+- [ ] **Virtualized marker system** — รองรับ 10k+ points
+- [ ] **Smart clustering** — dynamic cluster radius ตาม density
+- [ ] **Offline mode** — limited map usage โดยไม่ต้องมี internet
+- [ ] **AI search** — ค้นหาด้วยภาษาธรรมชาติ
 
 ---
 
