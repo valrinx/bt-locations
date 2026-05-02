@@ -392,9 +392,11 @@
                 </div>
                 <div class="popup-actions">
                     <a class="link-gmaps" href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank">Google Maps</a>
-                    <button class="btn-popup-edit" onclick="openEdit(${idx})">แก้ไข</button>
-                    <button class="btn-popup-delete" onclick="deleteLoc(${idx})">ลบ</button>
+                    <button class="btn-popup-edit" onclick="openEdit(${idx})">✏️ แก้ไข</button>
                     <button class="btn-popup-edit" onclick="measureFrom(${idx})" style="background:#059669;">📏 วัดระยะ</button>
+                </div>
+                <div class="popup-actions" style="margin-top:4px;">
+                    <button class="btn-popup-delete" onclick="confirmDelete(${idx})" style="font-size:11px;opacity:0.7;">� ลบจุดนี้</button>
                 </div>
             </div>`;
         }
@@ -581,17 +583,24 @@
         };
 
         // === DELETE ===
-        window.deleteLoc = function(idx) {
+        window.confirmDelete = function(idx) {
             const loc = locations[idx];
             if (!loc) return;
             const name = loc.name || loc.list || 'ไม่มีชื่อ';
-            if (!confirm(`ลบจุด "${name}" ?`)) return;
+            if (!confirm(`⚠️ ยืนยันลบจุดนี้?
+
+"${name}"
+รายการ: ${loc.list}
+พิกัด: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}
+
+(กด Undo ได้ถ้าลบผิด)`)) return;
             pushUndo();
             locations.splice(idx, 1);
             saveLocations();
             map.closePopup();
             update();
         };
+        window.deleteLoc = window.confirmDelete;
 
         // === MODAL ===
         document.getElementById('modalCancel').onclick = () => {
