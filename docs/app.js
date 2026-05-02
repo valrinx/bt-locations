@@ -704,6 +704,45 @@ document.getElementById('listFilterClose').onclick=()=>{
 document.getElementById('listFilterClear').onclick=()=>{filterList='';document.getElementById('listFilterModalOverlay').classList.remove('open');update();};
 document.getElementById('listFilterModalOverlay').onclick=e=>{if(e.target===document.getElementById('listFilterModalOverlay')){document.getElementById('listFilterModalOverlay').classList.remove('open');update();}};
 
+// Rename list
+document.getElementById('listRenameBtn').onclick=()=>{
+    if(!filterList){showToast('เลือกรายการก่อน',true);return;}
+    const newName=prompt(`เปลี่ยนชื่อรายการ "${filterList}" เป็น:`,filterList);
+    if(!newName||newName.trim()===filterList)return;
+    const trimmed=newName.trim();
+    pushUndo();
+    let count=0;
+    locations.forEach(l=>{if(l.list===filterList){l.list=trimmed;l.updatedAt=Date.now();count++;}});
+    showToast(`✏️ เปลี่ยนชื่อ ${count} จุด → "${trimmed}"`);
+    filterList=trimmed;
+    saveLocations();invalidateCache();
+    document.getElementById('listFilterModalOverlay').classList.remove('open');
+    update();
+};
+// Merge lists
+document.getElementById('listMergeBtn').onclick=()=>{
+    const counts={};locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
+    const lists=Object.keys(counts).sort();
+    if(lists.length<2){showToast('มีแค่รายการเดียว',true);return;}
+    const msg=lists.map((n,i)=>`${i+1}. ${n} (${counts[n]})`).join('\n');
+    const fromIdx=prompt(`รวมรายการไหน → ไปไหน?\n\nรายการทั้งหมด:\n${msg}\n\nใส่เลขรายการ "ต้นทาง" ที่จะรวม:`);
+    if(!fromIdx)return;
+    const toIdx=prompt('ใส่เลขรายการ "ปลายทาง" ที่จะรวมเข้า:');
+    if(!toIdx)return;
+    const fromList=lists[parseInt(fromIdx)-1];
+    const toList=lists[parseInt(toIdx)-1];
+    if(!fromList||!toList){showToast('เลขไม่ถูกต้อง',true);return;}
+    if(fromList===toList){showToast('เลือกคนละรายการ',true);return;}
+    pushUndo();
+    let count=0;
+    locations.forEach(l=>{if(l.list===fromList){l.list=toList;l.updatedAt=Date.now();count++;}});
+    showToast(`🔗 รวม "${fromList}" (${count} จุด) → "${toList}"`);
+    filterList=toList;
+    saveLocations();invalidateCache();
+    document.getElementById('listFilterModalOverlay').classList.remove('open');
+    update();
+};
+
 document.getElementById('chipCity').onclick=()=>{
     const counts={}; locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
     const cities=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
@@ -723,6 +762,45 @@ document.getElementById('cityFilterClose').onclick=()=>{
 };
 document.getElementById('cityFilterClear').onclick=()=>{filterCity='';document.getElementById('cityFilterModalOverlay').classList.remove('open');update();};
 document.getElementById('cityFilterModalOverlay').onclick=e=>{if(e.target===document.getElementById('cityFilterModalOverlay')){document.getElementById('cityFilterModalOverlay').classList.remove('open');update();}};
+
+// Rename city
+document.getElementById('cityRenameBtn').onclick=()=>{
+    if(!filterCity){showToast('เลือกเขตก่อน',true);return;}
+    const newName=prompt(`เปลี่ยนชื่อเขต "${filterCity}" เป็น:`,filterCity);
+    if(!newName||newName.trim()===filterCity)return;
+    const trimmed=newName.trim();
+    pushUndo();
+    let count=0;
+    locations.forEach(l=>{if(l.city===filterCity){l.city=trimmed;l.updatedAt=Date.now();count++;}});
+    showToast(`✏️ เปลี่ยนชื่อเขต ${count} จุด → "${trimmed}"`);
+    filterCity=trimmed;
+    saveLocations();invalidateCache();
+    document.getElementById('cityFilterModalOverlay').classList.remove('open');
+    update();
+};
+// Merge cities
+document.getElementById('cityMergeBtn').onclick=()=>{
+    const counts={};locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
+    const cities=Object.keys(counts).sort();
+    if(cities.length<2){showToast('มีแค่เขตเดียว',true);return;}
+    const msg=cities.map((n,i)=>`${i+1}. ${n} (${counts[n]})`).join('\n');
+    const fromIdx=prompt(`รวมเขตไหน → ไปไหน?\n\nเขตทั้งหมด:\n${msg}\n\nใส่เลขเขต "ต้นทาง" ที่จะรวม:`);
+    if(!fromIdx)return;
+    const toIdx=prompt('ใส่เลขเขต "ปลายทาง" ที่จะรวมเข้า:');
+    if(!toIdx)return;
+    const fromCity=cities[parseInt(fromIdx)-1];
+    const toCity=cities[parseInt(toIdx)-1];
+    if(!fromCity||!toCity){showToast('เลขไม่ถูกต้อง',true);return;}
+    if(fromCity===toCity){showToast('เลือกคนละเขต',true);return;}
+    pushUndo();
+    let count=0;
+    locations.forEach(l=>{if(l.city===fromCity){l.city=toCity;l.updatedAt=Date.now();count++;}});
+    showToast(`🔗 รวม "${fromCity}" (${count} จุด) → "${toCity}"`);
+    filterCity=toCity;
+    saveLocations();invalidateCache();
+    document.getElementById('cityFilterModalOverlay').classList.remove('open');
+    update();
+};
 
 document.getElementById('chipHeatmap').onclick=()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();};
 document.getElementById('chipList2').onclick=()=>{
@@ -1111,7 +1189,7 @@ let _directionsLine = null;
 function clearDirections(){
     if(_directionsLine){map.removeLayer(_directionsLine);_directionsLine=null;}
     const banner=document.getElementById('directionsBanner');
-    if(banner)banner.classList.remove('show');
+    if(banner)banner.remove();
 }
 window.clearDirections=clearDirections;
 window.doDirectionsTo = function(idx) {

@@ -752,7 +752,10 @@
         <div class="modal" style="max-width:360px;">
             <div class="modal-header">กรองตามรายการ</div>
             <div class="modal-body"><div class="filter-choice-list" id="listChoiceList"></div></div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
+                <button class="modal-btn" id="listRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
+                <button class="modal-btn" id="listMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมรายการ</button>
+                <div style="flex:1"></div>
                 <button class="modal-btn modal-btn-cancel" id="listFilterClear">ล้างตัวกรอง</button>
                 <button class="modal-btn modal-btn-save" id="listFilterClose">เสร็จ</button>
             </div>
@@ -764,7 +767,10 @@
         <div class="modal" style="max-width:360px;">
             <div class="modal-header">กรองตามเขต</div>
             <div class="modal-body"><div class="filter-choice-list" id="cityChoiceList"></div></div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
+                <button class="modal-btn" id="cityRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
+                <button class="modal-btn" id="cityMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมเขต</button>
+                <div style="flex:1"></div>
                 <button class="modal-btn modal-btn-cancel" id="cityFilterClear">ล้างตัวกรอง</button>
                 <button class="modal-btn modal-btn-save" id="cityFilterClose">เสร็จ</button>
             </div>
