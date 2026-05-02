@@ -70,6 +70,8 @@ function throttle(fn, ms) {
 }
 
 // ── save: debounced + integrity check ──
+// Architecture: GitHub = source of truth, localStorage = cache
+// save → update cache + push GitHub
 function _validateBeforeSave() {
     if (!Array.isArray(locations)) { console.error('Save aborted: locations is not array'); return false; }
     if (locations.length === 0) return true; // allow empty
@@ -77,9 +79,39 @@ function _validateBeforeSave() {
     if (typeof sample.lat !== 'number' || typeof sample.lng !== 'number') { console.error('Save aborted: invalid lat/lng in first item'); return false; }
     return true;
 }
+let _pushPending = false;
+const _debouncedPush = debounce(async () => {
+    if (!_pushPending) return;
+    _pushPending = false;
+    const token = getToken();
+    if (!token) return; // no token → cache only
+    try {
+        const locs = locations.map(l => { const { photo, ...rest } = l; return rest; });
+        const sha = localStorage.getItem(SYNC_SHA_KEY) || '';
+        // Get current SHA from GitHub
+        const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' },
+            cache: 'no-store'
+        });
+        if (!res.ok) { console.warn('Auto-push: fetch failed', res.status); setSyncIndicator('error'); return; }
+        const data = await res.json();
+        await _pushToGithub(token, locs, data.sha);
+        setSyncIndicator('ok');
+        _lastSyncTime = Date.now();
+        console.log('Auto-pushed to GitHub:', locs.length, 'locs');
+    } catch (err) {
+        console.warn('Auto-push failed:', err.message);
+        setSyncIndicator('error');
+    }
+}, 2000); // 2s debounce for GitHub push
+
 const saveLocations = debounce(() => {
     if (!_validateBeforeSave()) return;
+    // 1. Update local cache
     localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+    // 2. Queue GitHub push
+    _pushPending = true;
+    _debouncedPush();
 }, 300);
 
 // ── index map: O(1) lookup แทน locations.indexOf() O(n) ──
@@ -1753,21 +1785,51 @@ function startAutoSync(){
     });
 }
 
-// Initial sync + start polling
+// Initial load: GitHub = source of truth, localStorage = cache
 (async()=>{
-    if(getToken()){
-        await doSync(true);
-        startAutoSync();
-    } else {
-        // No token — just pull from raw (public read)
-        try{
-            const res=await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`,{cache:'no-store'});
-            if(!res.ok)return;const fresh=await res.json();
-            if(fresh.length>0&&JSON.stringify(fresh)!==JSON.stringify(locations)){
-                locations=fresh;saveLocations();invalidateCache();update();console.log('Synced',fresh.length,'locs');
+    let loaded = false;
+    // Try GitHub first (always — raw is public)
+    try {
+        const token = getToken();
+        let fresh;
+        if (token) {
+            // Authenticated fetch (gets latest, no CDN cache)
+            const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/all_locations.json`, {
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Cache-Control': 'no-cache' },
+                cache: 'no-store'
+            });
+            if (res.ok) {
+                const data = await res.json();
+                fresh = JSON.parse(decodeURIComponent(escape(atob(data.content.replace(/\n/g, '')))));
+                localStorage.setItem(SYNC_SHA_KEY, data.sha);
+                localStorage.setItem(SYNC_SNAPSHOT_KEY, JSON.stringify(fresh));
             }
-        }catch(e){}
-    }
+        }
+        if (!fresh) {
+            // Public raw fetch (may have ~5min CDN cache)
+            const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`, { cache: 'no-store' });
+            if (res.ok) fresh = await res.json();
+        }
+        if (fresh && fresh.length > 0) {
+            // Preserve local photos
+            const photoMap = new Map();
+            locations.forEach(l => { if (l.photo) photoMap.set(_locKey(l), l.photo); });
+            locations = fresh.map(l => {
+                const n = normalizeLocation(l);
+                const p = photoMap.get(_locKey(n));
+                return p ? { ...n, photo: p } : n;
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+            invalidateCache(); update();
+            loaded = true;
+            console.log('Loaded from GitHub:', locations.length, 'locs');
+        }
+    } catch (e) { console.warn('GitHub load failed, using cache:', e.message); }
+
+    if (!loaded) console.log('Using localStorage cache:', locations.length, 'locs');
+
+    // Start auto-sync if token available
+    if (getToken()) startAutoSync();
 })();
 
 // ════════════════════════════════════════════
