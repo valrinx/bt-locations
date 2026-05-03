@@ -1233,11 +1233,9 @@
             background: var(--s2);
             overflow-y: auto;
             display: none;
+            z-index: 100;
         }
-
-        .stats-view.show {
-            display: block;
-        }
+        .stats-view.show { display: block; }
 
         .sv-inner {
             padding: 18px;
@@ -1247,32 +1245,62 @@
 
         .sv-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .sv-card {
             background: var(--s1);
-            border: 0.5px solid var(--bd2);
-            border-radius: 10px;
-            padding: 14px;
+            border-radius: 20px;
+            padding: 20px;
             text-align: center;
+            border: 1px solid var(--bd3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s;
         }
+        .sv-card:hover { transform: translateY(-4px); border-color: var(--bl); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
 
         .sv-v {
-            font-size: 26px;
-            font-weight: 700;
-            line-height: 1;
-            margin-bottom: 4px;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--bl), #00d2ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
-        .sv-l {
-            font-size: 10px;
-            color: var(--tx3);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
+        /* ── Floating Map Stats (Overlay) ── */
+        .map-stats {
+            position: absolute;
+            top: 70px; /* Below topbar */
+            right: 8px; /* Closer to the edge as requested */
+            z-index: 1100; /* Above routing panels (usually 1000) */
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none;
+            transition: all 0.3s;
         }
+
+        .msv-pill {
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(8px);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #ffffff !important;
+            min-width: 70px;
+            justify-content: flex-start;
+        }
+        .msv-pill.clst { background: rgba(37, 99, 235, 0.9) !important; }
 
         .sv-row {
             display: grid;
@@ -3051,9 +3079,81 @@
                 cursor: pointer;
             }
 
-            .mob-search-row {
-                display: none !important;
+            /* Restore topbar elements for mobile */
+            .tb-center {
+                display: flex !important;
+                flex: 1;
+                margin: 0 8px;
+                max-width: none;
+                gap: 8px;
             }
+            .tb-center .search-box {
+                flex: 1;
+                height: 36px;
+                padding: 0 10px;
+                font-size: 13px;
+                border-radius: 12px;
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.05);
+                display: flex !important;
+                align-items: center;
+                gap: 6px;
+            }
+            .tb-center .search-box input {
+                width: 100%;
+                background: none;
+                border: none;
+                outline: none;
+                color: #fff;
+                font-size: 13px;
+            }
+            .tb-center .search-box .kbd { display: none; } /* Hide ⌘K on mobile */
+            
+            .tb-right {
+                display: flex !important;
+                gap: 6px;
+                align-items: center;
+            }
+            .live-p {
+                display: flex !important;
+                background: rgba(16, 185, 129, 0.1);
+                border: 1px solid rgba(16, 185, 129, 0.2);
+                color: #10b981;
+                padding: 4px 8px;
+                border-radius: 8px;
+                font-size: 10px;
+                font-weight: 700;
+                align-items: center;
+                gap: 4px;
+            }
+            .pill-badge {
+                display: none; /* Hide count pill on small mobile to save space */
+            }
+            .avs {
+                display: flex !important;
+                margin-right: 4px;
+            }
+            .av {
+                width: 24px;
+                height: 24px;
+                font-size: 10px;
+            }
+            .tb-left h1, .logo-txt {
+                font-size: 14px !important;
+                display: block !important;
+            }
+            .logo-sq {
+                width: 28px;
+                height: 28px;
+                font-size: 10px;
+            }
+            .version-badge {
+                display: none;
+            }
+            .tb-sep { display: none; }
+            #btnImportData, #btnUpload { display: none; }
+
+
 
             /* chips row */
             .mob-chips-row {
@@ -3473,12 +3573,12 @@
                             </div>
                         </div>
 
-                        <!-- Map stats -->
+                        <!-- Map stats overlay -->
                         <div class="map-stats">
-                            <div class="msv" title="Total Locations">
+                            <div class="msv-pill" title="Total Locations">
                                 📍 <span id="mapStatTotalVal">0</span>
                             </div>
-                            <div class="msv clst" title="Clusters">
+                            <div class="msv-pill clst" title="Clusters">
                                 ◩ <span id="mapStatClustersVal">0</span>
                             </div>
                         </div>
@@ -3486,8 +3586,7 @@
                         <!-- Right map controls -->
                         <div class="map-controls" id="mapControlsCol">
                             <div class="map-btn-group" style="margin-bottom:4px;">
-                                <button class="map-btn" title="เปลี่ยนแผนที่"
-                                    onclick="if(typeof window.toggleBaseMap==='function') window.toggleBaseMap();">
+                                <button class="map-btn" id="btnTile" title="เปลี่ยนแผนที่">
                                     <svg viewBox="0 0 24 24" fill="currentColor">
                                         <path
                                             d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z" />
@@ -3507,6 +3606,10 @@
                                 </button>
                             </div>
                             <div class="map-btn-group" style="margin-top:4px;">
+                                <button class="map-btn" id="btnTheme" title="เปลี่ยนแผนที่"
+                                    onclick="if(typeof window.toggleBaseMap==='function') window.toggleBaseMap();">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                </button>
                                 <button class="map-btn" id="btnGps" title="ตำแหน่งของฉัน">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <circle cx="12" cy="12" r="3" />
@@ -3516,12 +3619,6 @@
                                 <button class="map-btn" id="btnMeasure" title="วัดระยะ">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M3 21l4-4m10-10l4-4M3 17l8-8M11 17l6-6M7 21l10-10" />
-                                    </svg>
-                                </button>
-                                <button class="map-btn" id="btnFullscreen" title="Fullscreen">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path
-                                            d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
                                     </svg>
                                 </button>
                             </div>
@@ -4960,7 +5057,18 @@
 
             const svTotal = document.getElementById('svTotal');
             if (svTotal) svTotal.textContent = locs ? locs.length : 0;
-            if (!locs || !locs.length) return;
+            
+            const mapStatTotalVal = document.getElementById('mapStatTotalVal');
+            if (mapStatTotalVal) mapStatTotalVal.textContent = locs ? locs.length : 0;
+
+            const mapStatClustersVal = document.getElementById('mapStatClustersVal');
+            if (mapStatClustersVal) {
+                // If marker cluster group exists, get its count
+                const count = (window.markers && typeof window.markers.getLayers === 'function') 
+                              ? window.markers.getLayers().length : (locs ? locs.length : 0);
+                mapStatClustersVal.textContent = count;
+            }
+
 
             const cities = {}, lists = {};
             locs.forEach(l => {
@@ -5068,16 +5176,18 @@
         // Map interactions, Google Maps nav, and custom markers patch
         window.addEventListener('load', function () {
             updateIP();
-            
-            if (typeof window.closeListPanel === 'function') {
-                const _origCloseListPanel = window.closeListPanel;
-                window.closeListPanel = function () {
-                    _origCloseListPanel();
-                    document.querySelectorAll('.mob-nb').forEach(el => el.classList.remove('on'));
-                    document.getElementById('mn-map')?.classList.add('on');
+
+            // Hook into the main app's update function to keep stats in sync
+            if (typeof window.update === 'function') {
+                const _origUpdate = window.update;
+                window.update = function() {
+                    _origUpdate();
+                    if (typeof window.renderStatsView === 'function') {
+                        window.renderStatsView();
+                    }
                 };
             }
-            // 13. Sync bottom nav state when panels close naturally (e.g. dragging down or close button)
+            
             if (typeof window.closeListPanel === 'function') {
                 const _origCloseListPanel = window.closeListPanel;
                 window.closeListPanel = function () {
