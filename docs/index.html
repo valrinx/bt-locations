@@ -1327,19 +1327,32 @@
 <div id="crosshair" style="display:none; position:fixed; pointer-events:none; z-index:200; font-size:28px; transform:translate(-50%,-100%);">📍</div>
 
 <!-- Add mode banner -->
-<div id="addBanner" style="display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:500; background:var(--bl); color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; pointer-events:none; white-space:nowrap;">📍 แตะแผนที่เพื่อเลือกตำแหน่ง</div>
+<div id="addBanner" class="add-banner">
+    📍 แตะแผนที่เพื่อเลือกตำแหน่ง
+    <button class="add-banner-cancel" id="btnCancelAddBanner">ยกเลิก</button>
+</div>
 
 <!-- Measure mode banner -->
-<div id="measureBanner" style="display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:500; background:#7b1fa2; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; pointer-events:none; white-space:nowrap;">📏 เลือก 2 จุดเพื่อวัดระยะ</div>
+<div id="measureBanner" class="measure-banner">
+    📏 เลือก 2 จุดเพื่อวัดระยะ
+    <button class="measure-banner-cancel" id="btnCancelMeasureBanner">ยกเลิก</button>
+</div>
 
 <!-- Directions banner -->
 <div id="directionsBanner" style="display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:500; background:#059669; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; pointer-events:none; white-space:nowrap;">🗺️ กำลังคำนวณเส้นทาง...</div>
 
 <!-- FAB button (mobile add) -->
-<button id="btnFab" style="display:none; position:fixed; bottom:90px; right:16px; z-index:300; width:52px; height:52px; border-radius:50%; background:var(--bl); color:#fff; border:none; font-size:26px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.3);">+</button>
+<button id="btnFab" class="fab" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    เพิ่มจุด
+</button>
 
 <!-- GPS button -->
-<button id="btnGps" style="display:none; position:fixed; bottom:90px; right:80px; z-index:300; width:40px; height:40px; border-radius:50%; background:var(--s2); color:var(--tx); border:1px solid var(--bd); font-size:18px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.2);">⊕</button>
+<div class="gps-btn-wrap" id="btnGpsWrap" style="display:none;">
+    <button id="btnGps" class="map-btn" title="ตำแหน่งของฉัน">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+    </button>
+</div>
 
 <!-- Cancel add button -->
 <button id="btnCancelAdd" style="display:none; position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:500; padding:8px 20px; background:var(--s2); color:var(--tx); border:1px solid var(--bd); border-radius:20px; font-size:13px; cursor:pointer;">ยกเลิก</button>
@@ -1749,6 +1762,32 @@
             }, 800);
         });
     })();
+    </script>
+    <script>
+    // Wire up new banner cancel buttons to existing functions
+    document.addEventListener('DOMContentLoaded', function(){
+        setTimeout(function(){
+            // Banner cancel buttons
+            var btnCancelAddBanner = document.getElementById('btnCancelAddBanner');
+            if(btnCancelAddBanner && typeof cancelAddMode === 'function'){
+                btnCancelAddBanner.onclick = cancelAddMode;
+            }
+            var btnCancelMeasureBanner = document.getElementById('btnCancelMeasureBanner');
+            if(btnCancelMeasureBanner && typeof cancelMeasureMode === 'function'){
+                btnCancelMeasureBanner.onclick = cancelMeasureMode;
+            }
+            // FAB click handler
+            var btnFab = document.getElementById('btnFab');
+            if(btnFab && typeof openAddMode === 'function'){
+                btnFab.onclick = openAddMode;
+            }
+            // GPS button click handler
+            var btnGps = document.getElementById('btnGps');
+            if(btnGps && typeof gpsButtonClick === 'function'){
+                btnGps.onclick = gpsButtonClick;
+            }
+        }, 1500);
+    });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
