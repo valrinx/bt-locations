@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.10.1';
+const APP_VERSION = 'v5.10.2';
 const STORAGE_KEY = 'bt_locations_data';
 
 // ════════════════════════════════════════════
@@ -1149,9 +1149,13 @@ async function fetchWithTimeout(url, timeout = FETCH_TIMEOUT){
 }
 
 async function initApp(){
-    // 1. Load sample data IMMEDIATELY for fast startup
+    // 1. Data already loaded from localStorage at module init (line ~720)
+    // If no localStorage data, locations will be empty and we use sample data
     setLoader('กำลังเริ่มต้น...');
-    if(locations.length === 0) loadSampleData();
+    if(locations.length === 0) {
+        loadSampleData();
+        saveToStorage(); // Save sample data to localStorage for next time
+    }
     
     // 2. Init map right away
     initMap();
@@ -1168,23 +1172,7 @@ async function initApp(){
     const a1 = document.getElementById('av1');
     if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
     
-    // 5. Fetch GitHub data in BACKGROUND with timeout
-    // Don't block the UI - if it succeeds, we'll refresh
-    fetchGitHubDataInBackground();
-}
-
-async function fetchGitHubDataInBackground(){
-    try {
-        const data = await fetchRepoDataWithTimeout();
-        if(data && data.length > 0 && data.length !== locations.length){
-            locations = data;
-            invalidateMarkerCache();
-            update();
-            showToast(`โหลดข้อมูล ${data.length} จุดจาก GitHub`, false, true);
-        }
-    } catch(e) {
-        console.log('Background fetch failed (expected):', e.message);
-    }
+    // 5. No automatic fetch - user controls data via Import button
 }
 
 async function fetchRepoDataWithTimeout(){
