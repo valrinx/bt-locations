@@ -363,7 +363,7 @@ function handleClusterClick(childMarkers){
     } else {
         // Desktop: show list panel
         const lp = document.getElementById('listPanel');
-        lp.classList.add('open');
+        if(lp) lp.classList.add('open');
         closePlaceCard();
         renderListPanel(clusterLocs);
     }
@@ -1227,7 +1227,10 @@ function showPlaceCard(loc, idx) {
         el.title='กดเพื่อตั้งสีให้ tag นี้ (ทุกจุดที่มี tag นี้จะเปลี่ยนสี)';
     });
     closePlaceCard();
-    setTimeout(()=>document.getElementById('placeCard').classList.add('open'),10);
+    setTimeout(()=>{
+        const pc = document.getElementById('placeCard');
+        if(pc) pc.classList.add('open');
+    },10);
     const targetZoom = Math.max(map.getZoom(), _mobile ? 16 : 15);
     map.flyTo([loc.lat,loc.lng], targetZoom, {animate: !_mobile, duration: _mobile ? 0.3 : 0.6});
     closeListPanel();
@@ -1249,7 +1252,7 @@ function fallbackCopy(text) {
     document.body.removeChild(ta);
 }
 
-function closePlaceCard() { document.getElementById('placeCard').classList.remove('open'); }
+function closePlaceCard() { const pc = document.getElementById('placeCard'); if(pc) pc.classList.remove('open'); }
 window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'⭐ เพิ่มในรายการโปรดแล้ว':'☆ นำออกจากรายการโปรดแล้ว');};
 onClick('placeCardClose', closePlaceCard);
 
