@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.20';
+const APP_VERSION = 'v6.6.22';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1479,7 +1479,15 @@ const _chipListEl=document.getElementById('chipList');
 if(_chipListEl && _listDropdown) {
     _chipListEl.addEventListener('click',e=>{
         e.stopPropagation();
-        _listDropdown.classList.toggle('open');
+        const isOpen = _listDropdown.classList.toggle('open');
+        if (isOpen) {
+            // Position fixed dropdown relative to the button
+            const rect = _chipListEl.getBoundingClientRect();
+            _listDropdown.style.top = (rect.bottom + 6) + 'px';
+            _listDropdown.style.left = (rect.left) + 'px';
+            _listDropdown.style.right = 'auto';
+            _listDropdown.style.minWidth = '200px';
+        }
     });
     // Close on outside touch/click
     document.addEventListener('mousedown',e=>{
