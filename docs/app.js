@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.22';
+const APP_VERSION = 'v6.6.23';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1473,37 +1473,51 @@ function renderSearchResults() {
 // FILTER CHIPS
 // ════════════════════════════════════════════
 
-// Dropdown toggle for "List Manager"
-const _listDropdown=document.getElementById('listDropdown');
-const _chipListEl=document.getElementById('chipList');
-if(_chipListEl && _listDropdown) {
-    _chipListEl.addEventListener('click',e=>{
-        e.stopPropagation();
-        const isOpen = _listDropdown.classList.toggle('open');
-        if (isOpen) {
-            // Position fixed dropdown relative to the button
-            const rect = _chipListEl.getBoundingClientRect();
-            _listDropdown.style.top = (rect.bottom + 6) + 'px';
-            _listDropdown.style.left = (rect.left) + 'px';
-            _listDropdown.style.right = 'auto';
-            _listDropdown.style.minWidth = '200px';
-        }
+// Mobile bottom sheet helper
+function openMobSheet(){
+    const s=document.getElementById('mobSheet');
+    if(s)s.classList.add('open');
+}
+function closeMobSheet(){
+    const s=document.getElementById('mobSheet');
+    if(s)s.classList.remove('open');
+}
+
+function openListOptionsSheet(){
+    const list = [
+        { icon: '🗺️', name: 'วางแผนหลายเส้นทาง', action: () => { doMultiRoute(); closeMobSheet(); } },
+        { icon: '🛤️', name: 'วางแผนเส้นทาง (ปัจจุบัน)', action: () => { doRoute(); closeMobSheet(); } },
+        { icon: '📂', name: 'เลือกรายการ...', action: () => { openMobDrawer(); closeMobSheet(); } },
+        { icon: '🔗', name: 'รวมรายการ...', action: () => { document.getElementById('btnMergeList').click(); closeMobSheet(); } }
+    ];
+    
+    const container = document.getElementById('mobSheetList');
+    const title = document.getElementById('mobSheetTitle');
+    if(!container || !title) return;
+    
+    title.innerText = 'จัดการรายการ';
+    container.innerHTML = list.map(item => `
+        <div class="ms-item" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">${item.icon}</div>
+            <div style="font-size:14px;font-weight:500;">${item.name}</div>
+        </div>
+    `).join('');
+    
+    const items = container.querySelectorAll('.ms-item');
+    items.forEach((el, i) => {
+        el.onclick = () => { list[i].action(); };
     });
-    // Close on outside touch/click
-    document.addEventListener('mousedown',e=>{
-        if(_listDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
-            _listDropdown.classList.remove('open');
-    });
-    document.addEventListener('touchstart',e=>{
-        if(_listDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
-            _listDropdown.classList.remove('open');
-    },{passive:true});
-    // Each dropdown item closes menu after its handler runs
-    document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
-        item.addEventListener('click',()=>{
-            setTimeout(()=>_listDropdown.classList.remove('open'),100);
-        });
-    });
+    
+    openMobSheet();
+}
+
+// Search bar listeners
+const mobSearchInput = document.getElementById('mobSearchInput');
+if(mobSearchInput) {
+    mobSearchInput.oninput = (e) => {
+        searchTerm = e.target.value;
+        update();
+    };
 }
 
 onClick('chipAll', ()=>{
