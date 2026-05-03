@@ -115,8 +115,10 @@
         .search-box input::placeholder { color: var(--tx3); }
         .si { font-size: 12px; color: var(--tx3); }
         .pill-badge { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
-        .live-p { display: flex; align-items: center; gap: 5px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 20px; padding: 3px 9px; }
-        .live-p span { font-size: 11px; color: var(--tx2); }
+        .version-pill { background: var(--s2); border: 0.5px solid var(--bd2); color: var(--tx3); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 12px; margin-left: 6px; }
+        .live-p { display: flex; align-items: center; gap: 6px; background: rgba(45,255,160,0.12); border: 0.5px solid rgba(45,255,160,0.3); border-radius: 20px; padding: 4px 10px; }
+        .live-p .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gn); animation: livePulse 2s ease infinite; }
+        .live-p span { font-size: 11px; color: var(--gn); font-weight: 600; }
         .avs { display: flex; }
         .av { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--bg); border: 1.5px solid var(--bg); margin-left: -5px; cursor: pointer; }
         .tb-icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--tx2); transition: all 0.12s; }
@@ -137,11 +139,30 @@
         .flist { flex-shrink: 0; padding: 0 10px; display: flex; flex-direction: column; }
         .fl { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); border: 0.5px solid transparent; }
         .fl:hover { background: var(--s2); color: var(--tx); }
-        .fl.on { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 500; }
-        .fd { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .fn { flex: 1; }
-        .fc { font-size: 10px; color: var(--tx3); background: var(--s2); padding: 1px 7px; border-radius: 10px; }
-        .fl.on .fc { background: rgba(91,143,255,0.18); color: var(--bl); }
+
+        /* Sidebar filter items with colored dots and counts */
+        .flist-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: all 0.12s; font-size: 13px; color: var(--tx2); margin-bottom: 2px; }
+        .flist-item:hover { background: var(--s2); color: var(--tx); }
+        .flist-item.active { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); }
+        .fl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .fl-name { flex: 1; font-weight: 500; }
+        .fl-count { font-size: 11px; color: var(--tx3); background: var(--s2); padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+        .flist-item.active .fl-count { background: rgba(91,143,255,0.2); color: var(--bl); }
+
+        /* Mobile drawer filter items */
+        .fi { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: all 0.12s; font-size: 13px; color: var(--tx2); margin-bottom: 3px; }
+        .fi:hover { background: var(--s2); }
+        .fi.on { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); }
+        .fdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .fn { flex: 1; font-weight: 500; }
+        .fc { font-size: 12px; color: var(--tx3); background: var(--s2); padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+        .fi.on .fc { background: rgba(91,143,255,0.2); color: var(--bl); }
+
+        /* City list items */
+        .clist-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: all 0.12s; font-size: 13px; color: var(--tx2); margin-bottom: 2px; }
+        .clist-item:hover { background: var(--s2); color: var(--tx); }
+        .clist-item.active { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); }
+
         .sdiv { height: 0.5px; background: var(--bd); margin: 10px 14px; flex-shrink: 0; }
         .clist { flex: 1; overflow-y: auto; padding: 0 10px; }
         .cl { display: flex; align-items: center; gap: 9px; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); }
@@ -1147,6 +1168,7 @@
             <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
             <div class="logo-sq">BT</div>
             <span class="tb-brand">BT Locations</span>
+            <span class="version-pill" id="versionPill">v5</span>
         </div>
         <!-- CENTER: search -->
         <div class="tb-center">
@@ -1208,7 +1230,7 @@
             <div class="vtabs">
                 <div class="vt on" id="vt-map" data-view="map"><span class="vt-i">◉</span> แผนที่</div>
                 <div class="vt" id="vt-list" data-view="list"><span class="vt-i">≡</span> รายการ</div>
-                <div class="vt" id="vt-stats" data-view="stats"><span class="vt-i">◧</span> Stats</div>
+                <div class="vt" id="vt-stats" data-view="stats"><span class="vt-i">◧</span> สถิติ</div>
                 <div class="vt" id="vt-heat" data-view="heat"><span class="vt-i">◈</span> Heatmap</div>
             </div>
 
@@ -1230,9 +1252,9 @@
                             <div class="pp-mi" id="ppTime">-</div>
                         </div>
                         <div class="pp-btns">
-                            <div class="ppb p" id="ppNav">นำทาง</div>
-                            <div class="ppb" id="ppEdit">แก้ไข</div>
-                            <div class="ppb" id="ppRoute">Route +</div>
+                            <div class="ppb" id="ppEdit" style="background:rgba(91,143,255,0.15);color:var(--bl);">แก้ไข</div>
+                            <div class="ppb p" id="ppNav" style="background:rgba(45,255,160,0.15);color:var(--gn);">เส้นทาง</div>
+                            <div class="ppb" id="ppDelete" style="background:rgba(255,95,95,0.15);color:var(--red);">ลบ</div>
                         </div>
                     </div>
 
@@ -1257,10 +1279,10 @@
 
                     <!-- Bottom toolbar -->
                     <div class="btbar">
-                        <button class="bt on" id="btMap"><span class="bt-i">◉</span> Map</button>
-                        <button class="bt" id="btRoute"><span class="bt-i">◎</span> Route</button>
-                        <button class="bt" id="btHeat"><span class="bt-i">◈</span> Heat</button>
-                        <button class="bt" id="btAdd"><span class="bt-i">+</span> Add</button>
+                        <button class="bt on" id="btMap"><span class="bt-i">◉</span> แผนที่</button>
+                        <button class="bt" id="btRoute"><span class="bt-i">◎</span> เส้นทาง</button>
+                        <button class="bt" id="btHeat"><span class="bt-i">◈</span> Heatmap</button>
+                        <button class="bt" id="btAdd"><span class="bt-i">+</span> เพิ่ม</button>
                     </div>
                 </div>
 
@@ -1497,11 +1519,11 @@
     </div>
     <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
         <div class="mob-nb-ico">◧</div>
-        <div class="mob-nb-lbl">Stats</div>
+        <div class="mob-nb-lbl">สถิติ</div>
     </div>
     <div class="mob-nb" id="mn-heat" onclick="mobSwitchView('heat')">
         <div class="mob-nb-ico">◈</div>
-        <div class="mob-nb-lbl">Heat</div>
+        <div class="mob-nb-lbl">Heatmap</div>
     </div>
 </div>
 

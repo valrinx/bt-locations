@@ -1181,37 +1181,17 @@ function showPlaceCard(loc, idx) {
         ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--gn);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
         ${loc.note?`<div style="font-size:13px;color:var(--gn);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>`:''}
         <div class="place-card-actions">
-            <a class="place-action-btn" href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank">
-                <span class="place-action-icon">🗺️</span>
-                <span class="place-action-label" style="color:var(--bl);">Maps</span>
-            </a>
-            <a class="place-action-btn green" href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank">
-                <span class="place-action-icon">🚗</span>
-                <span class="place-action-label">Waze</span>
-            </a>
-            <button class="place-action-btn yellow" onclick="openEdit(${idx})">
+            <button class="place-action-btn" onclick="openEdit(${idx})" style="background:rgba(91,143,255,0.15);border-color:rgba(91,143,255,0.3);">
                 <span class="place-action-icon">✏️</span>
-                <span class="place-action-label">แก้ไข</span>
+                <span class="place-action-label" style="color:var(--bl);">แก้ไข</span>
             </button>
-            <button class="place-action-btn purple" onclick="startMeasureMode(${idx})">
-                <span class="place-action-icon">📏</span>
-                <span class="place-action-label">วัดระยะ</span>
-            </button>
-            <button class="place-action-btn" onclick="shareLocation(${loc.lat},${loc.lng},'${(loc.name||'BT').replace(/'/g,'\\&#39;')}')">
-                <span class="place-action-icon">🔗</span>
-                <span class="place-action-label">แชร์</span>
-            </button>
-            <button class="place-action-btn green" onclick="doDirectionsTo(${idx})">
+            <button class="place-action-btn" onclick="doDirectionsTo(${idx})" style="background:rgba(45,255,160,0.12);border-color:rgba(45,255,160,0.3);">
                 <span class="place-action-icon">🧭</span>
-                <span class="place-action-label">นำทาง</span>
+                <span class="place-action-label" style="color:var(--gn);">เส้นทาง</span>
             </button>
-            <button class="place-action-btn orange" onclick="doToggleFavorite(${idx})">
-                <span class="place-action-icon">${isFavorite(loc)?'⭐':'☆'}</span>
-                <span class="place-action-label">${isFavorite(loc)?'ยกเลิก':'ชอบ'}</span>
-            </button>
-            <button class="place-action-btn red" onclick="doConfirmDelete(${idx})">
+            <button class="place-action-btn" onclick="doConfirmDelete(${idx})" style="background:rgba(255,95,95,0.12);border-color:rgba(255,95,95,0.3);">
                 <span class="place-action-icon">🗑️</span>
-                <span class="place-action-label">ลบ</span>
+                <span class="place-action-label" style="color:var(--red);">ลบ</span>
             </button>
         </div>
         <div class="place-card-divider"></div>
