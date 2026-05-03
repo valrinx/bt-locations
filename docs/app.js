@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.14';
+const APP_VERSION = 'v6.6.16';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3579,17 +3579,33 @@ window.btDebug = {
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
-// Version badge
-(function showVersion(){
-    const badge = document.getElementById('versionBadge');
-    if (badge) badge.textContent = `app:${APP_VERSION}`;
-    // Detect SW cache version
-    if ('caches' in window) {
-        caches.keys().then(keys => {
-            const swVer = keys.find(k => k.startsWith('bt-locations-')) || 'none';
-            if (badge) badge.textContent = `app:${APP_VERSION} sw:${swVer}`;
-            console.log('SW cache:', swVer, 'App:', APP_VERSION);
-        });
+// Version badge & Update Announcement
+(async function showVersion(){
+    const container = document.getElementById('dynamicVerInfo');
+    if (!container) return;
+    
+    // 1. Display current app version from code
+    container.innerHTML = `<span class="v-text">${APP_VERSION}</span><span class="v-hash" id="dynamicHash">...</span>`;
+    
+    // 2. Announcement logic (Auto Toast after update)
+    const lastVer = localStorage.getItem('bt_last_version');
+    if (lastVer && lastVer !== APP_VERSION) {
+        showToast(`🚀 อัปเดตแอปเป็น ${APP_VERSION} เรียบร้อย!`, false, 5000);
+    }
+    localStorage.setItem('bt_last_version', APP_VERSION);
+
+    // 3. Fetch latest commit hash from GitHub (Truly Auto)
+    try {
+        const resp = await fetch('https://api.github.com/repos/valrinx/bt-locations/commits?per_page=1');
+        const data = await resp.json();
+        if (data && data[0]) {
+            const sha = data[0].sha.substring(0, 7);
+            const hashEl = document.getElementById('dynamicHash');
+            if (hashEl) hashEl.textContent = sha;
+        }
+    } catch(e) {
+        const hashEl = document.getElementById('dynamicHash');
+        if (hashEl) hashEl.textContent = 'online';
     }
 })();
 
