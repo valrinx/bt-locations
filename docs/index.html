@@ -3256,7 +3256,7 @@
                 width: 100%;
                 max-height: 75vh;
                 border-radius: 20px 20px 0 0;
-                transform: translateY(120%);
+                transform: translateY(calc(100% + var(--nav-h) + env(safe-area-inset-bottom, 0px) + 20px));
                 padding-bottom: 0;
             }
 
@@ -3453,7 +3453,7 @@
                 <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
                 <div class="logo-sq">BT</div>
                 <span class="logo-txt">Locations</span>
-                <span class="version-badge" id="versionBadge">v6.6.1</span>
+                <span class="version-badge" id="versionBadge">v6.6.2</span>
             </div>
             <div class="tb-center">
                 <div class="search-box">
@@ -4925,7 +4925,7 @@
             width: 100% !important;
             max-height: 75vh !important;
             border-radius: 20px 20px 0 0 !important;
-            transform: translateY(120%) !important;
+            transform: translateY(calc(100% + var(--nav-h) + env(safe-area-inset-bottom, 0px) + 20px)) !important;
             padding-bottom: 0 !important;
         }
 
