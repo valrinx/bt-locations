@@ -1800,6 +1800,11 @@
     if (forceMobile) {
         body.classList.add('force-mobile');
         if (toggle) toggle.checked = true;
+        // Hide sidebar elements directly
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) sidebar.style.display = 'none';
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+        if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
     }
     
     // Handle toggle change
@@ -1821,17 +1826,16 @@
 
 <style>
 /* Force Mobile Mode Styles */
-body.force-mobile .sidebar,
-body.force-mobile .sidebar *,
-body.force-mobile #sidebar,
-body.force-mobile #sidebar * { display: none !important; }
+body.force-mobile #sidebar { display: none !important; visibility: hidden !important; opacity: 0 !important; }
 body.force-mobile .sidebar-backdrop { display: none !important; }
 body.force-mobile .search-bar { display: none !important; }
 body.force-mobile .mob-search-row { display: flex !important; }
 body.force-mobile .mob-chips-row { display: flex !important; }
 body.force-mobile .mob-nav { display: flex !important; }
-body.force-mobile .tb-left { width: auto !important; border-right: none !important; }
+body.force-mobile .tb-left { width: auto !important; min-width: unset !important; border-right: none !important; padding: 0 10px !important; }
 body.force-mobile .list-view { display: none !important; }
+body.force-mobile .body { display: block !important; }
+body.force-mobile .main { width: 100% !important; flex: 1 !important; }
 body.force-mobile .place-card {
     position: fixed; bottom: -100%; left: 0; right: 0;
     width: 100%; border-radius: 14px 14px 0 0;
@@ -1839,14 +1843,13 @@ body.force-mobile .place-card {
 }
 body.force-mobile .place-card.open { transform: translateY(-100%); }
 @media (min-width: 768px) {
-    body.force-mobile .sidebar,
-    body.force-mobile .sidebar * { display: none !important; }
-    body.force-mobile #sidebar,
-    body.force-mobile #sidebar * { display: none !important; }
+    body.force-mobile #sidebar { display: none !important; visibility: hidden !important; }
     body.force-mobile .mob-nav { display: flex !important; }
     body.force-mobile .mob-chips-row { display: flex !important; }
     body.force-mobile .topbar { height: var(--topbar-h); }
-    body.force-mobile .tb-left { width: auto !important; }
+    body.force-mobile .tb-left { width: auto !important; min-width: unset !important; }
+    body.force-mobile .body { display: block !important; }
+    body.force-mobile .main { width: 100% !important; }
 }
 </style>
 
