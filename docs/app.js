@@ -2399,12 +2399,32 @@ async function _routeFetchOSRM(waypoints){
     const CHUNK=25;
     const allCoords=[];
     let totalDist=0, totalDur=0;
-    for(let i=0;i<waypoints.length-1;i+=CHUNK-1){
-        const chunk=waypoints.slice(i, Math.min(i+CHUNK, waypoints.length));
+
+    // Validate & deduplicate waypoints (prevents OSRM 400)
+    const validWaypoints = waypoints.filter(p =>
+        Array.isArray(p) && p.length === 2 &&
+        isFinite(p[0]) && isFinite(p[1]) &&
+        Math.abs(p[1]) <= 90 && Math.abs(p[0]) <= 180
+    );
+    const dedupedWaypoints = validWaypoints.filter((p, i) => {
+        if (i === 0) return true;
+        const prev = validWaypoints[i - 1];
+        const dist = Math.sqrt(Math.pow(p[0]-prev[0],2) + Math.pow(p[1]-prev[1],2));
+        return dist > 0.00001; // ~1 meter threshold
+    });
+    if (dedupedWaypoints.length < 2) throw new Error('ต้องการอย่างน้อย 2 จุดที่แตกต่างกัน');
+
+    for(let i=0;i<dedupedWaypoints.length-1;i+=CHUNK-1){
+        const chunk=dedupedWaypoints.slice(i, Math.min(i+CHUNK, dedupedWaypoints.length));
         if(chunk.length<2)break;
         const coordStr=chunk.map(c=>c[0]+','+c[1]).join(';');
         const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson${_osrmExcludeParam()}`;
         const res=await fetch(url);
+        if(!res.ok){
+            let msg = `OSRM error ${res.status}`;
+            try { const e=await res.json(); msg=e.message||msg; } catch(_){}
+            throw new Error(msg);
+        }
         const data=await res.json();
         if(data.routes&&data.routes.length){
             const r=data.routes[0];
@@ -2413,7 +2433,7 @@ async function _routeFetchOSRM(waypoints){
             allCoords.push(...coords);
             totalDist+=r.distance;
             totalDur+=r.duration;
-        }else{throw new Error('No route');}
+        }else{throw new Error('OSRM: ไม่พบเส้นทาง (ลองเลือกจุดที่อยู่บนถนน)');}
     }
     return {coords:allCoords,distance:totalDist,duration:totalDur};
 }
