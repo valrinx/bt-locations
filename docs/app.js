@@ -325,7 +325,7 @@ function showLocationDetails(loc, idx){
         window._sheetIdx = idx;
     } else {
         // Desktop: show map popup
-        showMapPopup(loc, idx);
+        showPlaceCard(loc, idx);
     }
 }
 
