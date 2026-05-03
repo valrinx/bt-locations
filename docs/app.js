@@ -620,6 +620,24 @@ function _setSyncStatus(status) {
 }
 function _updateSyncBadge() {
     let badge = document.getElementById('syncBadge');
+    let topBadge = document.getElementById('topSyncBadge');
+    let topDot = document.getElementById('topSyncDot');
+    let topText = document.getElementById('topSyncText');
+
+    if (badge) badge.style.display = 'none'; // Hide legacy badge
+
+    const colors = { ok: '#10b981', syncing: '#f5a623', dirty: '#f5a623', error: '#ef4444', idle: '#10b981' };
+    const labels = { ok: 'Live', syncing: 'Syncing', dirty: 'Wait', error: 'Error', idle: 'Live' };
+    
+    if (topBadge) {
+        const color = colors[syncStatus] || '#10b981';
+        topBadge.style.color = color;
+        topBadge.style.borderColor = color + '33';
+        topBadge.style.background = color + '1a';
+        if (topDot) topDot.style.background = color;
+        if (topText) topText.textContent = labels[syncStatus] || 'Live';
+    }
+
     if (!badge) return;
     const icons = { idle: '', ok: '🟢', syncing: '🟡', dirty: '🟡', error: '🔴' };
     badge.textContent = icons[syncStatus] || '';
@@ -627,11 +645,10 @@ function _updateSyncBadge() {
     const agoText = _lastSyncTime ? (ago < 60 ? `${ago}s ago` : `${Math.round(ago / 60)}m ago`) : '';
     const titles = { idle: '', ok: `Synced ${agoText}`, syncing: 'กำลัง sync...', dirty: 'ยังไม่ sync', error: 'Sync ล้มเหลว' };
     badge.title = titles[syncStatus] || '';
-    // Update btn tooltip too
+    
     const btn = document.getElementById('btnGithubSave');
     if (btn) btn.title = `GitHub Sync ${icons[syncStatus] || ''} ${agoText}`.trim();
 }
-// Auto-refresh badge every 10s to keep "ago" current
 setInterval(_updateSyncBadge, 10000);
 
 function _canSync(){return true;}
