@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -1123,6 +1123,43 @@
             .search-bar { display: none !important; }
             .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
         }
+
+        /* ════════════════════════════════════════
+           DEV MOBILE TOGGLE BUTTON
+        ════════════════════════════════════════ */
+        .dev-mob-toggle {
+            position: fixed; left: 14px; bottom: 14px;
+            z-index: 9999;
+            display: flex; align-items: center; gap: 7px;
+            padding: 8px 14px 8px 11px;
+            border-radius: 24px;
+            background: rgba(17,18,24,0.92);
+            border: 1px solid rgba(167,139,250,0.35);
+            color: var(--pu);
+            font-size: 12px; font-weight: 700; font-family: inherit;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(167,139,250,0.22), 0 2px 8px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+            user-select: none;
+        }
+        .dev-mob-toggle:hover {
+            background: rgba(167,139,250,0.15);
+            border-color: rgba(167,139,250,0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(167,139,250,0.3), 0 2px 8px rgba(0,0,0,0.5);
+        }
+        .dev-mob-toggle:active { transform: scale(0.96); }
+        .dev-mob-toggle.active {
+            background: rgba(167,139,250,0.18);
+            border-color: rgba(167,139,250,0.7);
+            color: var(--pu);
+        }
+        .dev-mob-toggle-icon { font-size: 15px; line-height: 1; }
+        /* Hide on real mobile */
+        @media (max-width: 767px) {
+            .dev-mob-toggle { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -1217,15 +1254,7 @@
                 <!-- populated by app.js -->
             </div>
 
-            <!-- Mobile Mode Toggle -->
-            <div class="sec-hd" style="margin-top:8px;">การแสดงผล</div>
-            <div class="mobile-toggle-row" style="padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                <span style="font-size:13px;color:var(--tx2);">โหมดมือถือ</span>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="mobileModeToggle">
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
+
 
             <!-- Footer -->
             <div class="sfoot">
@@ -1449,6 +1478,12 @@
             <div class="mob-sheet-close" onclick="closeMobSheet()">✕</div>
         </div>
         <div class="mob-sheet-list" id="mobSheetList"></div>
+    </div>
+
+    <!-- ══ DEV: MOBILE MODE TOGGLE BUTTON ══ -->
+    <div id="devMobileToggle" class="dev-mob-toggle" title="สลับโหมดมือถือ (Dev)">
+        <span class="dev-mob-toggle-icon" id="devToggleIcon">🖥️</span>
+        <span id="devToggleLabel">Desktop</span>
     </div>
 
 </div><!-- /app -->
@@ -1785,72 +1820,177 @@
     };
 })();
 
-// ── Mobile Mode Toggle ──
+// ── Mobile Mode Toggle (Dev) ──
 (function(){
-    const MOBILE_MODE_KEY = 'bt_force_mobile_mode';
-    const toggle = document.getElementById('mobileModeToggle');
+    const KEY = 'bt_force_mobile_mode';
     const body = document.body;
-    
-    // Check saved preference or auto-detect
-    const savedMode = localStorage.getItem(MOBILE_MODE_KEY);
-    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
-    const forceMobile = savedMode === 'true' || (savedMode === null && isMobileDevice);
-    
-    // Apply initial state
-    if (forceMobile) {
-        body.classList.add('force-mobile');
-        if (toggle) toggle.checked = true;
-        // Hide sidebar elements directly
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) sidebar.style.display = 'none';
-        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-        if (sidebarBackdrop) sidebarBackdrop.style.display = 'none';
-    }
-    
-    // Handle toggle change
-    if (toggle) {
-        toggle.addEventListener('change', function() {
-            if (this.checked) {
-                body.classList.add('force-mobile');
-                localStorage.setItem(MOBILE_MODE_KEY, 'true');
-            } else {
-                body.classList.remove('force-mobile');
-                localStorage.setItem(MOBILE_MODE_KEY, 'false');
+
+    function applyMobileMode(on) {
+        if (on) {
+            body.classList.add('force-mobile');
+        } else {
+            body.classList.remove('force-mobile');
+        }
+        updateToggleBtn(on);
+        try {
+            if (window.map && typeof window.map.invalidateSize === 'function') {
+                setTimeout(function(){ window.map.invalidateSize(); }, 50);
             }
-            // Refresh page to apply layout changes
-            window.location.reload();
-        });
+        } catch(e){}
     }
+
+    function updateToggleBtn(on) {
+        var btn = document.getElementById('devMobileToggle');
+        var lbl = document.getElementById('devToggleLabel');
+        var ico = document.getElementById('devToggleIcon');
+        if (!btn) return;
+        if (on) {
+            btn.classList.add('active');
+            if (lbl) lbl.textContent = 'มือถือ';
+            if (ico) ico.textContent = '📱';
+        } else {
+            btn.classList.remove('active');
+            if (lbl) lbl.textContent = 'Desktop';
+            if (ico) ico.textContent = '🖥️';
+        }
+    }
+
+    // Init from localStorage
+    var saved = localStorage.getItem(KEY);
+    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+    var forceMobile = saved === 'true' || (saved === null && isMobile);
+    applyMobileMode(forceMobile);
+
+    // Wire dev button after DOM ready
+    document.addEventListener('DOMContentLoaded', function(){
+        var btn = document.getElementById('devMobileToggle');
+        if (btn) {
+            updateToggleBtn(body.classList.contains('force-mobile'));
+            btn.addEventListener('click', function(){
+                var isOn = body.classList.contains('force-mobile');
+                localStorage.setItem(KEY, !isOn ? 'true' : 'false');
+                applyMobileMode(!isOn);
+            });
+        }
+    });
 })();
 </script>
 
 <style>
-/* Force Mobile Mode Styles */
-body.force-mobile #sidebar { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+/* ════════════════════════════════════════
+   FORCE MOBILE MODE STYLES
+════════════════════════════════════════ */
+body.force-mobile .sidebar { display: none !important; }
 body.force-mobile .sidebar-backdrop { display: none !important; }
-body.force-mobile .search-bar { display: none !important; }
-body.force-mobile .mob-search-row { display: flex !important; }
-body.force-mobile .mob-chips-row { display: flex !important; }
-body.force-mobile .mob-nav { display: flex !important; }
-body.force-mobile .tb-left { width: auto !important; min-width: unset !important; border-right: none !important; padding: 0 10px !important; }
-body.force-mobile .list-view { display: none !important; }
-body.force-mobile .body { display: block !important; }
-body.force-mobile .main { width: 100% !important; flex: 1 !important; }
+
+/* Topbar */
+body.force-mobile .topbar { height: var(--topbar-h) !important; padding: 0 10px !important; gap: 8px !important; }
+body.force-mobile .tb-left { width: auto !important; border-right: none !important; padding: 0 !important; gap: 0 !important; }
+body.force-mobile .tb-left .logo-sq { display: none !important; }
+body.force-mobile .tb-brand { display: none !important; }
+body.force-mobile .tb-center { flex: 1 !important; padding: 0 !important; min-width: 0 !important; }
+body.force-mobile .search-box { width: 100% !important; max-width: none !important; height: 36px !important; border-radius: 20px !important; padding: 0 12px !important; }
+body.force-mobile .tb-right { border-left: none !important; padding: 0 !important; gap: 0 !important; }
+body.force-mobile .pill-badge,
+body.force-mobile .live-p,
+body.force-mobile .tb-sep,
+body.force-mobile #btnImportData,
+body.force-mobile #btnUpload,
+body.force-mobile #av2,
+body.force-mobile #av3 { display: none !important; }
+body.force-mobile .tb-right .avs { display: flex !important; }
+body.force-mobile #av1 { width: 32px !important; height: 32px !important; border-radius: 50% !important; font-size: 12px !important; margin-left: 0 !important; }
+
+/* Chips row */
+body.force-mobile .mob-chips-row {
+    display: flex !important;
+    position: fixed; top: var(--topbar-h); left: 0; right: 0;
+    z-index: 40; height: var(--chips-h);
+    background: var(--s1); border-bottom: 0.5px solid var(--bd);
+    padding: 0 10px; gap: 6px; align-items: center;
+    overflow-x: auto; scrollbar-width: none;
+}
+
+/* Body layout */
+body.force-mobile .body { display: flex !important; flex-direction: column !important; position: relative !important; }
+body.force-mobile .main { position: relative !important; flex: 1 !important; overflow: hidden !important; width: 100% !important; }
+
+/* View area offsets */
+body.force-mobile .view-area {
+    position: absolute !important;
+    top: var(--chips-h) !important;
+    left: 0 !important; right: 0 !important;
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* Bottom nav */
+body.force-mobile .mob-nav {
+    display: flex !important;
+    position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom,0px) !important;
+    z-index: 50 !important;
+}
+body.force-mobile .btbar { display: none !important; }
+body.force-mobile .vtabs { display: none !important; }
+
+/* Map controls */
+body.force-mobile .map-controls { position: absolute; right: 8px; top: 50%; }
+body.force-mobile .zoom-c { position: absolute; right: 8px; bottom: 14px; }
+
+/* Place card */
 body.force-mobile .place-card {
-    position: fixed; bottom: -100%; left: 0; right: 0;
-    width: 100%; border-radius: 14px 14px 0 0;
-    max-height: 55vh; transform: translateY(0);
+    position: fixed !important;
+    bottom: -100% !important;
+    left: 0 !important; right: 0 !important;
+    top: auto !important; width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+    opacity: 1 !important; transform: none !important;
+    transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1) !important;
+    pointer-events: auto !important;
+    max-height: 60vh !important;
 }
-body.force-mobile .place-card.open { transform: translateY(-100%); }
-@media (min-width: 768px) {
-    body.force-mobile #sidebar { display: none !important; visibility: hidden !important; }
-    body.force-mobile .mob-nav { display: flex !important; }
-    body.force-mobile .mob-chips-row { display: flex !important; }
-    body.force-mobile .topbar { height: var(--topbar-h); }
-    body.force-mobile .tb-left { width: auto !important; min-width: unset !important; }
-    body.force-mobile .body { display: block !important; }
-    body.force-mobile .main { width: 100% !important; }
+body.force-mobile .place-card.open {
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
 }
+body.force-mobile .place-card-drag { display: block !important; }
+
+/* List panel */
+body.force-mobile .list-panel { bottom: -100% !important; }
+body.force-mobile .list-panel.open { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important; }
+
+/* Mob sheet */
+body.force-mobile .mob-sheet { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important; }
+
+/* Info panel */
+body.force-mobile .info-panel {
+    top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    width: 100% !important; max-height: 75vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    transform: translateY(110%) !important;
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
+}
+body.force-mobile .info-panel.open { transform: translateY(0) !important; }
+
+/* FAB / banners */
+body.force-mobile #btnFab { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; right: 16px !important; }
+body.force-mobile .gps-btn-wrap { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; }
+body.force-mobile #addBanner,
+body.force-mobile #measureBanner,
+body.force-mobile #directionsBanner { top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important; }
+body.force-mobile #countPill { top: calc(var(--topbar-h) + var(--chips-h) + 8px) !important; }
+body.force-mobile #latlngHint { display: none !important; }
+
+/* Toast / count pill */
+body.force-mobile .toast,
+body.force-mobile .save-toast { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px) !important; }
+body.force-mobile .count-pill { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px) !important; }
+
+/* Stats / modals */
+body.force-mobile .sv-grid { grid-template-columns: repeat(2,1fr) !important; }
+body.force-mobile .sv-row { grid-template-columns: 1fr !important; }
+body.force-mobile .sv-inner { padding: 12px !important; }
+body.force-mobile .modal { width: calc(100vw - 24px) !important; max-height: 85vh !important; border-radius: 14px !important; }
 </style>
 
 </body>
