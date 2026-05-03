@@ -1166,6 +1166,7 @@
             background: var(--bg);
             display: none;
             flex-direction: column;
+            z-index: 40; /* Lower than .mob-nav (50) */
         }
 
         .list-view.show {
@@ -1213,6 +1214,7 @@
         .ltable {
             flex: 1;
             overflow-y: auto;
+            padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 20px);
         }
 
         .ltable::-webkit-scrollbar {
@@ -1233,12 +1235,13 @@
             background: var(--s2);
             overflow-y: auto;
             display: none;
-            z-index: 100;
+            z-index: 40; /* Lower than .mob-nav (50) */
         }
         .stats-view.show { display: block; }
 
         .sv-inner {
             padding: 18px;
+            padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 20px); /* Add padding for mobile nav */
             max-width: 900px;
             margin: 0 auto;
         }
@@ -3450,7 +3453,7 @@
                 <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
                 <div class="logo-sq">BT</div>
                 <span class="logo-txt">Locations</span>
-                <span class="version-badge" id="versionBadge">v6.6</span>
+                <span class="version-badge" id="versionBadge">v6.6.1</span>
             </div>
             <div class="tb-center">
                 <div class="search-box">
@@ -4999,6 +5002,7 @@
             bottom: 0 !important;
             overflow-y: auto !important;
             background: var(--bg) !important;
+            z-index: 40 !important; /* Lower than .mob-nav (50) */
         }
 
         body.force-mobile .list-view.show,
