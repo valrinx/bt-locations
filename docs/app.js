@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.10';
+const APP_VERSION = 'v6.6.12';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -656,6 +656,15 @@ function _updateSyncBadge() {
         topBadge.style.background = color + '1a';
         if (topDot) topDot.style.background = color;
         if (topText) topText.textContent = labels[syncStatus] || 'Live';
+        
+        // Update mini dot near logo
+        const miniDot = document.getElementById('topSyncDotMini');
+        if (miniDot) {
+            miniDot.style.background = color;
+            miniDot.style.boxShadow = `0 0 6px ${color}`;
+            if (syncStatus === 'syncing') miniDot.classList.add('syncing');
+            else miniDot.classList.remove('syncing');
+        }
     }
 
     if (!badge) return;
