@@ -998,6 +998,7 @@ async function initApp(){
             document.getElementById('loader').classList.add('done');
             document.getElementById('app').style.display = 'flex';
             console.log('[BT] Loader hidden');
+            setTimeout(()=>{map.invalidateSize();update();},100);
         }, 200);
         
         // 4. Set avatar (if exists in UI)
@@ -3344,4 +3345,5 @@ if ('serviceWorker' in navigator) {
         }
     });
 }
+
 
