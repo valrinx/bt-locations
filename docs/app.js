@@ -171,6 +171,31 @@ function _renderMobDrawer(){
     cityContainer.innerHTML = cityHtml;
 }
 
+function _renderSidebar(){
+    const listContainer = document.getElementById('listContainer');
+    const cityContainer = document.getElementById('cityContainer');
+    if(!listContainer || !cityContainer) { _renderMobDrawer(); return; }
+    
+    const lists = [...new Set(locations.map(l=>l.list))].filter(Boolean).sort();
+    const cities = [...new Set(locations.map(l=>l.city))].filter(Boolean).sort();
+    
+    listContainer.innerHTML = lists.map(name =>
+        `<div class="flist-item${filterList===name?' active':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}')">
+            <span class="fl-dot" style="background:${getColor(name)}"></span>
+            <span class="fl-name">${name}</span>
+            <span class="fl-count">${locations.filter(l=>l.list===name).length}</span>
+        </div>`
+    ).join('');
+    
+    cityContainer.innerHTML = cities.map(name =>
+        `<div class="clist-item${filterCity===name?' active':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}')">
+            <span class="fl-name">${name}</span>
+            <span class="fl-count">${locations.filter(l=>l.city===name).length}</span>
+        </div>`
+    ).join('');
+    
+    _renderMobDrawer();
+}
 // Filter setters for mobile
 function setFilterList(name){
     filterList = name;
