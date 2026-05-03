@@ -1228,29 +1228,30 @@
 <button id="filterMoreBtn" style="display:none; padding:4px 12px; background:var(--s2); border:1px solid var(--bd); border-radius:10px; font-size:12px; cursor:pointer; color:var(--tx2);">▾ ตัวกรองเพิ่ม</button>
 
 <!-- Place card (slide-up detail panel) -->
-<div id="placeCard" style="position:fixed; bottom:0; left:0; right:0; z-index:400; background:var(--s1); border-top:1px solid var(--bd2); border-radius:20px 20px 0 0; padding:20px; transform:translateY(100%); transition:transform 0.3s ease; max-height:70vh; overflow-y:auto;">
-    <div style="width:40px; height:4px; background:var(--bd3); border-radius:2px; margin:0 auto 16px;"></div>
-    <div id="placeCardContent"></div>
+<div id="placeCard" class="place-card">
+    <div class="place-card-drag"></div>
+    <button id="placeCardClose" class="place-card-close">✕</button>
+    <div class="place-card-content" id="placeCardContent"></div>
 </div>
 
-<!-- List panel (slide-in from right) -->
-<div id="listPanel" style="position:fixed; top:0; right:0; bottom:0; z-index:350; width:320px; max-width:90vw; background:var(--s1); border-left:1px solid var(--bd2); transform:translateX(100%); transition:transform 0.3s ease; display:flex; flex-direction:column;">
-    <div style="padding:16px; border-bottom:1px solid var(--bd2); display:flex; align-items:center; justify-content:space-between;">
-        <span id="listPanelTitle" style="font-weight:700; font-size:15px;">รายการจุด</span>
-        <button onclick="window.closeListPanel&&window.closeListPanel()" style="background:none; border:none; cursor:pointer; color:var(--tx2); font-size:18px;">✕</button>
+<!-- List panel -->
+<div id="listPanel" class="list-panel">
+    <div class="list-panel-header">
+        <span id="listPanelTitle" class="list-panel-title">รายการจุด</span>
+        <button class="list-panel-close" onclick="window.closeListPanel&&window.closeListPanel()">✕</button>
     </div>
-    <div id="listSortBar" style="padding:8px 12px; border-bottom:1px solid var(--bd2); display:flex; gap:6px; flex-wrap:wrap;"></div>
-    <div id="listBody" style="flex:1; overflow-y:auto; padding:8px;"></div>
+    <div id="listSortBar" class="list-sort-bar"></div>
+    <div id="listBody" class="list-body"></div>
 </div>
 
-<!-- Info panel (slide-in from right) -->
-<div id="infoPanel" style="position:fixed; top:0; right:0; bottom:0; z-index:360; width:340px; max-width:90vw; background:var(--s1); border-left:1px solid var(--bd2); transform:translateX(100%); transition:transform 0.3s ease;">
-    <div id="infoPanelBackdrop" style="display:none; position:fixed; inset:0; z-index:359;" onclick="closeInfo&&closeInfo()"></div>
-    <div style="padding:16px; border-bottom:1px solid var(--bd2); display:flex; align-items:center; justify-content:space-between;">
-        <span id="infoPanelTitle" style="font-weight:700; font-size:15px;">ข้อมูล</span>
-        <button id="infoPanelClose" onclick="closeInfo&&closeInfo()" style="background:none; border:none; cursor:pointer; color:var(--tx2); font-size:18px;">✕</button>
+<!-- Info panel -->
+<div id="infoPanel" class="info-panel">
+    <div id="infoPanelBackdrop" class="info-panel-backdrop" onclick="closeInfo&&closeInfo()"></div>
+    <div class="info-panel-header">
+        <span id="infoPanelTitle" class="info-panel-title">ข้อมูล</span>
+        <button id="infoPanelClose" class="info-panel-close" onclick="closeInfo&&closeInfo()">✕</button>
     </div>
-    <div id="infoPanelBody" style="padding:16px; overflow-y:auto; height:calc(100% - 57px);"></div>
+    <div id="infoPanelBody" class="info-panel-body"></div>
 </div>
 
 <!-- Add banner (visible) bump -->
