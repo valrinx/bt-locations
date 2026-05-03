@@ -7,6 +7,10 @@ on:
       - 'all_locations.json'
       - 'build_html.py'
 
+env:
+  SUPABASE_URL: https://uaemvtttfeapvofqhnwoo.supabase.co
+  SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,18 +18,93 @@ jobs:
       contents: write
 
     steps:
+      # ═══════════════════════════════════════════════════
+      # STEP 1: Notify build started (Supabase + LINE)
+      # ═══════════════════════════════════════════════════
+      - name: 📡 Notify build started to Supabase
+        run: |
+          curl -s -X POST "${{ env.SUPABASE_URL }}/rest/v1/build_status" \
+            -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"run_id\": \"${{ github.run_id }}\", \"commit_sha\": \"${{ github.sha }}\", \"commit_msg\": \"${{ github.event.head_commit.message }}\", \"status\": \"pending\", \"branch\": \"${{ github.ref_name }}\"}"
+          echo "🔵 Build status: PENDING sent to Supabase"
+
+      - name: 💬 LINE notify - Build started
+        run: |
+          curl -s -X POST https://notify-api.line.me/api/notify \
+            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
+            -F "message=🔄 เริ่ม build ใหม่...
+            📋 ${{ github.event.head_commit.message }}
+            🔗 ${{ github.sha }}" || true
+
+      # ═══════════════════════════════════════════════════
+      # STEP 2: Checkout & Build
+      # ═══════════════════════════════════════════════════
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Build HTML + locations.js
+      - name: 🔨 Build HTML + locations.js
+        id: build
         run: python build_html.py
 
-      - name: Commit and push generated files
+      - name: 📤 Commit and push generated files
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/
           git diff --cached --quiet || (git commit -m "Auto-build: update docs from all_locations.json" && git push)
+
+      # ═══════════════════════════════════════════════════
+      # STEP 3: Update Supabase on SUCCESS
+      # ═══════════════════════════════════════════════════
+      - name: ✅ Update Supabase - Build success
+        if: success()
+        run: |
+          curl -s -X PATCH "${{ env.SUPABASE_URL }}/rest/v1/build_status?run_id=eq.${{ github.run_id }}" \
+            -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"status\": \"success\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+          echo "🟢 Build status: SUCCESS sent to Supabase"
+
+      # ═══════════════════════════════════════════════════
+      # STEP 4: Update Supabase on FAILURE
+      # ═══════════════════════════════════════════════════
+      - name: ❌ Update Supabase - Build failed
+        if: failure()
+        run: |
+          curl -s -X PATCH "${{ env.SUPABASE_URL }}/rest/v1/build_status?run_id=eq.${{ github.run_id }}" \
+            -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
+            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: return=minimal" \
+            -d "{\"status\": \"failed\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+          echo "🔴 Build status: FAILED sent to Supabase"
+
+      # ═══════════════════════════════════════════════════
+      # STEP 5: LINE notify result
+      # ═══════════════════════════════════════════════════
+      - name: 💬 LINE notify - Build success
+        if: success()
+        run: |
+          curl -s -X POST https://notify-api.line.me/api/notify \
+            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
+            -F "message=✅ Build สำเร็จ! 🚀
+            📋 ${{ github.event.head_commit.message }}
+            🔗 ดูผลลัพธ์: https://valrinx.github.io/bt-locations/" || true
+
+      - name: 💬 LINE notify - Build failed
+        if: failure()
+        run: |
+          curl -s -X POST https://notify-api.line.me/api/notify \
+            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
+            -F "message=❌ Build ล้มเหลว!
+            📋 ${{ github.event.head_commit.message }}
+            🔗 ดู log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
