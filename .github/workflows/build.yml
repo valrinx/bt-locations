@@ -21,15 +21,16 @@ jobs:
       # ═══════════════════════════════════════════════════
       # STEP 1: Notify build started (Supabase + LINE)
       # ═══════════════════════════════════════════════════
-      - name: 📡 Notify build started to Supabase
+      - name: 📡 Notify build started to Supabase (optional)
         run: |
+          echo "🔵 Sending PENDING to Supabase..."
           curl -s -X POST "${{ env.SUPABASE_URL }}/rest/v1/build_status" \
             -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
             -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
-            -d "{\"run_id\": \"${{ github.run_id }}\", \"commit_sha\": \"${{ github.sha }}\", \"commit_msg\": \"${{ github.event.head_commit.message }}\", \"status\": \"pending\", \"branch\": \"${{ github.ref_name }}\"}"
-          echo "🔵 Build status: PENDING sent to Supabase"
+            -d "{\"run_id\": \"${{ github.run_id }}\", \"commit_sha\": \"${{ github.sha }}\", \"commit_msg\": \"${{ github.event.head_commit.message }}\", \"status\": \"pending\", \"branch\": \"${{ github.ref_name }}\"}" || echo "⚠️ Supabase notify skipped (table may not exist)"
+        continue-on-error: true
 
       - name: 💬 Discord notify - Build started
         run: |
@@ -66,7 +67,7 @@ jobs:
           git diff --cached --quiet || (git commit -m "Auto-build: update docs from all_locations.json" && git push)
 
       # ═══════════════════════════════════════════════════
-      # STEP 3: Update Supabase on SUCCESS
+      # STEP 3: Update Supabase on SUCCESS (optional)
       # ═══════════════════════════════════════════════════
       - name: ✅ Update Supabase - Build success
         if: success()
@@ -76,11 +77,12 @@ jobs:
             -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
-            -d "{\"status\": \"success\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+            -d "{\"status\": \"success\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" || echo "⚠️ Supabase update skipped"
           echo "🟢 Build status: SUCCESS sent to Supabase"
+        continue-on-error: true
 
       # ═══════════════════════════════════════════════════
-      # STEP 4: Update Supabase on FAILURE
+      # STEP 4: Update Supabase on FAILURE (optional)
       # ═══════════════════════════════════════════════════
       - name: ❌ Update Supabase - Build failed
         if: failure()
@@ -90,8 +92,9 @@ jobs:
             -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
             -H "Content-Type: application/json" \
             -H "Prefer: return=minimal" \
-            -d "{\"status\": \"failed\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+            -d "{\"status\": \"failed\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" || echo "⚠️ Supabase update skipped"
           echo "🔴 Build status: FAILED sent to Supabase"
+        continue-on-error: true
 
       # ═══════════════════════════════════════════════════
       # STEP 5: LINE notify result
