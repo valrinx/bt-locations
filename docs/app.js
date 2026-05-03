@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.8.1';
+const APP_VERSION = 'v5.9.0';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -61,6 +61,183 @@ document.getElementById('btMap').onclick = () => switchView('map');
 document.getElementById('btRoute').onclick = () => { routeMode ? clearRoute() : doRoute(); };
 document.getElementById('btHeat').onclick = () => switchView(heatmapMode ? 'map' : 'heat');
 document.getElementById('btAdd').onclick = () => openAddMode();
+
+// ════════════════════════════════════════════
+// MOBILE UI FUNCTIONS
+// ════════════════════════════════════════════
+
+// Mobile view switcher (for bottom nav)
+function mobSwitchView(view){
+    switchView(view);
+    // Update mobile nav active state
+    document.querySelectorAll('.mob-nb').forEach(nb => nb.classList.remove('on'));
+    document.getElementById('mn-'+view)?.classList.add('on');
+    // Close bottom sheet if open
+    closeMobSheet();
+}
+
+// Mobile drawer
+function openMobDrawer(){
+    const drawer = document.getElementById('mobDrawer');
+    if(drawer) drawer.classList.add('show');
+    _renderMobDrawer();
+}
+function closeMobDrawer(){
+    const drawer = document.getElementById('mobDrawer');
+    if(drawer) drawer.classList.remove('show');
+}
+
+// Render mobile drawer content
+function _renderMobDrawer(){
+    const listContainer = document.getElementById('mobDrawerLists');
+    const cityContainer = document.getElementById('mobDrawerCities');
+    if(!listContainer || !cityContainer) return;
+    
+    // Lists
+    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
+    const lists = Object.entries(lc).sort((a,b)=>b[1]-a[1]);
+    let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:var(--bl)"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
+    lists.forEach(([name,count],i)=>{
+        const col=_listColors[i % _listColors.length];
+        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
+    });
+    listContainer.innerHTML = listHtml;
+    
+    // Cities
+    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
+    const cities = Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+    let cityHtml = '';
+    cities.forEach(([name,count],i)=>{
+        const col=_listColors[i % _listColors.length];
+        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span></div>`;
+    });
+    cityContainer.innerHTML = cityHtml;
+}
+
+// Filter setters for mobile
+function setFilterList(name){
+    filterList = name;
+    filterCity = '';
+    _lastFilteredKey = null;
+    update();
+    _renderSidebar();
+    _updateMobChips();
+}
+function setFilterCity(name){
+    filterCity = name;
+    filterList = '';
+    _lastFilteredKey = null;
+    update();
+    _renderSidebar();
+    _updateMobChips();
+    // Zoom to city
+    const cityLocs = locations.filter(l=>l.city===filterCity);
+    if(cityLocs.length && map){
+        const group = L.featureGroup(cityLocs.map(l=>L.marker([l.lat,l.lng])));
+        map.fitBounds(group.getBounds().pad(0.15), {animate:false, maxZoom:16});
+    }
+}
+
+// Mobile chips update
+function _updateMobChips(){
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    if(!filterList && !filterCity && !filterFavorites){
+        document.getElementById('chipAll')?.classList.add('on');
+    } else if(filterFavorites){
+        document.getElementById('chipFav')?.classList.add('on');
+    } else if(filterList){
+        document.getElementById('chipList')?.classList.add('on');
+    } else if(filterCity){
+        document.getElementById('chipCity')?.classList.add('on');
+    }
+}
+
+// Chip click handlers
+document.querySelectorAll('.chip').forEach(chip=>{
+    chip.onclick = () => {
+        const filter = chip.dataset.filter;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+        chip.classList.add('on');
+        if(filter === 'all'){
+            filterList = ''; filterCity = ''; filterFavorites = false;
+        } else if(filter === 'fav'){
+            filterFavorites = true; filterList = ''; filterCity = '';
+        } else if(filter === 'list'){
+            // Open drawer to select list
+            openMobDrawer();
+        } else if(filter === 'city'){
+            // Open drawer to select city
+            openMobDrawer();
+        }
+        _lastFilteredKey = null;
+        update();
+        _renderSidebar();
+    };
+});
+
+// Mobile search sync
+document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e)=>{
+    const si = document.getElementById('topSearch');
+    if(si) si.value = e.target.value;
+    update();
+}, 150));
+
+// Sync top search to mobile
+document.getElementById('topSearch')?.addEventListener('input', debounce((e)=>{
+    const mi = document.getElementById('mobSearchInput');
+    if(mi) mi.value = e.target.value;
+}, 150));
+
+// Mobile bottom sheet
+let mobSheetOpen = false;
+function openMobSheet(title, items){
+    const sheet = document.getElementById('mobSheet');
+    const titleEl = document.getElementById('mobSheetTitle');
+    const listEl = document.getElementById('mobSheetList');
+    if(!sheet) return;
+    if(titleEl) titleEl.textContent = title || 'รายการ';
+    if(listEl && items){
+        listEl.innerHTML = items.map((item,i) => `
+            <div class="ms-item" onclick="mobSheetItemClick(${i})">
+                <div class="ms-dot" style="background:${item.color||'var(--bl)'}"></div>
+                <div class="ms-info">
+                    <div class="ms-name">${item.name}</div>
+                    <div class="ms-meta">${item.meta || ''}</div>
+                </div>
+                <div class="ms-chevron">›</div>
+            </div>
+        `).join('');
+    }
+    sheet.classList.add('open');
+    mobSheetOpen = true;
+}
+function closeMobSheet(){
+    const sheet = document.getElementById('mobSheet');
+    if(sheet) sheet.classList.remove('open');
+    mobSheetOpen = false;
+}
+function toggleMobSheet(){
+    if(mobSheetOpen) closeMobSheet();
+}
+function mobSheetItemClick(index){
+    // Override this to handle item clicks
+    console.log('Sheet item clicked:', index);
+}
+
+// Menu button opens mobile drawer on mobile
+window.toggleSidebar = function(){
+    if(window.innerWidth < 768){
+        openMobDrawer();
+    } else {
+        // Desktop: toggle sidebar visibility if needed
+        const sb = document.getElementById('sidebar');
+        const bd = document.getElementById('sidebarBackdrop');
+        if(sb){
+            const isOpen = sb.classList.toggle('open');
+            if(bd) bd.classList.toggle('show', isOpen);
+        }
+    }
+};
 
 // Updated sidebar rendering
 const _listColors=['#5b8fff','#2ecc90','#f5a623','#ff5c5c','#a78bfa','#ff7f5c','#40c0ff','#c0a060'];
@@ -784,6 +961,7 @@ function update() {
     updateChipLabels();
     refreshDatalistSuggestions();
     _renderSidebar();
+    _updateMobChips(); // Sync mobile chip state
 }
 
 // Init

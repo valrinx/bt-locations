@@ -737,66 +737,142 @@
         body.light .modal-field input, body.light .modal-field select, body.light .modal-field textarea { background: var(--s2); color: var(--tx); }
 
         /* ══ DESKTOP ══ */
+        /* ══════════════════════════════════════
+           MOBILE COMPONENTS (hidden on desktop)
+        ════════════════════════════════════════ */
+        .mob-search-row { display: none; flex-shrink: 0; padding: 8px 12px 0; }
+        .mob-search { height: 38px; display: flex; align-items: center; gap: 7px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 10px; padding: 0 11px; width: 100%; cursor: text; }
+        .mob-search:focus-within { border-color: var(--bl-b); }
+        .mob-search input { background: none; border: none; outline: none; color: var(--tx); font-size: 13px; width: 100%; font-family: inherit; }
+        .mob-search input::placeholder { color: var(--tx3); }
+
+        .mob-chips-row { display: none; gap: 6px; padding: 8px 12px 4px; overflow-x: auto; flex-shrink: 0; }
+        .mob-chips-row::-webkit-scrollbar { display: none; }
+        .chip { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; border: 0.5px solid var(--bd2); background: var(--s2); font-size: 11.5px; color: var(--tx2); white-space: nowrap; cursor: pointer; transition: all 0.13s; user-select: none; flex-shrink: 0; }
+        .chip:hover { color: var(--tx); }
+        .chip.on { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); }
+        .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+        .mob-nav { display: none; height: 58px; flex-shrink: 0; background: var(--s1); border-top: 0.5px solid var(--bd); align-items: center; z-index: 20; }
+        .mob-nb { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; height: 100%; user-select: none; }
+        .mob-nb-ico { font-size: 18px; color: var(--tx3); transition: color 0.13s; }
+        .mob-nb-lbl { font-size: 9.5px; color: var(--tx3); transition: color 0.13s; }
+        .mob-nb.on .mob-nb-ico { color: var(--bl); }
+        .mob-nb.on .mob-nb-lbl { color: var(--bl); }
+        .mob-nb-add { width: 46px; height: 46px; border-radius: 50%; background: var(--bl); display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; box-shadow: 0 4px 16px rgba(91,143,255,0.4); }
+
+        .mob-drawer { position: fixed; inset: 0; z-index: 80; display: none; }
+        .mob-drawer.show { display: block; }
+        .mob-drawer-bg { position: absolute; inset: 0; background: rgba(18,19,26,0.7); }
+        .mob-drawer-panel { position: absolute; left: 0; top: 0; bottom: 0; width: 280px; background: var(--s1); border-right: 0.5px solid var(--bd2); display: flex; flex-direction: column; overflow: hidden; animation: slideRight 0.22s ease; }
+        @keyframes slideRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .mob-drawer-hd { padding: 16px 14px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 0.5px solid var(--bd); }
+        .mob-drawer-title { font-size: 14px; font-weight: 600; }
+        .mob-drawer-close { width: 26px; height: 26px; border-radius: 6px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx2); font-size: 14px; }
+
+        .mob-sheet { position: fixed; left: 0; right: 0; bottom: 58px; background: var(--s1); border-radius: 14px 14px 0 0; border-top: 0.5px solid var(--bd2); z-index: 30; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.22,1,0.36,1); max-height: 55vh; display: flex; flex-direction: column; }
+        .mob-sheet.open { transform: translateY(0); }
+        .mob-sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--bd2); margin: 10px auto 8px; flex-shrink: 0; cursor: pointer; }
+        .mob-sheet-hd { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 10px; border-bottom: 0.5px solid var(--bd); flex-shrink: 0; }
+        .mob-sheet-title { font-size: 13px; font-weight: 700; }
+        .mob-sheet-close { font-size: 16px; color: var(--tx3); cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .mob-sheet-list { flex: 1; overflow-y: auto; }
+        .mob-sheet-list::-webkit-scrollbar { display: none; }
+
+        /* Mobile list items */
+        .ms-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--bd); cursor: pointer; }
+        .ms-item:hover { background: var(--s2); }
+        .ms-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .ms-info { flex: 1; min-width: 0; }
+        .ms-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ms-meta { font-size: 11px; color: var(--tx3); }
+        .ms-chevron { font-size: 12px; color: var(--tx3); }
+
         @media (min-width: 768px) {
             .sidebar { position: static; width: 252px; transform: none !important; }
             .search-bar { display: none !important; }
+            .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
         }
+
         /* ══ MOBILE ══ */
         @media (max-width: 767px) {
+            .app { padding-bottom: env(safe-area-inset-bottom, 0); }
             .body { flex-direction: column; position: relative; }
-            .sidebar { 
-                position: fixed; top: 50px; left: 0; bottom: 0; width: 280px; 
-                transform: translateX(-110%); z-index: 500; 
-                box-shadow: 4px 0 20px rgba(0,0,0,0.4);
-            }
-            .sidebar.open { transform: translateX(0); }
-            .sidebar-backdrop { 
-                display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); 
-                z-index: 400; backdrop-filter: blur(2px);
-            }
-            .sidebar-backdrop.show { display: block; }
+            /* Hide desktop sidebar on mobile, use drawer instead */
+            .sidebar { display: none; }
+            .sidebar-backdrop { display: none !important; }
             .main { position: relative; flex: 1; }
-            .vtabs { overflow-x: auto; scrollbar-width: none; }
+            /* Mobile layout structure */
+            .mob-search-row { display: flex; }
+            .mob-chips-row { display: flex; }
+            .mob-nav { display: flex; }
+            /* View tabs still visible but can hide on very small screens */
+            .vtabs { overflow-x: auto; scrollbar-width: none; height: 36px; }
             .vtabs::-webkit-scrollbar { display: none; }
-            .vt { white-space: nowrap; padding: 5px 10px; }
-            .btbar { bottom: env(safe-area-inset-bottom, 8px); padding: 3px 5px; }
-            .bt { padding: 6px 10px; font-size: 11px; min-height: 32px; }
-            .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 52px); }
-            .zb { width: 36px; height: 36px; font-size: 18px; }
-            .map-stats { left: 10px; top: 10px; gap: 6px; }
-            .msc { padding: 10px 14px; min-width: 80px; }
-            .msv { font-size: 20px; }
+            .vt { white-space: nowrap; padding: 4px 9px; font-size: 11px; }
+            /* Hide desktop btbar, use mob-nav instead */
+            .btbar { display: none !important; }
+            /* Zoom controls repositioned for mobile nav */
+            .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
+            .zb { width: 34px; height: 34px; font-size: 16px; }
+            /* Map popup becomes bottom sheet style */
             .map-popup { 
-                right: 8px; top: 8px; width: calc(100vw - 130px); max-width: 240px; 
-                max-height: calc(100vh - 150px); overflow-y: auto;
+                right: 10px; left: 10px; top: auto; bottom: 68px;
+                width: auto; max-width: none;
+                max-height: 50vh; overflow-y: auto;
+                border-radius: 12px;
             }
+            .map-stats { left: 10px; top: 10px; gap: 6px; z-index: 10; }
+            .msc { padding: 8px 12px; min-width: 80px; }
+            .msv { font-size: 18px; }
+            /* Stats and list views */
             .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
             .sv-row { grid-template-columns: 1fr; }
             .sv-inner { padding: 12px; }
-            .modal { width: calc(100vw - 24px); max-height: 80vh; border-radius: 14px; }
+            .list-view { position: fixed; inset: 50px 0 58px 0; }
+            .stats-view { position: fixed; inset: 50px 0 58px 0; }
+            /* List table adjustments */
+            .ltable { font-size: 12px; }
+            .lrow { grid-template-columns: 28px 1fr 70px 60px; }
+            .lrow.hd { display: none; } /* Hide headers on mobile */
+            .lrow > *:nth-child(5), .lrow > *:nth-child(6) { display: none; }
+            /* Modal adjustments */
+            .modal { width: calc(100vw - 24px); max-height: 85vh; border-radius: 14px; }
+            /* Topbar mobile */
             .topbar { padding: 0 12px; gap: 8px; height: 48px; }
-            .search-box { max-width: none; height: 32px; }
+            .search-box { display: none; } /* Use mob-search instead */
             .si { font-size: 14px; }
             .logo-txt { display: none; }
-            .pill-badge, .live-p span, .tb-sep:last-of-type, #btnUpload, #btnDownload { display: none; }
+            .pill-badge, .live-p, .live-p span, .tb-sep:last-of-type, #btnUpload, #btnDownload { display: none; }
             .tb-right { gap: 6px; }
             .av { width: 26px; height: 26px; font-size: 8px; }
             .tb-icon-btn { width: 32px; height: 32px; font-size: 15px; }
-            .list-view { position: fixed; inset: 50px 0 0 0; }
-            .stats-view { position: fixed; inset: 50px 0 0 0; }
-            .lv-toolbar { padding: 0 10px; gap: 6px; }
+            /* Toolbar mobile */
+            .lv-toolbar { padding: 0 10px; gap: 6px; height: 40px; }
             .lv-tb-btn { font-size: 11px; padding: 0 8px; height: 28px; }
+            .lv-count { font-size: 10px; }
+            /* Crosshair */
             #crosshair { font-size: 32px; }
+            /* View tabs can be hidden if needed */
+            .hide-tabs .vtabs { display: none; }
         }
+
         /* Small phones */
         @media (max-width: 380px) {
-            .btbar { padding: 2px 4px; gap: 2px; }
-            .bt { padding: 5px 8px; font-size: 10px; }
-            .bt-i { display: none; }
-            .vt { padding: 4px 8px; font-size: 11px; }
+            .vt { padding: 3px 7px; font-size: 10px; }
+            .mob-nav { height: 52px; }
+            .mob-nb-ico { font-size: 16px; }
+            .mob-nb-lbl { font-size: 9px; }
+            .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
+            .mob-sheet { bottom: 52px; }
+            .map-popup { bottom: 62px; }
+            .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
             .map-stats { left: 6px; top: 6px; }
-            .msc { padding: 8px 10px; min-width: 70px; }
-            .msv { font-size: 18px; }
+            .msc { padding: 6px 10px; min-width: 70px; }
+            .msv { font-size: 16px; }
+            .msl { font-size: 9px; }
+            .mob-sheet-title { font-size: 12px; }
+            .lrow { grid-template-columns: 26px 1fr 60px 50px; }
         }
 
         /* Leaflet overrides */
@@ -1075,6 +1151,84 @@
 <div class="toast" id="toast"></div>
 
 <div id="versionBadge" style="position:fixed;bottom:4px;left:4px;font-size:10px;color:rgba(255,255,255,0.2);z-index:9999;pointer-events:none;font-family:monospace;"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+   MOBILE COMPONENTS (hidden on desktop)
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- Mobile search row -->
+<div class="mob-search-row" id="mobSearchRow">
+    <div class="mob-search">
+        <span class="si">🔍</span>
+        <input type="text" id="mobSearchInput" placeholder="ค้นหาจุด, เมือง, list...">
+    </div>
+</div>
+
+<!-- Mobile filter chips -->
+<div class="mob-chips-row" id="mobChipsRow">
+    <div class="chip on" id="chipAll" data-filter="all"><span class="chip-dot" style="background:var(--bl)"></span>ทั้งหมด</div>
+    <div class="chip" id="chipList" data-filter="list"><span class="chip-dot"></span>รายการ</div>
+    <div class="chip" id="chipCity" data-filter="city"><span class="chip-dot"></span>เมือง</div>
+    <div class="chip" id="chipFav" data-filter="fav">⭐ ชื่นชอบ</div>
+</div>
+
+<!-- Mobile bottom navigation -->
+<div class="mob-nav" id="mobNav">
+    <div class="mob-nb on" id="mn-map" onclick="mobSwitchView('map')">
+        <div class="mob-nb-ico">◉</div>
+        <div class="mob-nb-lbl">แผนที่</div>
+    </div>
+    <div class="mob-nb" id="mn-list" onclick="mobSwitchView('list')">
+        <div class="mob-nb-ico">≡</div>
+        <div class="mob-nb-lbl">รายการ</div>
+    </div>
+    <div class="mob-nb" onclick="openAddMode()">
+        <div class="mob-nb-add">+</div>
+    </div>
+    <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
+        <div class="mob-nb-ico">◧</div>
+        <div class="mob-nb-lbl">Stats</div>
+    </div>
+    <div class="mob-nb" id="mn-heat" onclick="mobSwitchView('heat')">
+        <div class="mob-nb-ico">◈</div>
+        <div class="mob-nb-lbl">Heat</div>
+    </div>
+</div>
+
+<!-- Mobile drawer -->
+<div class="mob-drawer" id="mobDrawer">
+    <div class="mob-drawer-bg" onclick="closeMobDrawer()"></div>
+    <div class="mob-drawer-panel">
+        <div class="mob-drawer-hd">
+            <span class="mob-drawer-title">BT Locations</span>
+            <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
+        </div>
+        <div style="padding:8px;flex:1;overflow-y:auto;">
+            <div class="sec-hd" style="padding-left:6px;">Lists</div>
+            <div class="flist" id="mobDrawerLists">
+                <!-- Populated by JS -->
+            </div>
+            <div class="sdiv"></div>
+            <div class="sec-hd" style="padding-left:6px;">เมือง</div>
+            <div id="mobDrawerCities" style="padding:0 8px;">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+        <div style="padding:12px;">
+            <button class="add-btn" onclick="openAddMode();closeMobDrawer()">+ เพิ่มจุดใหม่</button>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile bottom sheet -->
+<div class="mob-sheet" id="mobSheet">
+    <div class="mob-sheet-handle" onclick="toggleMobSheet()"></div>
+    <div class="mob-sheet-hd">
+        <span class="mob-sheet-title" id="mobSheetTitle">รายการจุด</span>
+        <span class="mob-sheet-close" onclick="closeMobSheet()">✕</span>
+    </div>
+    <div class="mob-sheet-list" id="mobSheetList"></div>
+</div>
 
     <!-- ══ LIST FILTER MODAL ══ -->
     <div class="modal-overlay" id="listFilterModalOverlay">
