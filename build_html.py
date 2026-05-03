@@ -3,9 +3,11 @@ import shutil
 import os
 from datetime import datetime
 
-# Auto backup
-src = r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json'
-backup_dir = r'C:\Users\T\Documents\GitHub\bt-locations\backups'
+# Auto backup - use relative paths for cross-platform compatibility
+import os
+script_dir = os.path.dirname(os.path.abspath(__file__))
+src = os.path.join(script_dir, 'all_locations.json')
+backup_dir = os.path.join(script_dir, 'backups')
 os.makedirs(backup_dir, exist_ok=True)
 backup_name = f'all_locations_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
 shutil.copy2(src, os.path.join(backup_dir, backup_name))
