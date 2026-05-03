@@ -2333,13 +2333,22 @@
         /* ════════════════════════════════════════
            MOBILE CHIPS ROW
         ════════════════════════════════════════ */
-        .mob-chips-row {
+        .mob-chips-scroll-container {
             display: none;
+            overflow-x: auto;
+            overflow-y: visible;
+            -webkit-overflow-scrolling: touch;
+            flex-shrink: 0;
+            padding-bottom: 4px;
+            margin-bottom: -4px;
+        }
+        .mob-chips-row {
+            display: flex;
             gap: 6px;
             padding: 0 10px;
-            overflow-x: auto;
-            flex-shrink: 0;
+            overflow: visible;
             align-items: center;
+            min-width: max-content;
         }
 
         .mob-chips-row::-webkit-scrollbar {
@@ -3707,29 +3716,34 @@
         </div><!-- /body -->
 
         <!-- ── MOBILE SEARCH + CHIPS ROW ── -->
-        <div class="mob-chips-row" id="mobChipsRow">
-            <!-- Mobile search bar -->
-            <div class="mob-search-wrap">
-                <span class="mob-search-icon">⌕</span>
-                <input type="text" id="mobSearchInput" class="mob-search-input" placeholder="ค้นหาสถานที่..."
-                    autocomplete="off">
-            </div>
-            <!-- Filter chips (app.js reads dataset.filter) -->
-            <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
-            <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
-            <div class="chip-more-wrap">
-                <button class="chip" id="chipList" data-filter="list">&#9660; จัดการรายการ</button>
-                <div class="chip-dropdown" id="listDropdown">
-                    <button class="chip-dropdown-item" id="btnPlanMultipleRoutes">
-                        <span style="font-size:16px;">🗺️</span> วางแผนหลายเส้นทาง
-                    </button>
-                    <button class="chip-dropdown-item" id="chipRoute">
-                        <span style="font-size:16px;">🛤️</span> วางแผนเส้นทาง (ปัจจุบัน)
-                    </button>
-                    <div style="height:1px; background:var(--bd); margin:4px 0;"></div>
-                    <button class="chip-dropdown-item" onclick="openMobDrawer()">
-                        <span style="font-size:16px;">📂</span> เลือกรายการ...
-                    </button>
+        <div class="mob-chips-scroll-container">
+            <div class="mob-chips-row" id="mobChipsRow">
+                <!-- Mobile search bar -->
+                <div class="mob-search-wrap">
+                    <span class="mob-search-icon">⌕</span>
+                    <input type="text" id="mobSearchInput" class="mob-search-input" placeholder="ค้นหาสถานที่..."
+                        autocomplete="off">
+                </div>
+                <!-- Filter chips (app.js reads dataset.filter) -->
+                <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
+                <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
+                <div class="chip-more-wrap">
+                    <button class="chip" id="chipList" data-filter="list">&#9660; จัดการรายการ</button>
+                    <div class="chip-dropdown" id="listDropdown">
+                        <button class="chip-dropdown-item" id="btnPlanMultipleRoutes">
+                            <span style="font-size:16px;">🗺️</span> วางแผนหลายเส้นทาง
+                        </button>
+                        <button class="chip-dropdown-item" id="chipRoute">
+                            <span style="font-size:16px;">🛤️</span> วางแผนเส้นทาง (ปัจจุบัน)
+                        </button>
+                        <div style="height:1px; background:var(--bd); margin:4px 0;"></div>
+                        <button class="chip-dropdown-item" onclick="openMobDrawer()">
+                            <span style="font-size:16px;">📂</span> เลือกรายการ...
+                        </button>
+                        <button class="chip-dropdown-item" id="btnMergeList">
+                            <span style="font-size:16px;">🔗</span> รวมรายการ...
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
