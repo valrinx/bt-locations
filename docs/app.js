@@ -1144,8 +1144,10 @@ try {
 }
 
 function refreshDatalistSuggestions() {
-    document.getElementById('listSuggestions').innerHTML=[...new Set(locations.map(l=>l.list).filter(Boolean))].map(l=>`<option value="${l}">`).join('');
-    document.getElementById('citySuggestions').innerHTML=[...new Set(locations.map(l=>l.city).filter(Boolean))].map(c=>`<option value="${c}">`).join('');
+    const listSuggestions = document.getElementById('listSuggestions');
+    const citySuggestions = document.getElementById('citySuggestions');
+    if(listSuggestions) listSuggestions.innerHTML=[...new Set(locations.map(l=>l.list).filter(Boolean))].map(l=>`<option value="${l}">`).join('');
+    if(citySuggestions) citySuggestions.innerHTML=[...new Set(locations.map(l=>l.city).filter(Boolean))].map(c=>`<option value="${c}">`).join('');
 }
 
 function updateChipLabels() {
@@ -1552,6 +1554,7 @@ onClick('btnTile', ()=>{
 // ════════════════════════════════════════════
 const btnGps=document.getElementById('btnGps');
 
+if(btnGps){
 // ── smooth pan ด้วย panTo แทน flyTo — ไม่กระตุกเมื่อตำแหน่งเปลี่ยนนิดเดียว ──
 function _smoothFollow(lat, lng) {
     if (!gpsTracking) return;
@@ -1691,6 +1694,7 @@ btnGps.onclick = () => {
         {enableHighAccuracy:false, timeout:5000, maximumAge:30000}
     );
 };
+} // end if(btnGps)
 
 // GPS modal
 const btnUseGpsModal = document.getElementById('btnUseGpsModal');
