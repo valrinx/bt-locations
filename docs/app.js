@@ -3043,21 +3043,14 @@ rebuildIndexMap();
         const lat = parts[0], lng = parts[1], zoom = parts[2] || 17;
         setTimeout(() => {
             map.setView([lat, lng], zoom);
-    const h=location.hash.replace('#','');
-    if(!h)return;
-    const parts=h.split(',').map(Number);
-    if(parts.length>=2&&!isNaN(parts[0])&&!isNaN(parts[1])){
-        const lat=parts[0],lng=parts[1],zoom=parts[2]||17;
-        setTimeout(()=>{
-            map.setView([lat,lng],zoom);
             // Find nearest location within 50m and open its card
-            let nearest=null,minD=50;
-            locations.forEach((l,i)=>{
-                const d=haversine(lat,lng,l.lat,l.lng);
-                if(d<minD){minD=d;nearest={loc:l,idx:i};}
+            let nearest = null, minD = 50;
+            locations.forEach((l, i) => {
+                const d = haversine(lat, lng, l.lat, l.lng);
+                if (d < minD) { minD = d; nearest = { loc: l, idx: i }; }
             });
-            if(nearest) showPlaceCard(nearest.loc,nearest.idx);
-        },500);
+            if (nearest) showPlaceCard(nearest.loc, nearest.idx);
+        }, 500);
     }
 })();
 
