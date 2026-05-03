@@ -1,6 +1,7 @@
 import json
 import shutil
 import os
+import time
 from datetime import datetime
 
 # Auto backup - use relative paths for cross-platform compatibility
@@ -330,7 +331,8 @@ html = f'''<!DOCTYPE html>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="locations.js"></script>
+    <script src="locations.js?v={int(time.time())}"></script>
+    <script src="app.js?v={int(time.time())}"></script>
     <script>
 
         const STORAGE_KEY = 'bt_locations_data';
@@ -383,21 +385,28 @@ html = f'''<!DOCTYPE html>
         let currentMarkers = [];
 
         function _initMapEvents() {{
-            if (!map) return;
-            map.on('click', (e) => {{
-                if (!addMode) return;
-                addMode = false;
-                addBanner.classList.remove('show');
-                map.getContainer().style.cursor = '';
-                editingIndex = -1;
-                document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
-                document.getElementById('modalName').value = '';
-                document.getElementById('modalList').value = '';
-                document.getElementById('modalCity').value = '';
-                document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
-                document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
-                document.getElementById('modalOverlay').classList.add('open');
-            }});
+            const _safetyMax = 20; let _safetyIdx = 0;
+            const _check = setInterval(() => {{
+                _safetyIdx++;
+                if (typeof map !== 'undefined' && map !== null) {{
+                    clearInterval(_check);
+                    map.on('click', (e) => {{
+                        if (!addMode) return;
+                        addMode = false;
+                        addBanner.classList.remove('show');
+                        map.getContainer().style.cursor = '';
+                        editingIndex = -1;
+                        document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
+                        document.getElementById('modalName').value = '';
+                        document.getElementById('modalList').value = '';
+                        document.getElementById('modalCity').value = '';
+                        document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
+                        document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
+                        document.getElementById('modalOverlay').classList.add('open');
+                    }});
+                }}
+                if (_safetyIdx >= _safetyMax) clearInterval(_check);
+            }}, 500);
         }}
         _initMapEvents();
 
