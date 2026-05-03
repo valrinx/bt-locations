@@ -2423,10 +2423,22 @@ function mobSwitchView(view) {
     const btn = document.getElementById('mn-' + view) || document.querySelector(`.mob-nb[onclick*="${view}"]`);
     if(btn) btn.classList.add('on');
     
-    if (typeof window.switchView === 'function') {
-        window.switchView(view);
-    } else if (typeof window.openInfoPanel === 'function' && view === 'stats') {
-        window.openInfoPanel('stats');
+    // Close existing panels safely before opening new ones
+    if (typeof window.closeListPanel === 'function') window.closeListPanel();
+    if (typeof window.closeInfo === 'function') window.closeInfo();
+
+    if (view === 'list') {
+        const listPanel = document.getElementById('listPanel');
+        if (listPanel) {
+            listPanel.classList.add('open');
+            if (typeof window.renderListPanel === 'function') {
+                window.renderListPanel(typeof window.getFiltered === 'function' ? window.getFiltered() : window.locations);
+            }
+        }
+    } else if (view === 'stats') {
+        if (typeof window.openInfoPanel === 'function') {
+            window.openInfoPanel('stats');
+        }
     }
 }
 
@@ -2475,6 +2487,37 @@ window.addEventListener('load', function() {
                 }, 50);
             };
         }
+
+        // 13. Sync bottom nav state when panels close naturally (e.g. dragging down or close button)
+        if (typeof window.closeListPanel === 'function') {
+            const _origCloseListPanel = window.closeListPanel;
+            window.closeListPanel = function() {
+                _origCloseListPanel();
+                document.querySelectorAll('.mob-nb').forEach(el => el.classList.remove('on'));
+                document.getElementById('mn-map')?.classList.add('on');
+            };
+        }
+        if (typeof window.closeInfo === 'function') {
+            const _origCloseInfo = window.closeInfo;
+            window.closeInfo = function() {
+                _origCloseInfo();
+                document.querySelectorAll('.mob-nb').forEach(el => el.classList.remove('on'));
+                document.getElementById('mn-map')?.classList.add('on');
+            };
+        }
+
+        // 14. Fetch current user IP for online checking
+        fetch('https://api.ipify.org?format=json')
+            .then(res => res.json())
+            .then(data => {
+                const ip = data.ip;
+                const onlineCount = document.getElementById('onlineCount');
+                const svOnline = document.getElementById('svOnline');
+                if (onlineCount) onlineCount.textContent = 'IP: ' + ip;
+                if (svOnline) svOnline.textContent = ip;
+            })
+            .catch(err => console.error('Failed to fetch IP', err));
+            
     }, 1500);
 });
 </script>
