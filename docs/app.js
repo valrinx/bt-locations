@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.11.6';
+const APP_VERSION = 'v5.11.8';
 const STORAGE_KEY = 'bt_locations_data';
 
 // Helper: safely attach onclick handler (avoids null errors)
