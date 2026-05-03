@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.11.2';
+const APP_VERSION = 'v5.11.3';
 const STORAGE_KEY = 'bt_locations_data';
 
 // ════════════════════════════════════════════
@@ -716,12 +716,31 @@ function normalizeLocation(l) {
     };
 }
 
+// Default locations fallback (in case locations.js fails to load)
+const DEFAULT_LOCATIONS = (typeof window.DEFAULT_LOCATIONS !== 'undefined') ? window.DEFAULT_LOCATIONS : [];
+
 let locations = (() => {
-    try { const s = localStorage.getItem(STORAGE_KEY); const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); return raw.map(normalizeLocation); }
-    catch(e) { return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)).map(normalizeLocation); }
+    try { 
+        const s = localStorage.getItem(STORAGE_KEY); 
+        const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); 
+        return raw.map(normalizeLocation); 
+    }
+    catch(e) { 
+        console.error('Failed to load locations:', e);
+        return []; // Return empty array as safe fallback
+    }
 })();
 // Auto-clean DMS names from localStorage data on load
-(function(){let dirty=false;locations.forEach(l=>{const c=_cleanDMSName(l.name);if(c!==l.name){l.name=c||'';dirty=true;}});if(dirty){localStorage.setItem(STORAGE_KEY,JSON.stringify(locations));}})();
+(function(){
+    if(!Array.isArray(locations) || locations.length === 0) return;
+    let dirty=false;
+    locations.forEach(l=>{
+        if(!l || !l.name) return;
+        const c=_cleanDMSName(l.name);
+        if(c!==l.name){l.name=c||'';dirty=true;}
+    });
+    if(dirty){localStorage.setItem(STORAGE_KEY,JSON.stringify(locations));}
+})();
 
 let addMode = false, editingIndex = -1;
 let filterList = '', filterCity = '';
@@ -1149,29 +1168,40 @@ async function fetchWithTimeout(url, timeout = FETCH_TIMEOUT){
 }
 
 async function initApp(){
-    // 1. Data already loaded from localStorage at module init (line ~720)
-    // If no localStorage data, locations will be empty and we use sample data
-    setLoader('กำลังเริ่มต้น...');
-    if(locations.length === 0) {
-        loadSampleData();
-        saveToStorage(); // Save sample data to localStorage for next time
+    try {
+        console.log('[BT] initApp started');
+        
+        // 1. Data already loaded from localStorage at module init (line ~720)
+        // If no localStorage data, locations will be empty and we use sample data
+        setLoader('กำลังเริ่มต้น...');
+        if(locations.length === 0) {
+            console.log('[BT] No locations, loading sample data');
+            loadSampleData();
+            saveToStorage(); // Save sample data to localStorage for next time
+        }
+        
+        // 2. Render initial markers (map already initialized at line ~875)
+        console.log('[BT] Calling update()...');
+        update();
+        
+        // 3. Show app immediately
+        setLoader('พร้อมใช้งาน');
+        setTimeout(() => {
+            document.getElementById('loader').classList.add('done');
+            console.log('[BT] Loader hidden');
+        }, 200);
+        
+        // 4. Set avatar (if exists in UI)
+        const un = localStorage.getItem('bt_username') || '';
+        const a1 = document.getElementById('av1');
+        if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
+        
+        console.log('[BT] initApp completed');
+        // 5. No automatic fetch - user controls data via Import button
+    } catch(e) {
+        console.error('[BT] initApp error:', e);
+        document.getElementById('loaderTxt').textContent = 'เกิดข้อผิดพลาด: ' + e.message;
     }
-    
-    // 2. Render initial markers (map already initialized at line ~875)
-    update();
-    
-    // 3. Show app immediately
-    setLoader('พร้อมใช้งาน');
-    setTimeout(() => {
-        document.getElementById('loader').classList.add('done');
-    }, 200);
-    
-    // 4. Set avatar (if exists in UI)
-    const un = localStorage.getItem('bt_username') || '';
-    const a1 = document.getElementById('av1');
-    if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
-    
-    // 5. No automatic fetch - user controls data via Import button
 }
 
 async function fetchRepoDataWithTimeout(){
@@ -1281,11 +1311,19 @@ function loadSampleData(){
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
-if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    // DOM already ready (app.js loaded dynamically after DOMContentLoaded)
-    initApp();
+console.log('[BT] Script loaded, readyState:', document.readyState);
+console.log('[BT] locations count:', locations.length);
+
+try {
+    if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+        // DOM already ready (app.js loaded dynamically after DOMContentLoaded)
+        initApp();
+    }
+} catch(e) {
+    console.error('[BT] Init failed:', e);
+    document.getElementById('loaderTxt').textContent = 'เกิดข้อผิดพลาด: ' + e.message;
 }
 
 function refreshDatalistSuggestions() {
