@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.12.0';
+const APP_VERSION = 'v6.0.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -916,8 +916,8 @@ function renderMarkers(filtered) {
 
     const zoom = map.getZoom();
     const MAX_MARKERS = _mobile
-        ? (zoom >= 15 ? 600 : zoom >= 13 ? 400 : 250)
-        : (zoom >= 15 ? 2000 : zoom >= 13 ? 1200 : 600);
+        ? (zoom >= 15 ? 3000 : zoom >= 13 ? 1500 : 800)
+        : (zoom >= 15 ? 10000 : zoom >= 13 ? 5000 : 2500);
     const layers = [];
     let truncated = false;
     filteredIdxSet.forEach(idx => {
@@ -2159,7 +2159,8 @@ async function _navFetchRoute(fromLat,fromLng){
     });
 
     const coordStr = uniquePoints.map(c => c[0] + ',' + c[1]).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
+    const radiuses = uniquePoints.map(() => '500').join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true&radiuses=${radiuses}${_osrmExcludeParam()}`;
     
     try {
         const res = await fetch(url);
