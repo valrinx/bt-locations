@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.4.0';
+const APP_VERSION = 'v6.5.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2198,48 +2198,88 @@ function _handleMapClickForWaypoint(e) {
 }
 
 
-async function _navFetchRoute(fromLat,fromLng){
-    // Build coordinates: from → waypoints → dest
-    const points=[[fromLng,fromLat]];
-    _navState.waypoints.forEach(w=>points.push([w.lng,w.lat]));
-    points.push([_navState.dest.lng,_navState.dest.lat]);
+// ── Shared routing helper: Valhalla (primary) → OSRM (fallback) ──
+async function _fetchRouteValhalla(points) {
+    // points = [[lng,lat], [lng,lat], ...]
+    const locations = points.map(p => ({ lon: p[0], lat: p[1] }));
+    const body = JSON.stringify({
+        locations,
+        costing: 'auto',
+        costing_options: { auto: { use_highways: 0.2, use_tolls: 0.2 } },
+        directions_options: { language: 'th-TH', units: 'kilometers' }
+    });
+    const res = await fetch('https://valhalla1.openstreetmap.de/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+    });
+    if (!res.ok) throw new Error(`Valhalla error ${res.status}`);
+    const data = await res.json();
+    if (!data.trip) throw new Error('Valhalla: no trip');
+    // Convert Valhalla encoded shape → [[lat,lng], ...]
+    const coords = _decodePolyline(data.trip.legs[0].shape, 6);
+    const dist = data.trip.summary.length * 1000; // km → m
+    const dur = data.trip.summary.time;
+    return { coords, distance: dist, duration: dur };
+}
 
-    // Validate coordinates are finite and in range
+function _decodePolyline(encoded, precision = 5) {
+    let index = 0, lat = 0, lng = 0;
+    const coords = [];
+    const factor = Math.pow(10, precision);
+    while (index < encoded.length) {
+        let b, shift = 0, result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+        shift = result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+        coords.push([lat / factor, lng / factor]);
+    }
+    return coords;
+}
+
+async function _navFetchRoute(fromLat, fromLng) {
+    // Build & validate points [lng, lat]
+    const points = [[fromLng, fromLat]];
+    _navState.waypoints.forEach(w => points.push([w.lng, w.lat]));
+    points.push([_navState.dest.lng, _navState.dest.lat]);
+
     const validPoints = points.filter(p =>
         isFinite(p[0]) && isFinite(p[1]) &&
         Math.abs(p[1]) <= 90 && Math.abs(p[0]) <= 180
     );
-
-    // Filter out duplicates or points that are too close (prevents OSRM 400)
-    const uniquePoints = [];
-    validPoints.forEach((p, i) => {
-        if (i === 0) { uniquePoints.push(p); return; }
-        const prev = uniquePoints[uniquePoints.length - 1];
-        const dist = Math.sqrt(Math.pow(p[0] - prev[0], 2) + Math.pow(p[1] - prev[1], 2));
-        if (dist > 0.00001) { uniquePoints.push(p); } // ~1 meter
+    const uniquePoints = validPoints.filter((p, i) => {
+        if (i === 0) return true;
+        const prev = validPoints[i - 1];
+        return Math.sqrt(Math.pow(p[0]-prev[0],2)+Math.pow(p[1]-prev[1],2)) > 0.00001;
     });
+    if (uniquePoints.length < 2) throw new Error('ตำแหน่งเริ่มต้นและปลายทางอยู่ใกล้กันเกินไป');
 
-    // Must have at least 2 distinct points for OSRM
-    if (uniquePoints.length < 2) {
-        throw new Error('ตำแหน่งเริ่มต้นและปลายทางอยู่ใกล้กันเกินไป หรือพิกัดไม่ถูกต้อง');
-    }
-
-    const coordStr = uniquePoints.map(c => c[0] + ',' + c[1]).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
-    
+    // Try Valhalla first (better local road routing)
     try {
-        const res = await fetch(url);
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.message || `OSRM error ${res.status} — ลองเลือกจุดบนถนน`);
-        }
-        const data = await res.json();
-        if (!data.routes || !data.routes.length) throw new Error('OSRM: ไม่พบเส้นทาง');
-        return data.routes[0];
-    } catch (e) {
-        console.warn('[BT] _navFetchRoute failed:', e.message);
-        throw e;
+        const result = await _fetchRouteValhalla(uniquePoints);
+        return {
+            geometry: { coordinates: result.coords.map(c => [c[1], c[0]]) },
+            distance: result.distance,
+            duration: result.duration,
+            _coords: result.coords  // [lat,lng] already
+        };
+    } catch (valhallaErr) {
+        console.warn('[BT] Valhalla failed, falling back to OSRM:', valhallaErr.message);
     }
+
+    // Fallback: OSRM
+    const coordStr = uniquePoints.map(c => c[0] + ',' + c[1]).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `OSRM error ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data.routes || !data.routes.length) throw new Error('ไม่พบเส้นทาง');
+    return data.routes[0];
 }
 
 
@@ -2247,7 +2287,8 @@ async function _navReroute(lat,lng){
     _navState.lastReroute=Date.now();
     try{
         const route=await _navFetchRoute(lat,lng);
-        const coords=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+        // Valhalla returns _coords as [lat,lng]; OSRM returns geometry.coordinates as [lng,lat]
+        const coords = route._coords || route.geometry.coordinates.map(c=>[c[1],c[0]]);
         _navState.routeCoords=coords;
         _navState.totalDist=route.distance;
         _navState.totalDur=route.duration;
