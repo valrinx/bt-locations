@@ -979,16 +979,17 @@ html = f'''<!DOCTYPE html>
 </body>
 </html>'''
 
-with open(r'C:\Users\T\Documents\GitHub\bt-locations\docs\index.html', 'w', encoding='utf-8') as f:
+docs_dir = os.path.join(script_dir, 'docs')
+os.makedirs(docs_dir, exist_ok=True)
+with open(os.path.join(docs_dir, 'index.html'), 'w', encoding='utf-8') as f:
     f.write(html)
 
 # Generate locations.js
 js_content = 'const DEFAULT_LOCATIONS = [\n            ' + js_array + '\n        ];\n'
-with open(r'C:\Users\T\Documents\GitHub\bt-locations\docs\locations.js', 'w', encoding='utf-8') as f:
+with open(os.path.join(docs_dir, 'locations.js'), 'w', encoding='utf-8') as f:
     f.write(js_content)
 
 # Copy all_locations.json to docs/
-shutil.copy2(r'C:\Users\T\Documents\GitHub\bt-locations\all_locations.json',
-             r'C:\Users\T\Documents\GitHub\bt-locations\docs\all_locations.json')
+shutil.copy2(src, os.path.join(docs_dir, 'all_locations.json'))
 
 print(f'Done! Generated HTML + locations.js with {len(locs)} locations from {len(lists)} lists')
