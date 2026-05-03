@@ -33,9 +33,10 @@
             --tx: #eeedf8;
             --tx2: #8a8aaa;
             --tx3: #4e4e68;
-            --bl: #5b8fff;
-            --bl-d: rgba(91, 143, 255, 0.13);
-            --bl-b: rgba(91, 143, 255, 0.28);
+            --bl: #ffffff;
+            /* Premium White for Logo */
+            --bl-d: rgba(255, 255, 255, 0.1);
+            --bl-b: rgba(255, 255, 255, 0.2);
             --gn: #2ecc90;
             --gn-d: rgba(46, 204, 144, 0.10);
             --gn-b: rgba(46, 204, 144, 0.25);
@@ -3093,32 +3094,61 @@
                 cursor: pointer;
             }
 
-            /* Restore topbar elements for mobile */
-            .tb-center {
-                display: none !important;
-                /* Hide empty center */
+            /* Robust Mobile Topbar - ULTIMATE FORCE */
+            .topbar {
+                display: flex !important;
+                height: 56px !important;
+                padding: 0 12px !important;
+                background: #0f172a !important;
+                /* Premium Dark */
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+                z-index: 1000 !important;
+            }
+
+            .tb-left {
+                display: flex !important;
+                align-items: center !important;
+                flex: 0 0 auto !important;
+            }
+
+            .logo-txt {
+                display: block !important;
+                color: #ffffff !important;
+                /* Force white */
+                font-size: 15px !important;
+                font-weight: 800 !important;
+                letter-spacing: 0.5px !important;
+            }
+
+            .logo-sq {
+                display: flex !important;
+                background: linear-gradient(135deg, #3b82f6, #10b981) !important;
+                color: #fff !important;
             }
 
             .tb-right {
                 display: flex !important;
-                gap: 8px;
-                align-items: center;
-                flex: 1;
-                justify-content: flex-end;
+                align-items: center !important;
+                justify-content: flex-end !important;
+                flex: 1 !important;
+                gap: 12px !important;
+            }
+
+            #topSyncBadge {
+                display: flex !important;
+                /* FORCE SHOW */
+                visibility: visible !important;
+                opacity: 1 !important;
             }
 
             .live-p {
-                display: flex !important;
-                background: rgba(16, 185, 129, 0.1);
-                border: 1px solid rgba(16, 185, 129, 0.2);
-                color: #10b981;
-                padding: 4px 8px;
-                border-radius: 8px;
-                font-size: 10px;
-                font-weight: 700;
-                align-items: center;
-                gap: 4px;
-                white-space: nowrap;
+                padding: 5px 10px !important;
+                border-radius: 10px !important;
+                font-size: 11px !important;
+                font-weight: 800 !important;
+                background: rgba(16, 185, 129, 0.15) !important;
+                border: 1px solid rgba(16, 185, 129, 0.3) !important;
+                color: #10b981 !important;
             }
 
             .avs {
@@ -3126,24 +3156,9 @@
             }
 
             .av {
-                width: 26px;
-                height: 26px;
-                font-size: 11px;
-            }
-
-            .tb-left {
-                flex: 0 0 auto;
-                max-width: 120px;
-            }
-
-            .tb-left h1,
-            .logo-txt {
-                font-size: 13px !important;
-            }
-
-            .logo-sq {
-                width: 26px;
-                height: 26px;
+                width: 30px !important;
+                height: 30px !important;
+                border: 2px solid #0f172a !important;
             }
 
             /* Restore mobile search bar position */
@@ -4585,6 +4600,7 @@
     <!-- ════════════════════════════════════════
      SCRIPT LOADING
 ════════════════════════════════════════ -->
+    <script src="app.js?v=2.0.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -4615,21 +4631,31 @@
                 }
                 updateToggleBtn(on);
                 try {
-                    // Wrap the logic to ensure window.map is the correct instance
-                    if (window.map && typeof window.map.on === 'function') {
-                        let pressTimer;
-                        window.map.on('mousedown touchstart', function (e) {
-                            pressTimer = window.setTimeout(function () {
-                                const addBtn = document.getElementById('btAdd');
-                                if (addBtn) addBtn.click();
+                    // Safe map event attachment
+                    try {
+                        const attachMapEvents = () => {
+                            if (typeof window.map !== 'undefined' && window.map && typeof window.map.on === 'function') {
+                                let pressTimer;
+                                window.map.on('mousedown touchstart', function (e) {
+                                    pressTimer = window.setTimeout(function () {
+                                        const addBtn = document.getElementById('btAdd');
+                                        if (addBtn) addBtn.click();
+                                    }, 800);
+                                });
+                                window.map.on('mouseup mousemove touchend touchmove', function () {
+                                    clearTimeout(pressTimer);
+                                });
+                                return true;
+                            }
+                            return false;
+                        };
+                        if (!attachMapEvents()) {
+                            let retries = 0;
+                            const timer = setInterval(() => {
+                                if (attachMapEvents() || retries++ > 15) clearInterval(timer);
                             }, 800);
-                        });
-                        window.map.on('mouseup mousemove touchend touchmove', function () {
-                            clearTimeout(pressTimer);
-                        });
-                    } else {
-                        console.error("window.map is not initialized or doesn't support .on()");
-                    }
+                        }
+                    } catch (e) { }
                 } catch (e) { }
             }
 
@@ -5224,25 +5250,29 @@
                     document.getElementById('mn-map')?.classList.add('on');
                 };
             }
-            if (!window.map) return;
-
-            if (!window.map || typeof window.map.on !== 'function') return;
-
             // 11. Long-press to Add New Location
-            let pressTimer;
-            window.map.on('mousedown touchstart', function (e) {
-                pressTimer = window.setTimeout(function () {
+            const initLongPress = () => {
+                if (!window.map || typeof window.map.on !== 'function') return false;
+                let pressTimer;
+                window.map.on('mousedown touchstart', function (e) {
+                    pressTimer = window.setTimeout(function () {
+                        const addBtn = document.getElementById('btAdd');
+                        if (addBtn) addBtn.click();
+                    }, 800);
+                });
+                window.map.on('mouseup mousemove touchend touchmove', function () {
+                    clearTimeout(pressTimer);
+                });
+                window.map.on('contextmenu', function (e) {
                     const addBtn = document.getElementById('btAdd');
                     if (addBtn) addBtn.click();
-                }, 800);
-            });
-            window.map.on('mouseup mousemove touchend touchmove', function () {
-                clearTimeout(pressTimer);
-            });
-            window.map.on('contextmenu', function (e) {
-                const addBtn = document.getElementById('btAdd');
-                if (addBtn) addBtn.click();
-            });
+                });
+                return true;
+            };
+            if (!initLongPress()) {
+                let r = 0;
+                const t = setInterval(() => { if (initLongPress() || r++ > 10) clearInterval(t); }, 1000);
+            }
 
             // 10. Realistic marker clustering
             if (window.markers && typeof window.markers.options !== 'undefined') {
