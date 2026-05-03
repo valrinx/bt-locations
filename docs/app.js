@@ -1749,6 +1749,11 @@ document.getElementById('map').addEventListener('mousemove', throttle(e=>{
 // MAP CLICK
 // ════════════════════════════════════════════
 map.on('click',e=>{
+    // Waypoint Mode Hook
+    if (typeof _handleMapClickForWaypoint === 'function' && _isAddingWaypoint) {
+        _handleMapClickForWaypoint(e);
+        return;
+    }
     const{lat,lng}=e.latlng;
     const editModalOverlay = document.getElementById('editModalOverlay');
     if(editModalOverlay && editModalOverlay.classList.contains('open')){
@@ -1994,24 +1999,38 @@ function _osrmExcludeParam(){
     return ex.length?`&exclude=${ex.join(',')}`:'';
 }
 window._showAvoidSettings=function(){
+    // Anti-spam & Toggle logic: If open, close it and return
+    const old = document.getElementById('_avoidModal');
+    if(old) {
+        old.remove();
+        const backdrop = document.getElementById('_avoidBackdrop');
+        if(backdrop) backdrop.remove();
+        return;
+    }
+
     const html=`
-        <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2000;background:var(--surface);padding:20px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.4);min-width:260px;font-family:inherit;" id="_avoidModal">
-            <div style="font-weight:600;font-size:15px;margin-bottom:12px;">⚙️ ตั้งค่าเส้นทาง</div>
-            <label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;cursor:pointer;">
-                <input type="checkbox" id="_avToll" ${_routeAvoid.toll?'checked':''}> 🚧 หลีกเลี่ยงทางด่วน/เก็บเงิน
+        <div id="_avoidModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);padding:24px;border-radius:24px;box-shadow:0 20px 50px rgba(0,0,0,0.6);min-width:300px;border:1px solid rgba(255,255,255,0.1);color:#fff;font-family:inherit;">
+            <div style="font-weight:700;font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;color:var(--bl);">
+                <i class="fa-solid fa-shield-halved"></i> ตั้งค่าเส้นทาง
+            </div>
+            <label style="display:flex;align-items:center;gap:12px;padding:12px 0;font-size:14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <input type="checkbox" id="_avToll" ${_routeAvoid.toll?'checked':''} style="width:18px;height:18px;accent-color:var(--bl);"> 
+                <span>หลีกเลี่ยงทางด่วน / เก็บเงิน</span>
             </label>
-            <label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;cursor:pointer;">
-                <input type="checkbox" id="_avFerry" ${_routeAvoid.ferry?'checked':''}> ⛴️ หลีกเลี่ยงทางเรือ/เรือข้ามฟาก
+            <label style="display:flex;align-items:center;gap:12px;padding:12px 0;font-size:14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <input type="checkbox" id="_avFerry" ${_routeAvoid.ferry?'checked':''} style="width:18px;height:18px;accent-color:var(--bl);"> 
+                <span>หลีกเลี่ยงทางเรือ / เรือข้ามฟาก</span>
             </label>
-            <label style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:13px;cursor:pointer;">
-                <input type="checkbox" id="_avMotorway" ${_routeAvoid.motorway?'checked':''}> 🛣️ หลีกเลี่ยงทางหลวง/มอเตอร์เวย์
+            <label style="display:flex;align-items:center;gap:12px;padding:12px 0;font-size:14px;cursor:pointer;margin-bottom:8px;">
+                <input type="checkbox" id="_avMotorway" ${_routeAvoid.motorway?'checked':''} style="width:18px;height:18px;accent-color:var(--bl);"> 
+                <span>หลีกเลี่ยงทางหลวง / มอเตอร์เวย์</span>
             </label>
-            <div style="display:flex;gap:8px;margin-top:12px;">
-                <button onclick="_applyAvoidSettings()" style="flex:1;padding:8px;border:none;background:var(--bl);color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ บันทึก</button>
-                <button onclick="document.getElementById('_avoidModal').remove();document.getElementById('_avoidBackdrop').remove();" style="flex:1;padding:8px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button onclick="_applyAvoidSettings()" style="flex:1;padding:12px;border:none;background:var(--bl);color:#fff;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;">✅ บันทึก</button>
+                <button onclick="document.getElementById('_avoidModal').remove();document.getElementById('_avoidBackdrop').remove();" style="flex:1;padding:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#fff;border-radius:14px;font-size:14px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>
-        <div id="_avoidBackdrop" onclick="document.getElementById('_avoidModal').remove();this.remove();" style="position:fixed;inset:0;z-index:1999;background:rgba(0,0,0,.3);"></div>`;
+        <div id="_avoidBackdrop" onclick="document.getElementById('_avoidModal').remove();this.remove();" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);"></div>`;
     document.body.insertAdjacentHTML('beforeend',html);
 };
 window._applyAvoidSettings=function(){
@@ -2043,19 +2062,26 @@ const REROUTE_THRESHOLD = 80; // meters off-route to trigger reroute
 const REROUTE_COOLDOWN = 15000; // ms between reroutes
 const ARRIVAL_THRESHOLD = 50; // meters to consider "arrived"
 
-// Inject nav banner CSS once
+// Inject nav banner CSS once (Modern Premium Redesign)
 (function(){const s=document.createElement('style');s.textContent=`
-#directionsBanner{position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:1500;
-  background:var(--surface);padding:12px 16px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.3);
-  font-size:13px;font-family:inherit;min-width:220px;max-width:92vw;width:340px;color:var(--text);}
-#directionsBanner .nav-row{display:flex;align-items:center;gap:8px;}
-#directionsBanner .nav-stats{display:flex;gap:12px;font-size:13px;margin:6px 0;}
-#directionsBanner .nav-btns{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;}
-#directionsBanner .nav-btn{flex:1;padding:6px 2px;border:1px solid var(--gn);border-radius:8px;
-  background:var(--surface);cursor:pointer;font-size:11px;min-width:0;color:var(--text);transition:background .15s;}
-#directionsBanner .nav-btn:active{background:var(--gn);}
-#directionsBanner .nav-close{padding:6px 10px;border:none;background:#ea4335;color:#fff;border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;}
-#directionsBanner .nav-close:active{background:#c62828;}
+#directionsBanner{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:2000;
+  background:rgba(15,23,42,0.9);backdrop-filter:blur(12px);padding:16px 20px;border-radius:24px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.5);font-size:14px;font-family:inherit;min-width:280px;
+  max-width:92vw;width:360px;color:#fff;border:1px solid rgba(255,255,255,0.1);}
+#directionsBanner .nav-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+#directionsBanner .nav-row strong{font-size:16px;font-weight:700;color:var(--bl);}
+#directionsBanner .nav-stats{display:flex;gap:20px;font-size:14px;margin:8px 0;opacity:0.9;}
+#directionsBanner .nav-stats span{display:flex;align-items:center;gap:6px;}
+#directionsBanner .nav-btns{display:flex;gap:8px;margin-top:14px;}
+#directionsBanner .nav-btn{flex:1;padding:10px 4px;border:none;border-radius:12px;
+  background:rgba(255,255,255,0.1);cursor:pointer;font-size:12px;font-weight:600;color:#fff;
+  transition:all .2s ease;display:flex;align-items:center;justify-content:center;gap:4px;}
+#directionsBanner .nav-btn:hover{background:rgba(255,255,255,0.2);transform:translateY(-1px);}
+#directionsBanner .nav-btn i{font-size:14px;}
+#directionsBanner .nav-close{width:40px;height:40px;border:none;background:#ff4d4d;color:#fff;
+  border-radius:12px;cursor:pointer;font-size:16px;font-weight:bold;box-shadow:0 4px 10px rgba(255,77,77,0.3);
+  transition:all .2s;display:flex;align-items:center;justify-content:center;}
+#directionsBanner .nav-close:hover{background:#ff2e2e;transform:scale(1.05);}
 `;document.head.appendChild(s);})();
 
 let _navDestMarker=null;
@@ -2091,8 +2117,23 @@ function _updateNavBanner(){
     const distKm=(_navState.totalDist/1000).toFixed(1);
     const etaMins=Math.round(_navState.totalDur/60);
     const destName=_navState.dest?.name||'ปลายทาง';
-    const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--gn);margin-top:4px;">📍 ${_navState.waypoints.length} จุดแวะ</div>`:'';
-    banner.innerHTML=`<div class="nav-row"><span style="font-size:18px;">🧭</span><strong style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${destName}</strong></div><div class="nav-stats"><span>📏 ${distKm} km</span><span>⏱️ ~${etaMins} นาที</span></div>${wpText}<div class="nav-btns"><button class="nav-btn" id="_nbWaypoint">📍 จุดแวะ</button><button class="nav-btn" id="_nbAvoid">⚙️ หลีกเลี่ยง</button><button class="nav-btn" id="_nbMaps">🗺️ Maps</button><button class="nav-close" id="_nbClose">✕</button></div>`;
+    const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--bl);margin-top:4px;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-location-dot"></i> ${_navState.waypoints.length} จุดแวะ</div>`:'';
+    banner.innerHTML=`
+        <div class="nav-row">
+            <i class="fa-solid fa-compass" style="font-size:20px;color:var(--bl);"></i>
+            <strong style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${destName}</strong>
+        </div>
+        <div class="nav-stats">
+            <span><i class="fa-solid fa-route"></i> ${distKm} km</span>
+            <span><i class="fa-solid fa-clock-rotate-left"></i> ~${etaMins} นาที</span>
+        </div>
+        ${wpText}
+        <div class="nav-btns">
+            <button class="nav-btn" id="_nbWaypoint"><i class="fa-solid fa-location-pin"></i> จุดแวะ</button>
+            <button class="nav-btn" id="_nbAvoid"><i class="fa-solid fa-shield"></i> หลีกเลี่ยง</button>
+            <button class="nav-btn" id="_nbMaps"><i class="fa-solid fa-map"></i> Maps</button>
+            <button class="nav-close" id="_nbClose">✕</button>
+        </div>`;
 
     // Bind buttons with addEventListener (reliable, no scope issues)
     document.getElementById('_nbWaypoint').addEventListener('click',_navAddWaypoint);
@@ -2111,15 +2152,35 @@ function _navOpenMaps(){
     window.open(url,'_blank');
 }
 
+let _isAddingWaypoint = false;
+
 function _navAddWaypoint(){
-    if(!_navState.active)return;
-    const c=map.getCenter();
-    const name=prompt('ชื่อจุดแวะ (หรือเว้นว่าง):','');
-    if(name===null)return;
-    _navState.waypoints.push({lat:c.lat,lng:c.lng,name:name||`จุดแวะ ${_navState.waypoints.length+1}`});
-    showToast(`📍 เพิ่มจุดแวะ: ${_navState.waypoints[_navState.waypoints.length-1].name}`);
-    if(myLatLng)_navReroute(myLatLng.lat,myLatLng.lng);
+    if(!_navState.active) return;
+    _isAddingWaypoint = true;
+    showToast('📍 โปรดคลิกบนแผนที่เพื่อเลือกจุดแวะ');
+    map.getContainer().style.cursor = 'crosshair';
 }
+
+// Add this to your map click handler logic
+function _handleMapClickForWaypoint(e) {
+    if(!_isAddingWaypoint) return;
+    
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    
+    _navState.waypoints.push({
+        lat: lat,
+        lng: lng,
+        name: `จุดแวะ ${_navState.waypoints.length + 1}`
+    });
+    
+    _isAddingWaypoint = false;
+    map.getContainer().style.cursor = '';
+    
+    showToast(`📍 เพิ่มจุดแวะเรียบร้อยแล้ว`);
+    if(myLatLng) _navReroute(myLatLng.lat, myLatLng.lng);
+}
+
 
 async function _navFetchRoute(fromLat,fromLng){
     // Build coordinates: from → waypoints → dest
@@ -2127,13 +2188,33 @@ async function _navFetchRoute(fromLat,fromLng){
     _navState.waypoints.forEach(w=>points.push([w.lng,w.lat]));
     points.push([_navState.dest.lng,_navState.dest.lat]);
 
-    const coordStr=points.map(c=>c[0]+','+c[1]).join(';');
-    const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
-    const res=await fetch(url);
-    const data=await res.json();
-    if(!data.routes||!data.routes.length)throw new Error('No route');
-    return data.routes[0];
+    // Filter out duplicates or points that are too close (prevents OSRM 400)
+    const uniquePoints = [];
+    points.forEach((p, i) => {
+        if (i === 0) { uniquePoints.push(p); return; }
+        const prev = uniquePoints[uniquePoints.length - 1];
+        const dist = Math.sqrt(Math.pow(p[0] - prev[0], 2) + Math.pow(p[1] - prev[1], 2));
+        if (dist > 0.00001) { uniquePoints.push(p); } // Approx 1 meter
+    });
+
+    const coordStr = uniquePoints.map(c => c[0] + ',' + c[1]).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
+    
+    try {
+        const res = await fetch(url);
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        if (!data.routes || !data.routes.length) throw new Error('No route');
+        return data.routes[0];
+    } catch (e) {
+        console.warn('[BT] FetchRoute failed:', e.message);
+        throw e;
+    }
 }
+
 
 async function _navReroute(lat,lng){
     _navState.lastReroute=Date.now();
@@ -2147,7 +2228,8 @@ async function _navReroute(lat,lng){
         _navState.line=L.polyline(coords,{color:'#1a73e8',weight:5,opacity:0.85}).addTo(map);
         _updateNavBanner();
     }catch(e){
-        console.warn('Reroute failed:',e);
+        showToast('❌ ไม่สามารถคำนวณเส้นทางได้ (โปรดเลือกจุดบนถนน)', true);
+        if(_navState.waypoints.length > 0) _navState.waypoints.pop();
     }
 }
 
