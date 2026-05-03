@@ -2683,7 +2683,7 @@ function fallbackExport(jsonStr, filename) {
     document.getElementById('shareModalText').textContent = `${locations.length} สถานที่ · ${Math.round(jsonStr.length/1024)} KB`;
     document.getElementById('shareModalOverlay').classList.add('open');
 
-    document.getElementById('shareBtnDownload')?.onclick = () => {
+    onClick('shareBtnDownload', () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
         // วิธีที่ 1: blob URL (Desktop)
         try {
@@ -2700,9 +2700,9 @@ function fallbackExport(jsonStr, filename) {
             a.download = filename; a.click();
             showToast('✅ ดาวน์โหลดแล้ว', false, true);
         }
-    };
+    });
 
-    document.getElementById('shareBtnShare')?.onclick = () => {
+    onClick('shareBtnShare', () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
         if (navigator.share) {
             navigator.share({ title: 'BT Locations', text: jsonStr })
@@ -2711,16 +2711,16 @@ function fallbackExport(jsonStr, filename) {
         } else {
             showToast('Browser ไม่รองรับ Share API');
         }
-    };
+    });
 
-    document.getElementById('shareBtnCopy')?.onclick = () => {
+    onClick('shareBtnCopy', () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
         fallbackCopy(jsonStr);
-    };
+    });
 
-    document.getElementById('shareBtnCancel')?.onclick = () => {
+    onClick('shareBtnCancel', () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
-    };
+    });
 }
 
 // ════════════════════════════════════════════
