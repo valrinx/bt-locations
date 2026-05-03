@@ -7,10 +7,6 @@ on:
       - 'all_locations.json'
       - 'build_html.py'
 
-env:
-  SUPABASE_URL: https://uaemvtttfeapvofqhnwoo.supabase.co
-  SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,36 +14,6 @@ jobs:
       contents: write
 
     steps:
-      # ═══════════════════════════════════════════════════
-      # STEP 1: Notify build started (Supabase + LINE)
-      # ═══════════════════════════════════════════════════
-      - name: 📡 Notify build started to Supabase (optional)
-        run: |
-          echo "🔵 Sending PENDING to Supabase..."
-          curl -s -X POST "${{ env.SUPABASE_URL }}/rest/v1/build_status" \
-            -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
-            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
-            -H "Content-Type: application/json" \
-            -H "Prefer: return=minimal" \
-            -d "{\"run_id\": \"${{ github.run_id }}\", \"commit_sha\": \"${{ github.sha }}\", \"commit_msg\": \"${{ github.event.head_commit.message }}\", \"status\": \"pending\", \"branch\": \"${{ github.ref_name }}\"}" || echo "⚠️ Supabase notify skipped (table may not exist)"
-        continue-on-error: true
-
-      - name: 💬 Discord notify - Build started
-        run: |
-          curl -s -X POST ${{ secrets.DISCORD_WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d '{
-              "embeds": [{
-                "title": "🔄 เริ่ม build ใหม่",
-                "description": "📋 ${{ github.event.head_commit.message }}\n🔗 Commit: ${{ github.sha }}",
-                "color": 16776960,
-                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-              }]
-            }' || true
-
-      # ═══════════════════════════════════════════════════
-      # STEP 2: Checkout & Build
-      # ═══════════════════════════════════════════════════
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -65,64 +31,3 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/
           git diff --cached --quiet || (git commit -m "Auto-build: update docs from all_locations.json" && git push)
-
-      # ═══════════════════════════════════════════════════
-      # STEP 3: Update Supabase on SUCCESS (optional)
-      # ═══════════════════════════════════════════════════
-      - name: ✅ Update Supabase - Build success
-        if: success()
-        run: |
-          curl -s -X PATCH "${{ env.SUPABASE_URL }}/rest/v1/build_status?run_id=eq.${{ github.run_id }}" \
-            -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
-            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
-            -H "Content-Type: application/json" \
-            -H "Prefer: return=minimal" \
-            -d "{\"status\": \"success\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" || echo "⚠️ Supabase update skipped"
-          echo "🟢 Build status: SUCCESS sent to Supabase"
-        continue-on-error: true
-
-      # ═══════════════════════════════════════════════════
-      # STEP 4: Update Supabase on FAILURE (optional)
-      # ═══════════════════════════════════════════════════
-      - name: ❌ Update Supabase - Build failed
-        if: failure()
-        run: |
-          curl -s -X PATCH "${{ env.SUPABASE_URL }}/rest/v1/build_status?run_id=eq.${{ github.run_id }}" \
-            -H "apikey: ${{ env.SUPABASE_SERVICE_KEY }}" \
-            -H "Authorization: Bearer ${{ env.SUPABASE_SERVICE_KEY }}" \
-            -H "Content-Type: application/json" \
-            -H "Prefer: return=minimal" \
-            -d "{\"status\": \"failed\", \"completed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" || echo "⚠️ Supabase update skipped"
-          echo "🔴 Build status: FAILED sent to Supabase"
-        continue-on-error: true
-
-      # ═══════════════════════════════════════════════════
-      # STEP 5: LINE notify result
-      # ═══════════════════════════════════════════════════
-      - name: 💬 Discord notify - Build success
-        if: success()
-        run: |
-          curl -s -X POST ${{ secrets.DISCORD_WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d '{
-              "embeds": [{
-                "title": "✅ Build สำเร็จ! 🚀",
-                "description": "📋 ${{ github.event.head_commit.message }}\n🔗 [ดูผลลัพธ์](https://valrinx.github.io/bt-locations/)",
-                "color": 3066993,
-                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-              }]
-            }' || true
-
-      - name: 💬 Discord notify - Build failed
-        if: failure()
-        run: |
-          curl -s -X POST ${{ secrets.DISCORD_WEBHOOK_URL }} \
-            -H "Content-Type: application/json" \
-            -d '{
-              "embeds": [{
-                "title": "❌ Build ล้มเหลว!",
-                "description": "📋 ${{ github.event.head_commit.message }}\n🔗 [ดู log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
-                "color": 15158332,
-                "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-              }]
-            }' || true
