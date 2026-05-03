@@ -1422,14 +1422,12 @@
                     </div>
 
                     <!-- Right map controls -->
-                    <!-- Removed old map-float-btns as it's been moved to Left Side in CSS -->
-                    <div class="map-float-btns">
-                        <button class="map-circle-btn" title="เปลี่ยนแผนที่" onclick="if(typeof window.toggleBaseMap==='function') window.toggleBaseMap();">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
-                        </button>
-                    </div>
-
                     <div class="map-controls" id="mapControlsCol">
+                        <div class="map-btn-group" style="margin-bottom:4px;">
+                            <button class="map-btn" title="เปลี่ยนแผนที่" onclick="if(typeof window.toggleBaseMap==='function') window.toggleBaseMap();">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+                            </button>
+                        </div>
                         <div class="map-btn-group">
                             <button class="map-btn" id="btnZoomIn" title="Zoom in">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
@@ -2536,24 +2534,7 @@ body.force-mobile .mob-drawer { z-index: 1000 !important; }
 }
 .marker-cluster:hover { transform: scale(1.1) !important; }
 
-/* 18 & 19. Custom Map Layers Button (removed bookmark button) */
-.map-float-btns {
-    position: absolute; top: calc(var(--chips-h) + 12px); left: 12px; /* Moved to left side to avoid all overlaps */
-    display: flex; flex-direction: column; gap: 8px; z-index: var(--z-controls);
-}
-@media (min-width: 769px) { .map-float-btns { display: none !important; } }
-body.force-mobile .map-float-btns { display: flex !important; }
 
-.map-circle-btn {
-    width: 44px; height: 44px; border-radius: 50%;
-    background: #ffffff; color: #4b5563;
-    border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all 0.2s;
-}
-.map-circle-btn:hover { background: #f3f4f6; transform: scale(1.05); }
-.map-circle-btn:active { transform: scale(0.95); }
-.map-circle-btn svg { width: 22px; height: 22px; }
 </style>
 
 </body>
