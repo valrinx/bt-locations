@@ -3083,75 +3083,99 @@
             .tb-center {
                 display: flex !important;
                 flex: 1;
-                margin: 0 8px;
+                margin: 0 4px;
                 max-width: none;
-                gap: 8px;
+                gap: 4px;
+                justify-content: flex-end; /* Push live/avatars to the right */
             }
             .tb-center .search-box {
-                flex: 1;
-                height: 36px;
-                padding: 0 10px;
-                font-size: 13px;
-                border-radius: 12px;
-                background: rgba(255,255,255,0.06);
-                border: 1px solid rgba(255,255,255,0.05);
-                display: flex !important;
-                align-items: center;
-                gap: 6px;
+                display: none !important;
             }
-            .tb-center .search-box input {
-                width: 100%;
-                background: none;
-                border: none;
-                outline: none;
-                color: #fff;
-                font-size: 13px;
-            }
-            .tb-center .search-box .kbd { display: none; } /* Hide ⌘K on mobile */
             
             .tb-right {
                 display: flex !important;
-                gap: 6px;
+                gap: 4px;
                 align-items: center;
+                flex-shrink: 0;
             }
             .live-p {
                 display: flex !important;
                 background: rgba(16, 185, 129, 0.1);
                 border: 1px solid rgba(16, 185, 129, 0.2);
                 color: #10b981;
-                padding: 4px 8px;
+                padding: 4px 6px;
                 border-radius: 8px;
-                font-size: 10px;
+                font-size: 9px;
                 font-weight: 700;
                 align-items: center;
-                gap: 4px;
+                gap: 3px;
+                white-space: nowrap;
+                transition: all 0.3s ease;
+            }
+            .live-dot {
+                width: 5px;
+                height: 5px;
             }
             .pill-badge {
-                display: none; /* Hide count pill on small mobile to save space */
+                display: none;
             }
             .avs {
                 display: flex !important;
-                margin-right: 4px;
+                margin-right: 0;
             }
             .av {
-                width: 24px;
-                height: 24px;
-                font-size: 10px;
+                width: 22px;
+                height: 22px;
+                font-size: 9px;
+            }
+            .tb-left {
+                gap: 4px;
+                min-width: 0;
+                flex: 0 1 auto;
             }
             .tb-left h1, .logo-txt {
-                font-size: 14px !important;
+                font-size: 12px !important;
                 display: block !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 80px;
             }
             .logo-sq {
-                width: 28px;
-                height: 28px;
-                font-size: 10px;
+                width: 24px;
+                height: 24px;
+                font-size: 9px;
+                flex-shrink: 0;
             }
             .version-badge {
                 display: none;
             }
             .tb-sep { display: none; }
             #btnImportData, #btnUpload { display: none; }
+
+            /* Restore mobile search bar position */
+            .mob-search-row {
+                display: flex !important;
+                padding: 8px 12px;
+                background: var(--s2);
+            }
+            .mob-search-box {
+                flex: 1;
+                background: rgba(255,255,255,0.05);
+                border-radius: 12px;
+                padding: 8px 12px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .mob-search-input {
+                width: 100%;
+                background: none;
+                border: none;
+                outline: none;
+                color: #fff;
+                font-size: 14px;
+            }
 
 
 
@@ -3464,9 +3488,9 @@
                     <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
                     <span class="kbd">⌘K</span>
                 </div>
-                <div class="live-p">
-                    <div class="live-dot"></div>
-                    <span>Live</span>
+                <div class="live-p" id="topSyncBadge">
+                    <div class="live-dot" id="topSyncDot"></div>
+                    <span id="topSyncText">Live</span>
                 </div>
             </div>
             <div class="tb-right">
