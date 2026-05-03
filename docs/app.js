@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.11.1';
+const APP_VERSION = 'v5.11.2';
 const STORAGE_KEY = 'bt_locations_data';
 
 // ════════════════════════════════════════════
@@ -1281,7 +1281,12 @@ function loadSampleData(){
 // ════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', initApp);
+if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    // DOM already ready (app.js loaded dynamically after DOMContentLoaded)
+    initApp();
+}
 
 function refreshDatalistSuggestions() {
     document.getElementById('listSuggestions').innerHTML=[...new Set(locations.map(l=>l.list).filter(Boolean))].map(l=>`<option value="${l}">`).join('');
