@@ -777,6 +777,7 @@
         .map-view {
             position: absolute;
             inset: 0;
+            display: none;
         }
 
         .map-view.show {
@@ -1264,38 +1265,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-
-        /* ── Floating Map Stats (Overlay) ── */
-        .map-stats {
-            position: absolute;
-            top: 70px; /* Below topbar */
-            right: 8px; /* Closer to the edge as requested */
-            z-index: 1100; /* Above routing panels (usually 1000) */
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            pointer-events: none;
-            transition: all 0.3s;
-        }
-
-        .msv-pill {
-            pointer-events: auto;
-            background: rgba(15, 23, 42, 0.9) !important;
-            backdrop-filter: blur(8px);
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 800;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.15);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #ffffff !important;
-            min-width: 70px;
-            justify-content: flex-start;
-        }
-        .msv-pill.clst { background: rgba(37, 99, 235, 0.9) !important; }
 
         .sv-row {
             display: grid;
@@ -2844,7 +2813,7 @@
         }
 
         .leaflet-cluster-anim .leaflet-marker-icon,
-        .leaflet-cluster-anim .leaflet-marker-shadow {
+        .leaflet-marker-shadow {
             transition: left 0.25s ease, top 0.25s ease, opacity 0.2s ease !important;
         }
 
@@ -3443,7 +3412,7 @@
                 <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
                 <div class="logo-sq">BT</div>
                 <span class="logo-txt">Locations</span>
-                <span class="version-badge" id="versionBadge">v6.6.3</span>
+                <span class="version-badge" id="versionBadge">v6.6.4</span>
             </div>
             <div class="tb-center">
                 <div class="search-box">
@@ -3559,9 +3528,6 @@
                                 <div class="ppb" id="ppRoute">Route +</div>
                             </div>
                         </div>
-
-                        <!-- Map stats overlay removed -->
-
 
                         <!-- Right map controls -->
                         <div class="map-controls" id="mapControlsCol">
@@ -3679,16 +3645,6 @@
                     <div class="map-view" id="view-heat" style="display:none;">
                         <div class="mgrid"></div>
                         <div id="heatmap"></div>
-                        <div class="map-stats">
-                            <div class="msc">
-                                <div class="msv" style="color:var(--rd);">High</div>
-                                <div class="msl">ความหนาแน่นสูง</div>
-                            </div>
-                            <div class="msc">
-                                <div class="msv" style="color:var(--am);">Med</div>
-                                <div class="msl">ปานกลาง</div>
-                            </div>
-                        </div>
                         <div class="btbar">
                             <button class="bt" id="btHeatMap"><span class="bt-i">◉</span> Map</button>
                             <button class="bt on"><span class="bt-i">◈</span> Heatmap</button>
@@ -3842,53 +3798,10 @@
         style="display:none;position:fixed;bottom:130px;left:50%;transform:translateX(-50%);z-index:400;background:rgba(0,0,0,0.7);color:#fff;padding:4px 12px;border-radius:10px;font-size:11px;font-family:monospace;pointer-events:none;">
     </div>
 
-    <!-- Sync badge -->
-    <div id="syncBadge"
-        style="display:none;position:fixed;top:10px;right:10px;z-index:999;background:#059669;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;">
-        ● sync</div>
-
-    <!-- GitHub save button -->
-    <button id="btnGithubSave"
-        style="display:none;position:fixed;top:10px;right:70px;z-index:999;padding:4px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;font-size:12px;cursor:pointer;color:var(--tx);font-family:inherit;">💾
-        Save</button>
-
     <!-- Count pill -->
     <div id="countPill"
         style="display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:400;background:var(--bl);color:#fff;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;">
     </div>
-
-    <!-- Search bar (legacy floating — desktop) -->
-    <div id="searchBar"
-        style="display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:600;width:380px;max-width:90vw;">
-        <div id="searchBox"
-            style="display:flex;align-items:center;background:var(--s1);border:1px solid var(--bd2);border-radius:12px;padding:0 12px;height:40px;gap:8px;">
-            <span style="color:var(--tx3);">⌕</span>
-            <input type="text" id="searchInput" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off"
-                style="flex:1;background:none;border:none;outline:none;color:var(--tx);font-size:13px;">
-            <button id="btnClearSearch"
-                style="display:none;background:none;border:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:0;line-height:1;">✕</button>
-            <div id="searchAvatar"
-                style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#5b8fff,#2ecc90);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">
-                V</div>
-        </div>
-        <div id="searchResults"
-            style="display:none;position:absolute;top:44px;left:0;right:0;background:var(--s1);border:1px solid var(--bd2);border-radius:12px;max-height:300px;overflow-y:auto;z-index:601;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
-        </div>
-    </div>
-
-    <!-- Filter chips (more dropdown — legacy) -->
-    <div style="display:none;" class="chip-more-wrap" id="chipMoreWrap">
-        <button id="chipMore" class="chip">⋯ เพิ่มเติม</button>
-        <div id="chipDropdown" class="chip-dropdown">
-            <div id="chipNearby" class="chip-dropdown-item">📍 ใกล้ฉัน</div>
-            <div id="chipRoute" class="chip-dropdown-item">🗺️ Route</div>
-            <div id="chipHeatmap" class="chip-dropdown-item">🔥 Heatmap</div>
-        </div>
-    </div>
-
-    <!-- Chip labels (app.js reads these) -->
-    <span id="chipListLabel" style="display:none;"></span>
-    <span id="chipCityLabel" style="display:none;"></span>
 
     <!-- Toast -->
     <div class="toast" id="toast"></div>
@@ -4809,24 +4722,6 @@
             bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)) !important;
         }
 
-        /* ── Map stats — ขยับขวาให้ไม่บังแผนที่ ──
-   ปัญหาเดิม: right:56px ทับกับ controls
-   แก้: วางขวาบน ไม่บัง */
-
-
-        body.force-mobile .msc {
-            padding: 4px 8px !important;
-            text-align: right !important;
-        }
-
-        body.force-mobile .msv {
-            font-size: 13px !important;
-        }
-
-        body.force-mobile .msl {
-            font-size: 8px !important;
-        }
-
         /* ── Bottom nav ── */
         body.force-mobile .mob-nav {
             display: flex !important;
@@ -5039,15 +4934,6 @@
             const svTotal = document.getElementById('svTotal');
             if (svTotal) svTotal.textContent = locs ? locs.length : 0;
             
-
-
-            const mapStatClustersVal = document.getElementById('mapStatClustersVal');
-            if (mapStatClustersVal) {
-                // If marker cluster group exists, get its count
-                const count = (window.markers && typeof window.markers.getLayers === 'function') 
-                              ? window.markers.getLayers().length : (locs ? locs.length : 0);
-                mapStatClustersVal.textContent = count;
-            }
 
 
             const cities = {}, lists = {};
