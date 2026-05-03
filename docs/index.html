@@ -4120,7 +4120,6 @@
                         if (cancelBtn) cancelBtn.onclick = function () { el.classList.remove('open'); };
                         el.onclick = function (e) { if (e.target === el) el.classList.remove('open'); };
                     };
-                    el.onclick = null; // will be set per-call
 
                 }, 800);
             });
@@ -5018,21 +5017,51 @@
 
             // --- INSTANT PATCHES (No setTimeout needed) ---
             // 14. Fetch current user IP for online checking
-            fetch('https://api.ipify.org?format=json')
-                .then(res => res.json())
-                .then(data => {
-                    const ip = data.ip;
-                    const onlineCount = document.getElementById('onlineCount');
-                    const svOnline = document.getElementById('svOnline');
-                    if (onlineCount) onlineCount.textContent = 'IP: ' + ip;
-                    if (svOnline) svOnline.textContent = ip;
-                })
-                .catch(err => console.error('Failed to fetch IP', err));
+            function updateIP() {
+                fetch('https://api.ipify.org?format=json')
+                    .then(res => res.json())
+                    .then(data => {
+                        const ip = data.ip;
+                        const onlineCount = document.getElementById('onlineCount');
+                        const svOnline = document.getElementById('svOnline');
+                        if (onlineCount) onlineCount.textContent = 'IP: ' + ip;
+                        if (svOnline) svOnline.textContent = ip;
+                    })
+                    .catch(err => {
+                        console.error('Failed to fetch IP', err);
+                        // Fallback to second service
+                        fetch('https://ipapi.co/json/')
+                            .then(res => res.json())
+                            .then(data => {
+                                const ip = data.ip;
+                                const onlineCount = document.getElementById('onlineCount');
+                                const svOnline = document.getElementById('svOnline');
+                                if (onlineCount) onlineCount.textContent = 'IP: ' + ip;
+                                if (svOnline) svOnline.textContent = ip;
+                            });
+                    });
+            }
+            updateIP();
 
             // 15. Fix Desktop Stats View (renderStatsView was missing)
             window.renderStatsView = function () {
-                const locs = window.btDebug ? window.btDebug.locations : null;
-                if (!locs || !locs.length) return;
+                let locs = window.btDebug ? window.btDebug.locations : [];
+                // If empty in memory, try localStorage
+                if (!locs || locs.length === 0) {
+                    try {
+                        const s = localStorage.getItem('bt_locations_data');
+                        if (s) locs = JSON.parse(s);
+                    } catch(e){}
+                }
+                // If still empty, try DEFAULT_LOCATIONS
+                if ((!locs || locs.length === 0) && typeof DEFAULT_LOCATIONS !== 'undefined') {
+                    locs = DEFAULT_LOCATIONS;
+                }
+
+                if (!locs || !locs.length) {
+                    console.log('renderStatsView: No locations found yet.');
+                    return;
+                }
 
                 const svTotal = document.getElementById('svTotal');
                 if (svTotal) svTotal.textContent = locs.length;
