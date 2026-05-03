@@ -20,38 +20,38 @@
            DESIGN TOKENS
         ════════════════════════════════════════ */
         :root {
-            --bg:  #0b0c10;
-            --s1:  #111218;
-            --s2:  #181921;
-            --s3:  #1e1f2a;
-            --s4:  #252634;
-            --bd:  rgba(255,255,255,0.055);
+            --bg:  #090a10;
+            --s1:  #0e101a;
+            --s2:  #141726;
+            --s3:  #1a1e30;
+            --s4:  #20253a;
+            --bd:  rgba(255,255,255,0.06);
             --bd2: rgba(255,255,255,0.10);
-            --bd3: rgba(255,255,255,0.16);
-            --tx:  #eceaf5;
-            --tx2: #8f8fa8;
-            --tx3: #52526a;
+            --bd3: rgba(255,255,255,0.17);
+            --tx:  #eeedf8;
+            --tx2: #8a8aaa;
+            --tx3: #4e4e68;
             --bl:  #5b8fff;
-            --bl-d: rgba(91,143,255,0.12);
-            --bl-b: rgba(91,143,255,0.26);
+            --bl-d: rgba(91,143,255,0.13);
+            --bl-b: rgba(91,143,255,0.28);
             --gn:  #2ecc90;
             --gn-d: rgba(46,204,144,0.10);
             --gn-b: rgba(46,204,144,0.25);
             --am:  #f5a623;
             --am-d: rgba(245,166,35,0.10);
             --rd:  #ff5c5c;
-            --rd-d: rgba(255,92,92,0.10);
+            --rd-d: rgba(255,92,92,0.12);
             --pu:  #a78bfa;
-            --pu-d: rgba(167,139,250,0.10);
+            --pu-d: rgba(167,139,250,0.11);
             --or:  #ff7f5c;
             /* app.js color aliases */
             --red: #ff5c5c; --green: #2ecc90; --yellow: #f5a623;
             /* shadows */
-            --shadow-sm: 0 1px 4px rgba(0,0,0,0.45);
-            --shadow-md: 0 2px 14px rgba(0,0,0,0.55);
-            --shadow-lg: 0 8px 36px rgba(0,0,0,0.65);
+            --shadow-sm: 0 1px 6px rgba(0,0,0,0.5);
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.65);
+            --shadow-lg: 0 12px 48px rgba(0,0,0,0.78);
             --radius: 12px;
-            --sidebar-w: 256px;
+            --sidebar-w: 272px;
             /* z-index layers */
             --z-map: 0;
             --z-controls: 100;
@@ -67,8 +67,8 @@
             --z-hint: 150;
             /* mobile layout */
             --topbar-h: 52px;
-            --chips-h: 38px;
-            --nav-h: 58px;
+            --chips-h: 40px;
+            --nav-h: 60px;
             --mob-map-top: calc(var(--topbar-h) + var(--chips-h));
             --mob-above-nav: calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
         }
@@ -156,56 +156,61 @@
 
         /* search box */
         .search-box {
-            flex: 1; max-width: 400px; height: 30px;
-            display: flex; align-items: center; gap: 7px;
-            background: var(--s2); border: 0.5px solid var(--bd);
-            border-radius: 8px; padding: 0 10px;
-            transition: border-color 0.15s;
+            flex: 1; max-width: 420px; height: 32px;
+            display: flex; align-items: center; gap: 8px;
+            background: var(--s2); border: 0.5px solid var(--bd2);
+            border-radius: 10px; padding: 0 12px;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
-        .search-box:focus-within { border-color: var(--bl-b); }
-        .search-box .si { font-size: 12px; color: var(--tx3); flex-shrink: 0; }
+        .search-box:focus-within {
+            border-color: var(--bl-b);
+            box-shadow: 0 0 0 2px rgba(91,143,255,0.12);
+        }
+        .search-box .si { font-size: 13px; color: var(--tx3); flex-shrink: 0; }
         .search-box input {
             background: none; border: none; outline: none;
-            color: var(--tx); font-size: 12px; width: 100%;
+            color: var(--tx); font-size: 13px; width: 100%;
             font-family: inherit;
         }
         .search-box input::placeholder { color: var(--tx3); }
         .search-box .kbd {
             font-size: 9px; color: var(--tx3);
-            background: var(--s3); border: 0.5px solid var(--bd);
-            border-radius: 3px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0;
+            background: var(--s3); border: 0.5px solid var(--bd2);
+            border-radius: 4px; padding: 2px 6px; white-space: nowrap; flex-shrink: 0;
         }
 
         /* topbar pills & controls */
         .live-p {
             display: flex; align-items: center; gap: 5px;
-            background: var(--s2); border: 0.5px solid var(--bd);
-            border-radius: 20px; padding: 3px 9px;
+            background: rgba(46,204,144,0.12); border: 0.5px solid rgba(46,204,144,0.3);
+            border-radius: 20px; padding: 4px 10px;
         }
         .live-dot {
             width: 6px; height: 6px; border-radius: 50%;
             background: var(--gn); animation: livePulse 2s ease infinite;
         }
-        @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
-        .live-p span { font-size: 10px; color: var(--tx2); }
+        @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .live-p span { font-size: 10.5px; color: var(--gn); font-weight: 600; }
         .pill-badge {
             background: var(--bl-d); border: 0.5px solid var(--bl-b);
-            color: var(--bl); font-size: 10px; font-weight: 600;
-            padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+            color: var(--bl); font-size: 10px; font-weight: 700;
+            padding: 3px 9px; border-radius: 20px; white-space: nowrap;
         }
         .avs { display: flex; }
         .av {
-            width: 24px; height: 24px; border-radius: 50%;
+            width: 26px; height: 26px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 9px; font-weight: 800; color: var(--bg);
-            border: 1.5px solid var(--s1); margin-left: -5px; cursor: pointer;
+            font-size: 10px; font-weight: 800; color: var(--bg);
+            border: 2px solid var(--s1); margin-left: -6px; cursor: pointer;
+            transition: transform 0.15s;
         }
+        .av:hover { transform: translateY(-2px) scale(1.1); z-index: 1; }
         .tb-sep { width: 0.5px; height: 16px; background: var(--bd2); margin: 0 2px; }
         .tb-icon-btn {
-            width: 28px; height: 28px; border-radius: 7px;
-            border: 0.5px solid var(--bd); background: var(--s2);
+            width: 30px; height: 30px; border-radius: 8px;
+            border: 0.5px solid var(--bd2); background: var(--s2);
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 13px; color: var(--tx2);
+            cursor: pointer; font-size: 14px; color: var(--tx2);
             transition: all 0.12s;
         }
         .tb-icon-btn:hover { background: var(--s3); color: var(--tx); }
@@ -228,59 +233,60 @@
         /* View Switcher 2×2 grid */
         .vtabs {
             display: grid; grid-template-columns: 1fr 1fr;
-            gap: 6px; padding: 12px 10px 10px;
+            gap: 5px; padding: 10px;
             border-bottom: 0.5px solid var(--bd);
             flex-shrink: 0;
         }
         .vt {
-            display: flex; align-items: center; gap: 7px;
-            padding: 7px 10px; border-radius: 8px;
-            cursor: pointer; font-size: 11.5px; color: var(--tx3);
+            display: flex; align-items: center; gap: 6px;
+            padding: 9px 10px; border-radius: 9px;
+            cursor: pointer; font-size: 12px; font-weight: 500; color: var(--tx3);
             border: 0.5px solid transparent;
-            transition: all 0.12s; user-select: none;
+            transition: all 0.15s; user-select: none;
         }
-        .vt:hover { background: var(--s2); color: var(--tx2); }
+        .vt:hover { background: var(--s3); color: var(--tx2); }
         .vt.on {
             background: var(--bl-d); border-color: var(--bl-b);
-            color: var(--bl); font-weight: 600;
+            color: var(--bl); font-weight: 700;
         }
         .vt-i {
-            font-size: 13px; line-height: 1;
-            width: 16px; text-align: center; flex-shrink: 0;
+            font-size: 15px; line-height: 1;
+            width: 18px; text-align: center; flex-shrink: 0;
         }
         .vt.on .vt-i { color: var(--bl); }
 
         /* section headers */
         .sec-hd {
-            padding: 12px 14px 5px;
-            font-size: 9px; font-weight: 700;
-            letter-spacing: 0.12em; text-transform: uppercase;
+            padding: 14px 14px 6px;
+            font-size: 9.5px; font-weight: 800;
+            letter-spacing: 0.14em; text-transform: uppercase;
             color: var(--tx3); flex-shrink: 0;
         }
 
         /* filter list */
         .flist {
             flex-shrink: 0; padding: 0 8px;
-            display: flex; flex-direction: column; gap: 1px;
+            display: flex; flex-direction: column; gap: 2px;
         }
         .fl {
-            display: flex; align-items: center; gap: 9px;
-            padding: 6px 9px; border-radius: 7px;
-            cursor: pointer; font-size: 11.5px; color: var(--tx2);
-            border: 0.5px solid transparent; transition: all 0.11s;
+            display: flex; align-items: center; gap: 10px;
+            padding: 7px 10px; border-radius: 8px;
+            cursor: pointer; font-size: 12.5px; color: var(--tx2);
+            border: 0.5px solid transparent; transition: all 0.12s;
         }
-        .fl:hover { background: var(--s2); color: var(--tx); }
+        .fl:hover { background: var(--s3); color: var(--tx); }
         .fl.on {
             background: var(--bl-d); border-color: var(--bl-b);
             color: var(--bl); font-weight: 600;
         }
-        .fd { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .fd { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
         .fn { flex: 1; }
         .fc {
-            font-size: 9.5px; color: var(--tx3);
-            background: var(--s2); padding: 1px 6px; border-radius: 8px;
+            font-size: 11px; font-weight: 600; color: var(--tx3);
+            background: var(--s3); padding: 2px 8px; border-radius: 10px;
+            min-width: 28px; text-align: center; letter-spacing: 0.02em;
         }
-        .fl.on .fc { background: rgba(91,143,255,0.18); color: var(--bl); }
+        .fl.on .fc { background: var(--bl-b); color: var(--bl); }
 
         .sdiv { height: 0.5px; background: var(--bd); margin: 8px 14px; flex-shrink: 0; }
 
@@ -290,29 +296,30 @@
         .clist::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
 
         /* sidebar footer */
-        .sfoot { padding: 8px; flex-shrink: 0; border-top: 0.5px solid var(--bd); }
+        .sfoot { padding: 10px; flex-shrink: 0; border-top: 0.5px solid var(--bd); }
         .add-btn {
-            width: 100%; padding: 9px 0;
-            background: var(--bl-d); border: 0.5px solid var(--bl-b);
-            border-radius: 8px; color: var(--bl);
-            font-size: 12px; font-weight: 600; font-family: inherit;
-            cursor: pointer; transition: all 0.13s; text-align: center;
-            display: block;
+            width: 100%; padding: 11px 0;
+            background: var(--bl); border: none;
+            border-radius: 10px; color: #fff;
+            font-size: 13px; font-weight: 700; font-family: inherit;
+            cursor: pointer; transition: all 0.15s; text-align: center;
+            display: block; letter-spacing: 0.01em;
+            box-shadow: 0 4px 16px rgba(91,143,255,0.35);
         }
-        .add-btn:hover { background: rgba(91,143,255,0.2); }
-        .add-btn:active { transform: scale(0.98); }
+        .add-btn:hover { background: #7aaaff; box-shadow: 0 6px 22px rgba(91,143,255,0.5); }
+        .add-btn:active { transform: scale(0.97); }
 
         .collab {
             display: flex; align-items: center; gap: 8px;
-            padding: 8px 6px 2px;
+            padding: 8px 4px 2px;
         }
         .cav {
-            width: 20px; height: 20px; border-radius: 50%;
+            width: 22px; height: 22px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 8px; font-weight: 800; color: var(--bg);
-            border: 1.5px solid var(--s1);
+            font-size: 9px; font-weight: 800; color: var(--bg);
+            border: 2px solid var(--s1);
         }
-        .ctxt { font-size: 10px; color: var(--tx3); flex: 1; }
+        .ctxt { font-size: 10.5px; color: var(--tx3); flex: 1; }
 
         /* Toggle Switch */
         .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
@@ -430,22 +437,29 @@
 
         /* ── Bottom toolbar (desktop map) ── */
         .btbar {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 4px; z-index: var(--z-controls);
-            background: rgba(17,18,24,0.92);
-            border: 0.5px solid var(--bd2); border-radius: 12px;
-            padding: 4px; box-shadow: var(--shadow-md);
-            backdrop-filter: blur(12px);
+            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 3px; z-index: var(--z-controls);
+            background: rgba(10,11,18,0.95);
+            border: 0.5px solid var(--bd3); border-radius: 16px;
+            padding: 4px; box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(20px);
         }
         .bt {
-            padding: 7px 14px; border-radius: 8px; border: none;
-            background: none; cursor: pointer; font-size: 11.5px;
+            padding: 8px 16px; border-radius: 12px; border: none;
+            background: none; cursor: pointer; font-size: 12px; font-weight: 600;
             font-family: inherit; color: var(--tx2);
-            transition: all 0.12s; display: flex; align-items: center; gap: 5px;
+            transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+            white-space: nowrap;
         }
         .bt:hover { background: var(--s3); color: var(--tx); }
-        .bt.on { background: var(--bl-d); color: var(--bl); font-weight: 600; }
-        .bt-i { font-size: 11px; }
+        .bt.on { background: var(--bl-d); color: var(--bl); }
+        .bt-i { font-size: 13px; }
+        /* Add/เพิ่ม button gets solid blue */
+        #btAdd {
+            background: var(--bl); color: #fff;
+            box-shadow: 0 2px 12px rgba(91,143,255,0.4);
+        }
+        #btAdd:hover { background: #7aaaff; box-shadow: 0 4px 18px rgba(91,143,255,0.55); }
 
         /* ── Map popup card ── */
         .map-popup {
@@ -595,21 +609,23 @@
             transition: all 0.13s;
         }
         .place-card-close:hover { background: var(--s3); color: var(--tx); }
-        .place-card-content { padding: 6px 14px 20px; }
-        .place-card-name { font-size: 17px; font-weight: 700; color: var(--tx); margin-bottom: 3px; padding-right: 34px; line-height: 1.3; }
-        .place-card-meta { font-size: 11.5px; color: var(--tx2); margin-bottom: 12px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-        .place-card-meta .dot { color: var(--tx3); }
-        .place-card-actions { display: flex; gap: 6px; margin-bottom: 12px; }
+        .place-card-content { padding: 8px 16px 20px; }
+        .place-card-name { font-size: 18px; font-weight: 800; color: var(--tx); margin-bottom: 4px; padding-right: 34px; line-height: 1.3; }
+        .place-card-meta { font-size: 12px; font-weight: 500; color: var(--tx2); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .place-card-meta .dot { color: var(--tx3); font-size: 10px; }
+        .place-card-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 8px; margin-bottom: 14px; }
         .pca-btn {
-            flex: 1; padding: 8px 0; text-align: center;
-            border-radius: 8px; font-size: 12px; font-weight: 600;
+            padding: 9px 4px; text-align: center;
+            border-radius: 10px; font-size: 12.5px; font-weight: 600;
             cursor: pointer; border: 0.5px solid var(--bd2);
             background: var(--s2); color: var(--tx2); font-family: inherit;
-            transition: all 0.12s;
+            transition: all 0.15s; letter-spacing: 0.01em;
         }
-        .pca-btn:hover { background: var(--s3); color: var(--tx); }
-        .pca-btn.primary { background: var(--bl); border-color: var(--bl); color: white; }
-        .pca-btn.danger { background: var(--rd-d); border-color: rgba(255,92,92,0.25); color: var(--rd); }
+        .pca-btn:hover { background: var(--s3); color: var(--tx); box-shadow: var(--shadow-sm); }
+        .pca-btn.primary { background: var(--bl); border-color: var(--bl); color: white; box-shadow: 0 4px 12px rgba(91,143,255,0.3); }
+        .pca-btn.primary:hover { background: #7aaaff; }
+        .pca-btn.danger { background: rgba(255,92,92,0.1); border-color: rgba(255,92,92,0.25); color: var(--rd); }
+        .pca-btn.danger:hover { background: rgba(255,92,92,0.2); }
         .place-card-note { font-size: 12px; color: var(--tx2); line-height: 1.6; }
         .place-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
         .tag-pill {
@@ -844,18 +860,27 @@
         .mob-nb {
             flex: 1; display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            gap: 2px; cursor: pointer; height: 100%; user-select: none;
+            gap: 3px; cursor: pointer; height: 100%; user-select: none;
+            position: relative;
         }
-        .mob-nb-ico { font-size: 18px; color: var(--tx3); transition: color 0.13s; }
-        .mob-nb-lbl { font-size: 9.5px; color: var(--tx3); transition: color 0.13s; }
-        .mob-nb.on .mob-nb-ico { color: var(--bl); }
-        .mob-nb.on .mob-nb-lbl { color: var(--bl); }
+        .mob-nb-ico { font-size: 20px; color: var(--tx3); transition: color 0.13s, transform 0.15s; }
+        .mob-nb-lbl { font-size: 10px; color: var(--tx3); transition: color 0.13s; font-weight: 500; }
+        .mob-nb.on .mob-nb-ico { color: var(--bl); transform: scale(1.1); }
+        .mob-nb.on .mob-nb-lbl { color: var(--bl); font-weight: 700; }
+        .mob-nb.on::after {
+            content: ''; position: absolute; bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 20px; height: 2.5px; border-radius: 2px 2px 0 0;
+            background: var(--bl);
+        }
         .mob-nb-add {
-            width: 44px; height: 44px; border-radius: 50%;
+            width: 48px; height: 48px; border-radius: 50%;
             background: var(--bl); display: flex; align-items: center; justify-content: center;
-            font-size: 22px; color: white;
-            box-shadow: 0 4px 16px rgba(91,143,255,0.4);
+            font-size: 24px; color: white;
+            box-shadow: 0 4px 20px rgba(91,143,255,0.5);
+            transition: transform 0.15s, box-shadow 0.15s;
         }
+        .mob-nb:has(.mob-nb-add):hover .mob-nb-add { transform: scale(1.08); box-shadow: 0 6px 28px rgba(91,143,255,0.65); }
 
         /* ════════════════════════════════════════
            MOBILE DRAWER
@@ -1344,10 +1369,10 @@
 
                     <!-- Bottom toolbar (desktop) -->
                     <div class="btbar">
-                        <button class="bt on" id="btMap"><span class="bt-i">◉</span> Map</button>
-                        <button class="bt" id="btRoute"><span class="bt-i">◎</span> Route</button>
-                        <button class="bt" id="btHeat"><span class="bt-i">◈</span> Heat</button>
-                        <button class="bt" id="btAdd"><span class="bt-i">+</span> Add</button>
+                        <button class="bt on" id="btMap"><span class="bt-i">🗺️</span> แผนที่</button>
+                        <button class="bt" id="btRoute"><span class="bt-i">🔀</span> เส้นทาง</button>
+                        <button class="bt" id="btHeat"><span class="bt-i">🔥</span> Heatmap</button>
+                        <button class="bt" id="btAdd"><span class="bt-i">+</span> เพิ่มสถานที่</button>
                     </div>
                 </div>
 
@@ -1591,7 +1616,7 @@
         <div class="place-card-actions">
             <button class="pca-btn primary" id="placeCardNav">นำทาง</button>
             <button class="pca-btn" id="placeCardEdit">แก้ไข</button>
-            <button class="pca-btn" id="placeCardRoute">Route +</button>
+            <button class="pca-btn" id="placeCardRoute">เส้นทาง</button>
             <button class="pca-btn danger" id="placeCardDelete">ลบ</button>
         </div>
         <div class="place-card-note" id="placeCardNote"></div>
