@@ -2936,15 +2936,15 @@
 
         .chip-dropdown {
             display: none;
-            position: absolute;
-            top: calc(100% + 6px);
-            right: 0;
+            position: fixed; /* Fixed to bypass overflow clipping */
+            top: 0;
+            left: 0;
             background: var(--s1);
             border: 0.5px solid var(--bd2);
             border-radius: 12px;
             box-shadow: var(--shadow-lg);
-            min-width: 160px;
-            z-index: 1100;
+            min-width: 180px;
+            z-index: 3000;
             overflow: hidden;
             animation: chipDropIn 0.15s ease-out;
         }
@@ -3160,7 +3160,7 @@
 
 
             /* chips row */
-            .mob-chips-row {
+            .mob-chips-scroll-container {
                 display: flex !important;
                 position: fixed;
                 top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
@@ -3170,11 +3170,19 @@
                 height: var(--chips-h);
                 background: var(--s1);
                 border-bottom: 0.5px solid var(--bd);
+                overflow-x: auto;
+                overflow-y: visible;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+            }
+            .mob-chips-row {
+                display: flex !important;
                 padding: 0 10px;
                 gap: 6px;
                 align-items: center;
-                overflow-x: auto;
-                scrollbar-width: none;
+                overflow: visible;
+                min-width: max-content;
+                height: 100%;
             }
 
             /* view tabs hide, use mob-nav */
@@ -4763,7 +4771,7 @@
         }
 
         /* ── Chips row ── */
-        body.force-mobile .mob-chips-row {
+        body.force-mobile .mob-chips-scroll-container {
             display: flex !important;
             position: fixed;
             top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
@@ -4773,12 +4781,19 @@
             height: var(--chips-h);
             background: var(--s1);
             border-bottom: 0.5px solid var(--bd);
+            overflow-x: auto;
+            overflow-y: visible;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        body.force-mobile .mob-chips-row {
+            display: flex !important;
             padding: 0 10px;
             gap: 6px;
             align-items: center;
-            overflow-x: auto;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
+            overflow: visible;
+            min-width: max-content;
+            height: 100%;
         }
 
         body.force-mobile .mob-chips-row::-webkit-scrollbar {
