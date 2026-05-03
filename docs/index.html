@@ -3079,48 +3079,70 @@
                 cursor: pointer;
             }
 
-            /* Restore topbar elements for mobile */
+            /* Robust Mobile Topbar */
+            .topbar {
+                display: flex !important;
+                height: 54px !important;
+                padding: 0 12px !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                background: var(--s1);
+                border-bottom: 1px solid var(--bd2);
+            }
+            .tb-left {
+                display: flex !important;
+                align-items: center !important;
+                gap: 8px !important;
+                flex: 0 1 auto !important;
+                min-width: 0;
+            }
+            .logo-sq {
+                display: flex !important;
+                width: 30px !important;
+                height: 30px !important;
+                font-size: 11px !important;
+                flex-shrink: 0 !important;
+            }
+            .logo-txt {
+                display: block !important;
+                font-size: 14px !important;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100px;
+            }
             .tb-center {
-                display: none !important; /* Hide empty center */
+                display: none !important;
             }
             .tb-right {
                 display: flex !important;
-                gap: 8px;
-                align-items: center;
-                flex: 1;
-                justify-content: flex-end;
+                align-items: center !important;
+                gap: 10px !important;
+                flex: 1 !important;
+                justify-content: flex-end !important;
             }
             .live-p {
                 display: flex !important;
-                background: rgba(16, 185, 129, 0.1);
-                border: 1px solid rgba(16, 185, 129, 0.2);
-                color: #10b981;
-                padding: 4px 8px;
-                border-radius: 8px;
-                font-size: 10px;
-                font-weight: 700;
-                align-items: center;
-                gap: 4px;
-                white-space: nowrap;
+                padding: 4px 10px !important;
+                border-radius: 10px !important;
+                font-size: 11px !important;
+                font-weight: 700 !important;
+                gap: 4px !important;
+                background: rgba(16, 185, 129, 0.1) !important;
+                border: 1px solid rgba(16, 185, 129, 0.2) !important;
+                color: #10b981 !important;
             }
             .avs {
                 display: flex !important;
             }
             .av {
-                width: 26px;
-                height: 26px;
-                font-size: 11px;
+                width: 28px !important;
+                height: 28px !important;
+                font-size: 11px !important;
             }
-            .tb-left {
-                flex: 0 0 auto;
-                max-width: 120px;
-            }
-            .tb-left h1, .logo-txt {
-                font-size: 13px !important;
-            }
-            .logo-sq {
-                width: 26px;
-                height: 26px;
+            .version-badge, .pill-badge, .tb-sep, #btnImportData, #btnUpload {
+                display: none !important;
             }
 
             /* Restore mobile search bar position */
