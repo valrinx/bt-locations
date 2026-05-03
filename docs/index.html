@@ -194,35 +194,46 @@
 
         .logo-wrapper {
             display: flex;
-            align-items: baseline;
-            gap: 8px;
+            align-items: center;
+            gap: 12px;
             cursor: pointer;
             position: relative;
         }
         .logo-main {
-            font-size: 22px;
+            font-size: 28px;
             font-weight: 900;
             color: #fff;
-            background: linear-gradient(135deg, #fff 30%, var(--bl) 100%);
+            background: linear-gradient(135deg, #fff 40%, var(--bl) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            letter-spacing: -1.5px;
-            line-height: 1;
+            letter-spacing: -2px;
+            line-height: 0.8;
+        }
+        .logo-right {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .logo-sub-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         .logo-sub {
-            font-size: 11px;
-            font-weight: 500;
+            font-size: 10px;
+            font-weight: 600;
             color: var(--tx2);
-            letter-spacing: 1.5px;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            opacity: 0.8;
+            opacity: 0.9;
+            line-height: 1;
         }
         .sync-dot-mini {
             width: 7px;
             height: 7px;
             border-radius: 50%;
             background: #10b981;
-            margin-left: 2px;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
             transition: all 0.3s ease;
         }
         .sync-dot-mini.syncing {
@@ -241,24 +252,21 @@
 
         .ver-info {
             display: flex;
-            flex-direction: column;
-            gap: 1px;
-            margin-left: 4px;
-            align-self: center;
+            align-items: center;
+            gap: 6px;
+            opacity: 0.5;
         }
         .v-text {
-            font-size: 10px;
-            font-weight: 700;
+            font-size: 8px;
+            font-weight: 600;
             color: var(--tx3);
-            line-height: 1;
+            text-transform: uppercase;
         }
         .v-hash {
             font-size: 8px;
             font-weight: 400;
             color: var(--tx3);
-            opacity: 0.6;
             font-family: monospace;
-            line-height: 1;
         }
 
         /* search box */
@@ -3440,9 +3448,13 @@
             <div class="tb-left" id="tbLeft">
                 <div class="logo-wrapper" onclick="location.reload()">
                     <div class="logo-main">BT</div>
-                    <div class="logo-sub">LOCATIONS</div>
-                    <div class="sync-dot-mini" id="topSyncDotMini"></div>
-
+                    <div class="logo-right">
+                        <div class="logo-sub-row">
+                            <span class="logo-sub">LOCATIONS</span>
+                            <div class="sync-dot-mini" id="topSyncDotMini"></div>
+                        </div>
+                        <div class="ver-info" id="dynamicVerInfo"></div>
+                    </div>
                 </div>
             </div>
             <div class="tb-center">
