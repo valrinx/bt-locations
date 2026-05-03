@@ -1476,8 +1476,10 @@ onClick('chipList', ()=>{
                 <button id="_mergeListCancel" style="flex:1;padding:10px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>`;
-    document.getElementById('_mergeListCancel').onclick=()=>{document.getElementById('chipList').click();};
-    document.getElementById('_mergeListConfirm').onclick=()=>{
+    const _mergeListCancel=document.getElementById('_mergeListCancel');
+    const _mergeListConfirm=document.getElementById('_mergeListConfirm');
+    if(_mergeListCancel) _mergeListCancel.onclick=()=>{const chipList=document.getElementById('chipList');if(chipList)chipList.click();};
+    if(_mergeListConfirm) _mergeListConfirm.onclick=()=>{
         const toList=document.getElementById('_mergeListTarget').value;
         pushUndo();
         let count=0;
@@ -1554,7 +1556,6 @@ onClick('btnTile', ()=>{
 // ════════════════════════════════════════════
 const btnGps=document.getElementById('btnGps');
 
-if(btnGps){
 // ── smooth pan ด้วย panTo แทน flyTo — ไม่กระตุกเมื่อตำแหน่งเปลี่ยนนิดเดียว ──
 function _smoothFollow(lat, lng) {
     if (!gpsTracking) return;
@@ -1620,6 +1621,7 @@ map.on('zoomend', () => {
     update();
 });
 
+if(btnGps){
 map.on('dragstart', () => {
     if (gpsTracking) {
         gpsTracking = false;
@@ -1627,17 +1629,18 @@ map.on('dragstart', () => {
         btnGps.classList.remove('gps-tracking');
     }
 });
+}
 
 function stopGps() {
     if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
     gpsActive = false; gpsTracking = false; gpsCoarseShown = false; gpsFlyDone = false;
     gpsToastShown = false; gpsFineToastShown = false;
-    btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking');
+    if(btnGps) btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking');
     _lastGpsLat = null; _lastGpsLng = null;
 }
 
 // btnGps: กดครั้งที่ 1 = เปิด GPS + เปิด tracking, กดครั้งที่ 2 = กล้องบินไปตำแหน่ง + เปิด tracking อีกครั้ง
-btnGps.onclick = () => {
+if(btnGps) btnGps.onclick = () => {
     if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS', true); return; }
     if (gpsActive && myLocationMarker) {
         // toggle tracking: ถ้า tracking อยู่ → บินไปตำแหน่ง, ถ้าไม่ → เปิด tracking
@@ -1694,7 +1697,6 @@ btnGps.onclick = () => {
         {enableHighAccuracy:false, timeout:5000, maximumAge:30000}
     );
 };
-} // end if(btnGps)
 
 // GPS modal
 const btnUseGpsModal = document.getElementById('btnUseGpsModal');
@@ -1730,7 +1732,8 @@ fab.onclick=()=>{
     closePlaceCard(); cancelMeasureMode();
 };
 
-document.getElementById('btnCancelAdd').onclick=cancelAddMode;
+const btnCancelAdd=document.getElementById('btnCancelAdd');
+if(btnCancelAdd) btnCancelAdd.onclick=cancelAddMode;
 function cancelAddMode() {
     addMode=false; fab.classList.remove('add-mode');
     fab.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>เพิ่มจุด`;
@@ -1747,7 +1750,8 @@ document.getElementById('map').addEventListener('mousemove', throttle(e=>{
 // ════════════════════════════════════════════
 map.on('click',e=>{
     const{lat,lng}=e.latlng;
-    if(document.getElementById('editModalOverlay').classList.contains('open')){
+    const editModalOverlay = document.getElementById('editModalOverlay');
+    if(editModalOverlay && editModalOverlay.classList.contains('open')){
         document.getElementById('modalLat').value=lat.toFixed(6);
         document.getElementById('modalLng').value=lng.toFixed(6);
         ['modalLat','modalLng'].forEach(id=>{const el=document.getElementById(id);el.style.borderColor='#34a853';setTimeout(()=>el.style.borderColor='',800);});
@@ -1899,10 +1903,13 @@ window.openEdit=function(idx){
     document.getElementById('editModalOverlay').classList.add('open');
 };
 
-document.getElementById('editModalCancel').onclick=()=>document.getElementById('editModalOverlay').classList.remove('open');
-document.getElementById('editModalOverlay').onclick=e=>{if(e.target===document.getElementById('editModalOverlay'))document.getElementById('editModalOverlay').classList.remove('open');};
+const editModalCancel=document.getElementById('editModalCancel');
+const editModalOverlay=document.getElementById('editModalOverlay');
+if(editModalCancel) editModalCancel.onclick=()=>{if(editModalOverlay)editModalOverlay.classList.remove('open');};
+if(editModalOverlay) editModalOverlay.onclick=e=>{if(e.target===editModalOverlay&&editModalOverlay)editModalOverlay.classList.remove('open');};
 
-document.getElementById('editModalSave').onclick=()=>{
+const editModalSave=document.getElementById('editModalSave');
+if(editModalSave) editModalSave.onclick=()=>{
     const name=_cleanDMSName(document.getElementById('modalName').value.trim());
     const list=document.getElementById('modalList').value.trim()||'ไม่มีรายการ';
     const city=document.getElementById('modalCity').value.trim();
@@ -1958,15 +1965,19 @@ window.startMeasureMode=function(idx){
     document.getElementById('map').classList.add('measure-cursor');
     closePlaceCard();
 };
-document.getElementById('btnCancelMeasure').onclick=cancelMeasureMode;
+const btnCancelMeasure=document.getElementById('btnCancelMeasure');
+if(btnCancelMeasure) btnCancelMeasure.onclick=cancelMeasureMode;
 function cancelMeasureMode(){
     measureMode=false;measureStart=null;
     document.getElementById('measureBanner').classList.remove('show');
     document.getElementById('map').classList.remove('measure-cursor');
 }
-document.getElementById('measureModalClose').onclick=()=>document.getElementById('measureModalOverlay').classList.remove('open');
-document.getElementById('measureModalClear').onclick=()=>{if(measureLine){map.removeLayer(measureLine);measureLine=null;}document.getElementById('measureModalOverlay').classList.remove('open');};
-document.getElementById('measureModalOverlay').onclick=e=>{if(e.target===document.getElementById('measureModalOverlay'))document.getElementById('measureModalOverlay').classList.remove('open');};
+const measureModalClose=document.getElementById('measureModalClose');
+const measureModalClear=document.getElementById('measureModalClear');
+const measureModalOverlay2=document.getElementById('measureModalOverlay');
+if(measureModalClose) measureModalClose.onclick=()=>{if(measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
+if(measureModalClear) measureModalClear.onclick=()=>{if(measureLine){map.removeLayer(measureLine);measureLine=null;}if(measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
+if(measureModalOverlay2) measureModalOverlay2.onclick=e=>{if(e.target===measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
 
 // ════════════════════════════════════════════
 // DIRECTIONS (Live navigation + auto-reroute)
@@ -2518,7 +2529,8 @@ async function doRoute(){
     await _routeDraw();
 }
 
-document.getElementById('chipRoute').onclick=()=>{
+const chipRoute=document.getElementById('chipRoute');
+if(chipRoute) chipRoute.onclick=()=>{
     if(routeMode){clearRoute();closeListPanel();showToast('ปิดเส้นทาง');}
     else doRoute();
 };
@@ -2526,8 +2538,10 @@ document.getElementById('chipRoute').onclick=()=>{
 // ════════════════════════════════════════════
 // INFO PANEL (kept for compatibility)
 // ════════════════════════════════════════════
-document.getElementById('infoPanelClose').onclick = closeInfo;
-document.getElementById('infoPanelBackdrop').onclick = closeInfo;
+const infoPanelClose=document.getElementById('infoPanelClose');
+const infoPanelBackdrop=document.getElementById('infoPanelBackdrop');
+if(infoPanelClose) infoPanelClose.onclick = closeInfo;
+if(infoPanelBackdrop) infoPanelBackdrop.onclick = closeInfo;
 
 function openInfoPanel(mode){
     const body=document.getElementById('infoPanelBody');
@@ -2927,10 +2941,14 @@ function toggleDark(){document.body.classList.toggle('light');const isLight=docu
 function getToken(){return '';}
 function setToken(t){}
 
-document.getElementById('btnGithubSave').onclick=()=>{showToast('⏳ กำลังซิงค์...');_debouncedPush.flush?_debouncedPush.flush():_debouncedPush();};
-document.getElementById('tokenCancel').onclick=()=>document.getElementById('tokenModalOverlay').classList.remove('open');
-document.getElementById('tokenSave').onclick=()=>document.getElementById('tokenModalOverlay').classList.remove('open');
-document.getElementById('tokenModalOverlay').onclick=e=>{if(e.target===document.getElementById('tokenModalOverlay'))document.getElementById('tokenModalOverlay').classList.remove('open');};
+const btnGithubSave=document.getElementById('btnGithubSave');
+if(btnGithubSave) btnGithubSave.onclick=()=>{showToast('⏳ กำลังซิงค์...');_debouncedPush.flush?_debouncedPush.flush():_debouncedPush();};
+const tokenCancel=document.getElementById('tokenCancel');
+const tokenSave=document.getElementById('tokenSave');
+const tokenModalOverlay=document.getElementById('tokenModalOverlay');
+if(tokenCancel) tokenCancel.onclick=()=>{if(tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
+if(tokenSave) tokenSave.onclick=()=>{if(tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
+if(tokenModalOverlay) tokenModalOverlay.onclick=e=>{if(e.target===tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
 
 function _workerHeaders(){return{'Content-Type':'application/json'};}
 async function githubFile(path,token){return{sha:null};}
@@ -2947,12 +2965,15 @@ function showConfirm(icon,title,text,cb){
     confirmCallback=cb;
     document.getElementById('confirmModalOverlay').classList.add('open');
 }
-document.getElementById('confirmCancel').onclick=()=>document.getElementById('confirmModalOverlay').classList.remove('open');
-document.getElementById('confirmOk').onclick=()=>{
-    document.getElementById('confirmModalOverlay').classList.remove('open');
+const confirmCancel=document.getElementById('confirmCancel');
+const confirmOk=document.getElementById('confirmOk');
+const confirmModalOverlay=document.getElementById('confirmModalOverlay');
+if(confirmCancel) confirmCancel.onclick=()=>{if(confirmModalOverlay)confirmModalOverlay.classList.remove('open');};
+if(confirmOk) confirmOk.onclick=()=>{
+    if(confirmModalOverlay)confirmModalOverlay.classList.remove('open');
     if(confirmCallback){confirmCallback();confirmCallback=null;}
 };
-document.getElementById('confirmModalOverlay').onclick=e=>{if(e.target===document.getElementById('confirmModalOverlay'))document.getElementById('confirmModalOverlay').classList.remove('open');};
+if(confirmModalOverlay) confirmModalOverlay.onclick=e=>{if(e.target===confirmModalOverlay)confirmModalOverlay.classList.remove('open');};
 
 // ════════════════════════════════════════════
 // TOAST
