@@ -1,0 +1,1457 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BT Locations</title>
+    <meta name="theme-color" content="#0b0c10">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0c10;
+            --s1: #12131a;
+            --s2: #191a23;
+            --s3: #20212c;
+            --s4: #272836;
+            --bd: rgba(255,255,255,0.06);
+            --bd2: rgba(255,255,255,0.11);
+            --bd3: rgba(255,255,255,0.18);
+            --tx: #eceaf5;
+            --tx2: #9494a8;
+            --tx3: #5a5a6e;
+            --bl: #5b8fff;
+            --bl-d: rgba(91,143,255,0.13);
+            --bl-b: rgba(91,143,255,0.26);
+            --gn: #2ecc90;
+            --gn-d: rgba(46,204,144,0.11);
+            --gn-b: rgba(46,204,144,0.26);
+            --am: #f5a623;
+            --am-d: rgba(245,166,35,0.11);
+            --rd: #ff5c5c;
+            --rd-d: rgba(255,92,92,0.11);
+            --pu: #a78bfa;
+            --pu-d: rgba(167,139,250,0.11);
+            --or: #ff7f5c;
+            --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.5);
+            --radius: 14px;
+            --z-map: 0;
+            --z-controls: 100;
+            --z-panel: 200;
+            --z-modal: 300;
+            --z-toast: 400;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Noto Sans Thai', sans-serif; background: var(--bg); overflow: hidden; height: 100vh; color: var(--tx); }
+
+        /* ══ APP CONTAINER ══ */
+        .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* ══ TOPBAR ══ */
+        .topbar {
+            height: 50px; flex-shrink: 0;
+            display: flex; align-items: center; gap: 10px; padding: 0 14px;
+            background: var(--s1); border-bottom: 0.5px solid var(--bd);
+        }
+        .logo { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+        .logo-sq { width: 24px; height: 24px; border-radius: 6px; background: var(--bl-d); border: 0.5px solid var(--bl-b); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--bl); }
+        .logo-txt { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--bl); text-transform: uppercase; }
+
+        /* ════════════════════════════════════
+           LOADING SCREEN
+        ════════════════════════════════════ */
+        .loader { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 9999; transition: opacity 0.4s ease; }
+        .loader.done { opacity: 0; pointer-events: none; }
+        .spin { width: 32px; height: 32px; border: 2px solid var(--bd2); border-top-color: var(--bl); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-t { font-size: 13px; color: var(--tx2); }
+        .tb-sep { width: 0.5px; height: 18px; background: var(--bd2); margin: 0 3px; }
+        .search-box {
+            flex: 1; max-width: 280px; height: 30px;
+            display: flex; align-items: center; gap: 7px;
+            background: var(--s2); border: 0.5px solid var(--bd); border-radius: 8px; padding: 0 10px;
+            transition: border-color 0.15s;
+        }
+        .search-box:focus-within { border-color: var(--bl-b); }
+        .search-box input { background: none; border: none; outline: none; color: var(--tx); font-size: 12px; width: 100%; }
+        .search-box input::placeholder { color: var(--tx3); }
+        .si { font-size: 12px; color: var(--tx3); }
+        .tb-right { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+        .pill-badge { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+        .live-p { display: flex; align-items: center; gap: 5px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 20px; padding: 3px 9px; }
+        .live-p span { font-size: 11px; color: var(--tx2); }
+        .avs { display: flex; }
+        .av { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--bg); border: 1.5px solid var(--bg); margin-left: -5px; cursor: pointer; }
+        .tb-icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--tx2); transition: all 0.12s; }
+        .tb-icon-btn:hover { background: var(--s3); color: var(--tx); }
+        .tb-icon-btn.active { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); }
+
+        /* ══ BODY LAYOUT ══ */
+        .body { display: flex; flex: 1; overflow: hidden; }
+
+        /* ══ SIDEBAR ══ */
+        .sidebar {
+            width: 252px; flex-shrink: 0;
+            background: var(--s1); border-right: 0.5px solid var(--bd);
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .sec-hd { padding: 14px 14px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tx3); flex-shrink: 0; }
+        .flist { flex-shrink: 0; padding: 0 10px; display: flex; flex-direction: column; }
+        .fl { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); border: 0.5px solid transparent; }
+        .fl:hover { background: var(--s2); color: var(--tx); }
+        .fl.on { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 500; }
+        .fd { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .fn { flex: 1; }
+        .fc { font-size: 10px; color: var(--tx3); background: var(--s2); padding: 1px 7px; border-radius: 10px; }
+        .fl.on .fc { background: rgba(91,143,255,0.18); color: var(--bl); }
+        .sdiv { height: 0.5px; background: var(--bd); margin: 10px 14px; flex-shrink: 0; }
+        .clist { flex: 1; overflow-y: auto; padding: 0 10px; }
+        .cl { display: flex; align-items: center; gap: 9px; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); }
+        .cl:hover { background: var(--s2); color: var(--tx); }
+        .cl.on { background: var(--s2); color: var(--tx); }
+        .cd { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .cn { flex: 1; }
+        .cc { font-size: 10px; color: var(--tx3); margin-left: auto; }
+        .sfoot { padding: 10px 12px; border-top: 0.5px solid var(--bd); flex-shrink: 0; background: var(--s1); }
+        .add-btn { width: 100%; padding: 9px; border-radius: 9px; border: none; background: var(--s2); color: var(--tx); font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s; }
+        .add-btn:hover { background: var(--bl-d); color: var(--bl); }
+        .collab { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .cav { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--bg); border: 1.5px solid var(--s1); }
+        .ctxt { font-size: 11px; color: var(--tx3); }
+
+        /* ══ MAIN ══ */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+        /* View tabs */
+        .vtabs {
+            height: 38px; flex-shrink: 0;
+            display: flex; align-items: center; gap: 2px; padding: 0 12px;
+            background: var(--s1); border-bottom: 0.5px solid var(--bd);
+        }
+        .vt {
+            display: flex; align-items: center; gap: 5px;
+            padding: 5px 11px; border-radius: 7px;
+            font-size: 12px; font-weight: 500; color: var(--tx2); cursor: pointer;
+            border: 0.5px solid transparent; transition: all 0.13s;
+        }
+        .vt:hover { color: var(--tx); background: var(--s2); }
+        .vt.on { color: var(--bl); background: var(--bl-d); border-color: var(--bl-b); }
+        .vt-i { font-size: 13px; }
+
+        .view-area { flex: 1; position: relative; overflow: hidden; }
+
+        /* Map view */
+        .map-view { position: absolute; inset: 0; background: #0d0e14; display: none; }
+        .map-view.show { display: block; }
+        .mgrid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.013) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.013) 1px,transparent 1px); background-size: 44px 44px; pointer-events: none; }
+        #map { position: absolute; inset: 0; z-index: 1; }
+
+        /* Map popup */
+        .map-popup {
+            position: absolute; right: 14px; top: 14px; width: 214px;
+            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 13px; padding: 13px 14px;
+            z-index: 100; display: none;
+        }
+        .map-popup.show { display: block; }
+        .pp-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--bl); margin-bottom: 3px; }
+        .pp-name { font-size: 14px; font-weight: 600; margin-bottom: 1px; }
+        .pp-sub { font-size: 11px; color: var(--tx2); margin-bottom: 10px; }
+        .pp-meta { display: flex; gap: 12px; padding: 8px 0; border-top: 0.5px solid var(--bd); border-bottom: 0.5px solid var(--bd); margin-bottom: 10px; }
+        .pp-mi { font-size: 11px; color: var(--tx2); }
+        .pp-mi b { color: var(--tx); font-weight: 500; }
+        .pp-btns { display: flex; gap: 5px; }
+        .ppb { flex: 1; padding: 6px 4px; border-radius: 7px; border: 0.5px solid var(--bd2); background: var(--s2); color: var(--tx2); font-size: 11px; font-weight: 500; text-align: center; cursor: pointer; transition: all 0.12s; }
+        .ppb:hover { color: var(--tx); background: var(--s3); }
+        .ppb.p { background: var(--bl); border-color: var(--bl); color: white; font-weight: 700; }
+        .ppb.p:hover { opacity: 0.85; }
+
+        /* Map stats - concept style */
+        .map-stats { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 50; }
+        .msc { background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 10px; padding: 10px 14px; min-width: 88px; }
+        .msv { font-size: 20px; font-weight: 700; line-height: 1; }
+        .msl { font-size: 10px; color: var(--tx3); margin-top: 3px; letter-spacing: 0.02em; }
+
+        /* Zoom controls */
+        .zoom-c { position: absolute; right: 14px; bottom: 58px; display: flex; flex-direction: column; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 8px; overflow: hidden; z-index: 50; }
+        .zb { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--tx2); cursor: pointer; background: none; border: none; transition: all 0.12s; }
+        .zb:hover { background: var(--s2); color: var(--tx); }
+        .zsep { height: 0.5px; background: var(--bd); }
+
+        /* Bottom toolbar */
+        .btbar { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 30px; padding: 4px 7px; z-index: 50; }
+        .bt { display: flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 500; color: var(--tx2); cursor: pointer; border: none; background: none; transition: all 0.13s; }
+        .bt:hover { background: var(--s2); color: var(--tx); }
+        .bt.on { background: var(--bl-d); color: var(--bl); }
+        .bt-i { font-size: 12px; }
+
+        /* List view */
+        .list-view { position: absolute; inset: 0; background: var(--bg); display: none; flex-direction: column; }
+        .list-view.show { display: flex; }
+        .lv-toolbar { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--s1); border-bottom: 0.5px solid var(--bd); }
+        .lv-tb-btn { height: 26px; padding: 0 10px; border-radius: 7px; border: 0.5px solid var(--bd2); background: var(--s2); color: var(--tx2); font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.12s; white-space: nowrap; }
+        .lv-tb-btn:hover { color: var(--tx); background: var(--s3); }
+        .lv-tb-btn.danger:hover { color: var(--rd); border-color: rgba(255,92,92,0.3); }
+        .lv-count { font-size: 11px; color: var(--tx3); margin-left: auto; }
+        .ltable { flex: 1; overflow-y: auto; }
+
+        /* Stats view */
+        .stats-view { position: absolute; inset: 0; background: var(--bg); display: none; overflow-y: auto; }
+        .stats-view.show { display: block; }
+        .sv-inner { padding: 16px; }
+        .sv-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
+        .sv-card { background: var(--s1); border: 0.5px solid var(--bd); border-radius: 10px; padding: 12px 14px; }
+        .sv-v { font-size: 22px; font-weight: 700; }
+        .sv-l { font-size: 11px; color: var(--tx3); margin-top: 2px; }
+        .sv-h { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--tx3); margin-bottom: 10px; }
+        .sv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .sv-panel { background: var(--s1); border: 0.5px solid var(--bd); border-radius: 10px; padding: 14px; }
+        .donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+        .donut-legend { display: flex; flex-direction: column; gap: 6px; }
+        .dl-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--tx2); }
+        .dl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .dl-val { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--tx); }
+        .recent-list { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; }
+        .ri { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 0.5px solid var(--bd); }
+        .ri:last-child { border-bottom: none; }
+        .ri-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .ri-info { flex: 1; }
+        .ri-name { font-size: 12px; font-weight: 500; }
+        .ri-meta { font-size: 11px; color: var(--tx3); }
+        .ri-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 58px; left: 50%; transform: translateX(-50%);
+            background: var(--s2); border: 0.5px solid var(--bd2); border-radius: 20px;
+            padding: 7px 14px; display: flex; align-items: center; gap: 9px;
+            font-size: 12px; color: var(--tx); white-space: nowrap;
+            opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 400;
+        }
+        .toast.show { opacity: 1; pointer-events: auto; }
+
+        /* ══ SEARCH BAR (mobile only) ══ */
+        .search-bar {
+            position: fixed; top: 10px; left: 10px;
+            width: min(calc(100vw - 20px), var(--sidebar-w));
+            z-index: var(--z-controls); display: flex; flex-direction: column; gap: 0;
+        }
+        .search-box {
+            background: var(--s1); border-radius: var(--radius);
+            border: 0.5px solid var(--bd2);
+            box-shadow: var(--shadow-md); display: flex; align-items: center;
+            padding: 0 14px 0 10px; height: 48px; gap: 8px;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            backdrop-filter: blur(12px);
+        }
+        .search-box.focused { border-color: var(--bl); box-shadow: 0 0 0 2px var(--bl-d), var(--shadow-md); border-radius: var(--radius) var(--radius) 0 0; }
+        .search-box.focused + .search-results { display: block; }
+        .search-menu-btn {
+            width: 36px; height: 36px; border-radius: 8px; border: none; background: none;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: var(--tx2); flex-shrink: 0; transition: background 0.15s;
+        }
+        .search-menu-btn:hover { background: var(--s2); color: var(--tx); }
+        .search-menu-btn svg { width: 18px; height: 18px; }
+        .search-input {
+            flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit;
+            color: var(--tx); background: transparent; caret-color: var(--bl);
+        }
+        .search-input::placeholder { color: var(--tx3); }
+        .search-clear {
+            width: 28px; height: 28px; border-radius: 6px; border: none; background: none;
+            cursor: pointer; display: none; align-items: center; justify-content: center;
+            color: var(--tx3); flex-shrink: 0; font-size: 12px;
+        }
+        .search-clear.show { display: flex; }
+        .search-clear:hover { background: var(--s2); color: var(--tx); }
+        .search-divider { width: 1px; height: 18px; background: var(--bd2); flex-shrink: 0; }
+        .search-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--bl), var(--gn));
+            color: #0d0d0f;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; flex-shrink: 0; cursor: pointer;
+        }
+        /* live dot */
+        .live-indicator { display:flex; align-items:center; gap:5px; }
+        .live-dot { width:6px; height:6px; border-radius:50%; background:var(--gn); animation:livePulse 2s ease infinite; flex-shrink:0; }
+        @keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+        .live-label { font-size:10px; color:var(--tx3); letter-spacing:0.05em; }
+        .search-results {
+            display: none; background: var(--s1);
+            border: 0.5px solid var(--bd2); border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            box-shadow: var(--shadow-lg); overflow: hidden;
+            max-height: 360px; overflow-y: auto;
+        }
+        .search-result-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 14px; cursor: pointer; transition: background 0.1s;
+        }
+        .search-result-item:hover { background: var(--s2); }
+        .search-result-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: var(--bl-d); color: var(--bl);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 14px;
+        }
+        .search-result-text { flex: 1; min-width: 0; }
+        .search-result-name { font-size: 13px; font-weight: 500; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .search-result-sub { font-size: 11px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ══ FILTER CHIPS ══ */
+        .filter-chips {
+            display: flex; gap: 6px; align-items: center;
+            padding: 6px 2px 2px; overflow: visible;
+        }
+        .chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 20px;
+            background: var(--s1); border: 0.5px solid var(--bd2);
+            font-size: 12px; font-family: inherit; font-weight: 500; color: var(--tx2);
+            cursor: pointer; flex-shrink: 0;
+            transition: all 0.15s; white-space: nowrap;
+            backdrop-filter: blur(8px);
+        }
+        .chip:hover { background: var(--s2); color: var(--tx); border-color: var(--bd2); }
+        .chip.active { background: var(--bl-d); color: var(--bl); border-color: var(--bl-b); font-weight: 600; }
+        .chip svg { width: 14px; height: 14px; }
+        .chip-more-wrap { position: relative; }
+        .chip-dropdown {
+            display: none; position: absolute; top: calc(100% + 6px); right: 0;
+            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 12px; box-shadow: var(--shadow-lg);
+            min-width: 160px; z-index: 1100; overflow: hidden;
+            animation: chipDropIn 0.15s ease-out;
+        }
+        @keyframes chipDropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        .chip-dropdown.open { display: block; }
+        .chip-dropdown-item {
+            display: flex; align-items: center; gap: 8px;
+            width: 100%; padding: 9px 14px; border: none; background: none;
+            font-size: 12px; font-family: inherit; color: var(--tx2); cursor: pointer;
+            transition: background 0.1s; text-align: left;
+        }
+        .chip-dropdown-item:hover { background: var(--s2); color: var(--tx); }
+        .chip-dropdown-item:active { background: var(--s3); }
+        .chip-dropdown-item.active { color: var(--bl); font-weight: 600; background: var(--bl-d); }
+        .chip-dropdown-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+        /* ══ RIGHT-SIDE CONTROLS ══ */
+        .gps-btn-wrap { position: fixed; right: 12px; bottom: 80px; z-index: var(--z-controls); }
+        .map-controls {
+            position: fixed; right: 12px; top: 50%;
+            transform: translateY(-50%); z-index: var(--z-controls);
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .map-btn {
+            width: 38px; height: 38px; border-radius: 8px;
+            background: var(--s1); border: 0.5px solid var(--bd2); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-md); color: var(--tx2);
+            transition: all 0.15s; flex-shrink: 0;
+            position: relative; overflow: hidden; backdrop-filter: blur(8px);
+        }
+        .map-btn:hover { background: var(--s2); color: var(--tx); }
+        .map-btn:active { transform: scale(0.9); background: var(--s3); }
+        .map-btn.active { color: var(--bl); background: var(--bl-d); border-color: var(--bl-b); }
+        .map-btn svg { width: 18px; height: 18px; transition: transform 0.2s; }
+        .map-btn.gps-searching { color: var(--yellow); animation: gps-btn-pulse 1.2s ease-in-out infinite; }
+        .map-btn.gps-found { color: var(--bl); }
+        .map-btn.gps-tracking { color: var(--bl); box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md); animation: gps-track-pulse 2s ease-in-out infinite; }
+        @keyframes gps-track-pulse { 0%,100% { box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md); } 50% { box-shadow: 0 0 0 5px rgba(79,138,255,0.1), var(--shadow-md); } }
+        @keyframes gps-btn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .map-btn-group {
+            background: var(--s1); border-radius: 8px;
+            border: 0.5px solid var(--bd2);
+            box-shadow: var(--shadow-md); overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .map-btn-group .map-btn { width: 38px; height: 38px; border-radius: 0; box-shadow: none; border: none; }
+        .map-btn-group .map-btn:not(:last-child) { border-bottom: 0.5px solid var(--bd3); }
+
+        /* ══ FAB ══ */
+        .fab {
+            position: fixed; right: 14px; bottom: 20px; z-index: var(--z-fab);
+            background: var(--bl); border: none; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(79,138,255,0.4); padding: 11px 18px;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; font-weight: 600; font-family: inherit;
+            color: #fff; cursor: pointer; transition: all 0.2s;
+        }
+        .fab:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(79,138,255,0.5); }
+        .fab:active { transform: scale(0.96); }
+        .fab svg { color: white; width: 18px; height: 18px; }
+        .fab.add-mode { background: var(--red); box-shadow: 0 4px 20px rgba(255,95,95,0.4); }
+        .fab.add-mode svg { color: white; }
+
+        /* ══ COUNT BADGE ══ */
+        .count-pill {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: var(--z-fab);
+            background: var(--s1); border: 0.5px solid var(--bd2); color: var(--tx);
+            border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 500;
+            box-shadow: var(--shadow-md); pointer-events: none;
+            opacity: 0; transition: opacity 0.3s; white-space: nowrap;
+        }
+        .count-pill.show { opacity: 1; }
+
+        /* ══ INFO PANEL ══ */
+        .info-panel {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: min(320px, 85vw); background: var(--s1); z-index: var(--z-info-panel);
+            border-right: 0.5px solid var(--bd2);
+            box-shadow: var(--shadow-lg); transform: translateX(-110%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .info-panel.open { transform: translateX(0); }
+        .info-panel-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: var(--z-info-backdrop); }
+        .info-panel-backdrop.show { display: block; }
+        .info-panel-header {
+            padding: 14px 14px 8px; display: flex; align-items: center; gap: 8px;
+            border-bottom: 0.5px solid var(--bd3); flex-shrink: 0;
+        }
+        .info-panel-close {
+            width: 32px; height: 32px; border-radius: 8px; border: none; background: none;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--tx2); flex-shrink: 0;
+        }
+        .info-panel-close:hover { background: var(--s2); color: var(--tx); }
+        .info-panel-title { font-size: 15px; font-weight: 600; flex: 1; letter-spacing: 0.02em; }
+        .info-panel-body { flex: 1; overflow-y: auto; background: var(--s2); }
+        /* Mobile: bottom sheet — ไม่บังแผนที่ */
+        @media (max-width: 599px) {
+            .info-panel {
+                top: auto; left: 0; right: 0; bottom: 0;
+                width: 100%; max-height: 75vh;
+                border-radius: 20px 20px 0 0;
+                transform: translateY(110%);
+                transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            }
+            .info-panel.open { transform: translateY(0); }
+            .info-panel-header { padding-top: 8px; }
+            .info-panel-drag {
+                width: 36px; height: 4px; background: var(--bd3);
+                border-radius: 2px; margin: 8px auto 4px; display: block;
+            }
+        }
+
+        .stats-section { padding: 14px; }
+        .stats-header { font-size: 10px; font-weight: 600; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+        .stats-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--bd3); }
+        .stats-row:last-child { border-bottom: none; }
+        .stats-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .stats-name { flex: 1; font-size: 13px; color: var(--tx); }
+        .stats-count { font-size: 12px; font-weight: 600; color: var(--tx2); }
+        .stats-bar-wrap { width: 50px; height: 3px; background: var(--bd3); border-radius: 2px; }
+        .stats-bar { height: 100%; border-radius: 2px; background: var(--bl); }
+
+        /* ══ PLACE CARD ══ */
+        .place-card {
+            position: fixed; bottom: -100%; left: 0; right: 0;
+            background: var(--s1); border-top: 0.5px solid var(--bd2);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 30px rgba(0,0,0,.5); z-index: var(--z-place-card);
+            transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1);
+            max-height: 60vh; overflow-y: auto;
+        }
+        .place-card.open { bottom: 0; }
+        @media (min-width: 600px) {
+            .place-card {
+                position: fixed; top: 72px; bottom: auto; left: 10px;
+                width: var(--sidebar-w); border-radius: var(--radius);
+                border: 0.5px solid var(--bd2);
+                max-height: calc(100vh - 90px); box-shadow: var(--shadow-lg);
+                opacity: 0; transform: translateY(10px) scale(0.98);
+                transition: opacity 0.22s ease, transform 0.28s cubic-bezier(0.34,1.2,0.64,1);
+                pointer-events: none;
+            }
+            .place-card.open { bottom: auto; top: 72px; opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+        }
+        .place-card-drag { width: 32px; height: 3px; background: var(--bd2); border-radius: 2px; margin: 8px auto 2px; }
+        @media (min-width: 600px) { .place-card-drag { display: none; } }
+        .place-card-close {
+            position: absolute; top: 8px; right: 10px;
+            width: 28px; height: 28px; border-radius: 8px;
+            border: none; background: var(--s2); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--tx3); font-size: 14px; transition: all 0.15s;
+            z-index: 10; pointer-events: auto;
+        }
+        .place-card-close:hover { background: var(--s3); color: var(--tx); }
+        .place-card-content { padding: 6px 14px 20px; }
+        .place-card-name { font-size: 18px; font-weight: 600; color: var(--tx); margin-bottom: 3px; padding-right: 36px; line-height: 1.3; }
+        .place-card-meta { font-size: 12px; color: var(--tx2); margin-bottom: 12px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .place-card-meta .dot { color: var(--tx3); }
+        .place-card-actions { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+        .place-action-btn {
+            flex: 1; min-width: 54px; display: flex; flex-direction: column;
+            align-items: center; gap: 3px; padding: 9px 4px;
+            background: var(--s2); border: 0.5px solid var(--bd3); border-radius: 10px;
+            cursor: pointer; transition: all 0.15s; text-decoration: none;
+        }
+        .place-action-btn:hover { background: var(--s3); transform: translateY(-1px); border-color: var(--bd2); }
+        .place-action-btn:active { transform: scale(0.95); }
+        .place-action-btn.red { background: rgba(255,95,95,0.1); border-color: rgba(255,95,95,0.2); }
+        .place-action-btn.green { background: rgba(45,255,160,0.08); border-color: rgba(45,255,160,0.2); }
+        .place-action-btn.yellow { background: rgba(255,184,48,0.1); border-color: rgba(255,184,48,0.2); }
+        .place-action-btn.purple { background: rgba(176,111,255,0.1); border-color: rgba(176,111,255,0.2); }
+        .place-action-btn.orange { background: rgba(255,122,92,0.1); border-color: rgba(255,122,92,0.2); }
+        .place-action-icon { font-size: 18px; }
+        .place-action-label { font-size: 10px; font-weight: 600; color: var(--tx2); font-family: inherit; }
+        .place-action-btn.red .place-action-label { color: var(--red); }
+        .place-action-btn.green .place-action-label { color: var(--green); }
+        .place-action-btn.yellow .place-action-label { color: var(--yellow); }
+        .place-action-btn.purple .place-action-label { color: #b06fff; }
+        .place-action-btn.orange .place-action-label { color: #ff7a5c; }
+        .place-card-divider { height: 0.5px; background: var(--bd3); margin: 10px 0; }
+        .place-card-row { display: flex; align-items: flex-start; gap: 12px; padding: 7px 0; }
+        .place-card-row-icon { color: var(--tx3); width: 18px; flex-shrink: 0; margin-top: 1px; font-size: 14px; }
+        .place-card-row-text { flex: 1; font-size: 13px; color: var(--tx); line-height: 1.5; }
+        .place-card-row-text small { color: var(--tx3); font-size: 11px; }
+
+        /* ══ LIST PANEL ══ */
+        .list-panel {
+            position: fixed; bottom: -100%; left: 0; right: 0;
+            background: var(--s1); border-top: 0.5px solid var(--bd2); border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 30px rgba(0,0,0,.5); z-index: var(--z-list-panel);
+            transition: bottom 0.3s cubic-bezier(0.4,0,0.2,1);
+            max-height: 60vh; display: flex; flex-direction: column;
+        }
+        .list-panel.open { bottom: 0; }
+        @media (min-width: 600px) {
+            .list-panel {
+                position: fixed; top: 72px; bottom: auto; left: 10px;
+                width: var(--sidebar-w); border-radius: var(--radius);
+                border: 0.5px solid var(--bd2);
+                max-height: calc(100vh - 90px); box-shadow: var(--shadow-lg);
+            }
+        }
+        .list-panel-header {
+            padding: 14px 14px 8px; display: flex; align-items: center;
+            justify-content: space-between; border-bottom: 0.5px solid var(--bd3); flex-shrink: 0;
+        }
+        .list-panel-title { font-size: 14px; font-weight: 600; color: var(--tx); }
+        .list-panel-close {
+            border: none; background: var(--s2); font-size: 14px; cursor: pointer; color: var(--tx2);
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; z-index: 1060; pointer-events: auto;
+            flex-shrink: 0; margin-left: 6px; transition: all 0.15s;
+        }
+        .list-panel-close:hover { background: var(--s3); color: var(--tx); }
+        .list-panel-close:active { transform: scale(0.9); }
+        .list-body { overflow-y: auto; flex: 1; }
+        .list-sort-bar {
+            display: flex; gap: 5px; padding: 7px 10px; border-bottom: 0.5px solid var(--bd3);
+            overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+        }
+        .list-sort-bar::-webkit-scrollbar { display: none; }
+        .sort-btn {
+            padding: 3px 10px; border-radius: 12px; border: 0.5px solid var(--bd3); background: var(--s2);
+            font-size: 11px; font-family: inherit; color: var(--tx3); cursor: pointer;
+            white-space: nowrap; transition: all 0.12s;
+        }
+        .sort-btn.active { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 600; }
+        .list-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; cursor: pointer; border-bottom: 0.5px solid var(--bd3);
+            transition: background 0.1s;
+        }
+        .list-item:hover { background: var(--s2); }
+        .list-item:last-child { border-bottom: none; }
+        .list-item-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+        .list-item-text { flex: 1; min-width: 0; }
+        .list-item-name { font-size: 13px; font-weight: 500; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-item-sub { font-size: 11px; color: var(--tx3); }
+        .list-item-chevron { color: var(--tx3); font-size: 14px; }
+
+        /* ══ MODAL ══ */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7); z-index: var(--z-modal);
+            align-items: center; justify-content: center;
+            padding: 16px; backdrop-filter: blur(6px);
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 20px;
+            width: 100%; max-width: 420px;
+            max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            animation: modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.9) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        .modal-header { padding: 20px 20px 0; font-size: 17px; font-weight: 600; color: var(--tx); flex-shrink: 0; letter-spacing: 0.01em; }
+        .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; min-height: 0; }
+        .modal-field { margin-bottom: 14px; }
+        .modal-field label { display: block; font-size: 10px; font-weight: 600; color: var(--bl); margin-bottom: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
+        .modal-field input, .modal-field select, .modal-field textarea {
+            width: 100%; padding: 10px 12px; border: 0.5px solid var(--bd2); border-radius: 10px;
+            font-size: 14px; font-family: inherit; color: var(--tx);
+            outline: none; transition: border-color 0.15s, box-shadow 0.15s; background: var(--s2);
+        }
+        .modal-field textarea { resize: vertical; min-height: 64px; }
+        .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--bl); box-shadow: 0 0 0 2px var(--bl-d); }
+        .latlng-row { display: flex; gap: 8px; }
+        .latlng-row .modal-field { flex: 1; }
+        .gps-modal-btn {
+            width: 100%; padding: 9px;
+            border: 0.5px dashed var(--bd2); border-radius: 10px;
+            background: var(--s2); color: var(--bl);
+            font-size: 12px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.15s; margin-bottom: 14px;
+        }
+        .gps-modal-btn:hover { border-color: var(--bl); background: var(--bl-d); }
+        .modal-footer { padding: 10px 0 4px; display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: -16px; margin: 0 -20px -16px; padding: 10px 20px 16px; background: var(--s1); border-top: 0.5px solid var(--bd3); z-index: 1; }
+        .modal-btn { padding: 8px 20px; border-radius: 20px; border: none; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+        .modal-btn-cancel { background: none; color: var(--tx2); border: 0.5px solid var(--bd2); }
+        .modal-btn-cancel:hover { background: var(--s2); color: var(--tx); }
+        .modal-btn-save { background: var(--bl); color: white; }
+        .modal-btn-save:hover { filter: brightness(1.1); box-shadow: 0 2px 12px rgba(79,138,255,.4); }
+
+        /* ══ FILTER MODAL ══ */
+        .filter-choice-list { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow-y: auto; padding: 4px 0; }
+        .filter-choice-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; border-radius: 10px; cursor: pointer;
+            border: 0.5px solid transparent; transition: all 0.12s;
+            font-size: 13px; color: var(--tx2);
+        }
+        .filter-choice-item:hover { background: var(--s2); color: var(--tx); }
+        .filter-choice-item.selected { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 600; }
+        .filter-choice-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .filter-choice-count { margin-left: auto; font-size: 11px; color: var(--tx3); font-weight: 600; background: var(--s2); padding: 1px 7px; border-radius: 10px; }
+
+        .token-modal { max-width: 380px; }
+        .token-icon { text-align: center; font-size: 48px; margin: 24px 0 8px; }
+        .token-title { text-align: center; font-size: 20px; font-weight: 600; padding: 0 24px; }
+        .token-sub { text-align: center; font-size: 14px; color: var(--tx2); padding: 8px 24px 4px; line-height: 1.6; }
+        .confirm-modal { max-width: 320px; }
+        .confirm-icon { text-align: center; font-size: 36px; padding: 24px 24px 8px; }
+        .confirm-title { font-size: 20px; font-weight: 600; padding: 0 24px; }
+        .confirm-text { font-size: 14px; color: var(--tx2); padding: 8px 24px 16px; line-height: 1.6; }
+        .confirm-footer { padding: 8px 16px 16px; display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-danger { background: var(--red) !important; }
+        .btn-danger:hover { background: #b31412 !important; }
+
+        /* ══ ADD BANNER ══ */
+        .add-banner {
+            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+            z-index: 1500; background: var(--s1); border: 0.5px solid var(--bl); color: var(--tx);
+            padding: 9px 16px; border-radius: 20px; font-size: 12px; font-weight: 500;
+            box-shadow: 0 0 0 2px var(--bl-d), var(--shadow-lg); display: none; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .add-banner.show { display: flex; }
+        .add-banner-cancel {
+            background: rgba(255,95,95,0.15); border: none; color: var(--red);
+            padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; font-family: inherit;
+        }
+        .add-banner-cancel:hover { background: rgba(255,95,95,0.25); }
+
+        /* ══ MEASURE BANNER ══ */
+        .measure-banner {
+            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+            z-index: 1500; background: var(--s1); border: 0.5px solid #b06fff; color: var(--tx);
+            padding: 9px 16px; border-radius: 20px; font-size: 12px; font-weight: 500;
+            box-shadow: 0 0 0 2px rgba(176,111,255,0.15), var(--shadow-lg); display: none; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .measure-banner.show { display: flex; }
+        .measure-banner-cancel {
+            background: rgba(176,111,255,0.15); border: none; color: #b06fff;
+            padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; font-family: inherit;
+        }
+
+        #crosshair {
+            display: none; position: fixed; pointer-events: none; z-index: var(--z-crosshair);
+            transform: translate(-50%, -100%); font-size: 28px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,.4));
+        }
+        #crosshair.show { display: block; }
+
+        /* ══ LAT/LNG HINT — desktop only ══ */
+        .latlng-hint {
+            position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+            z-index: var(--z-hint); background: rgba(32,33,36,0.7); color: white;
+            padding: 4px 10px; border-radius: 8px; font-size: 11px;
+            pointer-events: none; opacity: 0; transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+        .latlng-hint.show { opacity: 0.6; }
+        /* ซ่อนบนมือถือ */
+        @media (max-width: 599px) {
+            .latlng-hint { display: none !important; }
+        }
+
+        /* ══ TOAST ══ */
+        .save-toast {
+            position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+            z-index: var(--z-toast);
+            background: var(--s1); border: 0.5px solid var(--bd2); color: var(--tx);
+            padding: 9px 18px; border-radius: 10px;
+            font-size: 13px; box-shadow: var(--shadow-lg);
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+        }
+        .save-toast.show { opacity: 1; }
+        .save-toast.error { background: rgba(255,95,95,0.15); border-color: rgba(255,95,95,0.3); color: var(--red); }
+        .save-toast.success { background: rgba(45,255,160,0.1); border-color: rgba(45,255,160,0.25); color: var(--green); }
+
+        /* ══ INFO PANEL MENU ══ */
+        .om-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; border: none; background: none;
+            width: 100%; text-align: left;
+            font-size: 13px; font-family: inherit; color: var(--tx2); cursor: pointer;
+            transition: background 0.12s;
+        }
+        .om-item:not(:last-child) { border-bottom: 0.5px solid var(--bd3); }
+        .om-item:hover { background: var(--s2); color: var(--tx); }
+        .om-item:active { background: var(--s3); }
+        .om-item svg { width: 15px; height: 15px; color: var(--tx3); flex-shrink: 0; }
+        .om-item.red { color: var(--red); }
+        .om-item.red svg { color: var(--red); }
+        .om-sep { height: 0.5px; background: var(--bd3); margin: 4px 0; }
+
+        /* ══ YOU-ARE-HERE ══ */
+        .you-are-here-wrap { position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
+        .you-are-here-ring { position: absolute; width: 48px; height: 48px; border-radius: 50%; background: rgba(26,115,232,0.15); animation: gps-ring 2.4s ease-out infinite; }
+        .you-are-here-ring:nth-child(2) { animation-delay: 0.8s; }
+        .you-are-here-ring:nth-child(3) { animation-delay: 1.6s; }
+        @keyframes gps-ring { 0% { transform: scale(0.4); opacity: 0.8; } 100% { transform: scale(1.8); opacity: 0; } }
+        .you-are-here { position: relative; width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid white; box-shadow: 0 2px 8px rgba(26,115,232,0.5); z-index: 1; }
+
+        /* ══ DISTANCE BADGE ══ */
+        .distance-badge { display: inline-block; background: var(--bl-d); color: var(--bl); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; margin-left: 5px; border: 0.5px solid var(--bl-b); }
+
+        /* ══ LIGHT MODE override (default is dark) ══ */
+        body.light {
+            --surface: #ffffff; --surface2: #f8f9fa; --surface3: #f1f3f4; --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
+            --text: #202124; --text2: #5f6368; --text3: #9aa0a6;
+            --accent: #1a73e8; --accent2: #188038;
+            --pill: rgba(26,115,232,0.1); --pill-border: rgba(26,115,232,0.3);
+            background: #e8eaed;
+        }
+        body.light .search-input { color: var(--tx); }
+        body.light .modal-field input, body.light .modal-field select, body.light .modal-field textarea { background: var(--s2); color: var(--tx); }
+
+        /* ══ DESKTOP ══ */
+        /* ══════════════════════════════════════
+           MOBILE COMPONENTS (hidden on desktop)
+        ════════════════════════════════════════ */
+        .mob-search-row { display: none; flex-shrink: 0; padding: 8px 12px 0; }
+        .mob-search { height: 38px; display: flex; align-items: center; gap: 7px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 10px; padding: 0 11px; width: 100%; cursor: text; }
+        .mob-search:focus-within { border-color: var(--bl-b); }
+        .mob-search input { background: none; border: none; outline: none; color: var(--tx); font-size: 13px; width: 100%; font-family: inherit; }
+        .mob-search input::placeholder { color: var(--tx3); }
+
+        .mob-chips-row { display: none; gap: 6px; padding: 8px 12px 4px; overflow-x: auto; flex-shrink: 0; }
+        .mob-chips-row::-webkit-scrollbar { display: none; }
+        .chip { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; border: 0.5px solid var(--bd2); background: var(--s2); font-size: 11.5px; color: var(--tx2); white-space: nowrap; cursor: pointer; transition: all 0.13s; user-select: none; flex-shrink: 0; }
+        .chip:hover { color: var(--tx); }
+        .chip.on { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); }
+        .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+        .mob-nav { display: none; height: 58px; flex-shrink: 0; background: var(--s1); border-top: 0.5px solid var(--bd); align-items: center; z-index: 20; }
+        .mob-nb { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; height: 100%; user-select: none; }
+        .mob-nb-ico { font-size: 18px; color: var(--tx3); transition: color 0.13s; }
+        .mob-nb-lbl { font-size: 9.5px; color: var(--tx3); transition: color 0.13s; }
+        .mob-nb.on .mob-nb-ico { color: var(--bl); }
+        .mob-nb.on .mob-nb-lbl { color: var(--bl); }
+        .mob-nb-add { width: 46px; height: 46px; border-radius: 50%; background: var(--bl); display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; box-shadow: 0 4px 16px rgba(91,143,255,0.4); }
+
+        .mob-drawer { position: fixed; inset: 0; z-index: 80; display: none; }
+        .mob-drawer.show { display: block; }
+        .mob-drawer-bg { position: absolute; inset: 0; background: rgba(18,19,26,0.7); }
+        .mob-drawer-panel { position: absolute; left: 0; top: 0; bottom: 0; width: 280px; background: var(--s1); border-right: 0.5px solid var(--bd2); display: flex; flex-direction: column; overflow: hidden; animation: slideRight 0.22s ease; }
+        @keyframes slideRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        .mob-drawer-hd { padding: 16px 14px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 0.5px solid var(--bd); }
+        .mob-drawer-title { font-size: 14px; font-weight: 600; }
+        .mob-drawer-close { width: 26px; height: 26px; border-radius: 6px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx2); font-size: 14px; }
+
+        .mob-sheet { position: fixed; left: 0; right: 0; bottom: 58px; background: var(--s1); border-radius: 14px 14px 0 0; border-top: 0.5px solid var(--bd2); z-index: 30; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.22,1,0.36,1); max-height: 55vh; display: flex; flex-direction: column; }
+        .mob-sheet.open { transform: translateY(0); }
+        .mob-sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--bd2); margin: 10px auto 8px; flex-shrink: 0; cursor: pointer; }
+        .mob-sheet-hd { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 10px; border-bottom: 0.5px solid var(--bd); flex-shrink: 0; }
+        .mob-sheet-title { font-size: 13px; font-weight: 700; }
+        .mob-sheet-close { font-size: 16px; color: var(--tx3); cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .mob-sheet-list { flex: 1; overflow-y: auto; }
+        .mob-sheet-list::-webkit-scrollbar { display: none; }
+
+        /* Mobile list items */
+        .ms-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--bd); cursor: pointer; }
+        .ms-item:hover { background: var(--s2); }
+        .ms-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .ms-info { flex: 1; min-width: 0; }
+        .ms-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ms-meta { font-size: 11px; color: var(--tx3); }
+        .ms-chevron { font-size: 12px; color: var(--tx3); }
+
+        @media (min-width: 768px) {
+            .sidebar { position: static; width: 252px; transform: none !important; }
+            .search-bar { display: none !important; }
+            .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
+        }
+
+        /* ══ MOBILE ══ */
+        @media (max-width: 767px) {
+            .app { padding-bottom: env(safe-area-inset-bottom, 0); }
+            .body { flex-direction: column; position: relative; }
+            /* Hide desktop sidebar on mobile, use drawer instead */
+            .sidebar { display: none; }
+            .sidebar-backdrop { display: none !important; }
+            .main { position: relative; flex: 1; }
+            /* Mobile layout structure */
+            .mob-search-row { display: flex; }
+            .mob-chips-row { display: flex; }
+            .mob-nav { display: flex; }
+            /* View tabs still visible but can hide on very small screens */
+            .vtabs { overflow-x: auto; scrollbar-width: none; height: 36px; }
+            .vtabs::-webkit-scrollbar { display: none; }
+            .vt { white-space: nowrap; padding: 4px 9px; font-size: 11px; }
+            /* Hide desktop btbar, use mob-nav instead */
+            .btbar { display: none !important; }
+            /* Zoom controls repositioned for mobile nav */
+            .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
+            .zb { width: 34px; height: 34px; font-size: 16px; }
+            /* Map popup becomes bottom sheet style */
+            .map-popup { 
+                right: 10px; left: 10px; top: auto; bottom: 68px;
+                width: auto; max-width: none;
+                max-height: 50vh; overflow-y: auto;
+                border-radius: 12px;
+            }
+            .map-stats { left: 10px; top: 10px; gap: 6px; z-index: 10; }
+            .msc { padding: 8px 12px; min-width: 80px; }
+            .msv { font-size: 18px; }
+            /* Stats and list views */
+            .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
+            .sv-row { grid-template-columns: 1fr; }
+            .sv-inner { padding: 12px; }
+            .list-view { position: fixed; inset: 50px 0 58px 0; }
+            .stats-view { position: fixed; inset: 50px 0 58px 0; }
+            /* List table adjustments */
+            .ltable { font-size: 12px; }
+            .lrow { grid-template-columns: 28px 1fr 70px 60px; }
+            .lrow.hd { display: none; } /* Hide headers on mobile */
+            .lrow > *:nth-child(5), .lrow > *:nth-child(6) { display: none; }
+            /* Modal adjustments */
+            .modal { width: calc(100vw - 24px); max-height: 85vh; border-radius: 14px; }
+            /* Topbar mobile */
+            .topbar { padding: 0 12px; gap: 8px; height: 48px; }
+            .search-box { display: none; } /* Use mob-search instead */
+            .si { font-size: 14px; }
+            .logo-txt { display: none; }
+            .pill-badge, .live-p, .live-p span, .tb-sep:last-of-type, #btnUpload, #btnDownload { display: none; }
+            .tb-right { gap: 6px; }
+            .av { width: 26px; height: 26px; font-size: 8px; }
+            .tb-icon-btn { width: 32px; height: 32px; font-size: 15px; }
+            /* Toolbar mobile */
+            .lv-toolbar { padding: 0 10px; gap: 6px; height: 40px; }
+            .lv-tb-btn { font-size: 11px; padding: 0 8px; height: 28px; }
+            .lv-count { font-size: 10px; }
+            /* Crosshair */
+            #crosshair { font-size: 32px; }
+            /* View tabs can be hidden if needed */
+            .hide-tabs .vtabs { display: none; }
+        }
+
+        /* Small phones */
+        @media (max-width: 380px) {
+            .vt { padding: 3px 7px; font-size: 10px; }
+            .mob-nav { height: 52px; }
+            .mob-nb-ico { font-size: 16px; }
+            .mob-nb-lbl { font-size: 9px; }
+            .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
+            .mob-sheet { bottom: 52px; }
+            .map-popup { bottom: 62px; }
+            .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
+            .map-stats { left: 6px; top: 6px; }
+            .msc { padding: 6px 10px; min-width: 70px; }
+            .msv { font-size: 16px; }
+            .msl { font-size: 9px; }
+            .mob-sheet-title { font-size: 12px; }
+            .lrow { grid-template-columns: 26px 1fr 60px 50px; }
+        }
+
+        /* Leaflet overrides */
+        .leaflet-control-zoom { display: none; }
+        .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 0 !important; overflow: hidden; }
+        .leaflet-popup-content { margin: 0 !important; }
+        .leaflet-popup-tip-container { display: none; }
+        .leaflet-control-attribution { font-size: 10px; }
+
+        /* Route number tooltip */
+        .route-number-tooltip {
+            background: #4285f4 !important; color: #fff !important;
+            border: none !important; border-radius: 50% !important;
+            padding: 0 !important; width: 20px !important; height: 20px !important;
+            line-height: 20px !important; text-align: center !important;
+            font-size: 10px !important; font-weight: 700 !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,.3) !important;
+        }
+        .route-number-tooltip::before { display: none !important; }
+
+        /* Sync indicator */
+        .sync-ok { color: var(--gn) !important; }
+        .sync-pending { color: var(--yellow) !important; }
+        .sync-error { color: var(--red) !important; }
+        .sync-active { color: var(--bl) !important; animation: sync-spin 1s linear infinite; }
+        @keyframes sync-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bl); animation: sync-dot 1s linear infinite; }
+        @keyframes sync-dot { 0% { transform: scale(1); } 50% { transform: scale(0.5); } 100% { transform: scale(1); } }
+
+        /* Cluster */
+        .marker-cluster {
+            background-clip: padding-box;
+            border-radius: 50%;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+            will-change: transform;
+        }
+        .marker-cluster div {
+            width: 30px; height: 30px;
+            margin: 5px;
+            text-align: center; border-radius: 50%;
+            font: bold 12px 'Noto Sans Thai', sans-serif;
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            border: 1.5px solid rgba(255,255,255,0.2);
+        }
+        .cluster-density-low    { background: rgba(45,255,160,0.15) !important; }
+        .cluster-density-low div    { background: rgba(45,255,160,0.85) !important; color: #0d0d0f !important; }
+        .cluster-density-medium { background: rgba(255,184,48,0.15) !important; }
+        .cluster-density-medium div { background: rgba(255,184,48,0.85) !important; color: #0d0d0f !important; }
+        .cluster-density-high   { background: rgba(255,95,95,0.15) !important; }
+        .cluster-density-high div   { background: rgba(255,95,95,0.85) !important; }
+        .cluster-density-extreme{ background: rgba(176,111,255,0.15) !important; }
+        .cluster-density-extreme div{ background: rgba(176,111,255,0.85) !important; }
+        /* Leaflet cluster default animation override */
+        .leaflet-cluster-anim .leaflet-marker-icon,
+        .leaflet-cluster-anim .leaflet-marker-shadow {
+            transition: left 0.25s ease, top 0.25s ease, opacity 0.2s ease !important;
+        }
+        /* dot marker smooth */
+        .leaflet-marker-icon div[data-idx] {
+            transition: transform 0.15s ease;
+        }
+
+        /* ══ PERFORMANCE HINTS ══ */
+        .leaflet-map-pane,
+        .leaflet-tile-pane,
+        .leaflet-overlay-pane { will-change: transform; }
+        .info-panel  { will-change: transform; }
+        .place-card  { will-change: transform, opacity; }
+        .list-panel  { will-change: transform; contain: layout style; }
+        .modal-overlay { contain: layout style; }
+        .save-toast  { will-change: opacity; }
+        /* place-card GPU transition */
+        .place-card {
+            transition: opacity 0.28s cubic-bezier(0.4,0,0.2,1),
+                        transform 0.32s cubic-bezier(0.34,1.2,0.64,1);
+        }
+        @media (max-width: 599px) {
+            .place-card { transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); }
+            .place-card.open { transform: translateY(0) !important; bottom: 0 !important; }
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
+        /* bt-tooltip dark */
+        .bt-tooltip { background: var(--s1) !important; color: var(--tx) !important; border: 0.5px solid var(--bd2) !important; border-radius: 6px !important; font-size: 11px !important; padding: 3px 8px !important; box-shadow: var(--shadow-md) !important; }
+        .bt-tooltip::before { display:none !important; }
+    </style>
+</head>
+<body>
+<!-- LOADING SCREEN -->
+<div class="loader" id="loader">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="logo-sq">BT</div>
+        <span style="font-size:15px;font-weight:700;color:var(--tx);">BT Locations</span>
+    </div>
+    <div class="spin"></div>
+    <div class="loader-t" id="loaderTxt">กำลังโหลดข้อมูล...</div>
+</div>
+
+<div class="app" id="app" style="display:none;">
+    <!-- ══ TOPBAR ══ -->
+    <div class="topbar">
+        <div class="logo">
+            <div class="logo-sq">BT</div>
+            <span class="logo-txt">Locations</span>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="search-box">
+            <span class="si">⌕</span>
+            <input type="text" id="topSearch" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+        </div>
+        <div class="tb-right">
+            <div class="pill-badge" id="totalBadge">0 จุด</div>
+            <div class="live-p">
+                <div class="live-dot"></div>
+                <span>live sync</span>
+            </div>
+            <div class="avs">
+                <div class="av" id="av1" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
+                <div class="av" id="av2" style="background:linear-gradient(135deg,#f5a623,#ff5c5c); margin-left:-5px;">A</div>
+                <div class="av" id="av3" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c); margin-left:-5px;">K</div>
+            </div>
+            <div class="tb-sep"></div>
+            <div class="tb-icon-btn" id="btnMenu" title="เมนู">☰</div>
+            <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
+            <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
+        </div>
+    </div>
+
+    <!-- ══ SIDEBAR BACKDROP (mobile) ══ -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+    <!-- ══ BODY ══ -->
+    <div class="body">
+        <!-- ══ SIDEBAR ══ -->
+        <div class="sidebar" id="sidebar">
+            <div class="sec-hd">Lists</div>
+            <div class="flist" id="listContainer">
+                <!-- Populated by JS -->
+            </div>
+            <div class="sdiv"></div>
+            <div class="sec-hd">เมือง</div>
+            <div class="clist" id="cityContainer">
+                <!-- Populated by JS -->
+            </div>
+            <div class="sfoot">
+                <button class="add-btn" id="btnAddLocation">+ เพิ่มจุดใหม่</button>
+                <div class="collab">
+                    <div class="avs">
+                        <div class="cav" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
+                        <div class="cav" style="background:linear-gradient(135deg,#f5a623,#ff5c5c); margin-left:-3px;">A</div>
+                        <div class="cav" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c); margin-left:-3px;">K</div>
+                    </div>
+                    <span class="ctxt" id="onlineCount">3 คนออนไลน์</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ MAIN ══ -->
+        <div class="main">
+            <!-- View tabs -->
+            <div class="vtabs">
+                <div class="vt on" id="vt-map" data-view="map"><span class="vt-i">◉</span> แผนที่</div>
+                <div class="vt" id="vt-list" data-view="list"><span class="vt-i">≡</span> รายการ</div>
+                <div class="vt" id="vt-stats" data-view="stats"><span class="vt-i">◧</span> Stats</div>
+                <div class="vt" id="vt-heat" data-view="heat"><span class="vt-i">◈</span> Heatmap</div>
+            </div>
+
+            <!-- View area -->
+            <div class="view-area">
+                <!-- Map view -->
+                <div class="map-view show" id="view-map">
+                    <div class="mgrid"></div>
+                    <div id="map"></div>
+                    
+                    <!-- Map popup (concept style) -->
+                    <div class="map-popup" id="mapPopup" style="display:none;">
+                        <div class="pp-tag" id="ppTag">List · City</div>
+                        <div class="pp-name" id="ppName">Location Name</div>
+                        <div class="pp-sub" id="ppSub">District · added by user</div>
+                        <div class="pp-meta">
+                            <div class="pp-mi">List<br><b id="ppList">-</b></div>
+                            <div class="pp-mi">เขต<br><b id="ppDist">-</b></div>
+                            <div class="pp-mi" id="ppTime">-</div>
+                        </div>
+                        <div class="pp-btns">
+                            <div class="ppb p" id="ppNav">นำทาง</div>
+                            <div class="ppb" id="ppEdit">แก้ไข</div>
+                            <div class="ppb" id="ppRoute">Route +</div>
+                        </div>
+                    </div>
+
+                    <!-- Map stats -->
+                    <div class="map-stats">
+                        <div class="msc">
+                            <div class="msv" style="color:var(--bl);" id="mapStatTotal">0</div>
+                            <div class="msl">จุดทั้งหมด</div>
+                        </div>
+                        <div class="msc">
+                            <div class="msv" style="color:var(--gn);" id="mapStatClusters">0</div>
+                            <div class="msl">clusters</div>
+                        </div>
+                    </div>
+
+                    <!-- Zoom controls -->
+                    <div class="zoom-c">
+                        <button class="zb" id="btnZoomIn">+</button>
+                        <div class="zsep"></div>
+                        <button class="zb" id="btnZoomOut">−</button>
+                    </div>
+
+                    <!-- Bottom toolbar -->
+                    <div class="btbar">
+                        <button class="bt on" id="btMap"><span class="bt-i">◉</span> Map</button>
+                        <button class="bt" id="btRoute"><span class="bt-i">◎</span> Route</button>
+                        <button class="bt" id="btHeat"><span class="bt-i">◈</span> Heat</button>
+                        <button class="bt" id="btAdd"><span class="bt-i">+</span> Add</button>
+                    </div>
+                </div>
+
+                <!-- List view -->
+                <div class="list-view" id="view-list" style="display:none;">
+                    <div class="lv-toolbar">
+                        <div class="lv-tb-btn" id="lvSelectAll">☐ เลือกทั้งหมด</div>
+                        <div class="lv-tb-btn" id="lvAdd">+ เพิ่มจุด</div>
+                        <div class="lv-tb-btn" id="lvExport">↑ Export</div>
+                        <div class="lv-tb-btn danger" id="lvBulkDel" style="display:none;">🗑 ลบที่เลือก (<span id="selCount">0</span>)</div>
+                        <span class="lv-count" id="lvCount">แสดง 0 จาก 0 จุด</span>
+                    </div>
+                    <div class="ltable" id="listTable"></div>
+                </div>
+
+                <!-- Stats view -->
+                <div class="stats-view" id="view-stats" style="display:none;">
+                    <div class="sv-inner">
+                        <div class="sv-grid">
+                            <div class="sv-card"><div class="sv-v" style="color:var(--bl);" id="svTotal">0</div><div class="sv-l">จุดทั้งหมด</div></div>
+                            <div class="sv-card"><div class="sv-v" style="color:var(--gn);" id="svCities">0</div><div class="sv-l">เมือง</div></div>
+                            <div class="sv-card"><div class="sv-v" style="color:var(--am);" id="svLists">0</div><div class="sv-l">Lists</div></div>
+                            <div class="sv-card"><div class="sv-v" style="color:var(--pu);" id="svOnline">3</div><div class="sv-l">ผู้ใช้ออนไลน์</div></div>
+                        </div>
+                        <div class="sv-row">
+                            <div class="sv-panel">
+                                <div class="sv-h">จุดต่อเมือง</div>
+                                <div id="cityBars"></div>
+                            </div>
+                            <div class="sv-panel">
+                                <div class="sv-h">สัดส่วน Lists</div>
+                                <div class="donut-wrap">
+                                    <svg width="80" height="80" viewBox="0 0 80 80" id="donutSvg"></svg>
+                                    <div class="donut-legend" id="donutLegend"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sv-panel">
+                            <div class="sv-h">เพิ่มล่าสุด</div>
+                            <div class="recent-list" id="recentList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Heatmap view -->
+                <div class="map-view" id="view-heat" style="display:none;">
+                    <div class="mgrid"></div>
+                    <div id="heatmap"></div>
+                    <div class="map-stats">
+                        <div class="msc"><div class="msv" style="color:var(--rd);">High</div><div class="msl">ความหนาแน่นสูง</div></div>
+                        <div class="msc"><div class="msv" style="color:var(--am);">Med</div><div class="msl">ปานกลาง</div></div>
+                    </div>
+                    <div class="btbar">
+                        <button class="bt" id="btHeatMap"><span class="bt-i">◉</span> Map</button>
+                        <button class="bt on"><span class="bt-i">◈</span> Heatmap</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Crosshair for add mode -->
+<div id="crosshair" style="display:none; position:fixed; pointer-events:none; z-index:200; font-size:28px; transform:translate(-50%,-100%);">📍</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<div id="versionBadge" style="position:fixed;bottom:4px;left:4px;font-size:10px;color:rgba(255,255,255,0.2);z-index:9999;pointer-events:none;font-family:monospace;"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+   MOBILE COMPONENTS (hidden on desktop)
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- Mobile search row -->
+<div class="mob-search-row" id="mobSearchRow">
+    <div class="mob-search">
+        <span class="si">🔍</span>
+        <input type="text" id="mobSearchInput" placeholder="ค้นหาจุด, เมือง, list...">
+    </div>
+</div>
+
+<!-- Mobile filter chips -->
+<div class="mob-chips-row" id="mobChipsRow">
+    <div class="chip on" id="chipAll" data-filter="all"><span class="chip-dot" style="background:var(--bl)"></span>ทั้งหมด</div>
+    <div class="chip" id="chipList" data-filter="list"><span class="chip-dot"></span>รายการ</div>
+    <div class="chip" id="chipCity" data-filter="city"><span class="chip-dot"></span>เมือง</div>
+    <div class="chip" id="chipFav" data-filter="fav">⭐ ชื่นชอบ</div>
+</div>
+
+<!-- Mobile bottom navigation -->
+<div class="mob-nav" id="mobNav">
+    <div class="mob-nb on" id="mn-map" onclick="mobSwitchView('map')">
+        <div class="mob-nb-ico">◉</div>
+        <div class="mob-nb-lbl">แผนที่</div>
+    </div>
+    <div class="mob-nb" id="mn-list" onclick="mobSwitchView('list')">
+        <div class="mob-nb-ico">≡</div>
+        <div class="mob-nb-lbl">รายการ</div>
+    </div>
+    <div class="mob-nb" onclick="openAddMode()">
+        <div class="mob-nb-add">+</div>
+    </div>
+    <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
+        <div class="mob-nb-ico">◧</div>
+        <div class="mob-nb-lbl">Stats</div>
+    </div>
+    <div class="mob-nb" id="mn-heat" onclick="mobSwitchView('heat')">
+        <div class="mob-nb-ico">◈</div>
+        <div class="mob-nb-lbl">Heat</div>
+    </div>
+</div>
+
+<!-- Mobile drawer -->
+<div class="mob-drawer" id="mobDrawer">
+    <div class="mob-drawer-bg" onclick="closeMobDrawer()"></div>
+    <div class="mob-drawer-panel">
+        <div class="mob-drawer-hd">
+            <span class="mob-drawer-title">BT Locations</span>
+            <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
+        </div>
+        <div style="padding:8px;flex:1;overflow-y:auto;">
+            <div class="sec-hd" style="padding-left:6px;">Lists</div>
+            <div class="flist" id="mobDrawerLists">
+                <!-- Populated by JS -->
+            </div>
+            <div class="sdiv"></div>
+            <div class="sec-hd" style="padding-left:6px;">เมือง</div>
+            <div id="mobDrawerCities" style="padding:0 8px;">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+        <div style="padding:12px;">
+            <button class="add-btn" onclick="openAddMode();closeMobDrawer()">+ เพิ่มจุดใหม่</button>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile bottom sheet -->
+<div class="mob-sheet" id="mobSheet">
+    <div class="mob-sheet-handle" onclick="toggleMobSheet()"></div>
+    <div class="mob-sheet-hd">
+        <span class="mob-sheet-title" id="mobSheetTitle">รายการจุด</span>
+        <span class="mob-sheet-close" onclick="closeMobSheet()">✕</span>
+    </div>
+    <div class="mob-sheet-list" id="mobSheetList"></div>
+</div>
+
+    <!-- ══ LIST FILTER MODAL ══ -->
+    <div class="modal-overlay" id="listFilterModalOverlay">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-header">กรองตามรายการ</div>
+            <div class="modal-body"><div class="filter-choice-list" id="listChoiceList"></div></div>
+            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
+                <button class="modal-btn" id="listRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
+                <button class="modal-btn" id="listMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมรายการ</button>
+                <div style="flex:1"></div>
+                <button class="modal-btn modal-btn-cancel" id="listFilterClear">ล้างตัวกรอง</button>
+                <button class="modal-btn modal-btn-save" id="listFilterClose">เสร็จ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ CITY FILTER MODAL ══ -->
+    <div class="modal-overlay" id="cityFilterModalOverlay">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-header">กรองตามเขต</div>
+            <div class="modal-body"><div class="filter-choice-list" id="cityChoiceList"></div></div>
+            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
+                <button class="modal-btn" id="cityRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
+                <button class="modal-btn" id="cityMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมเขต</button>
+                <div style="flex:1"></div>
+                <button class="modal-btn modal-btn-cancel" id="cityFilterClear">ล้างตัวกรอง</button>
+                <button class="modal-btn modal-btn-save" id="cityFilterClose">เสร็จ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ ADD/EDIT MODAL ══ -->
+    <div class="modal-overlay" id="editModalOverlay">
+        <div class="modal">
+            <div class="modal-header" id="editModalTitle">เพิ่มสถานที่</div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label>ชื่อสถานที่</label>
+                    <input type="text" id="modalName" placeholder="เช่น ร้านซ่อมฉัตรชัย">
+                </div>
+                <div class="modal-field">
+                    <label>รายการ (List)</label>
+                    <input type="text" id="modalList" placeholder="เช่น บางเขน" list="listSuggestions">
+                    <datalist id="listSuggestions"></datalist>
+                </div>
+                <div class="modal-field">
+                    <label>เขต (City)</label>
+                    <input type="text" id="modalCity" placeholder="เขต/อำเภอ" list="citySuggestions">
+                    <datalist id="citySuggestions"></datalist>
+                </div>
+                <div class="modal-field">
+                    <label>หมายเหตุ (ไม่บังคับ)</label>
+                    <textarea id="modalNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+                </div>
+                <div class="modal-field">
+                    <label>แท็ก (ไม่บังคับ, คั่นด้วย ,)</label>
+                    <input type="text" id="modalTags" placeholder="เช่น 7-11, ปั๊ม, ร้านชำ">
+                </div>
+                <div class="modal-field">
+                    <label>รูปภาพ (ไม่บังคับ)</label>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <label for="modalPhotoInput" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--s2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);border:1.5px dashed var(--bd3);transition:all .15s;">
+                            📷 เลือกรูป
+                        </label>
+                        <input type="file" id="modalPhotoInput" accept="image/*" style="display:none;">
+                        <button type="button" id="modalPhotoRemove" style="display:none;padding:6px 12px;background:#fce8e6;border:none;border-radius:8px;cursor:pointer;font-size:12px;color:var(--red);">ลบรูป</button>
+                    </div>
+                    <img id="modalPhotoPreview" style="display:none;max-width:100%;max-height:160px;border-radius:10px;margin-top:8px;object-fit:cover;border:1px solid var(--bd3);">
+                </div>
+                <button class="gps-modal-btn" id="btnUseGpsModal">📍 ใช้ตำแหน่งของฉัน</button>
+                <div class="latlng-row">
+                    <div class="modal-field">
+                        <label>Latitude</label>
+                        <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
+                    </div>
+                    <div class="modal-field">
+                        <label>Longitude</label>
+                        <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+                    </div>
+                </div>
+                <p style="font-size:12px;color:var(--blue);margin-top:-8px;">✅ หรือคลิกบนแผนที่เพื่อเลือกพิกัด</p>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" id="editModalCancel">ยกเลิก</button>
+                    <button class="modal-btn modal-btn-save" id="editModalSave">บันทึก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ TOKEN MODAL ══ -->
+    <div class="modal-overlay" id="tokenModalOverlay">
+        <div class="modal token-modal">
+            <div class="token-icon">🔑</div>
+            <div class="token-title">ตั้งค่า Sync</div>
+            <div class="token-sub">เลือกวิธี sync: ใช้ Worker (แนะนำ) หรือ Token โดยตรง</div>
+            <div class="modal-body">
+                <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px;">☁️ Cloudflare Worker (แนะนำ)</div>
+                <div class="modal-field">
+                    <label>Worker URL</label>
+                    <input type="url" id="workerUrlInput" placeholder="https://bt-locations-api.xxx.workers.dev">
+                </div>
+                <div class="modal-field">
+                    <label>API Key (ถ้ามี)</label>
+                    <input type="password" id="apiKeyInput" placeholder="optional">
+                </div>
+                <div style="border-top:1px solid var(--bd3);margin:12px 0;"></div>
+                <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px;">🔑 GitHub Token (ถ้าไม่มี Worker)</div>
+                <div class="modal-field">
+                    <label>Token</label>
+                    <input type="password" id="tokenInput" placeholder="github_pat_...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" id="tokenCancel">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save" id="tokenSave">บันทึก &amp; Sync</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ CONFIRM MODAL ══ -->
+    <div class="modal-overlay" id="confirmModalOverlay">
+        <div class="modal confirm-modal">
+            <div class="confirm-icon" id="confirmIcon">⚠️</div>
+            <div class="confirm-title" id="confirmTitle">ยืนยัน</div>
+            <div class="confirm-text" id="confirmText"></div>
+            <div class="confirm-footer">
+                <button class="modal-btn modal-btn-cancel" id="confirmCancel">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save btn-danger" id="confirmOk">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MEASURE RESULT ══ -->
+    <div class="modal-overlay" id="measureModalOverlay">
+        <div class="modal confirm-modal">
+            <div class="confirm-icon">📏</div>
+            <div class="confirm-title">ระยะทาง</div>
+            <div class="confirm-text" id="measureResultText"></div>
+            <div class="confirm-footer">
+                <button class="modal-btn modal-btn-cancel" id="measureModalClose">ปิด</button>
+                <button class="modal-btn modal-btn-save" id="measureModalClear">ลบเส้น</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SHARE/EXPORT MODAL (mobile-friendly) ══ -->
+    <div class="modal-overlay" id="shareModalOverlay">
+        <div class="modal confirm-modal">
+            <div class="confirm-icon">📤</div>
+            <div class="confirm-title">Export ข้อมูล</div>
+            <div class="confirm-text" id="shareModalText">เลือกวิธี export</div>
+            <div class="confirm-footer" style="flex-direction:column;gap:8px;">
+                <button class="modal-btn modal-btn-save" id="shareBtnDownload" style="width:100%;">💾 ดาวน์โหลดไฟล์ JSON</button>
+                <button class="modal-btn modal-btn-save" id="shareBtnShare" style="width:100%;background:#059669;" id="shareBtnShare">📱 แชร์ผ่าน (Share API)</button>
+                <button class="modal-btn modal-btn-save" id="shareBtnCopy" style="width:100%;background:#7b1fa2;">📋 คัดลอก JSON</button>
+                <button class="modal-btn modal-btn-cancel" id="shareBtnCancel">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ IMPORT DATA MODAL ══ -->
+    <div class="modal-overlay" id="importModalOverlay">
+        <div class="modal" style="width:420px;max-width:90vw;">
+            <div class="modal-header">นำเข้าข้อมูล</div>
+            <div class="modal-body">
+                <div class="frow">
+                    <label>วาง JSON โดยตรง</label>
+                    <textarea id="importJsonText" rows="6" placeholder="[{&quot;name&quot;:&quot;...&quot;, &quot;lat&quot;:13.7, &quot;lng&quot;:100.5, &quot;list&quot;:&quot;...&quot;}]"></textarea>
+                </div>
+                <div style="text-align:center;color:var(--tx3);font-size:12px;margin:10px 0;">— หรือ —</div>
+                <div class="frow">
+                    <label>URL ข้อมูล (raw JSON)</label>
+                    <input type="text" id="importUrl" placeholder="https://.../data.json">
+                </div>
+                <div style="margin-top:12px;padding:10px;background:var(--s1);border-radius:8px;font-size:11px;color:var(--tx2);">
+                    <b>รองรับ:</b> Array ของจุด <code>[{name,lat,lng,list,city}]</code> หรือ <code>{lists:[{name,points:[]}]}</code>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeImportModal()">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save" onclick="doImportData()">นำเข้า</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="save-toast" id="saveToast"></div>
+    <input type="file" id="fileImport" accept=".json,.csv,.kml,.gpx,.geojson" style="display:none">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script>
+    (function(){
+        var v=Date.now();
+        var s1=document.createElement('script');
+        s1.src='locations.js?v='+v;
+        document.head.appendChild(s1);
+        s1.onload=function(){
+            var s2=document.createElement('script');
+            s2.src='app.js?v='+v;
+            document.head.appendChild(s2);
+        };
+    })();
+    </script>
+</body>
+</html>

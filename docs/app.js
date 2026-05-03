@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.10.2';
+const APP_VERSION = 'v5.11.0';
 const STORAGE_KEY = 'bt_locations_data';
 
 // ════════════════════════════════════════════
@@ -225,14 +225,14 @@ document.querySelectorAll('.chip').forEach(chip=>{
 
 // Mobile search sync
 document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e)=>{
-    const si = document.getElementById('topSearch');
+    const si = document.getElementById('search');
     if(si) si.value = e.target.value;
     update();
 }, 150));
 
 // Sync top search to mobile
-document.getElementById('topSearch')?.addEventListener('input', debounce((e)=>{
-    const mi = document.getElementById('mobSearchInput');
+document.getElementById('search')?.addEventListener('input', debounce((e)=>{
+    const mi = document.getElementById('mobSearchInput'); // mobile not in Google UI
     if(mi) mi.value = e.target.value;
 }, 150));
 
@@ -563,8 +563,8 @@ function _addToRoute(loc){
     }
 }
 
-// Topbar search
-document.getElementById('topSearch').addEventListener('input', debounce(()=>{
+// Search box
+document.getElementById('search').addEventListener('input', debounce(()=>{
     update();
 }, 150));
 
@@ -1164,10 +1164,9 @@ async function initApp(){
     setLoader('พร้อมใช้งาน');
     setTimeout(() => {
         document.getElementById('loader').classList.add('done');
-        document.getElementById('app').style.display = '';
     }, 200);
     
-    // 4. Set avatar
+    // 4. Set avatar (if exists in UI)
     const un = localStorage.getItem('bt_username') || '';
     const a1 = document.getElementById('av1');
     if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
