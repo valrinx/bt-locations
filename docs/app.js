@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.9.0';
+const APP_VERSION = 'v5.9.1';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -222,6 +222,66 @@ function toggleMobSheet(){
 function mobSheetItemClick(index){
     // Override this to handle item clicks
     console.log('Sheet item clicked:', index);
+}
+
+// Show location details in bottom sheet (mobile) or popup (desktop)
+function showLocationDetails(loc, idx){
+    const isMobile = window.innerWidth < 768;
+    if(isMobile){
+        // Mobile: show in bottom sheet
+        const color = getLocTagColor(loc) || getColor(loc.list);
+        openMobSheet(loc.name || loc.list, [{
+            name: loc.name || loc.list,
+            meta: `${loc.list} · ${loc.city || '-'} · ${loc.added_by || 'unknown'}`,
+            color: color
+        }]);
+        // Store current location for actions
+        window._sheetLoc = loc;
+        window._sheetIdx = idx;
+    } else {
+        // Desktop: show map popup
+        showMapPopup(loc, idx);
+    }
+}
+
+// Override cluster click to use bottom sheet on mobile
+function handleClusterClick(childMarkers){
+    const isMobile = window.innerWidth < 768;
+    const clusterLocs = childMarkers.map(m => {
+        const idx = m._locIdx;
+        return (idx !== undefined && locations[idx]) ? locations[idx] : null;
+    }).filter(Boolean);
+    
+    if(clusterLocs.length === 0) return;
+    
+    if(isMobile){
+        // Mobile: show in bottom sheet
+        const items = clusterLocs.map(loc => {
+            const color = getLocTagColor(loc) || getColor(loc.list);
+            return {
+                name: loc.name || loc.list,
+                meta: `${loc.list} · ${loc.city || '-'}`,
+                color: color,
+                loc: loc
+            };
+        });
+        openMobSheet(`${clusterLocs.length} จุดในบริเวณนี้`, items);
+        // Setup item click handlers
+        window.mobSheetItemClick = function(i){
+            const item = items[i];
+            if(item && item.loc){
+                map.flyTo([item.loc.lat, item.loc.lng], 16, {animate: true, duration: 0.5});
+                // Show single location after fly
+                setTimeout(() => showLocationDetails(item.loc, getLocIndex(item.loc)), 600);
+            }
+        };
+    } else {
+        // Desktop: show list panel
+        const lp = document.getElementById('listPanel');
+        lp.classList.add('open');
+        closePlaceCard();
+        renderListPanel(clusterLocs);
+    }
 }
 
 // Menu button opens mobile drawer on mobile
@@ -772,7 +832,14 @@ function createClusterGroup() {
         removeOutsideVisibleBounds: true,
         iconCreateFunction(cluster) {
             const count = cluster.getChildCount();
-            return L.divIcon({ html: `<div><span>${count}</span></div>`, className: `marker-cluster ${getDensityClass(count)}`, iconSize: L.point(40,40) });
+            // Proportional sizing: 30px for small clusters, up to 60px for large
+            const size = Math.min(60, Math.max(30, 30 + Math.sqrt(count) * 3));
+            const fontSize = Math.min(16, Math.max(11, 11 + count / 20));
+            return L.divIcon({ 
+                html: `<div style="width:${size}px;height:${size}px;font-size:${fontSize}px;"><span>${count}</span></div>`, 
+                className: `marker-cluster ${getDensityClass(count)}`, 
+                iconSize: L.point(size, size) 
+            });
         }
     });
 }
@@ -864,7 +931,7 @@ function _buildMarkerCache() {
             opacity: 0.95,
         });
         marker._locIdx = idx;
-        marker.on('click', () => showMapPopup(loc, idx));
+        marker.on('click', () => showLocationDetails(loc, idx));
         _markerCache.set(idx, marker);
     });
     _clusterDirty = false;
@@ -922,19 +989,10 @@ function renderMarkers(filtered) {
         document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
         document.getElementById('countPill').classList.add('show');
 
-        // Cluster click → show list of locations in that cluster
+        // Cluster click → show list of locations (bottom sheet on mobile, list panel on desktop)
         markerCluster.on('clusterclick', function(e) {
             const childMarkers = e.layer.getAllChildMarkers();
-            const clusterLocs = childMarkers.map(m => {
-                const idx = m._locIdx;
-                return (idx !== undefined && locations[idx]) ? locations[idx] : null;
-            }).filter(Boolean);
-            if (clusterLocs.length > 0) {
-                const lp = document.getElementById('listPanel');
-                lp.classList.add('open');
-                closePlaceCard();
-                renderListPanel(clusterLocs);
-            }
+            handleClusterClick(childMarkers);
         });
     });
 }
