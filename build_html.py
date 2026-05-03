@@ -39,87 +39,67 @@ html = f'''<!DOCTYPE html>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <style>
+        :root {{
+            --bg: #0b0c10;
+            --s1: #161b22;
+            --s2: #0d1117;
+            --bd: rgba(255,255,255,0.1);
+            --tx: #c9d1d9;
+            --bl: #58a6ff;
+            --gn: #238636;
+        }}
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{ font-family: 'Segoe UI', Tahoma, sans-serif; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--tx); overflow: hidden; height: 100vh; }}
         #map {{ width: 100%; height: 100vh; }}
-        .bt-marker {{
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        
+        /* Premium Topbar */
+        .topbar {{
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: rgba(13, 17, 23, 0.8); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--bd); display: flex; align-items: center;
+            justify-content: space-between; padding: 0 16px; z-index: 2000;
         }}
-        .bt-label {{
-            background: rgba(0,0,0,0.75) !important; color: #fff !important;
-            border: none !important; border-radius: 4px !important;
-            padding: 2px 6px !important; font-size: 11px !important;
-            font-weight: 600 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
-            white-space: nowrap !important;
+        .tb-left {{ display: flex; align-items: center; gap: 12px; }}
+        .logo-sq {{
+            width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #10b981);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 800; font-size: 14px;
         }}
-        .bt-label::before {{
-            border-top-color: rgba(0,0,0,0.75) !important;
+        .logo-txt {{ font-size: 16px; font-weight: 700; color: white; letter-spacing: -0.5px; }}
+        
+        .tb-right {{ display: flex; align-items: center; gap: 12px; }}
+        .live-p {{
+            display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+            background: rgba(35, 134, 54, 0.15); border: 1px solid rgba(35, 134, 54, 0.3);
+            border-radius: 20px; color: #3fb950; font-size: 12px; font-weight: 600;
         }}
+        .live-dot {{ width: 8px; height: 8px; background: #3fb950; border-radius: 50%; animation: pulse 2s infinite; }}
+        @keyframes pulse {{ 0% {{ transform: scale(0.95); opacity: 0.8; }} 70% {{ transform: scale(1.1); opacity: 1; }} 100% {{ transform: scale(0.95); opacity: 0.8; }} }}
+        
+        .av {{ width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #30363d, #484f58); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; font-size: 12px; color: white; }}
+
         .controls {{
-            position: absolute; top: 10px; left: 50px; z-index: 1000;
-            background: white; border-radius: 10px; padding: 8px 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 6px;
-            max-width: 90vw;
+            position: absolute; top: 70px; left: 16px; right: 16px; z-index: 1000;
+            display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none;
         }}
-        .ctrl-row {{
-            display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
-        }}
-        .ctrl-sep {{
-            width: 1px; height: 20px; background: #ddd; margin: 0 2px;
-        }}
-        .more-wrap {{ position: relative; }}
-        .more-menu {{
-            display: none; position: absolute; top: 100%; right: 0; margin-top: 6px;
-            background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-            min-width: 180px; padding: 6px 0; z-index: 2000;
-        }}
-        .more-menu.show {{ display: block; }}
-        .mm-item {{
-            display: block; width: 100%; text-align: left; border: none; background: none;
-            padding: 8px 16px; font-size: 13px; cursor: pointer; color: #333;
-        }}
-        .mm-item:hover {{ background: #f0f0f0; }}
-        .mm-sep {{ border: none; border-top: 1px solid #eee; margin: 4px 0; }}
+        .controls > * {{ pointer-events: auto; }}
         .controls input, .controls select {{
-            border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px;
-            font-size: 13px; outline: none;
+            background: var(--s1); border: 1px solid var(--bd); border-radius: 8px;
+            padding: 8px 12px; color: var(--tx); font-size: 13px; outline: none;
         }}
-        .controls input {{ width: 160px; }}
-        .controls select {{ max-width: 180px; }}
-        .controls input:focus, .controls select:focus {{ border-color: #4285f4; }}
-        .count-badge {{
-            background: #4285f4; color: white; border-radius: 12px;
-            padding: 4px 10px; font-size: 12px; font-weight: bold;
-        }}
-        .btn {{
-            border: none; border-radius: 6px; padding: 6px 12px;
-            font-size: 12px; cursor: pointer; font-weight: 500;
-        }}
-        .btn-add {{ background: #34a853; color: white; }}
-        .btn-add:hover {{ background: #2d9249; }}
-        .btn-edit {{ background: #fbbc04; color: #333; }}
-        .btn-edit:hover {{ background: #f0b400; }}
-        .btn-delete {{ background: #ea4335; color: white; }}
-        .btn-delete:hover {{ background: #d33426; }}
-        .btn-export {{ background: #4285f4; color: white; }}
-        .btn-export:hover {{ background: #3275e4; }}
-        .btn-import {{ background: #9334e6; color: white; }}
-        .btn-import:hover {{ background: #7b28c4; }}
-        .btn-reset {{ background: #666; color: white; }}
-        .btn-reset:hover {{ background: #555; }}
-        .btn-github {{ background: #24292e; color: white; }}
-        .btn-github:hover {{ background: #1b1f23; }}
-        .btn-github.saving {{ background: #666; cursor: wait; }}
-        .save-status {{ font-size: 11px; color: #34a853; font-weight: 500; display: none; }}
-        .save-status.show {{ display: inline; }}
-        .save-status.error {{ color: #ea4335; }}
-        .custom-popup .leaflet-popup-content-wrapper {{
-            border-radius: 8px; font-size: 14px;
-        }}
-        .bt-label {{
-            background: transparent; border: none; box-shadow: none;
-            font-size: 11px; font-weight: bold; color: #1a73e8;
-            white-space: nowrap;
+        .controls input:focus {{ border-color: var(--bl); }}
+        .btn {{ border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-weight: 600; transition: 0.2s; }}
+        .btn-add {{ background: var(--gn); color: white; }}
+        .btn-github {{ background: #30363d; color: white; border: 1px solid var(--bd); }}
+        
+        .list-panel {{ position: absolute; bottom: 0; left: 0; right: 0; background: var(--s2); border-top: 1px solid var(--bd); max-height: 40vh; overflow-y: auto; display: none; z-index: 1001; }}
+        .list-panel.open {{ display: block; }}
+        .list-item {{ padding: 12px 16px; border-bottom: 1px solid var(--bd); cursor: pointer; }}
+        .list-item:hover {{ background: var(--s1); }}
+        
+        @media (max-width: 600px) {{
+            .logo-txt {{ display: none; }}
+            .controls input {{ width: 100%; }}
         }}
         .popup-content {{ text-align: center; min-width: 180px; }}
         .popup-content h3 {{
@@ -260,40 +240,31 @@ html = f'''<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div class="controls">
-        <div class="ctrl-row">
-            <input type="text" id="search" placeholder="ค้นหา...">
-            <select id="listFilter">
-                <option value="">ทุกรายการ</option>
-                {filter_options}
-            </select>
-            <select id="cityFilter">
-                <option value="">ทุกเขต</option>
-                {city_options}
-            </select>
-            <span class="count-badge" id="count">0 จุด</span>
-            <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
-            <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>↩</button>
-            <button class="btn btn-github" id="btnGithub">� GitHub</button>
-            <span class="save-status" id="saveStatus"></span>
-            <div class="more-wrap">
-                <button class="btn" id="btnMore" style="background:#475569;color:white;">⋯ เพิ่มเติม</button>
-                <div class="more-menu" id="moreMenu">
-                    <button class="mm-item" id="btnExport">📤 Export JSON</button>
-                    <button class="mm-item" id="btnImport">📥 Import JSON</button>
-                    <button class="mm-item" id="btnBulkDel" style="color:#ef4444;">🗑 ลบที่กรอง</button>
-                    <button class="mm-item" id="btnReset" style="color:#ef4444;">🔄 Reset</button>
-                    <hr class="mm-sep">
-                    <button class="mm-item" id="btnStats">📊 Stats</button>
-                    <button class="mm-item" id="btnHeatmap">🔥 Heatmap</button>
-                    <button class="mm-item" id="btnLegend">🎨 Legend</button>
-                    <hr class="mm-sep">
-                    <button class="mm-item" id="btnDark">🌙 Dark mode</button>
-                    <button class="mm-item" id="btnTile">🗺️ เปลี่ยนแผนที่</button>
-                </div>
-            </div>
+    <div class="topbar">
+        <div class="tb-left">
+            <div class="logo-sq">BT</div>
+            <span class="logo-txt">Locations</span>
         </div>
+        <div class="tb-right">
+            <div class="live-p">
+                <div class="live-dot"></div>
+                Auto Sync
+            </div>
+            <div class="av">V</div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+    
+    <div class="controls">
+        <input type="text" id="search" placeholder="ค้นหาจุด...">
+        <select id="listFilter">
+            <option value="">ทุกรายการ</option>
+            {filter_options}
+        </select>
+        <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
+        <button class="btn btn-github" id="btnGithub">💾 Sync GitHub</button>
+    </div>
     </div>
     <div class="legend-panel" id="legendPanel"></div>
     <div class="add-mode-banner" id="addBanner">
@@ -410,8 +381,25 @@ html = f'''<!DOCTYPE html>
 
         let markerCluster = L.markerClusterGroup();
         let currentMarkers = [];
-        let heatLayer = null;
-        let heatmapMode = false;
+
+        function _initMapEvents() {{
+            if (!map) return;
+            map.on('click', (e) => {{
+                if (!addMode) return;
+                addMode = false;
+                addBanner.classList.remove('show');
+                map.getContainer().style.cursor = '';
+                editingIndex = -1;
+                document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
+                document.getElementById('modalName').value = '';
+                document.getElementById('modalList').value = '';
+                document.getElementById('modalCity').value = '';
+                document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
+                document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
+                document.getElementById('modalOverlay').classList.add('open');
+            }});
+        }}
+        _initMapEvents();
 
         function getPopupHTML(loc, idx) {{
             return `<div class="popup-content">
