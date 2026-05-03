@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.16';
+const APP_VERSION = 'v6.6.17';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1772,6 +1772,12 @@ const crosshair=document.getElementById('crosshair'), addBanner=document.getElem
 
 window.openAddMode = function(){
     if(addMode){cancelAddMode();return;}
+    
+    // Auto-switch back to map if we are on List or Stats
+    if (typeof currentView !== 'undefined' && currentView !== 'map') {
+        if (typeof switchView === 'function') switchView('map');
+    }
+
     addMode=true; fab.classList.add('add-mode');
     fab.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>ยกเลิก`;
     addBanner.classList.add('show'); crosshair.classList.add('show');
