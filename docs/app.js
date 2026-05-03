@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.11.4';
+const APP_VERSION = 'v5.11.5';
 const STORAGE_KEY = 'bt_locations_data';
 
 // ════════════════════════════════════════════
@@ -105,10 +105,10 @@ document.querySelectorAll('.vt').forEach(v=>{
 });
 
 // Bottom toolbar handlers
-document.getElementById('btMap').onclick = () => switchView('map');
-document.getElementById('btRoute').onclick = () => { routeMode ? clearRoute() : doRoute(); };
-document.getElementById('btHeat').onclick = () => switchView(heatmapMode ? 'map' : 'heat');
-document.getElementById('btAdd').onclick = () => openAddMode();
+document.getElementById('btMap')?.onclick = () => switchView('map');
+document.getElementById('btRoute')?.onclick = () => { routeMode ? clearRoute() : doRoute(); };
+document.getElementById('btHeat')?.onclick = () => switchView(heatmapMode ? 'map' : 'heat');
+document.getElementById('btAdd')?.onclick = () => openAddMode();
 
 // ════════════════════════════════════════════
 // MOBILE UI FUNCTIONS
@@ -144,7 +144,7 @@ function _renderMobDrawer(){
     // Lists
     const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
     const lists = Object.entries(lc).sort((a,b)=>b[1]-a[1]);
-    let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:var(--bl)"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
+    let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:#5b8fff"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
     lists.forEach(([name,count],i)=>{
         const col=_listColors[i % _listColors.length];
         listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
@@ -242,6 +242,9 @@ function openMobSheet(title, items){
     const sheet = document.getElementById('mobSheet');
     const titleEl = document.getElementById('mobSheetTitle');
     const listEl = document.getElementById('mobSheetList');
+    const chipList = document.getElementById('chipList');
+    const chipCity = document.getElementById('chipCity');
+    const filterMoreBtn = document.getElementById('filterMoreBtn'); // May not exist in Google UI
     if(!sheet) return;
     if(titleEl) titleEl.textContent = title || 'รายการ';
     if(listEl && items){
@@ -332,248 +335,17 @@ function handleClusterClick(childMarkers){
     }
 }
 
-// Menu button opens mobile drawer on mobile
-window.toggleSidebar = function(){
-    if(window.innerWidth < 768){
-        openMobDrawer();
-    } else {
-        // Desktop: toggle sidebar visibility if needed
-        const sb = document.getElementById('sidebar');
-        const bd = document.getElementById('sidebarBackdrop');
-        if(sb){
-            const isOpen = sb.classList.toggle('open');
-            if(bd) bd.classList.toggle('show', isOpen);
-        }
-    }
-};
-
-// Updated sidebar rendering
-const _listColors=['#5b8fff','#2ecc90','#f5a623','#ff5c5c','#a78bfa','#ff7f5c','#40c0ff','#c0a060'];
-function _renderSidebar(){
-    const totalBadge = document.getElementById('totalBadge');
-    if(totalBadge) totalBadge.textContent = locations.length + ' จุด';
-
-    // Lists
-    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
-    const lists = Object.entries(lc).sort((a,b)=>b[1]-a[1]);
-    const listEl = document.getElementById('listContainer');
-    if(listEl){
-        let html = `<div class="fl ${!filterList?'on':''}" data-list=""><span class="fd" style="background:#5b8fff"></span><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
-        lists.forEach(([name,count],i)=>{
-            const col=_listColors[i % _listColors.length];
-            html += `<div class="fl ${filterList===name?'on':''}" data-list="${name}"><span class="fd" style="background:${col}"></span><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
-        });
-        listEl.innerHTML = html;
-        listEl.querySelectorAll('.fl').forEach(el=>{
-            el.onclick = () => {
-                filterList = el.dataset.list;
-                filterCity = '';
-                _lastFilteredKey = null;
-                update();
-                _renderSidebar();
-            };
-        });
-    }
-
-    // Cities
-    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
-    const cities = Object.entries(cc).sort((a,b)=>b[1]-a[1]);
-    const cityEl = document.getElementById('cityContainer');
-    if(cityEl){
-        let html = '';
-        cities.forEach(([name,count],i)=>{
-            const col=_listColors[i % _listColors.length];
-            html += `<div class="cl ${filterCity===name?'on':''}" data-city="${name}"><span class="cd" style="background:${col}"></span><span class="cn">${name}</span><span class="cc">${count}</span></div>`;
-        });
-        cityEl.innerHTML = html;
-        cityEl.querySelectorAll('.cl').forEach(el=>{
-            el.onclick = () => {
-                filterCity = el.dataset.city;
-                filterList = '';
-                _lastFilteredKey = null;
-                update();
-                _renderSidebar();
-                const cityLocs = locations.filter(l=>l.city===filterCity);
-                if(cityLocs.length && map){
-                    const group = L.featureGroup(cityLocs.map(l=>L.marker([l.lat,l.lng])));
-                    map.fitBounds(group.getBounds().pad(0.15), {animate:false, maxZoom:16});
-                }
-            };
-        });
-    }
-
-    // Update map stats
-    const statTotal = document.getElementById('mapStatTotal');
-    if(statTotal) statTotal.textContent = locations.length;
-}
-
-// Stats view
-function renderStatsView(){
-    document.getElementById('svTotal').textContent = locations.length;
-    const cities = [...new Set(locations.map(l=>l.city).filter(Boolean))];
-    document.getElementById('svCities').textContent = cities.length;
-    const lists = [...new Set(locations.map(l=>l.list).filter(Boolean))];
-    document.getElementById('svLists').textContent = lists.length;
-
-    // City bars
-    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
-    const sortedCities = Object.entries(cc).sort((a,b)=>b[1]-a[1]);
-    const maxC = Math.max(...sortedCities.map(x=>x[1]), 1);
-    let barsHtml = '';
-    sortedCities.slice(0,8).forEach(([name,count],i)=>{
-        const col=_listColors[i % _listColors.length];
-        barsHtml += `<div class="bar-row" style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;"><span style="width:80px;color:var(--tx2);">${name}</span><div style="flex:1;height:4px;background:var(--s3);border-radius:2px;"><div style="width:${(count/maxC*100)}%;height:100%;background:${col};border-radius:2px;"></div></div><span style="width:40px;text-align:right;color:var(--tx);">${count}</span></div>`;
-    });
-    document.getElementById('cityBars').innerHTML = barsHtml;
-
-    // Donut chart
-    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
-    const sortedLists = Object.entries(lc).sort((a,b)=>b[1]-a[1]).slice(0,4);
-    const total = locations.length;
-    let ang = -90;
-    let svg = `<circle cx="40" cy="40" r="25" fill="var(--s1)"/>`;
-    let legend = '';
-    sortedLists.forEach(([name,count],i)=>{
-        const col=_listColors[i % _listColors.length];
-        const pct = count/total;
-        const sweep = pct * 360;
-        const r=32, cx=40, cy=40;
-        const startRad=ang*Math.PI/180;
-        const endRad=(ang+sweep)*Math.PI/180;
-        const x1=cx+r*Math.cos(startRad);
-        const y1=cy+r*Math.sin(startRad);
-        const x2=cx+r*Math.cos(endRad);
-        const y2=cy+r*Math.sin(endRad);
-        const large=sweep>180?1:0;
-        const d=`M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z`;
-        svg += `<path d="${d}" fill="${col}" opacity="0.9"/>`;
-        legend += `<div class="dl-item"><div class="dl-dot" style="background:${col};"></div>${name}<span class="dl-val">${count}</span></div>`;
-        ang += sweep;
-    });
-    document.getElementById('donutSvg').innerHTML = svg;
-    document.getElementById('donutLegend').innerHTML = legend;
-
-    // Recent items
-    const recent = [...locations].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,5);
-    let recentHtml = '';
-    recent.forEach((r,i)=>{
-        const col=_listColors[i % _listColors.length];
-        recentHtml += `<div class="ri"><div class="ri-dot" style="background:${col};"></div><div class="ri-info"><div class="ri-name">${r.name||'ไม่มีชื่อ'}</div><div class="ri-meta">${r.list}${r.city?' · '+r.city:''}</div></div><span class="ri-tag" style="background:${col}22;color:${col};">${r.list}</span></div>`;
-    });
-    document.getElementById('recentList').innerHTML = recentHtml;
-}
-
-// List view table
-let selectedSet = new Set();
-function renderListView(){
-    const filtered = getFiltered();
-    const table = document.getElementById('listTable');
-    const countEl = document.getElementById('lvCount');
-    if(countEl) countEl.textContent = `แสดง ${filtered.length} จาก ${locations.length} จุด`;
-    if(!table) return;
-
-    let html = '';
-    filtered.forEach((loc,idx)=>{
-        const realIdx = getLocIndex(loc);
-        const col = getColor(loc.list);
-        const sel = selectedSet.has(realIdx) ? 'sel' : '';
-        const chk = selectedSet.has(realIdx) ? '✓' : '';
-        html += `<div class="lrow ${sel}" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--bd);cursor:pointer;" onclick="toggleRowSel(${realIdx},this)">
-            <div style="width:18px;height:18px;border-radius:5px;border:1.5px solid ${selectedSet.has(realIdx)?col:'var(--bd2)'};background:${selectedSet.has(realIdx)?col+'33':'none'};display:flex;align-items:center;justify-content:center;color:${col};font-size:10px;" id="chk-${realIdx}">${chk}</div>
-            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${loc.name||'ไม่มีชื่อ'}</div><div style="font-size:11px;color:var(--tx3);">${loc.list}${loc.city?' · '+loc.city:''}</div></div>
-            <div style="display:flex;gap:4px;"><span class="ri-tag" style="background:${col}22;color:${col};">${loc.list}</span></div>
-            <div style="font-size:11px;color:var(--tx3);width:60px;text-align:right;">${loc.city||'-'}</div>
-        </div>`;
-    });
-    table.innerHTML = html;
-
-    const bulkDel = document.getElementById('lvBulkDel');
-    const selCount = document.getElementById('selCount');
-    if(bulkDel && selCount){
-        selCount.textContent = selectedSet.size;
-        bulkDel.style.display = selectedSet.size > 0 ? 'flex' : 'none';
-    }
-}
-
-function toggleRowSel(idx,row){
-    if(selectedSet.has(idx)){
-        selectedSet.delete(idx);
-        row.classList.remove('sel');
-    } else {
-        selectedSet.add(idx);
-        row.classList.add('sel');
-    }
-    const chk = document.getElementById(`chk-${idx}`);
-    if(chk){
-        const col = getColor(locations[idx].list);
-        chk.style.borderColor = selectedSet.has(idx) ? col : 'var(--bd2)';
-        chk.style.background = selectedSet.has(idx) ? col+'33' : 'none';
-        chk.style.color = col;
-        chk.textContent = selectedSet.has(idx) ? '✓' : '';
-    }
-    const bulkDel = document.getElementById('lvBulkDel');
-    const selCount = document.getElementById('selCount');
-    if(bulkDel && selCount){
-        selCount.textContent = selectedSet.size;
-        bulkDel.style.display = selectedSet.size > 0 ? 'flex' : 'none';
-    }
-}
-
-// List view buttons
-document.getElementById('lvSelectAll').onclick = () => {
-    const filtered = getFiltered();
-    if(selectedSet.size === filtered.length){
-        selectedSet.clear();
-    } else {
-        filtered.forEach(l=>selectedSet.add(getLocIndex(l)));
-    }
-    renderListView();
-};
-document.getElementById('lvAdd').onclick = () => openAddMode();
-document.getElementById('lvExport').onclick = () => doExport();
-
-// Map popup
-function showMapPopup(loc,idx){
-    const popup = document.getElementById('mapPopup');
-    if(!popup) return;
-    const col = getColor(loc.list);
-    document.getElementById('ppTag').textContent = `${loc.list} · ${loc.city||'กรุงเทพฯ'}`;
-    document.getElementById('ppName').textContent = loc.name || 'ไม่มีชื่อ';
-    document.getElementById('ppSub').textContent = `${loc.city||''} · เพิ่มโดย ${loc.addedBy||'user'}`;
-    document.getElementById('ppList').textContent = loc.list;
-    document.getElementById('ppDist').textContent = loc.city || '-';
-    popup.classList.add('show');
-
-    document.getElementById('ppNav').onclick = () => doDirectionsTo(idx);
-    document.getElementById('ppEdit').onclick = () => openEdit(idx);
-    document.getElementById('ppRoute').onclick = () => { routeMode ? clearRoute() : _addToRoute(loc); };
-}
-
-function _addToRoute(loc){
-    if(!routeMode){
-        _routeStops = [loc];
-        routeMode = true;
-        document.getElementById('btRoute').classList.add('on');
-        _routeDraw();
-        showToast(`เพิ่ม "${loc.name||loc.list}" ในเส้นทาง`);
-    } else {
-        _routeStops.push(loc);
-        _routeDraw();
-        showToast(`เพิ่ม "${loc.name||loc.list}" ในเส้นทาง (${_routeStops.length} จุด)`);
-    }
-}
-
 // Search box
-document.getElementById('search').addEventListener('input', debounce(()=>{
+document.getElementById('search')?.addEventListener('input', debounce(()=>{
     update();
 }, 150));
 
 // Add button
-document.getElementById('btnAddLocation').onclick = () => openAddMode();
+document.getElementById('btnAddLocation')?.onclick = () => openAddMode();
 
 // Export/Import buttons
-document.getElementById('btnUpload').onclick = () => doExport();
-document.getElementById('btnImportData').onclick = () => openImportModal();
+document.getElementById('btnUpload')?.onclick = () => doExport();
+document.getElementById('btnImportData')?.onclick = () => openImportModal();
 
 // Import modal functions
 window.openImportModal = function(){
@@ -641,7 +413,7 @@ window.closeSidebar = function(){
     sb.classList.remove('open');
     if(bd) bd.classList.remove('show');
 };
-document.getElementById('btnMenu').onclick = toggleSidebar;
+document.getElementById('btnMenu')?.onclick = toggleSidebar;
 
 function favKey(loc) { return `${loc.lat.toFixed(6)},${loc.lng.toFixed(6)}`; }
 function toggleFavorite(loc) { const k = favKey(loc); if (favorites.has(k)) favorites.delete(k); else favorites.add(k); saveFavorites(); }
@@ -1454,7 +1226,7 @@ function fallbackCopy(text) {
 
 function closePlaceCard() { document.getElementById('placeCard').classList.remove('open'); }
 window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'⭐ เพิ่มในรายการโปรดแล้ว':'☆ นำออกจากรายการโปรดแล้ว');};
-document.getElementById('placeCardClose').onclick = closePlaceCard;
+document.getElementById('placeCardClose')?.onclick = closePlaceCard;
 
 // ════════════════════════════════════════════
 // LIST PANEL
@@ -1479,9 +1251,9 @@ function renderListPanel(filtered) {
     }).join('');
 }
 window.closeListPanel = ()=>document.getElementById('listPanel').classList.remove('open');
-document.getElementById('listPanelClose').onclick = closeListPanel;
+document.getElementById('listPanelClose')?.onclick = closeListPanel;
 
-document.getElementById('listSortBar').addEventListener('click',e=>{
+document.getElementById('listSortBar')?.addEventListener('click',e=>{
     const btn=e.target.closest('.sort-btn'); if(!btn) return;
     const sort=btn.dataset.sort;
     if(sort==='near'&&!myLatLng){showToast('กรุณาเปิด GPS ก่อน',true);return;}
@@ -1508,7 +1280,7 @@ searchInput.addEventListener('input',()=>{
     renderSearchResults();
     _debouncedUpdate(); // debounce 120ms — ไม่ re-render map ทุก keystroke
 });
-btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
+btnClearSearch?.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
 
 // Normalize ALL Unicode degree/quote variants → ASCII
 function _normDMS(s){
@@ -1629,11 +1401,11 @@ document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
     });
 });
 
-document.getElementById('chipAll').onclick=()=>{filterList='';filterCity='';nearbyMode=false;update();};
+document.getElementById('chipAll')?.onclick=()=>{filterList='';filterCity='';nearbyMode=false;update();};
 
-document.getElementById('chipFav').onclick=()=>{filterFavorites=!filterFavorites;document.getElementById('chipFav').classList.toggle('active',filterFavorites);update();};
+document.getElementById('chipFav')?.onclick=()=>{filterFavorites=!filterFavorites;document.getElementById('chipFav')?.classList.toggle('active',filterFavorites);update();};
 
-document.getElementById('chipNearby').onclick=()=>{
+document.getElementById('chipNearby')?.onclick=()=>{
     if(!myLatLng){showToast('กรุณาเปิด GPS ก่อน',true);return;}
     nearbyMode=!nearbyMode; update();
     if(nearbyMode){
@@ -1643,56 +1415,17 @@ document.getElementById('chipNearby').onclick=()=>{
     }
 };
 
-document.getElementById('chipList').onclick=()=>{
+document.getElementById('chipList')?.onclick=()=>{
     const counts={}; locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
-    const lists=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-    const container=document.getElementById('listChoiceList');
-    container.innerHTML=`<div class="filter-choice-item ${!filterList?'selected':''}" data-val="">
-        <span class="filter-choice-dot" style="background:#9aa0a6"></span>ทุกรายการ<span class="filter-choice-count">${locations.length}</span></div>
-        ${lists.map(([n,c])=>`<div class="filter-choice-item ${filterList===n?'selected':''}" data-val="${n}">
-        <span class="filter-choice-dot" style="background:${getColor(n)}"></span>${n}<span class="filter-choice-count">${c}</span></div>`).join('')}`;
-    container.querySelectorAll('.filter-choice-item').forEach(el=>{
-        el.onclick=()=>{container.querySelectorAll('.filter-choice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');filterList=el.dataset.val;};
-    });
-    document.getElementById('listFilterModalOverlay').classList.add('open');
-};
-document.getElementById('listFilterClose').onclick=()=>{
-    document.getElementById('listFilterModalOverlay').classList.remove('open'); update();
-    if(filterList){const f=getFiltered();if(f.length>0)map.flyToBounds(L.latLngBounds(f.map(l=>[l.lat,l.lng])),{padding:[60,60],animate:true,duration:0.8});}
-};
-document.getElementById('listFilterClear').onclick=()=>{filterList='';document.getElementById('listFilterModalOverlay').classList.remove('open');update();};
-document.getElementById('listFilterModalOverlay').onclick=e=>{if(e.target===document.getElementById('listFilterModalOverlay')){document.getElementById('listFilterModalOverlay').classList.remove('open');update();}};
-
-// Rename list — rename the currently selected list
-document.getElementById('listRenameBtn').onclick=()=>{
-    if(!filterList){showToast('เลือกรายการก่อน',true);return;}
-    const newName=prompt(`เปลี่ยนชื่อ "${filterList}" เป็น:`,filterList);
-    if(!newName||newName.trim()===filterList)return;
-    const trimmed=newName.trim();
-    pushUndo();
-    let count=0;
-    const changedList=[];
-    locations.forEach(l=>{if(l.list===filterList){l.list=trimmed;l.updatedAt=Date.now();count++;changedList.push(l);}});
-    showToast(`✏️ เปลี่ยนชื่อ ${count} จุด → "${trimmed}"`);
-    filterList=trimmed;
-    saveLocations();invalidateCache();
-    if(_sbLoaded)sbBulkUpdate(changedList);
-    document.getElementById('listFilterModalOverlay').classList.remove('open');
-    update();
-};
-// Merge list — selected list → choose target from dropdown
-document.getElementById('listMergeBtn').onclick=()=>{
-    if(!filterList){showToast('เลือกรายการที่ต้องการรวมก่อน',true);return;}
-    const counts={};locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
-    const others=Object.keys(counts).filter(n=>n!==filterList).sort();
-    if(!others.length){showToast('ไม่มีรายการอื่นให้รวม',true);return;}
+    const lists=Object.keys(counts).filter(n=>n!==filterList).sort();
+    if(!lists.length){showToast('ไม่มีรายการอื่นให้รวม',true);return;}
     // Build inline dropdown in the modal body
     const container=document.getElementById('listChoiceList');
     container.innerHTML=`
         <div style="padding:12px;">
             <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterList}" (${counts[filterList]} จุด) → ไปรายการไหน?</div>
             <select id="_mergeListTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gn);font-size:14px;background:var(--surface);">
-                ${others.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
+                ${lists.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
             </select>
             <div style="display:flex;gap:8px;margin-top:12px;">
                 <button id="_mergeListConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
@@ -1715,63 +1448,24 @@ document.getElementById('listMergeBtn').onclick=()=>{
     };
 };
 
-document.getElementById('chipCity').onclick=()=>{
+document.getElementById('chipCity')?.onclick=()=>{
     const counts={}; locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
-    const cities=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-    const container=document.getElementById('cityChoiceList');
-    container.innerHTML=`<div class="filter-choice-item ${!filterCity?'selected':''}" data-val="">
-        <span class="filter-choice-dot" style="background:var(--text3)"></span>ทุกเขต<span class="filter-choice-count">${locations.length}</span></div>
-        ${cities.map(([n,c])=>`<div class="filter-choice-item ${filterCity===n?'selected':''}" data-val="${n}">
-        <span class="filter-choice-dot" style="background:var(--bl)"></span>${n}<span class="filter-choice-count">${c}</span></div>`).join('')}`;
-    container.querySelectorAll('.filter-choice-item').forEach(el=>{
-        el.onclick=()=>{container.querySelectorAll('.filter-choice-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');filterCity=el.dataset.val;};
-    });
-    document.getElementById('cityFilterModalOverlay').classList.add('open');
-};
-document.getElementById('cityFilterClose').onclick=()=>{
-    document.getElementById('cityFilterModalOverlay').classList.remove('open'); update();
-    if(filterCity){const f=getFiltered();if(f.length>0)map.flyToBounds(L.latLngBounds(f.map(l=>[l.lat,l.lng])),{padding:[60,60],animate:true,duration:0.8});}
-};
-document.getElementById('cityFilterClear').onclick=()=>{filterCity='';document.getElementById('cityFilterModalOverlay').classList.remove('open');update();};
-document.getElementById('cityFilterModalOverlay').onclick=e=>{if(e.target===document.getElementById('cityFilterModalOverlay')){document.getElementById('cityFilterModalOverlay').classList.remove('open');update();}};
-
-// Rename city — rename the currently selected city
-document.getElementById('cityRenameBtn').onclick=()=>{
-    if(!filterCity){showToast('เลือกเขตก่อน',true);return;}
-    const newName=prompt(`เปลี่ยนชื่อ "${filterCity}" เป็น:`,filterCity);
-    if(!newName||newName.trim()===filterCity)return;
-    const trimmed=newName.trim();
-    pushUndo();
-    let count=0;
-    const changedCity=[];
-    locations.forEach(l=>{if(l.city===filterCity){l.city=trimmed;l.updatedAt=Date.now();count++;changedCity.push(l);}});
-    showToast(`✏️ เปลี่ยนชื่อเขต ${count} จุด → "${trimmed}"`);
-    filterCity=trimmed;
-    saveLocations();invalidateCache();
-    if(_sbLoaded)sbBulkUpdate(changedCity);
-    document.getElementById('cityFilterModalOverlay').classList.remove('open');
-    update();
-};
-// Merge city — selected city → choose target from dropdown
-document.getElementById('cityMergeBtn').onclick=()=>{
-    if(!filterCity){showToast('เลือกเขตที่ต้องการรวมก่อน',true);return;}
-    const counts={};locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
-    const others=Object.keys(counts).filter(n=>n!==filterCity).sort();
-    if(!others.length){showToast('ไม่มีเขตอื่นให้รวม',true);return;}
+    const cities=Object.keys(counts).filter(n=>n!==filterCity).sort();
+    if(!cities.length){showToast('ไม่มีเขตอื่นให้รวม',true);return;}
     const container=document.getElementById('cityChoiceList');
     container.innerHTML=`
         <div style="padding:12px;">
             <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterCity}" (${counts[filterCity]} จุด) → ไปเขตไหน?</div>
             <select id="_mergeCityTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gn);font-size:14px;background:var(--surface);">
-                ${others.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
+                ${cities.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
             </select>
             <div style="display:flex;gap:8px;margin-top:12px;">
                 <button id="_mergeCityConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
                 <button id="_mergeCityCancel" style="flex:1;padding:10px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>`;
-    document.getElementById('_mergeCityCancel').onclick=()=>{document.getElementById('chipCity').click();};
-    document.getElementById('_mergeCityConfirm').onclick=()=>{
+    document.getElementById('_mergeCityCancel')?.onclick=()=>{document.getElementById('chipCity')?.click();};
+    document.getElementById('_mergeCityConfirm')?.onclick=()=>{
         const toCity=document.getElementById('_mergeCityTarget').value;
         pushUndo();
         let count=0;
@@ -1786,22 +1480,22 @@ document.getElementById('cityMergeBtn').onclick=()=>{
     };
 };
 
-document.getElementById('chipHeatmap').onclick=()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();};
-document.getElementById('chipShowList').onclick=()=>{
+document.getElementById('chipHeatmap')?.onclick=()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();};
+document.getElementById('chipShowList')?.onclick=()=>{
     const lp=document.getElementById('listPanel');
     if(lp.classList.contains('open')){closeListPanel();}else{
         lp.classList.add('open'); closePlaceCard();
         renderListPanel(getFiltered());
     }
 };
-document.getElementById('chipAll').classList.add('active');
+document.getElementById('chipAll')?.classList.add('active');
 
 // ════════════════════════════════════════════
 // MAP CONTROLS
 // ════════════════════════════════════════════
-document.getElementById('btnZoomIn').onclick=()=>map.zoomIn();
-document.getElementById('btnZoomOut').onclick=()=>map.zoomOut();
-document.getElementById('btnTile').onclick=()=>{
+document.getElementById('btnZoomIn')?.onclick=()=>map.zoomIn();
+document.getElementById('btnZoomOut')?.onclick=()=>map.zoomOut();
+document.getElementById('btnTile')?.onclick=()=>{
     map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
     currentTileIdx=(currentTileIdx+1)%tileNames.length;
     tileLayers[tileNames[currentTileIdx]].addTo(map);
@@ -2469,7 +2163,7 @@ window.doDirectionsTo = function(idx) {
             }, err=>console.warn('Nav GPS error:',err), {enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
         }catch(e){
-            showToast('❌ หาเส้นทางไม่ได้ — เปิด Google Maps',true);
+            showToast('❌ หาเส้นทางไม่ได้ — เปิด Google Maps');
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`,'_blank');
             _navState.active=false;
         }
@@ -2980,7 +2674,7 @@ function fallbackExport(jsonStr, filename) {
     document.getElementById('shareModalText').textContent = `${locations.length} สถานที่ · ${Math.round(jsonStr.length/1024)} KB`;
     document.getElementById('shareModalOverlay').classList.add('open');
 
-    document.getElementById('shareBtnDownload').onclick = () => {
+    document.getElementById('shareBtnDownload')?.onclick = () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
         // วิธีที่ 1: blob URL (Desktop)
         try {
@@ -2999,7 +2693,7 @@ function fallbackExport(jsonStr, filename) {
         }
     };
 
-    document.getElementById('shareBtnShare').onclick = () => {
+    document.getElementById('shareBtnShare')?.onclick = () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
         if (navigator.share) {
             navigator.share({ title: 'BT Locations', text: jsonStr })
@@ -3010,12 +2704,12 @@ function fallbackExport(jsonStr, filename) {
         }
     };
 
-    document.getElementById('shareBtnCopy').onclick = () => {
+    document.getElementById('shareBtnCopy')?.onclick = () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
         fallbackCopy(jsonStr);
     };
 
-    document.getElementById('shareBtnCancel').onclick = () => {
+    document.getElementById('shareBtnCancel')?.onclick = () => {
         document.getElementById('shareModalOverlay').classList.remove('open');
     };
 }
