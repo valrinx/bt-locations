@@ -2,6 +2,9 @@
 // STATE
 // ════════════════════════════════════════════
 const APP_VERSION = 'v5.11.8';
+
+// Hoisted early — used by renderMarkers before route section loads
+let routeLine = null, routeMode = false;
 const STORAGE_KEY = 'bt_locations_data';
 
 // Helper: safely attach onclick handler (avoids null errors)
@@ -857,8 +860,8 @@ function renderMarkers(filtered) {
         const hb=Math.round(hr*0.6);
         heatLayer = L.heatLayer(filtered.map(l=>[l.lat,l.lng,1]),{radius:hr,blur:hb,gradient:{0.2:'#00f',0.5:'#0ff',0.7:'#0f0',0.85:'#ff0',1.0:'#f00'},minOpacity:0.4}).addTo(map);
         map.off('zoomend',_heatZoom).on('zoomend',_heatZoom);
-        document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
-        document.getElementById('countPill').classList.add('show');
+        const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = filtered.length + ' สถานที่';
+        const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
         return;
     }
 
@@ -884,8 +887,8 @@ function renderMarkers(filtered) {
     requestAnimationFrame(() => {
         markerCluster.addLayers(layers, { chunkedLoading: true });
         map.addLayer(markerCluster);
-        document.getElementById('countPill').textContent = filtered.length + ' สถานที่';
-        document.getElementById('countPill').classList.add('show');
+        const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = filtered.length + ' สถานที่';
+        const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
 
         // Cluster click → show list of locations (bottom sheet on mobile, list panel on desktop)
         markerCluster.on('clusterclick', function(e) {
@@ -909,10 +912,12 @@ function update() {
     const filtered = getFiltered();
     renderMarkers(filtered);
     // render list panel เฉพาะเมื่อเปิดอยู่ และไม่ได้อยู่ใน route mode
-    if (document.getElementById('listPanel').classList.contains('open') && !routeMode) {
+    const _lp=document.getElementById('listPanel');
+    if (_lp && _lp.classList.contains('open') && !routeMode) {
         renderListPanel(filtered);
     } else if (!routeMode) {
-        document.getElementById('listPanelTitle').textContent = filtered.length + ' สถานที่';
+        const _lpt=document.getElementById('listPanelTitle');
+        if(_lpt) _lpt.textContent = filtered.length + ' สถานที่';
     }
     updateChipLabels();
     refreshDatalistSuggestions();
@@ -1256,7 +1261,7 @@ function renderListPanel(filtered) {
         </div>`;
     }).join('');
 }
-window.closeListPanel = ()=>document.getElementById('listPanel').classList.remove('open');
+window.closeListPanel = ()=>{const _lp=document.getElementById('listPanel');if(_lp)_lp.classList.remove('open');};
 onClick('listPanelClose', closeListPanel);
 
 document.getElementById('listSortBar')?.addEventListener('click',e=>{
@@ -1278,15 +1283,17 @@ const btnClearSearch=document.getElementById('btnClearSearch');
 
 const _debouncedUpdate = debounce(update, 120);
 
-searchInput.addEventListener('focus',()=>{searchBox.classList.add('focused');renderSearchResults();});
-searchInput.addEventListener('blur',()=>setTimeout(()=>searchBox.classList.remove('focused'),200));
-searchInput.addEventListener('input',()=>{
-    btnClearSearch.classList.toggle('show',searchInput.value.length>0);
-    if(!searchInput.value.trim())_clearSearchMarker();
-    renderSearchResults();
-    _debouncedUpdate(); // debounce 120ms — ไม่ re-render map ทุก keystroke
-});
-if(btnClearSearch) btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
+if(searchInput){
+    searchInput.addEventListener('focus',()=>{if(searchBox)searchBox.classList.add('focused');renderSearchResults();});
+    searchInput.addEventListener('blur',()=>setTimeout(()=>{if(searchBox)searchBox.classList.remove('focused');},200));
+    searchInput.addEventListener('input',()=>{
+        if(btnClearSearch)btnClearSearch.classList.toggle('show',searchInput.value.length>0);
+        if(!searchInput.value.trim())_clearSearchMarker();
+        renderSearchResults();
+        _debouncedUpdate();
+    });
+}
+if(btnClearSearch) btnClearSearch.onclick=()=>{if(searchInput)searchInput.value='';if(btnClearSearch)btnClearSearch.classList.remove('show');if(searchResults)searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
 
 // Normalize ALL Unicode degree/quote variants → ASCII
 function _normDMS(s){
@@ -1387,25 +1394,28 @@ function renderSearchResults() {
 
 // Dropdown toggle for "more" chip
 const _chipDropdown=document.getElementById('chipDropdown');
-document.getElementById('chipMore').addEventListener('click',e=>{
-    e.stopPropagation();
-    _chipDropdown.classList.toggle('open');
-});
-// Close on outside touch/click (mousedown fires before click, avoids timing issue)
-document.addEventListener('mousedown',e=>{
-    if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
-        _chipDropdown.classList.remove('open');
-});
-document.addEventListener('touchstart',e=>{
-    if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
-        _chipDropdown.classList.remove('open');
-},{passive:true});
-// Each dropdown item closes menu after its handler runs
-document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
-    item.addEventListener('click',()=>{
-        setTimeout(()=>_chipDropdown.classList.remove('open'),100);
+const _chipMoreEl=document.getElementById('chipMore');
+if(_chipMoreEl && _chipDropdown) {
+    _chipMoreEl.addEventListener('click',e=>{
+        e.stopPropagation();
+        _chipDropdown.classList.toggle('open');
     });
-});
+    // Close on outside touch/click (mousedown fires before click, avoids timing issue)
+    document.addEventListener('mousedown',e=>{
+        if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
+            _chipDropdown.classList.remove('open');
+    });
+    document.addEventListener('touchstart',e=>{
+        if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
+            _chipDropdown.classList.remove('open');
+    },{passive:true});
+    // Each dropdown item closes menu after its handler runs
+    document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
+        item.addEventListener('click',()=>{
+            setTimeout(()=>_chipDropdown.classList.remove('open'),100);
+        });
+    });
+}
 
 onClick('chipAll', ()=>{filterList='';filterCity='';nearbyMode=false;update();});
 
@@ -2187,7 +2197,7 @@ window.doDirectionsTo = function(idx) {
 // ════════════════════════════════════════════
 // ROUTE PLANNING (Smart TSP + Interactive Editor)
 // ════════════════════════════════════════════
-let routeLine=null, routeMode=false;
+// routeLine & routeMode hoisted to top of file
 let _routeStops=[]; // ordered stops [{lat,lng,name,list,city,...}]
 let _routeDist=0, _routeDur=0, _routeUseOSRM=false;
 
@@ -2958,16 +2968,16 @@ document.addEventListener('click',(e)=>{
     const target=e.target;
 
     // ปิด listPanel เมื่อคลิกนอก
-    if(listPanel.classList.contains('open') &&
+    if(listPanel && listPanel.classList.contains('open') &&
        !listPanel.contains(target) &&
-       !searchBar.contains(target) &&
+       !(searchBar && searchBar.contains(target)) &&
        !target.closest('.chip')){
         closeListPanel();
     }
 
     // ปิด placeCard เมื่อคลิกนอก (ยกเว้นตอน add/measure mode)
     if(!addMode && !measureMode &&
-       placeCard.classList.contains('open') &&
+       placeCard && placeCard.classList.contains('open') &&
        !placeCard.contains(target) &&
        !target.closest('.leaflet-marker-icon') &&
        !target.closest('.search-result-item')){
