@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.7';
+const APP_VERSION = 'v6.6.9';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1780,11 +1780,19 @@ map.on('click',e=>{
         ['modalLat','modalLng'].forEach(id=>{const el=document.getElementById(id);el.style.borderColor='#34a853';setTimeout(()=>el.style.borderColor='',800);});
         return;
     }
-    if(measureMode&&measureStart){
+    if(measureMode){
+        if(!measureStart){
+            measureStart = {lat, lng, name: 'จุดที่เลือก'};
+            // Visual feedback for first point
+            const dot = L.circleMarker([lat,lng], {radius:5, color:'#7b1fa2', fillColor:'#7b1fa2', fillOpacity:1}).addTo(map);
+            measureLine = dot; // Reuse measureLine to hold the temporary dot
+            return;
+        }
         const straightDist=haversine(measureStart.lat,measureStart.lng,lat,lng);
         if(measureLine)map.removeLayer(measureLine);
         // Draw straight line immediately
         measureLine=L.polyline([[measureStart.lat,measureStart.lng],[lat,lng]],{color:'#7b1fa2',weight:3,dashArray:'8,6'}).addTo(map);
+        document.getElementById('btnClearMeasure').style.display='flex';
         const fromName=measureStart.name||measureStart.list||'จุดเริ่ม';
         document.getElementById('measureResultText').textContent=`📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
         document.getElementById('measureModalOverlay').classList.add('open');
@@ -1798,6 +1806,7 @@ map.on('click',e=>{
                 const coords=route.geometry.coordinates.map(c=>[c[1],c[0]]);
                 if(measureLine)map.removeLayer(measureLine);
                 measureLine=L.polyline(coords,{color:'#7b1fa2',weight:4,opacity:0.85}).addTo(map);
+                document.getElementById('btnClearMeasure').style.display='flex';
                 document.getElementById('measureResultText').textContent=`🛣️ ${formatDist(roadDist)} · ~${mins} นาที (ถนน)\n📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
             }
         }).catch(()=>{});
@@ -1983,7 +1992,12 @@ window.doConfirmDelete=function(idx){
 // MEASURE
 // ════════════════════════════════════════════
 window.startMeasureMode=function(idx){
-    const loc=locations[idx]; measureStart=loc; measureMode=true;
+    measureMode=true;
+    if(typeof idx==='number' && locations[idx]){
+        measureStart=locations[idx];
+    } else {
+        measureStart=null;
+    }
     document.getElementById('measureBanner').classList.add('show');
     document.getElementById('map').classList.add('measure-cursor');
     closePlaceCard();
@@ -1999,7 +2013,16 @@ const measureModalClose=document.getElementById('measureModalClose');
 const measureModalClear=document.getElementById('measureModalClear');
 const measureModalOverlay2=document.getElementById('measureModalOverlay');
 if(measureModalClose) measureModalClose.onclick=()=>{if(measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
-if(measureModalClear) measureModalClear.onclick=()=>{if(measureLine){map.removeLayer(measureLine);measureLine=null;}if(measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
+if(measureModalClear) measureModalClear.onclick=()=>{
+    if(measureLine){map.removeLayer(measureLine);measureLine=null;}
+    document.getElementById('btnClearMeasure').style.display='none';
+    if(measureModalOverlay2)measureModalOverlay2.classList.remove('open');
+};
+const btnClearMeasureGlobal=document.getElementById('btnClearMeasure');
+if(btnClearMeasureGlobal) btnClearMeasureGlobal.onclick=()=>{
+    if(measureLine){map.removeLayer(measureLine);measureLine=null;}
+    btnClearMeasureGlobal.style.display='none';
+};
 if(measureModalOverlay2) measureModalOverlay2.onclick=e=>{if(e.target===measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
 
 // ════════════════════════════════════════════
