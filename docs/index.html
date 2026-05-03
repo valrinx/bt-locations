@@ -832,102 +832,43 @@
             .sidebar { display: none; }
             .sidebar-backdrop { display: none !important; }
             .main { position: relative; flex: 1; }
-
-            /* ── Topbar: สร้างใหม่เป็น ☰ | Search pill | Avatar ── */
-            .topbar {
-                height: 52px;
-                padding: 0 10px;
-                gap: 8px;
-                /* ซ่อน zone เดิมทั้งหมด แล้ว override ให้ topbar เป็น flex row */
-            }
-            .tb-left {
-                width: auto; flex-shrink: 0;
-                border-right: none; padding: 0;
-                gap: 0;
-            }
-            /* ซ่อนของใน tb-left ที่ไม่ต้องการ เหลือแค่ btnMenu */
-            .tb-left .logo-sq { display: none; }
+            /* Topbar mobile: hide center + brand, keep left icon + right */
+            .tb-left { width: auto; border-right: none; padding: 0 8px; gap: 6px; }
             .tb-brand { display: none; }
-            /* tb-center เปลี่ยนเป็น search pill โค้งมน */
-            .tb-center {
-                flex: 1; padding: 0; min-width: 0;
-            }
-            .search-box {
-                width: 100%; max-width: none; height: 36px;
-                border-radius: 20px; padding: 0 12px;
-                background: var(--s2); border: 0.5px solid var(--bd2);
-            }
-            /* tb-right: เหลือแค่ avatar วงกลม */
-            .tb-right {
-                border-left: none; padding: 0; gap: 0;
-            }
+            .tb-center { display: none; }
+            .tb-right { border-left: none; padding: 0 8px; margin-left: auto; }
             .pill-badge { display: none; }
             .live-p { display: none; }
-            .avs { display: none; }
-            .tb-sep { display: none; }
-            .tb-icon-btn#btnImportData { display: none; }
-            .tb-icon-btn#btnUpload { display: none; }
-            /* แปลง av1 ให้เป็น avatar กลม */
-            #av1 {
-                display: flex !important;
-                width: 32px; height: 32px;
-                border-radius: 50%;
-                font-size: 11px; font-weight: 700;
-                margin-left: 0;
-                border: none;
-            }
-            /* ซ่อน av2/av3 บน mobile */
-            #av2, #av3 { display: none !important; }
-            /* เปิด avs กลับมาเพื่อให้ av1 แสดง */
-            .tb-right .avs { display: flex !important; }
-
-            /* ── Filter chips row: เพิ่ม border-bottom ── */
-            .mob-chips-row {
-                display: flex;
-                background: var(--s1);
-                border-bottom: 0.5px solid var(--bd);
-                padding: 6px 10px;
-            }
-
-            /* ── Bottom nav ── */
+            /* Show mobile components */
+            .mob-search-row { display: flex; }
+            .mob-chips-row { display: flex; }
             .mob-nav { display: flex; }
-
-            /* vtabs: ซ่อนบน mobile (ใช้ mob-nav แทน) */
-            .vtabs { display: none; }
-
-            /* hide map bottom bar, use mob-nav */
+            /* vtabs */
+            .vtabs { overflow-x: auto; scrollbar-width: none; height: 36px; }
+            .vtabs::-webkit-scrollbar { display: none; }
+            .vt { white-space: nowrap; padding: 4px 9px; font-size: 11px; }
+            /* hide bottom bar, use mob-nav */
             .btbar { display: none !important; }
-
-            /* zoom buttons */
+            /* zoom */
             .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
             .zb { width: 34px; height: 34px; font-size: 16px; }
-
             /* stats + list views full screen */
             .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
             .sv-row { grid-template-columns: 1fr; }
             .sv-inner { padding: 12px; }
-
             /* modals */
             .modal { width: calc(100vw - 24px); max-height: 85vh; border-radius: 14px; }
-
-            /* map stats ซ้ายบน — เล็กลงนิดหน่อย */
-            .map-stats { left: 8px; top: 8px; }
-            .msc { padding: 7px 10px; min-width: 70px; }
-            .msv { font-size: 18px; }
-
-            /* mob-search-row: ไม่ต้องแสดงแล้ว (ใช้ topbar search แทน) */
-            .mob-search-row { display: none !important; }
         }
 
         /* Small phones */
         @media (max-width: 380px) {
+            .vt { padding: 3px 7px; font-size: 10px; }
             .mob-nav { height: 52px; }
             .mob-nb-ico { font-size: 16px; }
             .mob-nb-lbl { font-size: 9px; }
             .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
             .mob-sheet { bottom: 52px; }
             .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
-            .topbar { height: 48px; }
         }
 
         /* Leaflet overrides */
@@ -1011,6 +952,125 @@
         /* bt-tooltip dark */
         .bt-tooltip { background: var(--s1) !important; color: var(--tx) !important; border: 0.5px solid var(--bd2) !important; border-radius: 6px !important; font-size: 11px !important; padding: 3px 8px !important; box-shadow: var(--shadow-md) !important; }
         .bt-tooltip::before { display:none !important; }
+
+        /* ════════════════════════════════════════
+           LAYOUT OVERRIDE — CSS only, no HTML change
+           PC ≥768px  |  Mobile <768px
+        ════════════════════════════════════════ */
+
+        /* ── PC: ไม่เปลี่ยนอะไร topbar เดิมดีอยู่แล้ว ── */
+
+        /* ── MOBILE <768px ── */
+        @media (max-width: 767px) {
+
+            /* 1. App container */
+            .app { padding-bottom: env(safe-area-inset-bottom, 0); }
+            .body { flex-direction: column; position: relative; }
+            .sidebar { display: none !important; }
+            .sidebar-backdrop { display: none !important; }
+            .main { position: relative; flex: 1; }
+
+            /* 2. Topbar: ปรับเป็น ☰ | Search pill | Avatar
+               โดยใช้ element เดิมทั้งหมด ไม่เพิ่มลบอะไร */
+            .topbar {
+                height: 52px;
+                padding: 0 10px;
+                gap: 8px;
+            }
+            /* tb-left: ซ่อนทุกอย่าง เหลือแค่ปุ่ม hamburger */
+            .tb-left {
+                width: auto !important;
+                flex-shrink: 0;
+                border-right: none !important;
+                padding: 0 !important;
+                gap: 0 !important;
+            }
+            .tb-left .logo-sq { display: none; }
+            .tb-brand { display: none; }
+
+            /* tb-center: search pill กลม */
+            .tb-center {
+                flex: 1;
+                padding: 0 !important;
+                min-width: 0;
+            }
+            .search-box {
+                width: 100% !important;
+                max-width: none !important;
+                height: 36px !important;
+                border-radius: 20px !important;
+                padding: 0 12px !important;
+            }
+
+            /* tb-right: เหลือแค่ avatar วงกลม */
+            .tb-right {
+                border-left: none !important;
+                padding: 0 !important;
+                gap: 0 !important;
+            }
+            .pill-badge,
+            .live-p,
+            .tb-sep,
+            #btnImportData,
+            #btnUpload,
+            #av2, #av3 { display: none !important; }
+
+            /* av1 → avatar กลม */
+            .tb-right .avs { display: flex !important; }
+            #av1 {
+                width: 32px !important;
+                height: 32px !important;
+                border-radius: 50% !important;
+                font-size: 12px !important;
+                font-weight: 700 !important;
+                margin-left: 0 !important;
+                border: 2px solid rgba(255,255,255,0.15) !important;
+                cursor: pointer;
+            }
+
+            /* 3. mob-search-row: ซ่อน ไม่ต้องการแล้ว */
+            .mob-search-row { display: none !important; }
+
+            /* 4. mob-chips-row: แถว filter chips ใต้ topbar */
+            .mob-chips-row {
+                display: flex !important;
+                background: var(--s1);
+                border-bottom: 0.5px solid var(--bd);
+                padding: 6px 10px;
+                gap: 6px;
+            }
+
+            /* 5. vtabs: ซ่อน ใช้ mob-nav แทน */
+            .vtabs { display: none !important; }
+
+            /* 6. Bottom nav */
+            .mob-nav { display: flex; }
+
+            /* 7. Bottom toolbar บนแผนที่ — ซ่อน ใช้ mob-nav แทน */
+            .btbar { display: none !important; }
+
+            /* 8. Zoom controls */
+            .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
+            .zb { width: 34px; height: 34px; font-size: 16px; }
+
+            /* 9. Stats/List views */
+            .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
+            .sv-row { grid-template-columns: 1fr; }
+            .sv-inner { padding: 12px; }
+
+            /* 10. Modals */
+            .modal { width: calc(100vw - 24px); max-height: 85vh; border-radius: 14px; }
+        }
+
+        /* ── Small phones ── */
+        @media (max-width: 380px) {
+            .mob-nav { height: 52px; }
+            .mob-nb-ico { font-size: 16px; }
+            .mob-nb-lbl { font-size: 9px; }
+            .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
+            .mob-sheet { bottom: 52px; }
+            .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
+        }
     </style>
 </head>
 <body>
