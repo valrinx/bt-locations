@@ -1,218 +1,721 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BT Locations Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BT Locations</title>
+    <meta name="theme-color" content="#0b0c10">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; }
-        #map { width: 100%; height: 100vh; }
-        .bt-marker {
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        :root {
+            --bg: #0b0c10;
+            --s1: #12131a;
+            --s2: #191a23;
+            --s3: #20212c;
+            --s4: #272836;
+            --bd: rgba(255,255,255,0.06);
+            --bd2: rgba(255,255,255,0.11);
+            --bd3: rgba(255,255,255,0.18);
+            --tx: #eceaf5;
+            --tx2: #9494a8;
+            --tx3: #5a5a6e;
+            --bl: #5b8fff;
+            --bl-d: rgba(91,143,255,0.13);
+            --bl-b: rgba(91,143,255,0.26);
+            --gn: #2ecc90;
+            --gn-d: rgba(46,204,144,0.11);
+            --gn-b: rgba(46,204,144,0.26);
+            --am: #f5a623;
+            --am-d: rgba(245,166,35,0.11);
+            --rd: #ff5c5c;
+            --rd-d: rgba(255,92,92,0.11);
+            --pu: #a78bfa;
+            --pu-d: rgba(167,139,250,0.11);
+            --or: #ff7f5c;
+            --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
+            --shadow-md: 0 2px 12px rgba(0,0,0,0.5);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+            --radius: 14px;
+            --sidebar-w: 260px;
+            /* color aliases used by app.js */
+            --red: #ff5c5c; --green: #2ecc90; --yellow: #f5a623;
+            /* z-index layers */
+            --z-map: 0;
+            --z-controls: 100;
+            --z-panel: 200;
+            --z-list-panel: 210;
+            --z-place-card: 220;
+            --z-info-panel: 230;
+            --z-info-backdrop: 229;
+            --z-fab: 240;
+            --z-modal: 300;
+            --z-toast: 400;
+            --z-crosshair: 500;
+            --z-hint: 150;
         }
-        .bt-label {
-            background: rgba(0,0,0,0.75) !important; color: #fff !important;
-            border: none !important; border-radius: 4px !important;
-            padding: 2px 6px !important; font-size: 11px !important;
-            font-weight: 600 !important; box-shadow: 0 1px 4px rgba(0,0,0,0.3) !important;
-            white-space: nowrap !important;
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Noto Sans Thai', sans-serif; background: var(--bg); overflow: hidden; height: 100vh; color: var(--tx); }
+
+        /* ══ APP CONTAINER ══ */
+        .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* ══ TOPBAR — 3-zone aligned ══ */
+        .topbar {
+            height: 50px; flex-shrink: 0;
+            display: flex; align-items: stretch;
+            background: var(--s1); border-bottom: 0.5px solid var(--bd);
         }
-        .bt-label::before {
-            border-top-color: rgba(0,0,0,0.75) !important;
+        /* LEFT: exact width match with sidebar */
+        .tb-left {
+            width: 252px; flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px; padding: 0 12px;
+            border-right: 0.5px solid var(--bd2); overflow: hidden;
         }
-        .controls {
-            position: absolute; top: 10px; left: 50px; z-index: 1000;
-            background: white; border-radius: 10px; padding: 8px 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 6px;
-            max-width: 90vw;
+        .tb-brand { font-size: 13px; font-weight: 700; color: var(--tx); white-space: nowrap; }
+        /* CENTER: search bar fills remaining space */
+        .tb-center { flex: 1; display: flex; align-items: center; padding: 0 12px; min-width: 0; }
+        /* RIGHT: fixed actions */
+        .tb-right { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-left: 0.5px solid var(--bd2); }
+        .logo { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+        .logo-sq { width: 24px; height: 24px; border-radius: 6px; background: var(--bl-d); border: 0.5px solid var(--bl-b); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--bl); flex-shrink: 0; }
+        .logo-txt { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--bl); text-transform: uppercase; }
+
+        /* ════════════════════════════════════
+           LOADING SCREEN
+        ════════════════════════════════════ */
+        .loader { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 9999; transition: opacity 0.4s ease; }
+        .loader.done { opacity: 0; pointer-events: none; }
+        .spin { width: 32px; height: 32px; border: 2px solid var(--bd2); border-top-color: var(--bl); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-t { font-size: 13px; color: var(--tx2); }
+        .tb-sep { width: 0.5px; height: 18px; background: var(--bd2); margin: 0 2px; }
+        .search-box {
+            flex: 1; max-width: 440px; height: 32px;
+            display: flex; align-items: center; gap: 7px;
+            background: var(--s2); border: 0.5px solid var(--bd); border-radius: 8px; padding: 0 10px;
+            transition: border-color 0.15s;
         }
-        .ctrl-row {
-            display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+        .search-box:focus-within { border-color: var(--bl-b); }
+        .search-box input { background: none; border: none; outline: none; color: var(--tx); font-size: 12px; width: 100%; }
+        .search-box input::placeholder { color: var(--tx3); }
+        .si { font-size: 12px; color: var(--tx3); }
+        .pill-badge { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+        .live-p { display: flex; align-items: center; gap: 5px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 20px; padding: 3px 9px; }
+        .live-p span { font-size: 11px; color: var(--tx2); }
+        .avs { display: flex; }
+        .av { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--bg); border: 1.5px solid var(--bg); margin-left: -5px; cursor: pointer; }
+        .tb-icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--tx2); transition: all 0.12s; }
+        .tb-icon-btn:hover { background: var(--s3); color: var(--tx); }
+        .tb-icon-btn.active { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); }
+
+        /* ══ BODY LAYOUT ══ */
+        .body { display: flex; flex: 1; overflow: hidden; }
+
+        /* ══ SIDEBAR ══ */
+        .sidebar {
+            width: 252px; flex-shrink: 0;
+            background: var(--s1); border-right: 0.5px solid var(--bd);
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
         }
-        .ctrl-sep {
-            width: 1px; height: 20px; background: #ddd; margin: 0 2px;
+        .sec-hd { padding: 14px 14px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tx3); flex-shrink: 0; }
+        .flist { flex-shrink: 0; padding: 0 10px; display: flex; flex-direction: column; }
+        .fl { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); border: 0.5px solid transparent; }
+        .fl:hover { background: var(--s2); color: var(--tx); }
+        .fl.on { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 500; }
+        .fd { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .fn { flex: 1; }
+        .fc { font-size: 10px; color: var(--tx3); background: var(--s2); padding: 1px 7px; border-radius: 10px; }
+        .fl.on .fc { background: rgba(91,143,255,0.18); color: var(--bl); }
+        .sdiv { height: 0.5px; background: var(--bd); margin: 10px 14px; flex-shrink: 0; }
+        .clist { flex: 1; overflow-y: auto; padding: 0 10px; }
+        .cl { display: flex; align-items: center; gap: 9px; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); }
+        .cl:hover { background: var(--s2); color: var(--tx); }
+        .cl.on { background: var(--s2); color: var(--tx); }
+        .cd { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .cn { flex: 1; }
+        .cc { font-size: 10px; color: var(--tx3); margin-left: auto; }
+        .sfoot { padding: 10px 12px; border-top: 0.5px solid var(--bd); flex-shrink: 0; background: var(--s1); }
+        .add-btn { width: 100%; padding: 9px; border-radius: 9px; border: none; background: var(--s2); color: var(--tx); font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s; }
+        .add-btn:hover { background: var(--bl-d); color: var(--bl); }
+        .collab { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .cav { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--bg); border: 1.5px solid var(--s1); }
+        .ctxt { font-size: 11px; color: var(--tx3); }
+
+        /* ══ MAIN ══ */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+        /* View tabs */
+        .vtabs {
+            height: 38px; flex-shrink: 0;
+            display: flex; align-items: center; gap: 2px; padding: 0 12px;
+            background: var(--s1); border-bottom: 0.5px solid var(--bd);
         }
-        .more-wrap { position: relative; }
-        .more-menu {
-            display: none; position: absolute; top: 100%; right: 0; margin-top: 6px;
-            background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-            min-width: 180px; padding: 6px 0; z-index: 2000;
+        .vt {
+            display: flex; align-items: center; gap: 5px;
+            padding: 5px 11px; border-radius: 7px;
+            font-size: 12px; font-weight: 500; color: var(--tx2); cursor: pointer;
+            border: 0.5px solid transparent; transition: all 0.13s;
         }
-        .more-menu.show { display: block; }
-        .mm-item {
-            display: block; width: 100%; text-align: left; border: none; background: none;
-            padding: 8px 16px; font-size: 13px; cursor: pointer; color: #333;
+        .vt:hover { color: var(--tx); background: var(--s2); }
+        .vt.on { color: var(--bl); background: var(--bl-d); border-color: var(--bl-b); }
+        .vt-i { font-size: 13px; }
+
+        .view-area { flex: 1; position: relative; overflow: hidden; }
+
+        /* Map view */
+        .map-view { position: absolute; inset: 0; background: #0d0e14; display: none; }
+        .map-view.show { display: block; }
+        .mgrid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.013) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.013) 1px,transparent 1px); background-size: 44px 44px; pointer-events: none; }
+        #map { position: absolute; inset: 0; z-index: 1; }
+
+        /* Map popup */
+        .map-popup {
+            position: absolute; right: 14px; top: 14px; width: 214px;
+            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 13px; padding: 13px 14px;
+            z-index: 100; display: none;
         }
-        .mm-item:hover { background: #f0f0f0; }
-        .mm-sep { border: none; border-top: 1px solid #eee; margin: 4px 0; }
-        .controls input, .controls select {
-            border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px;
-            font-size: 13px; outline: none;
+        .map-popup.show { display: block; }
+        .pp-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--bl); margin-bottom: 3px; }
+        .pp-name { font-size: 14px; font-weight: 600; margin-bottom: 1px; }
+        .pp-sub { font-size: 11px; color: var(--tx2); margin-bottom: 10px; }
+        .pp-meta { display: flex; gap: 12px; padding: 8px 0; border-top: 0.5px solid var(--bd); border-bottom: 0.5px solid var(--bd); margin-bottom: 10px; }
+        .pp-mi { font-size: 11px; color: var(--tx2); }
+        .pp-mi b { color: var(--tx); font-weight: 500; }
+        .pp-btns { display: flex; gap: 5px; }
+        .ppb { flex: 1; padding: 6px 4px; border-radius: 7px; border: 0.5px solid var(--bd2); background: var(--s2); color: var(--tx2); font-size: 11px; font-weight: 500; text-align: center; cursor: pointer; transition: all 0.12s; }
+        .ppb:hover { color: var(--tx); background: var(--s3); }
+        .ppb.p { background: var(--bl); border-color: var(--bl); color: white; font-weight: 700; }
+        .ppb.p:hover { opacity: 0.85; }
+
+        /* Map stats - concept style */
+        .map-stats { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 50; }
+        .msc { background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 10px; padding: 10px 14px; min-width: 88px; }
+        .msv { font-size: 20px; font-weight: 700; line-height: 1; }
+        .msl { font-size: 10px; color: var(--tx3); margin-top: 3px; letter-spacing: 0.02em; }
+
+        /* Zoom controls */
+        .zoom-c { position: absolute; right: 14px; bottom: 58px; display: flex; flex-direction: column; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 8px; overflow: hidden; z-index: 50; }
+        .zb { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--tx2); cursor: pointer; background: none; border: none; transition: all 0.12s; }
+        .zb:hover { background: var(--s2); color: var(--tx); }
+        .zsep { height: 0.5px; background: var(--bd); }
+
+        /* Bottom toolbar */
+        .btbar { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 30px; padding: 4px 7px; z-index: 50; }
+        .bt { display: flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 500; color: var(--tx2); cursor: pointer; border: none; background: none; transition: all 0.13s; }
+        .bt:hover { background: var(--s2); color: var(--tx); }
+        .bt.on { background: var(--bl-d); color: var(--bl); }
+        .bt-i { font-size: 12px; }
+
+        /* List view */
+        .list-view { position: absolute; inset: 0; background: var(--bg); display: none; flex-direction: column; }
+        .list-view.show { display: flex; }
+        .lv-toolbar { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--s1); border-bottom: 0.5px solid var(--bd); }
+        .lv-tb-btn { height: 26px; padding: 0 10px; border-radius: 7px; border: 0.5px solid var(--bd2); background: var(--s2); color: var(--tx2); font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.12s; white-space: nowrap; }
+        .lv-tb-btn:hover { color: var(--tx); background: var(--s3); }
+        .lv-tb-btn.danger:hover { color: var(--rd); border-color: rgba(255,92,92,0.3); }
+        .lv-count { font-size: 11px; color: var(--tx3); margin-left: auto; }
+        .ltable { flex: 1; overflow-y: auto; }
+
+        /* Stats view */
+        .stats-view { position: absolute; inset: 0; background: var(--bg); display: none; overflow-y: auto; }
+        .stats-view.show { display: block; }
+        .sv-inner { padding: 16px; }
+        .sv-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
+        .sv-card { background: var(--s1); border: 0.5px solid var(--bd); border-radius: 10px; padding: 12px 14px; }
+        .sv-v { font-size: 22px; font-weight: 700; }
+        .sv-l { font-size: 11px; color: var(--tx3); margin-top: 2px; }
+        .sv-h { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--tx3); margin-bottom: 10px; }
+        .sv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .sv-panel { background: var(--s1); border: 0.5px solid var(--bd); border-radius: 10px; padding: 14px; }
+        .donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+        .donut-legend { display: flex; flex-direction: column; gap: 6px; }
+        .dl-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--tx2); }
+        .dl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .dl-val { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--tx); }
+        .recent-list { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; }
+        .ri { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 0.5px solid var(--bd); }
+        .ri:last-child { border-bottom: none; }
+        .ri-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .ri-info { flex: 1; }
+        .ri-name { font-size: 12px; font-weight: 500; }
+        .ri-meta { font-size: 11px; color: var(--tx3); }
+        .ri-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 58px; left: 50%; transform: translateX(-50%);
+            background: var(--s2); border: 0.5px solid var(--bd2); border-radius: 20px;
+            padding: 7px 14px; display: flex; align-items: center; gap: 9px;
+            font-size: 12px; color: var(--tx); white-space: nowrap;
+            opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 400;
         }
-        .controls input { width: 160px; }
-        .controls select { max-width: 180px; }
-        .controls input:focus, .controls select:focus { border-color: #4285f4; }
-        .count-badge {
-            background: #4285f4; color: white; border-radius: 12px;
-            padding: 4px 10px; font-size: 12px; font-weight: bold;
+        .toast.show { opacity: 1; pointer-events: auto; }
+
+        /* ══ SEARCH BAR (mobile only) ══ */
+        .search-bar {
+            position: fixed; top: 10px; left: 10px;
+            width: min(calc(100vw - 20px), var(--sidebar-w));
+            z-index: var(--z-controls); display: flex; flex-direction: column; gap: 0;
         }
-        .btn {
-            border: none; border-radius: 6px; padding: 6px 12px;
-            font-size: 12px; cursor: pointer; font-weight: 500;
+        .search-box {
+            background: var(--s1); border-radius: var(--radius);
+            border: 0.5px solid var(--bd2);
+            box-shadow: var(--shadow-md); display: flex; align-items: center;
+            padding: 0 14px 0 10px; height: 48px; gap: 8px;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            backdrop-filter: blur(12px);
         }
-        .btn-add { background: #34a853; color: white; }
-        .btn-add:hover { background: #2d9249; }
-        .btn-edit { background: #fbbc04; color: #333; }
-        .btn-edit:hover { background: #f0b400; }
-        .btn-delete { background: #ea4335; color: white; }
-        .btn-delete:hover { background: #d33426; }
-        .btn-export { background: #4285f4; color: white; }
-        .btn-export:hover { background: #3275e4; }
-        .btn-import { background: #9334e6; color: white; }
-        .btn-import:hover { background: #7b28c4; }
-        .btn-reset { background: #666; color: white; }
-        .btn-reset:hover { background: #555; }
-        .btn-github { background: #24292e; color: white; }
-        .btn-github:hover { background: #1b1f23; }
-        .btn-github.saving { background: #666; cursor: wait; }
-        .save-status { font-size: 11px; color: #34a853; font-weight: 500; display: none; }
-        .save-status.show { display: inline; }
-        .save-status.error { color: #ea4335; }
-        .custom-popup .leaflet-popup-content-wrapper {
-            border-radius: 8px; font-size: 14px;
+        .search-box.focused { border-color: var(--bl); box-shadow: 0 0 0 2px var(--bl-d), var(--shadow-md); border-radius: var(--radius) var(--radius) 0 0; }
+        .search-box.focused + .search-results { display: block; }
+        .search-menu-btn {
+            width: 36px; height: 36px; border-radius: 8px; border: none; background: none;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: var(--tx2); flex-shrink: 0; transition: background 0.15s;
         }
-        .bt-label {
-            background: transparent; border: none; box-shadow: none;
-            font-size: 11px; font-weight: bold; color: #1a73e8;
-            white-space: nowrap;
+        .search-menu-btn:hover { background: var(--s2); color: var(--tx); }
+        .search-menu-btn svg { width: 18px; height: 18px; }
+        .search-input {
+            flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit;
+            color: var(--tx); background: transparent; caret-color: var(--bl);
         }
-        .popup-content { text-align: center; min-width: 180px; }
-        .popup-content h3 {
-            color: #fff; margin: -12px -20px 10px; padding: 12px 20px;
-            font-size: 15px; font-weight: 600;
-            background: linear-gradient(135deg, #1a73e8, #4285f4);
-            border-radius: 8px 8px 0 0;
+        .search-input::placeholder { color: var(--tx3); }
+        .search-clear {
+            width: 28px; height: 28px; border-radius: 6px; border: none; background: none;
+            cursor: pointer; display: none; align-items: center; justify-content: center;
+            color: var(--tx3); flex-shrink: 0; font-size: 12px;
         }
-        .popup-content .popup-info { color: #555; margin: 4px 0; font-size: 12px; line-height: 1.5; }
-        .popup-content .popup-info strong { color: #333; }
-        .popup-content .popup-actions { margin-top: 10px; display: flex; gap: 6px; justify-content: center; }
-        .popup-content .popup-actions a, .popup-content .popup-actions button {
-            display: inline-flex; align-items: center; gap: 4px;
-            padding: 6px 12px; border-radius: 6px; text-decoration: none;
-            font-size: 12px; cursor: pointer; border: none; font-weight: 500;
-            transition: all 0.2s ease;
+        .search-clear.show { display: flex; }
+        .search-clear:hover { background: var(--s2); color: var(--tx); }
+        .search-divider { width: 1px; height: 18px; background: var(--bd2); flex-shrink: 0; }
+        .search-avatar {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--bl), var(--gn));
+            color: #0d0d0f;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; flex-shrink: 0; cursor: pointer;
         }
-        .popup-content .link-gmaps { background: #1a73e8; color: white; }
-        .popup-content .link-gmaps:hover { background: #1557b0; transform: translateY(-1px); }
-        .popup-content .btn-popup-edit { background: #fbbc04; color: #333; }
-        .popup-content .btn-popup-edit:hover { background: #f0b400; transform: translateY(-1px); }
-        .popup-content .btn-popup-delete { background: #ea4335; color: white; }
-        .popup-content .btn-popup-delete:hover { background: #d33426; transform: translateY(-1px); }
+        /* live dot */
+        .live-indicator { display:flex; align-items:center; gap:5px; }
+        .live-dot { width:6px; height:6px; border-radius:50%; background:var(--gn); animation:livePulse 2s ease infinite; flex-shrink:0; }
+        @keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+        .live-label { font-size:10px; color:var(--tx3); letter-spacing:0.05em; }
+        .search-results {
+            display: none; background: var(--s1);
+            border: 0.5px solid var(--bd2); border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            box-shadow: var(--shadow-lg); overflow: hidden;
+            max-height: 360px; overflow-y: auto;
+        }
+        .search-result-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 14px; cursor: pointer; transition: background 0.1s;
+        }
+        .search-result-item:hover { background: var(--s2); }
+        .search-result-icon {
+            width: 32px; height: 32px; border-radius: 8px;
+            background: var(--bl-d); color: var(--bl);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 14px;
+        }
+        .search-result-text { flex: 1; min-width: 0; }
+        .search-result-name { font-size: 13px; font-weight: 500; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .search-result-sub { font-size: 11px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ══ FILTER CHIPS ══ */
+        .filter-chips {
+            display: flex; gap: 6px; align-items: center;
+            padding: 6px 2px 2px; overflow: visible;
+        }
+        .chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 20px;
+            background: var(--s1); border: 0.5px solid var(--bd2);
+            font-size: 12px; font-family: inherit; font-weight: 500; color: var(--tx2);
+            cursor: pointer; flex-shrink: 0;
+            transition: all 0.15s; white-space: nowrap;
+            backdrop-filter: blur(8px);
+        }
+        .chip:hover { background: var(--s2); color: var(--tx); border-color: var(--bd2); }
+        .chip.active { background: var(--bl-d); color: var(--bl); border-color: var(--bl-b); font-weight: 600; }
+        .chip svg { width: 14px; height: 14px; }
+        .chip-more-wrap { position: relative; }
+        .chip-dropdown {
+            display: none; position: absolute; top: calc(100% + 6px); right: 0;
+            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 12px; box-shadow: var(--shadow-lg);
+            min-width: 160px; z-index: 1100; overflow: hidden;
+            animation: chipDropIn 0.15s ease-out;
+        }
+        @keyframes chipDropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        .chip-dropdown.open { display: block; }
+        .chip-dropdown-item {
+            display: flex; align-items: center; gap: 8px;
+            width: 100%; padding: 9px 14px; border: none; background: none;
+            font-size: 12px; font-family: inherit; color: var(--tx2); cursor: pointer;
+            transition: background 0.1s; text-align: left;
+        }
+        .chip-dropdown-item:hover { background: var(--s2); color: var(--tx); }
+        .chip-dropdown-item:active { background: var(--s3); }
+        .chip-dropdown-item.active { color: var(--bl); font-weight: 600; background: var(--bl-d); }
+        .chip-dropdown-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+        /* ══ RIGHT-SIDE CONTROLS ══ */
+        .gps-btn-wrap { position: fixed; right: 12px; bottom: 80px; z-index: var(--z-controls); }
+        .map-controls {
+            position: fixed; right: 12px; top: 50%;
+            transform: translateY(-50%); z-index: var(--z-controls);
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .map-btn {
+            width: 38px; height: 38px; border-radius: 8px;
+            background: var(--s1); border: 0.5px solid var(--bd2); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-md); color: var(--tx2);
+            transition: all 0.15s; flex-shrink: 0;
+            position: relative; overflow: hidden; backdrop-filter: blur(8px);
+        }
+        .map-btn:hover { background: var(--s2); color: var(--tx); }
+        .map-btn:active { transform: scale(0.9); background: var(--s3); }
+        .map-btn.active { color: var(--bl); background: var(--bl-d); border-color: var(--bl-b); }
+        .map-btn svg { width: 18px; height: 18px; transition: transform 0.2s; }
+        .map-btn.gps-searching { color: var(--yellow); animation: gps-btn-pulse 1.2s ease-in-out infinite; }
+        .map-btn.gps-found { color: var(--bl); }
+        .map-btn.gps-tracking { color: var(--bl); box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md); animation: gps-track-pulse 2s ease-in-out infinite; }
+        @keyframes gps-track-pulse { 0%,100% { box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md); } 50% { box-shadow: 0 0 0 5px rgba(79,138,255,0.1), var(--shadow-md); } }
+        @keyframes gps-btn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .map-btn-group {
+            background: var(--s1); border-radius: 8px;
+            border: 0.5px solid var(--bd2);
+            box-shadow: var(--shadow-md); overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .map-btn-group .map-btn { width: 38px; height: 38px; border-radius: 0; box-shadow: none; border: none; }
+        .map-btn-group .map-btn:not(:last-child) { border-bottom: 0.5px solid var(--bd3); }
+
+        /* ══ FAB ══ */
+        .fab {
+            position: fixed; right: 14px; bottom: 20px; z-index: var(--z-fab);
+            background: var(--bl); border: none; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(79,138,255,0.4); padding: 11px 18px;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; font-weight: 600; font-family: inherit;
+            color: #fff; cursor: pointer; transition: all 0.2s;
+        }
+        .fab:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(79,138,255,0.5); }
+        .fab:active { transform: scale(0.96); }
+        .fab svg { color: white; width: 18px; height: 18px; }
+        .fab.add-mode { background: var(--red); box-shadow: 0 4px 20px rgba(255,95,95,0.4); }
+        .fab.add-mode svg { color: white; }
+
+        /* ══ COUNT BADGE ══ */
+        .count-pill {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: var(--z-fab);
+            background: var(--s1); border: 0.5px solid var(--bd2); color: var(--tx);
+            border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 500;
+            box-shadow: var(--shadow-md); pointer-events: none;
+            opacity: 0; transition: opacity 0.3s; white-space: nowrap;
+        }
+        .count-pill.show { opacity: 1; }
+
+        /* ══ INFO PANEL ══ */
+        .info-panel {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: min(320px, 85vw); background: var(--s1); z-index: var(--z-info-panel);
+            border-right: 0.5px solid var(--bd2);
+            box-shadow: var(--shadow-lg); transform: translateX(-110%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .info-panel.open { transform: translateX(0); }
+        .info-panel-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: var(--z-info-backdrop); }
+        .info-panel-backdrop.show { display: block; }
+        .info-panel-header {
+            padding: 14px 14px 8px; display: flex; align-items: center; gap: 8px;
+            border-bottom: 0.5px solid var(--bd3); flex-shrink: 0;
+        }
+        .info-panel-close {
+            width: 32px; height: 32px; border-radius: 8px; border: none; background: none;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--tx2); flex-shrink: 0;
+        }
+        .info-panel-close:hover { background: var(--s2); color: var(--tx); }
+        .info-panel-title { font-size: 15px; font-weight: 600; flex: 1; letter-spacing: 0.02em; }
+        .info-panel-body { flex: 1; overflow-y: auto; background: var(--s2); }
+        /* Mobile: bottom sheet — ไม่บังแผนที่ */
+        @media (max-width: 599px) {
+            .info-panel {
+                top: auto; left: 0; right: 0; bottom: 0;
+                width: 100%; max-height: 75vh;
+                border-radius: 20px 20px 0 0;
+                transform: translateY(110%);
+                transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            }
+            .info-panel.open { transform: translateY(0); }
+            .info-panel-header { padding-top: 8px; }
+            .info-panel-drag {
+                width: 36px; height: 4px; background: var(--bd3);
+                border-radius: 2px; margin: 8px auto 4px; display: block;
+            }
+        }
+
+        .stats-section { padding: 14px; }
+        .stats-header { font-size: 10px; font-weight: 600; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+        .stats-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--bd3); }
+        .stats-row:last-child { border-bottom: none; }
+        .stats-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .stats-name { flex: 1; font-size: 13px; color: var(--tx); }
+        .stats-count { font-size: 12px; font-weight: 600; color: var(--tx2); }
+        .stats-bar-wrap { width: 50px; height: 3px; background: var(--bd3); border-radius: 2px; }
+        .stats-bar { height: 100%; border-radius: 2px; background: var(--bl); }
+
+        /* ══ PLACE CARD ══ */
+        .place-card {
+            position: fixed; bottom: -100%; left: 0; right: 0;
+            background: var(--s1); border-top: 0.5px solid var(--bd2);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 30px rgba(0,0,0,.5); z-index: var(--z-place-card);
+            max-height: 60vh; overflow-y: auto;
+        }
+        .place-card.open { bottom: 0; }
+        @media (min-width: 600px) {
+            .place-card {
+                position: fixed; top: 58px; bottom: auto;
+                left: 264px; /* sidebar 252px + 12px gap */
+                width: 280px; border-radius: var(--radius);
+                border: 0.5px solid var(--bd2); border-top: 0.5px solid var(--bd2);
+                max-height: calc(100vh - 76px); box-shadow: var(--shadow-lg);
+                opacity: 0; transform: translateY(8px) scale(0.98);
+                transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
+                pointer-events: none;
+            }
+            .place-card.open { bottom: auto; opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+        }
+        .place-card-drag { width: 32px; height: 3px; background: var(--bd2); border-radius: 2px; margin: 8px auto 2px; }
+        @media (min-width: 600px) { .place-card-drag { display: none; } }
+        .place-card-close {
+            position: absolute; top: 8px; right: 10px;
+            width: 28px; height: 28px; border-radius: 8px;
+            border: none; background: var(--s2); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--tx3); font-size: 14px; transition: all 0.15s;
+            z-index: 10; pointer-events: auto;
+        }
+        .place-card-close:hover { background: var(--s3); color: var(--tx); }
+        .place-card-content { padding: 6px 14px 20px; }
+        .place-card-name { font-size: 18px; font-weight: 600; color: var(--tx); margin-bottom: 3px; padding-right: 36px; line-height: 1.3; }
+        .place-card-meta { font-size: 12px; color: var(--tx2); margin-bottom: 12px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .place-card-meta .dot { color: var(--tx3); }
+        .place-card-actions { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+        .place-action-btn {
+            flex: 1; min-width: 54px; display: flex; flex-direction: column;
+            align-items: center; gap: 3px; padding: 9px 4px;
+            background: var(--s2); border: 0.5px solid var(--bd3); border-radius: 10px;
+            cursor: pointer; transition: all 0.15s; text-decoration: none;
+        }
+        .place-action-btn:hover { background: var(--s3); transform: translateY(-1px); border-color: var(--bd2); }
+        .place-action-btn:active { transform: scale(0.95); }
+        .place-action-btn.red { background: rgba(255,95,95,0.1); border-color: rgba(255,95,95,0.2); }
+        .place-action-btn.green { background: rgba(45,255,160,0.08); border-color: rgba(45,255,160,0.2); }
+        .place-action-btn.yellow { background: rgba(255,184,48,0.1); border-color: rgba(255,184,48,0.2); }
+        .place-action-btn.purple { background: rgba(176,111,255,0.1); border-color: rgba(176,111,255,0.2); }
+        .place-action-btn.orange { background: rgba(255,122,92,0.1); border-color: rgba(255,122,92,0.2); }
+        .place-action-icon { font-size: 18px; }
+        .place-action-label { font-size: 10px; font-weight: 600; color: var(--tx2); font-family: inherit; }
+        .place-action-btn.red .place-action-label { color: var(--red); }
+        .place-action-btn.green .place-action-label { color: var(--green); }
+        .place-action-btn.yellow .place-action-label { color: var(--yellow); }
+        .place-action-btn.purple .place-action-label { color: #b06fff; }
+        .place-action-btn.orange .place-action-label { color: #ff7a5c; }
+        .place-card-divider { height: 0.5px; background: var(--bd3); margin: 10px 0; }
+        .place-card-row { display: flex; align-items: flex-start; gap: 12px; padding: 7px 0; }
+        .place-card-row-icon { color: var(--tx3); width: 18px; flex-shrink: 0; margin-top: 1px; font-size: 14px; }
+        .place-card-row-text { flex: 1; font-size: 13px; color: var(--tx); line-height: 1.5; }
+        .place-card-row-text small { color: var(--tx3); font-size: 11px; }
+
+        /* ══ LIST PANEL ══ */
         .list-panel {
-            position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
-            background: white; max-height: 35vh; overflow-y: auto;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.2); display: none;
+            position: fixed; bottom: -100%; left: 0; right: 0;
+            background: var(--s1); border-top: 0.5px solid var(--bd2); border-radius: 16px 16px 0 0;
+            box-shadow: 0 -4px 30px rgba(0,0,0,.5); z-index: var(--z-list-panel);
+            transition: bottom 0.3s cubic-bezier(0.4,0,0.2,1);
+            max-height: 60vh; display: flex; flex-direction: column;
         }
-        .list-panel.open { display: block; }
-        .list-toggle {
-            position: absolute; bottom: 10px; right: 10px; z-index: 1001;
-            background: #4285f4; color: white; border: none; border-radius: 50%;
-            width: 48px; height: 48px; font-size: 20px; cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        .list-panel.open { bottom: 0; }
+        @media (min-width: 600px) {
+            .list-panel {
+                position: fixed; top: 58px; bottom: auto;
+                left: 264px; width: 280px; border-radius: var(--radius);
+                border: 0.5px solid var(--bd2);
+                max-height: calc(100vh - 76px); box-shadow: var(--shadow-lg);
+            }
         }
+        .list-panel-header {
+            padding: 14px 14px 8px; display: flex; align-items: center;
+            justify-content: space-between; border-bottom: 0.5px solid var(--bd3); flex-shrink: 0;
+        }
+        .list-panel-title { font-size: 14px; font-weight: 600; color: var(--tx); }
+        .list-panel-close {
+            border: none; background: var(--s2); font-size: 14px; cursor: pointer; color: var(--tx2);
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; z-index: 1060; pointer-events: auto;
+            flex-shrink: 0; margin-left: 6px; transition: all 0.15s;
+        }
+        .list-panel-close:hover { background: var(--s3); color: var(--tx); }
+        .list-panel-close:active { transform: scale(0.9); }
+        .list-body { overflow-y: auto; flex: 1; }
+        .list-sort-bar {
+            display: flex; gap: 5px; padding: 7px 10px; border-bottom: 0.5px solid var(--bd3);
+            overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
+        }
+        .list-sort-bar::-webkit-scrollbar { display: none; }
+        .sort-btn {
+            padding: 3px 10px; border-radius: 12px; border: 0.5px solid var(--bd3); background: var(--s2);
+            font-size: 11px; font-family: inherit; color: var(--tx3); cursor: pointer;
+            white-space: nowrap; transition: all 0.12s;
+        }
+        .sort-btn.active { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 600; }
         .list-item {
-            padding: 8px 16px; border-bottom: 1px solid #eee; cursor: pointer;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; cursor: pointer; border-bottom: 0.5px solid var(--bd3);
+            transition: background 0.1s;
         }
-        .list-item:hover { background: #f5f5f5; }
-        .list-item .name { font-weight: 500; font-size: 14px; }
-        .list-item .detail { color: #888; font-size: 12px; }
-        /* Modal */
+        .list-item:hover { background: var(--s2); }
+        .list-item:last-child { border-bottom: none; }
+        .list-item-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
+        .list-item-text { flex: 1; min-width: 0; }
+        .list-item-name { font-size: 13px; font-weight: 500; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-item-sub { font-size: 11px; color: var(--tx3); }
+        .list-item-chevron { color: var(--tx3); font-size: 14px; }
+
+        /* ══ MODAL ══ */
         .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
-            z-index: 2000; justify-content: center; align-items: center;
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7); z-index: var(--z-modal);
+            align-items: center; justify-content: center;
+            padding: 16px; backdrop-filter: blur(6px);
         }
         .modal-overlay.open { display: flex; }
         .modal {
-            background: white; border-radius: 16px; width: 90vw; max-width: 420px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
-            animation: modalIn 0.25s ease;
+            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 20px;
+            width: 100%; max-width: 420px;
+            max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            animation: modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
         }
-        @keyframes modalIn {
-            from { opacity: 0; transform: scale(0.95) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.9) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        .modal-header { padding: 20px 20px 0; font-size: 17px; font-weight: 600; color: var(--tx); flex-shrink: 0; letter-spacing: 0.01em; }
+        .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; min-height: 0; }
+        .modal-field { margin-bottom: 14px; }
+        .modal-field label { display: block; font-size: 10px; font-weight: 600; color: var(--bl); margin-bottom: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
+        .modal-field input, .modal-field select, .modal-field textarea {
+            width: 100%; padding: 10px 12px; border: 0.5px solid var(--bd2); border-radius: 10px;
+            font-size: 14px; font-family: inherit; color: var(--tx);
+            outline: none; transition: border-color 0.15s, box-shadow 0.15s; background: var(--s2);
         }
-        .modal-header {
-            background: linear-gradient(135deg, #1a73e8, #4285f4);
-            color: white; padding: 18px 24px; font-size: 18px; font-weight: 600;
+        .modal-field textarea { resize: vertical; min-height: 64px; }
+        .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--bl); box-shadow: 0 0 0 2px var(--bl-d); }
+        .latlng-row { display: flex; gap: 8px; }
+        .latlng-row .modal-field { flex: 1; }
+        .gps-modal-btn {
+            width: 100%; padding: 9px;
+            border: 0.5px dashed var(--bd2); border-radius: 10px;
+            background: var(--s2); color: var(--bl);
+            font-size: 12px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.15s; margin-bottom: 14px;
         }
-        .modal-body { padding: 20px 24px; }
-        .modal h2 { margin-bottom: 16px; font-size: 18px; color: #333; }
-        .modal label {
-            display: block; margin-bottom: 6px; font-size: 13px;
-            color: #444; font-weight: 600; letter-spacing: 0.3px;
-        }
-        .modal input {
-            width: 100%; border: 2px solid #e8e8e8; border-radius: 8px; padding: 10px 12px;
-            font-size: 14px; margin-bottom: 14px; outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        .modal input:focus { border-color: #4285f4; box-shadow: 0 0 0 3px rgba(66,133,244,0.15); }
-        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8f9fa; }
-        .modal-btns .btn {
-            padding: 10px 20px; font-size: 14px; border-radius: 8px;
-            font-weight: 600; transition: all 0.2s ease;
-        }
-        .btn-cancel { background: #e8e8e8; color: #555; }
-        .btn-cancel:hover { background: #ddd; }
-        .btn-save { background: linear-gradient(135deg, #1a73e8, #4285f4); color: white; }
-        .btn-save:hover { background: linear-gradient(135deg, #1557b0, #3275e4); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(66,133,244,0.4); }
-        .add-mode-banner {
-            display: none; position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
-            z-index: 1500; background: #34a853; color: white; padding: 10px 20px;
-            border-radius: 8px; font-size: 14px; font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        .add-mode-banner.show { display: block; }
-        .add-mode-banner .btn-cancel-add {
-            background: white; color: #34a853; border: none; border-radius: 4px;
-            padding: 4px 12px; margin-left: 12px; cursor: pointer; font-size: 12px;
-        }
-        .legend-panel {
-            position: absolute; bottom: 30px; left: 10px; z-index: 1000;
-            background: white; border-radius: 8px; padding: 10px 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-height: 300px;
-            overflow-y: auto; font-size: 12px; display: none;
-        }
-        .legend-panel.show { display: block; }
-        .legend-item { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
-        .legend-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3); flex-shrink: 0; }
+        .gps-modal-btn:hover { border-color: var(--bl); background: var(--bl-d); }
+        .modal-footer { padding: 10px 0 4px; display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: -16px; margin: 0 -20px -16px; padding: 10px 20px 16px; background: var(--s1); border-top: 0.5px solid var(--bd3); z-index: 1; }
+        .modal-btn { padding: 8px 20px; border-radius: 20px; border: none; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+        .modal-btn-cancel { background: none; color: var(--tx2); border: 0.5px solid var(--bd2); }
+        .modal-btn-cancel:hover { background: var(--s2); color: var(--tx); }
+        .modal-btn-save { background: var(--bl); color: white; }
+        .modal-btn-save:hover { filter: brightness(1.1); box-shadow: 0 2px 12px rgba(79,138,255,.4); }
 
-        body.dark { background: #1a1a2e; }
-        body.dark .controls { background: rgba(30,30,50,0.95); color: #e0e0e0; }
-        body.dark .controls input,
-        body.dark .controls select { background: #2a2a4a; color: #e0e0e0; border-color: #444; }
-        body.dark .list-panel { background: rgba(30,30,50,0.95); color: #e0e0e0; }
-        body.dark .legend-panel { background: rgba(30,30,50,0.95); color: #e0e0e0; }
-        body.dark .modal { background: #1e1e3e; color: #e0e0e0; }
-        body.dark .modal-header { background: linear-gradient(135deg, #1a1a4a, #2a2a6a); }
-        body.dark .modal-body { background: #1e1e3e; }
-        body.dark .modal-body label { color: #ccc; }
-        body.dark .modal input { background: #2a2a4a; color: #e0e0e0; border-color: #444; }
-        body.dark .modal-btns { background: #252550; }
-        body.dark .count-badge { background: #2a2a6a; color: #8ab4f8; }
-        body.dark .ctrl-sep { background: #444; }
-        body.dark .more-menu { background: #1e1e3e; }
-        body.dark .mm-item { color: #e0e0e0; }
-        body.dark .mm-item:hover { background: #2a2a5a; }
-        body.dark .mm-sep { border-color: #333; }
+        /* ══ FILTER MODAL ══ */
+        .filter-choice-list { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow-y: auto; padding: 4px 0; }
+        .filter-choice-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; border-radius: 10px; cursor: pointer;
+            border: 0.5px solid transparent; transition: all 0.12s;
+            font-size: 13px; color: var(--tx2);
+        }
+        .filter-choice-item:hover { background: var(--s2); color: var(--tx); }
+        .filter-choice-item.selected { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 600; }
+        .filter-choice-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .filter-choice-count { margin-left: auto; font-size: 11px; color: var(--tx3); font-weight: 600; background: var(--s2); padding: 1px 7px; border-radius: 10px; }
 
-<<<<<<< HEAD
+        .token-modal { max-width: 380px; }
+        .token-icon { text-align: center; font-size: 48px; margin: 24px 0 8px; }
+        .token-title { text-align: center; font-size: 20px; font-weight: 600; padding: 0 24px; }
+        .token-sub { text-align: center; font-size: 14px; color: var(--tx2); padding: 8px 24px 4px; line-height: 1.6; }
+        .confirm-modal { max-width: 320px; }
+        .confirm-icon { text-align: center; font-size: 36px; padding: 24px 24px 8px; }
+        .confirm-title { font-size: 20px; font-weight: 600; padding: 0 24px; }
+        .confirm-text { font-size: 14px; color: var(--tx2); padding: 8px 24px 16px; line-height: 1.6; }
+        .confirm-footer { padding: 8px 16px 16px; display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-danger { background: var(--red) !important; }
+        .btn-danger:hover { background: #b31412 !important; }
+
+        /* ══ ADD BANNER ══ */
+        .add-banner {
+            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+            z-index: 1500; background: var(--s1); border: 0.5px solid var(--bl); color: var(--tx);
+            padding: 9px 16px; border-radius: 20px; font-size: 12px; font-weight: 500;
+            box-shadow: 0 0 0 2px var(--bl-d), var(--shadow-lg); display: none; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .add-banner.show { display: flex; }
+        .add-banner-cancel {
+            background: rgba(255,95,95,0.15); border: none; color: var(--red);
+            padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; font-family: inherit;
+        }
+        .add-banner-cancel:hover { background: rgba(255,95,95,0.25); }
+
+        /* ══ MEASURE BANNER ══ */
+        .measure-banner {
+            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+            z-index: 1500; background: var(--s1); border: 0.5px solid #b06fff; color: var(--tx);
+            padding: 9px 16px; border-radius: 20px; font-size: 12px; font-weight: 500;
+            box-shadow: 0 0 0 2px rgba(176,111,255,0.15), var(--shadow-lg); display: none; align-items: center; gap: 8px; white-space: nowrap;
+        }
+        .measure-banner.show { display: flex; }
+        .measure-banner-cancel {
+            background: rgba(176,111,255,0.15); border: none; color: #b06fff;
+            padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; font-family: inherit;
+        }
+
+        #crosshair {
+            display: none; position: fixed; pointer-events: none; z-index: var(--z-crosshair);
+            transform: translate(-50%, -100%); font-size: 28px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,.4));
+        }
+        #crosshair.show { display: block; }
+
+        /* ══ LAT/LNG HINT — desktop only ══ */
+        .latlng-hint {
+            position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+            z-index: var(--z-hint); background: rgba(32,33,36,0.7); color: white;
+            padding: 4px 10px; border-radius: 8px; font-size: 11px;
+            pointer-events: none; opacity: 0; transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+        .latlng-hint.show { opacity: 0.6; }
+        /* ซ่อนบนมือถือ */
+        @media (max-width: 599px) {
+            .latlng-hint { display: none !important; }
+        }
+
         /* ══ TOAST ══ */
         .save-toast {
             position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
@@ -568,746 +1071,646 @@
             .mob-sheet { bottom: 52px; }
             .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
         }
-=======
-        @media (max-width: 600px) {
-            .controls {
-                left: 5px; right: 5px; top: 5px; padding: 6px 8px; gap: 4px;
-                max-width: calc(100vw - 10px); flex-wrap: wrap;
-            }
-            .controls input { width: calc(50% - 4px); font-size: 12px; }
-            .controls select { width: calc(50% - 4px); max-width: none; font-size: 12px; }
-            .btn { font-size: 11px; padding: 5px 8px; }
-            .modal { width: 95vw; }
-            .modal-header { padding: 14px 16px; font-size: 16px; }
-            .modal-body { padding: 14px 16px; }
-            .modal-btns { padding: 12px 16px; }
-            .list-panel { max-height: 40vh; }
-        }
->>>>>>> f17735bb967c41ac9dac2dce4646e19ec9e8f9e5
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div class="controls">
-        <div class="ctrl-row">
-            <input type="text" id="search" placeholder="ค้นหา...">
-            <select id="listFilter">
-                <option value="">ทุกรายการ</option>
-                <option value="คลองสาน">คลองสาน</option><option value="คลองสามวา">คลองสามวา</option><option value="คลองสามวา 2">คลองสามวา 2</option><option value="คลองเตย">คลองเตย</option><option value="คันนายาว">คันนายาว</option><option value="จตุจักร">จตุจักร</option><option value="จตุจักร+หมอชิต">จตุจักร+หมอชิต</option><option value="จอมทอง">จอมทอง</option><option value="ซ่อม">ซ่อม</option><option value="ซ่อมทุม">ซ่อมทุม</option><option value="ดินแดง">ดินแดง</option><option value="ดุสิต">ดุสิต</option><option value="ตลิ่งชัน">ตลิ่งชัน</option><option value="ถนอมมิตรสุขาภิบาล5จตุโชติ">ถนอมมิตรสุขาภิบาล5จตุโชติ</option><option value="ทวีวัฒนา">ทวีวัฒนา</option><option value="ทุ่งครุ">ทุ่งครุ</option><option value="ธนบุรี">ธนบุรี</option><option value="บางกอกน้อย">บางกอกน้อย</option><option value="บางกอกใหญ่">บางกอกใหญ่</option><option value="บางกะปิ">บางกะปิ</option><option value="บางกะปิ 2">บางกะปิ 2</option><option value="บางขุนเทียน">บางขุนเทียน</option><option value="บางขุนเทียน 2">บางขุนเทียน 2</option><option value="บางขุนเทียน 3">บางขุนเทียน 3</option><option value="บางคอแหลม">บางคอแหลม</option><option value="บางซื่อ">บางซื่อ</option><option value="บางนา">บางนา</option><option value="บางบอล">บางบอล</option><option value="บางบัวทอง">บางบัวทอง</option><option value="บางบัวทอง2">บางบัวทอง2</option><option value="บางพลัด">บางพลัด</option><option value="บางพลี">บางพลี</option><option value="บางรัก">บางรัก</option><option value="บางเขน">บางเขน</option><option value="บางเขน สายไฟสีดำ">บางเขน สายไฟสีดำ</option><option value="บางแค">บางแค</option><option value="บึงกุ่ม">บึงกุ่ม</option><option value="ปทุมธานี">ปทุมธานี</option><option value="ปทุมวัน">ปทุมวัน</option><option value="ประเวศ">ประเวศ</option><option value="ประเวศ 1">ประเวศ 1</option><option value="ปัญหา">ปัญหา</option><option value="ปากเกร็ด">ปากเกร็ด</option><option value="ป้อมปราบ">ป้อมปราบ</option><option value="พญาไท">พญาไท</option><option value="พระนคร">พระนคร</option><option value="ภาษีเจริญ">ภาษีเจริญ</option><option value="มีนบุรี">มีนบุรี</option><option value="มีนบุรี 2">มีนบุรี 2</option><option value="ยกกลับแล้ว">ยกกลับแล้ว</option><option value="ยังไม่ได้ทำ">ยังไม่ได้ทำ</option><option value="ยานนาวา">ยานนาวา</option><option value="ราชบูรณะ">ราชบูรณะ</option><option value="ราชเทวี">ราชเทวี</option><option value="รู๊ท 5 บางคอแหลม บางกอกใหญ่-บางกอกน้อย">รู๊ท 5 บางคอแหลม บางกอกใหญ่-บางกอกน้อย</option><option value="รู๊ส 3 บึงกุ่ม ถนนนวมินทร์">รู๊ส 3 บึงกุ่ม ถนนนวมินทร์</option><option value="รู๊ส 4 คันนายาว(บางเขนคลองสามวานิดหน่อย)">รู๊ส 4 คันนายาว(บางเขนคลองสามวานิดหน่อย)</option><option value="ลาดกระบัง">ลาดกระบัง</option><option value="ลาดกระบัง 2">ลาดกระบัง 2</option><option value="ลาดกระบัง 3">ลาดกระบัง 3</option><option value="ลาดพร้าว">ลาดพร้าว</option><option value="ลาดพร้าว- จตุจักร">ลาดพร้าว- จตุจักร</option><option value="วังทองหลาง">วังทองหลาง</option><option value="วัฒนา">วัฒนา</option><option value="สวนหลวง">สวนหลวง</option><option value="สะพานสูง">สะพานสูง</option><option value="สัมพันธวงศ์">สัมพันธวงศ์</option><option value="สาทร">สาทร</option><option value="สายไหม">สายไหม</option><option value="สายไหม(1)">สายไหม(1)</option><option value="หนองจอก">หนองจอก</option><option value="หนองจอก 2">หนองจอก 2</option><option value="หนองแขม">หนองแขม</option><option value="หนองแขม(1)">หนองแขม(1)</option><option value="หมอชิต - จตุจักร">หมอชิต - จตุจักร</option><option value="หลักสี่+ดอนเมือง">หลักสี่+ดอนเมือง</option><option value="หลักสี่ดอนเมือง">หลักสี่ดอนเมือง</option><option value="หาไม่เจอ">หาไม่เจอ</option><option value="ห้วยขวาง">ห้วยขวาง</option><option value="ูบึงกุ่ม+คันนายาว ถ.เสรีไทย">ูบึงกุ่ม+คันนายาว ถ.เสรีไทย</option><option value="เมืองนนทบุรี">เมืองนนทบุรี</option>
-            </select>
-            <select id="cityFilter">
-                <option value="">ทุกเขต</option>
-                <option value="คลองสาน">คลองสาน</option><option value="คลองสามวา">คลองสามวา</option><option value="คลองเตย">คลองเตย</option><option value="คันนายาว">คันนายาว</option><option value="จตุจักร">จตุจักร</option><option value="จตุจักร+หมอชิต">จตุจักร+หมอชิต</option><option value="จอมทอง">จอมทอง</option><option value="ซ่อม">ซ่อม</option><option value="ซ่อมทุม">ซ่อมทุม</option><option value="ดินแดง">ดินแดง</option><option value="ดุสิต">ดุสิต</option><option value="ตลิ่งชัน">ตลิ่งชัน</option><option value="ถนอมมิตรสุขาภิบาล5จตุโชติ">ถนอมมิตรสุขาภิบาล5จตุโชติ</option><option value="ทวีวัฒนา">ทวีวัฒนา</option><option value="ทุ่งครุ">ทุ่งครุ</option><option value="ธนบุรี">ธนบุรี</option><option value="บางกอกน้อย">บางกอกน้อย</option><option value="บางกอกใหญ่">บางกอกใหญ่</option><option value="บางกะปิ">บางกะปิ</option><option value="บางขุนเทียน">บางขุนเทียน</option><option value="บางคอแหลม">บางคอแหลม</option><option value="บางซื่อ">บางซื่อ</option><option value="บางนา">บางนา</option><option value="บางบอล">บางบอล</option><option value="บางบัวทอง">บางบัวทอง</option><option value="บางพลัด">บางพลัด</option><option value="บางพลี">บางพลี</option><option value="บางรัก">บางรัก</option><option value="บางเขน">บางเขน</option><option value="บางเขน สายไฟสีดำ">บางเขน สายไฟสีดำ</option><option value="บางแค">บางแค</option><option value="บึงกุ่ม">บึงกุ่ม</option><option value="ปทุมธานี">ปทุมธานี</option><option value="ปทุมวัน">ปทุมวัน</option><option value="ประเวศ">ประเวศ</option><option value="ปัญหา">ปัญหา</option><option value="ปากเกร็ด">ปากเกร็ด</option><option value="ป้อมปราบ">ป้อมปราบ</option><option value="พญาไท">พญาไท</option><option value="พระนคร">พระนคร</option><option value="ภาษีเจริญ">ภาษีเจริญ</option><option value="มีนบุรี">มีนบุรี</option><option value="ยกกลับ">ยกกลับ</option><option value="ยังไม่ได้ทำ">ยังไม่ได้ทำ</option><option value="ยานนาวา">ยานนาวา</option><option value="ราชบูรณะ">ราชบูรณะ</option><option value="ราชเทวี">ราชเทวี</option><option value="รู๊ท 5 บางคอแหลม บางกอกใหญ่-บางกอกน้อย">รู๊ท 5 บางคอแหลม บางกอกใหญ่-บางกอกน้อย</option><option value="รู๊ส 3 บึงกุ่ม ถนนนวมินทร์">รู๊ส 3 บึงกุ่ม ถนนนวมินทร์</option><option value="รู๊ส 4 คันนายาว(บางเขนคลองสามวานิดหน่อย">รู๊ส 4 คันนายาว(บางเขนคลองสามวานิดหน่อย</option><option value="ลาดกระบัง">ลาดกระบัง</option><option value="ลาดพร้าว">ลาดพร้าว</option><option value="ลาดพร้าว- จตุจักร">ลาดพร้าว- จตุจักร</option><option value="วังทองหลาง">วังทองหลาง</option><option value="วัฒนา">วัฒนา</option><option value="สวนหลวง">สวนหลวง</option><option value="สะพานสูง">สะพานสูง</option><option value="สัมพันธวงศ์">สัมพันธวงศ์</option><option value="สาทร">สาทร</option><option value="สายไหม">สายไหม</option><option value="สายไหม(1)">สายไหม(1)</option><option value="หนองจอก">หนองจอก</option><option value="หนองแขม">หนองแขม</option><option value="หนองแขม(1)">หนองแขม(1)</option><option value="หมอชิต - จตุจักร">หมอชิต - จตุจักร</option><option value="หลักสี่+ดอนเมือง">หลักสี่+ดอนเมือง</option><option value="หลักสี่ดอนเมือง">หลักสี่ดอนเมือง</option><option value="หาไม่เจอ">หาไม่เจอ</option><option value="ห้วยขวาง">ห้วยขวาง</option><option value="ูบึงกุ่ม+คันนายาว ถ.เสรีไทย">ูบึงกุ่ม+คันนายาว ถ.เสรีไทย</option><option value="เมืองนนทบุรี">เมืองนนทบุรี</option>
-            </select>
-            <span class="count-badge" id="count">0 จุด</span>
-            <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
-            <button class="btn" id="btnUndo" style="background:#6366f1;color:white;" disabled>↩</button>
-            <button class="btn btn-github" id="btnGithub">� GitHub</button>
-            <span class="save-status" id="saveStatus"></span>
-            <div class="more-wrap">
-                <button class="btn" id="btnMore" style="background:#475569;color:white;">⋯ เพิ่มเติม</button>
-                <div class="more-menu" id="moreMenu">
-                    <button class="mm-item" id="btnExport">📤 Export JSON</button>
-                    <button class="mm-item" id="btnImport">📥 Import JSON</button>
-                    <button class="mm-item" id="btnBulkDel" style="color:#ef4444;">🗑 ลบที่กรอง</button>
-                    <button class="mm-item" id="btnReset" style="color:#ef4444;">🔄 Reset</button>
-                    <hr class="mm-sep">
-                    <button class="mm-item" id="btnStats">📊 Stats</button>
-                    <button class="mm-item" id="btnHeatmap">🔥 Heatmap</button>
-                    <button class="mm-item" id="btnLegend">🎨 Legend</button>
-                    <hr class="mm-sep">
-                    <button class="mm-item" id="btnDark">🌙 Dark mode</button>
-                    <button class="mm-item" id="btnTile">🗺️ เปลี่ยนแผนที่</button>
+<!-- LOADING SCREEN -->
+<div class="loader" id="loader">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div class="logo-sq">BT</div>
+        <span style="font-size:15px;font-weight:700;color:var(--tx);">BT Locations</span>
+    </div>
+    <div class="spin"></div>
+    <div class="loader-t" id="loaderTxt">กำลังโหลดข้อมูล...</div>
+</div>
+
+<div class="app" id="app" style="display:none;">
+    <!-- ══ TOPBAR ══ -->
+    <div class="topbar">
+        <!-- LEFT: aligns with sidebar -->
+        <div class="tb-left" id="tbLeft">
+            <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
+            <div class="logo-sq">BT</div>
+            <span class="tb-brand">BT Locations</span>
+        </div>
+        <!-- CENTER: search -->
+        <div class="tb-center">
+            <div class="search-box">
+                <span class="si">⌕</span>
+                <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+            </div>
+        </div>
+        <!-- RIGHT: status + actions -->
+        <div class="tb-right">
+            <div class="pill-badge" id="totalBadge">0 จุด</div>
+            <div class="live-p">
+                <div class="live-dot"></div>
+                <span>live</span>
+            </div>
+            <div class="avs">
+                <div class="av" id="av1" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
+                <div class="av" id="av2" style="background:linear-gradient(135deg,#f5a623,#ff5c5c); margin-left:-5px;">A</div>
+                <div class="av" id="av3" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c); margin-left:-5px;">K</div>
+            </div>
+            <div class="tb-sep"></div>
+            <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
+            <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
+        </div>
+    </div>
+
+    <!-- ══ SIDEBAR BACKDROP (mobile) ══ -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+    <!-- ══ BODY ══ -->
+    <div class="body">
+        <!-- ══ SIDEBAR ══ -->
+        <div class="sidebar" id="sidebar">
+            <div class="sec-hd">Lists</div>
+            <div class="flist" id="listContainer">
+                <!-- Populated by JS -->
+            </div>
+            <div class="sdiv"></div>
+            <div class="sec-hd">เมือง</div>
+            <div class="clist" id="cityContainer">
+                <!-- Populated by JS -->
+            </div>
+            <div class="sfoot">
+                <button class="add-btn" id="btnAddLocation">+ เพิ่มจุดใหม่</button>
+                <div class="collab">
+                    <div class="avs">
+                        <div class="cav" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
+                        <div class="cav" style="background:linear-gradient(135deg,#f5a623,#ff5c5c); margin-left:-3px;">A</div>
+                        <div class="cav" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c); margin-left:-3px;">K</div>
+                    </div>
+                    <span class="ctxt" id="onlineCount">3 คนออนไลน์</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ MAIN ══ -->
+        <div class="main">
+            <!-- View tabs -->
+            <div class="vtabs">
+                <div class="vt on" id="vt-map" data-view="map"><span class="vt-i">◉</span> แผนที่</div>
+                <div class="vt" id="vt-list" data-view="list"><span class="vt-i">≡</span> รายการ</div>
+                <div class="vt" id="vt-stats" data-view="stats"><span class="vt-i">◧</span> Stats</div>
+                <div class="vt" id="vt-heat" data-view="heat"><span class="vt-i">◈</span> Heatmap</div>
+            </div>
+
+            <!-- View area -->
+            <div class="view-area">
+                <!-- Map view -->
+                <div class="map-view show" id="view-map">
+                    <div class="mgrid"></div>
+                    <div id="map"></div>
+                    
+                    <!-- Map popup (concept style) -->
+                    <div class="map-popup" id="mapPopup" style="display:none;">
+                        <div class="pp-tag" id="ppTag">List · City</div>
+                        <div class="pp-name" id="ppName">Location Name</div>
+                        <div class="pp-sub" id="ppSub">District · added by user</div>
+                        <div class="pp-meta">
+                            <div class="pp-mi">List<br><b id="ppList">-</b></div>
+                            <div class="pp-mi">เขต<br><b id="ppDist">-</b></div>
+                            <div class="pp-mi" id="ppTime">-</div>
+                        </div>
+                        <div class="pp-btns">
+                            <div class="ppb p" id="ppNav">นำทาง</div>
+                            <div class="ppb" id="ppEdit">แก้ไข</div>
+                            <div class="ppb" id="ppRoute">Route +</div>
+                        </div>
+                    </div>
+
+                    <!-- Map stats -->
+                    <div class="map-stats">
+                        <div class="msc">
+                            <div class="msv" style="color:var(--bl);" id="mapStatTotal">0</div>
+                            <div class="msl">จุดทั้งหมด</div>
+                        </div>
+                        <div class="msc">
+                            <div class="msv" style="color:var(--gn);" id="mapStatClusters">0</div>
+                            <div class="msl">clusters</div>
+                        </div>
+                    </div>
+
+                    <!-- Zoom controls -->
+                    <div class="zoom-c">
+                        <button class="zb" id="btnZoomIn">+</button>
+                        <div class="zsep"></div>
+                        <button class="zb" id="btnZoomOut">−</button>
+                    </div>
+
+                    <!-- Bottom toolbar -->
+                    <div class="btbar">
+                        <button class="bt on" id="btMap"><span class="bt-i">◉</span> Map</button>
+                        <button class="bt" id="btRoute"><span class="bt-i">◎</span> Route</button>
+                        <button class="bt" id="btHeat"><span class="bt-i">◈</span> Heat</button>
+                        <button class="bt" id="btAdd"><span class="bt-i">+</span> Add</button>
+                    </div>
+                </div>
+
+                <!-- List view -->
+                <div class="list-view" id="view-list" style="display:none;">
+                    <div class="lv-toolbar">
+                        <div class="lv-tb-btn" id="lvSelectAll">☐ เลือกทั้งหมด</div>
+                        <div class="lv-tb-btn" id="lvAdd">+ เพิ่มจุด</div>
+                        <div class="lv-tb-btn" id="lvExport">↑ Export</div>
+                        <div class="lv-tb-btn danger" id="lvBulkDel" style="display:none;">🗑 ลบที่เลือก (<span id="selCount">0</span>)</div>
+                        <span class="lv-count" id="lvCount">แสดง 0 จาก 0 จุด</span>
+                    </div>
+                    <div class="ltable" id="listTable"></div>
+                </div>
+
+                <!-- Stats view -->
+                <div class="stats-view" id="view-stats" style="display:none;">
+                    <div class="sv-inner">
+                        <div class="sv-grid">
+                            <div class="sv-card"><div class="sv-v" style="color:var(--bl);" id="svTotal">0</div><div class="sv-l">จุดทั้งหมด</div></div>
+                            <div class="sv-card"><div class="sv-v" style="color:var(--gn);" id="svCities">0</div><div class="sv-l">เมือง</div></div>
+                            <div class="sv-card"><div class="sv-v" style="color:var(--am);" id="svLists">0</div><div class="sv-l">Lists</div></div>
+                            <div class="sv-card"><div class="sv-v" style="color:var(--pu);" id="svOnline">3</div><div class="sv-l">ผู้ใช้ออนไลน์</div></div>
+                        </div>
+                        <div class="sv-row">
+                            <div class="sv-panel">
+                                <div class="sv-h">จุดต่อเมือง</div>
+                                <div id="cityBars"></div>
+                            </div>
+                            <div class="sv-panel">
+                                <div class="sv-h">สัดส่วน Lists</div>
+                                <div class="donut-wrap">
+                                    <svg width="80" height="80" viewBox="0 0 80 80" id="donutSvg"></svg>
+                                    <div class="donut-legend" id="donutLegend"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sv-panel">
+                            <div class="sv-h">เพิ่มล่าสุด</div>
+                            <div class="recent-list" id="recentList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Heatmap view -->
+                <div class="map-view" id="view-heat" style="display:none;">
+                    <div class="mgrid"></div>
+                    <div id="heatmap"></div>
+                    <div class="map-stats">
+                        <div class="msc"><div class="msv" style="color:var(--rd);">High</div><div class="msl">ความหนาแน่นสูง</div></div>
+                        <div class="msc"><div class="msv" style="color:var(--am);">Med</div><div class="msl">ปานกลาง</div></div>
+                    </div>
+                    <div class="btbar">
+                        <button class="bt" id="btHeatMap"><span class="bt-i">◉</span> Map</button>
+                        <button class="bt on"><span class="bt-i">◈</span> Heatmap</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="legend-panel" id="legendPanel"></div>
-    <div class="add-mode-banner" id="addBanner">
-        คลิกบนแผนที่เพื่อเพิ่มจุดใหม่
-        <button class="btn-cancel-add" id="btnCancelAdd">ยกเลิก</button>
-    </div>
-    <button class="list-toggle" id="listToggle">☰</button>
-    <div class="list-panel" id="listPanel">
-        <div id="listBody"></div>
-    </div>
-    <input type="file" id="fileImport" accept=".json" style="display:none">
+</div>
 
-    <!-- Token Modal -->
+<!-- Crosshair for add mode -->
+<div id="crosshair" style="display:none; position:fixed; pointer-events:none; z-index:200; font-size:28px; transform:translate(-50%,-100%);">📍</div>
+
+<!-- Add mode banner -->
+<div id="addBanner" style="display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:500; background:var(--bl); color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; pointer-events:none; white-space:nowrap;">📍 แตะแผนที่เพื่อเลือกตำแหน่ง</div>
+
+<!-- Measure mode banner -->
+<div id="measureBanner" style="display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:500; background:#7b1fa2; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; pointer-events:none; white-space:nowrap;">📏 เลือก 2 จุดเพื่อวัดระยะ</div>
+
+<!-- Directions banner -->
+<div id="directionsBanner" style="display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:500; background:#059669; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; pointer-events:none; white-space:nowrap;">🗺️ กำลังคำนวณเส้นทาง...</div>
+
+<!-- FAB button (mobile add) -->
+<button id="btnFab" style="display:none; position:fixed; bottom:90px; right:16px; z-index:300; width:52px; height:52px; border-radius:50%; background:var(--bl); color:#fff; border:none; font-size:26px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,0.3);">+</button>
+
+<!-- GPS button -->
+<button id="btnGps" style="display:none; position:fixed; bottom:90px; right:80px; z-index:300; width:40px; height:40px; border-radius:50%; background:var(--s2); color:var(--tx); border:1px solid var(--bd); font-size:18px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.2);">⊕</button>
+
+<!-- Cancel add button -->
+<button id="btnCancelAdd" style="display:none; position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:500; padding:8px 20px; background:var(--s2); color:var(--tx); border:1px solid var(--bd); border-radius:20px; font-size:13px; cursor:pointer;">ยกเลิก</button>
+
+<!-- Cancel measure button -->
+<button id="btnCancelMeasure" style="display:none; position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:500; padding:8px 20px; background:var(--s2); color:var(--tx); border:1px solid var(--bd); border-radius:20px; font-size:13px; cursor:pointer;">ยกเลิกวัดระยะ</button>
+
+<!-- Lat/Lng hint -->
+<div id="latlngHint" style="display:none; position:fixed; bottom:130px; left:50%; transform:translateX(-50%); z-index:400; background:rgba(0,0,0,0.7); color:#fff; padding:4px 12px; border-radius:10px; font-size:11px; font-family:monospace; pointer-events:none;"></div>
+
+<!-- Sync badge -->
+<div id="syncBadge" style="display:none; position:fixed; top:10px; right:10px; z-index:999; background:#059669; color:#fff; border-radius:20px; padding:4px 10px; font-size:11px; font-weight:600;">● sync</div>
+
+<!-- GitHub save button -->
+<button id="btnGithubSave" style="display:none; position:fixed; top:10px; right:70px; z-index:999; padding:4px 12px; background:var(--s2); border:1px solid var(--bd); border-radius:10px; font-size:12px; cursor:pointer; color:var(--tx);">💾 Save</button>
+
+<!-- Count pill (active filter indicator) -->
+<div id="countPill" style="display:none; position:fixed; top:56px; left:50%; transform:translateX(-50%); z-index:400; background:var(--bl); color:#fff; border-radius:20px; padding:4px 14px; font-size:12px; font-weight:600;"></div>
+
+<!-- Search bar wrapper (desktop) -->
+<div id="searchBar" style="display:none; position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:600; width:380px; max-width:90vw;">
+    <div id="searchBox" style="display:flex; align-items:center; background:var(--s1); border:1px solid var(--bd2); border-radius:12px; padding:0 12px; height:40px; gap:8px;">
+        <span style="color:var(--tx3);">⌕</span>
+        <input type="text" id="searchInput" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off" style="flex:1; background:none; border:none; outline:none; color:var(--tx); font-size:13px;">
+        <button id="btnClearSearch" style="display:none; background:none; border:none; cursor:pointer; color:var(--tx3); font-size:16px; padding:0; line-height:1;">✕</button>
+        <div id="searchAvatar" style="width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,#5b8fff,#2ecc90); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0;">V</div>
+    </div>
+    <div id="searchResults" style="display:none; position:absolute; top:44px; left:0; right:0; background:var(--s1); border:1px solid var(--bd2); border-radius:12px; max-height:300px; overflow-y:auto; z-index:601; box-shadow:0 8px 24px rgba(0,0,0,0.3);"></div>
+</div>
+
+<!-- Filter chips (more dropdown) -->
+<div style="display:none;" class="chip-more-wrap" id="chipMoreWrap">
+    <button id="chipMore" class="chip">⋯ เพิ่มเติม</button>
+    <div id="chipDropdown" class="chip-dropdown">
+        <div id="chipNearby" class="chip-dropdown-item">📍 ใกล้ฉัน</div>
+        <div id="chipRoute" class="chip-dropdown-item">🗺️ Route</div>
+        <div id="chipHeatmap" class="chip-dropdown-item">🔥 Heatmap</div>
+    </div>
+</div>
+
+<!-- Chip labels for active filters -->
+<span id="chipListLabel" style="display:none;"></span>
+<span id="chipCityLabel" style="display:none;"></span>
+
+<!-- Filter more button -->
+<button id="filterMoreBtn" style="display:none; padding:4px 12px; background:var(--s2); border:1px solid var(--bd); border-radius:10px; font-size:12px; cursor:pointer; color:var(--tx2);">▾ ตัวกรองเพิ่ม</button>
+
+<!-- Place card (slide-up detail panel) -->
+<div id="placeCard" class="place-card">
+    <div class="place-card-drag"></div>
+    <button id="placeCardClose" class="place-card-close">✕</button>
+    <div class="place-card-content" id="placeCardContent"></div>
+</div>
+
+<!-- List panel -->
+<div id="listPanel" class="list-panel">
+    <div class="list-panel-header">
+        <span id="listPanelTitle" class="list-panel-title">รายการจุด</span>
+        <button class="list-panel-close" onclick="window.closeListPanel&&window.closeListPanel()">✕</button>
+    </div>
+    <div id="listSortBar" class="list-sort-bar"></div>
+    <div id="listBody" class="list-body"></div>
+</div>
+
+<!-- Info panel -->
+<div id="infoPanel" class="info-panel">
+    <div id="infoPanelBackdrop" class="info-panel-backdrop" onclick="closeInfo&&closeInfo()"></div>
+    <div class="info-panel-header">
+        <span id="infoPanelTitle" class="info-panel-title">ข้อมูล</span>
+        <button id="infoPanelClose" class="info-panel-close" onclick="closeInfo&&closeInfo()">✕</button>
+    </div>
+    <div id="infoPanelBody" class="info-panel-body"></div>
+</div>
+
+<!-- Add banner (visible) bump -->
+<div id="addBannerInner" style="display:none;"></div>
+
+<!-- Avoid modal (route options) -->
+<div id="_avoidModal" style="display:none; position:fixed; inset:0; z-index:700; align-items:center; justify-content:center;">
+    <div id="_avoidBackdrop" style="position:absolute; inset:0; background:rgba(0,0,0,0.5);"></div>
+    <div style="position:relative; background:var(--s1); border-radius:16px; padding:20px; min-width:280px; z-index:1;">
+        <div style="font-weight:700; margin-bottom:12px;">ตัวเลือกเส้นทาง</div>
+        <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="_avMotorway"> หลีกเลี่ยงทางด่วน</label>
+        <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="_avToll"> หลีกเลี่ยงทางเสียค่าผ่าน</label>
+        <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="_avFerry"> หลีกเลี่ยงเรือข้ามฟาก</label>
+        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
+            <button id="_nbClose" style="padding:6px 14px; background:var(--s2); border:1px solid var(--bd); border-radius:8px; cursor:pointer; color:var(--tx);">ปิด</button>
+            <button id="_nbMaps" style="padding:6px 14px; background:var(--bl); border:none; border-radius:8px; cursor:pointer; color:#fff;">Google Maps</button>
+        </div>
+        <div style="margin-top:8px; display:flex; gap:8px;">
+            <button id="_nbWaypoint" style="padding:6px 14px; background:var(--s2); border:1px solid var(--bd); border-radius:8px; cursor:pointer; color:var(--tx); font-size:12px;">+ เพิ่มจุดแวะ</button>
+            <button id="_nbAvoid" style="padding:6px 14px; background:var(--s2); border:1px solid var(--bd); border-radius:8px; cursor:pointer; color:var(--tx); font-size:12px;">หลีกเลี่ยง</button>
+        </div>
+    </div>
+</div>
+
+<!-- Merge list modal -->
+<div id="_mergeListTarget" style="display:none;"></div>
+<button id="_mergeListCancel" style="display:none;"></button>
+<button id="_mergeListConfirm" style="display:none;"></button>
+<div id="_mergeCityTarget" style="display:none;"></div>
+
+
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<div id="versionBadge" style="position:fixed;bottom:4px;left:4px;font-size:10px;color:rgba(255,255,255,0.2);z-index:9999;pointer-events:none;font-family:monospace;"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+   MOBILE COMPONENTS (hidden on desktop)
+═══════════════════════════════════════════════════════════════════ -->
+
+<!-- Mobile search row -->
+<div class="mob-search-row" id="mobSearchRow">
+    <div class="mob-search">
+        <span class="si">🔍</span>
+        <input type="text" id="mobSearchInput" placeholder="ค้นหาจุด, เมือง, list...">
+    </div>
+</div>
+
+<!-- Mobile filter chips -->
+<div class="mob-chips-row" id="mobChipsRow">
+    <div class="chip on" id="chipAll" data-filter="all"><span class="chip-dot" style="background:var(--bl)"></span>ทั้งหมด</div>
+    <div class="chip" id="chipList" data-filter="list"><span class="chip-dot"></span>รายการ</div>
+    <div class="chip" id="chipCity" data-filter="city"><span class="chip-dot"></span>เมือง</div>
+    <div class="chip" id="chipFav" data-filter="fav">⭐ ชื่นชอบ</div>
+</div>
+
+<!-- Mobile bottom navigation -->
+<div class="mob-nav" id="mobNav">
+    <div class="mob-nb on" id="mn-map" onclick="mobSwitchView('map')">
+        <div class="mob-nb-ico">◉</div>
+        <div class="mob-nb-lbl">แผนที่</div>
+    </div>
+    <div class="mob-nb" id="mn-list" onclick="mobSwitchView('list')">
+        <div class="mob-nb-ico">≡</div>
+        <div class="mob-nb-lbl">รายการ</div>
+    </div>
+    <div class="mob-nb" onclick="openAddMode()">
+        <div class="mob-nb-add">+</div>
+    </div>
+    <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
+        <div class="mob-nb-ico">◧</div>
+        <div class="mob-nb-lbl">Stats</div>
+    </div>
+    <div class="mob-nb" id="mn-heat" onclick="mobSwitchView('heat')">
+        <div class="mob-nb-ico">◈</div>
+        <div class="mob-nb-lbl">Heat</div>
+    </div>
+</div>
+
+<!-- Mobile drawer -->
+<div class="mob-drawer" id="mobDrawer">
+    <div class="mob-drawer-bg" onclick="closeMobDrawer()"></div>
+    <div class="mob-drawer-panel">
+        <div class="mob-drawer-hd">
+            <span class="mob-drawer-title">BT Locations</span>
+            <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
+        </div>
+        <div style="padding:8px;flex:1;overflow-y:auto;">
+            <div class="sec-hd" style="padding-left:6px;">Lists</div>
+            <div class="flist" id="mobDrawerLists">
+                <!-- Populated by JS -->
+            </div>
+            <div class="sdiv"></div>
+            <div class="sec-hd" style="padding-left:6px;">เมือง</div>
+            <div id="mobDrawerCities" style="padding:0 8px;">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+        <div style="padding:12px;">
+            <button class="add-btn" onclick="openAddMode();closeMobDrawer()">+ เพิ่มจุดใหม่</button>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile bottom sheet -->
+<div class="mob-sheet" id="mobSheet">
+    <div class="mob-sheet-handle" onclick="toggleMobSheet()"></div>
+    <div class="mob-sheet-hd">
+        <span class="mob-sheet-title" id="mobSheetTitle">รายการจุด</span>
+        <span class="mob-sheet-close" onclick="closeMobSheet()">✕</span>
+    </div>
+    <div class="mob-sheet-list" id="mobSheetList"></div>
+</div>
+
+    <!-- ══ LIST FILTER MODAL ══ -->
+    <div class="modal-overlay" id="listFilterModalOverlay">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-header">กรองตามรายการ</div>
+            <div class="modal-body"><div class="filter-choice-list" id="listChoiceList"></div></div>
+            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
+                <button class="modal-btn" id="listRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
+                <button class="modal-btn" id="listMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมรายการ</button>
+                <div style="flex:1"></div>
+                <button class="modal-btn modal-btn-cancel" id="listFilterClear">ล้างตัวกรอง</button>
+                <button class="modal-btn modal-btn-save" id="listFilterClose">เสร็จ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ CITY FILTER MODAL ══ -->
+    <div class="modal-overlay" id="cityFilterModalOverlay">
+        <div class="modal" style="max-width:360px;">
+            <div class="modal-header">กรองตามเขต</div>
+            <div class="modal-body"><div class="filter-choice-list" id="cityChoiceList"></div></div>
+            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
+                <button class="modal-btn" id="cityRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
+                <button class="modal-btn" id="cityMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมเขต</button>
+                <div style="flex:1"></div>
+                <button class="modal-btn modal-btn-cancel" id="cityFilterClear">ล้างตัวกรอง</button>
+                <button class="modal-btn modal-btn-save" id="cityFilterClose">เสร็จ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ ADD/EDIT MODAL ══ -->
+    <div class="modal-overlay" id="editModalOverlay">
+        <div class="modal">
+            <div class="modal-header" id="editModalTitle">เพิ่มสถานที่</div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label>ชื่อสถานที่</label>
+                    <input type="text" id="modalName" placeholder="เช่น ร้านซ่อมฉัตรชัย">
+                </div>
+                <div class="modal-field">
+                    <label>รายการ (List)</label>
+                    <input type="text" id="modalList" placeholder="เช่น บางเขน" list="listSuggestions">
+                    <datalist id="listSuggestions"></datalist>
+                </div>
+                <div class="modal-field">
+                    <label>เขต (City)</label>
+                    <input type="text" id="modalCity" placeholder="เขต/อำเภอ" list="citySuggestions">
+                    <datalist id="citySuggestions"></datalist>
+                </div>
+                <div class="modal-field">
+                    <label>หมายเหตุ (ไม่บังคับ)</label>
+                    <textarea id="modalNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+                </div>
+                <div class="modal-field">
+                    <label>แท็ก (ไม่บังคับ, คั่นด้วย ,)</label>
+                    <input type="text" id="modalTags" placeholder="เช่น 7-11, ปั๊ม, ร้านชำ">
+                </div>
+                <div class="modal-field">
+                    <label>รูปภาพ (ไม่บังคับ)</label>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <label for="modalPhotoInput" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--s2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);border:1.5px dashed var(--bd3);transition:all .15s;">
+                            📷 เลือกรูป
+                        </label>
+                        <input type="file" id="modalPhotoInput" accept="image/*" style="display:none;">
+                        <button type="button" id="modalPhotoRemove" style="display:none;padding:6px 12px;background:#fce8e6;border:none;border-radius:8px;cursor:pointer;font-size:12px;color:var(--red);">ลบรูป</button>
+                    </div>
+                    <img id="modalPhotoPreview" style="display:none;max-width:100%;max-height:160px;border-radius:10px;margin-top:8px;object-fit:cover;border:1px solid var(--bd3);">
+                </div>
+                <button class="gps-modal-btn" id="btnUseGpsModal">📍 ใช้ตำแหน่งของฉัน</button>
+                <div class="latlng-row">
+                    <div class="modal-field">
+                        <label>Latitude</label>
+                        <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
+                    </div>
+                    <div class="modal-field">
+                        <label>Longitude</label>
+                        <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+                    </div>
+                </div>
+                <p style="font-size:12px;color:var(--blue);margin-top:-8px;">✅ หรือคลิกบนแผนที่เพื่อเลือกพิกัด</p>
+                <div class="modal-footer">
+                    <button class="modal-btn modal-btn-cancel" id="editModalCancel">ยกเลิก</button>
+                    <button class="modal-btn modal-btn-save" id="editModalSave">บันทึก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ TOKEN MODAL ══ -->
     <div class="modal-overlay" id="tokenModalOverlay">
-        <div class="modal">
-            <div class="modal-header">GitHub Token</div>
+        <div class="modal token-modal">
+            <div class="token-icon">🔑</div>
+            <div class="token-title">ตั้งค่า Sync</div>
+            <div class="token-sub">เลือกวิธี sync: ใช้ Worker (แนะนำ) หรือ Token โดยตรง</div>
             <div class="modal-body">
-                <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6;">ใส่ Personal Access Token เพื่อบันทึกข้อมูลขึ้น GitHub<br><small style="color:#999;">Token จะเก็บใน browser นี้เท่านั้น</small></p>
-                <label>Token</label>
-                <input type="password" id="tokenInput" placeholder="github_pat_...">
+                <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px;">☁️ Cloudflare Worker (แนะนำ)</div>
+                <div class="modal-field">
+                    <label>Worker URL</label>
+                    <input type="url" id="workerUrlInput" placeholder="https://bt-locations-api.xxx.workers.dev">
+                </div>
+                <div class="modal-field">
+                    <label>API Key (ถ้ามี)</label>
+                    <input type="password" id="apiKeyInput" placeholder="optional">
+                </div>
+                <div style="border-top:1px solid var(--bd3);margin:12px 0;"></div>
+                <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px;">🔑 GitHub Token (ถ้าไม่มี Worker)</div>
+                <div class="modal-field">
+                    <label>Token</label>
+                    <input type="password" id="tokenInput" placeholder="github_pat_...">
+                </div>
             </div>
-            <div class="modal-btns">
-                <button class="btn btn-cancel" id="tokenCancel">ยกเลิก</button>
-                <button class="btn btn-save" id="tokenSave">บันทึก Token</button>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" id="tokenCancel">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save" id="tokenSave">บันทึก &amp; Sync</button>
             </div>
         </div>
     </div>
 
-    <!-- Edit/Add Modal -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal">
-            <div class="modal-header" id="modalTitle">แก้ไขจุด</div>
+    <!-- ══ CONFIRM MODAL ══ -->
+    <div class="modal-overlay" id="confirmModalOverlay">
+        <div class="modal confirm-modal">
+            <div class="confirm-icon" id="confirmIcon">⚠️</div>
+            <div class="confirm-title" id="confirmTitle">ยืนยัน</div>
+            <div class="confirm-text" id="confirmText"></div>
+            <div class="confirm-footer">
+                <button class="modal-btn modal-btn-cancel" id="confirmCancel">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save btn-danger" id="confirmOk">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MEASURE RESULT ══ -->
+    <div class="modal-overlay" id="measureModalOverlay">
+        <div class="modal confirm-modal">
+            <div class="confirm-icon">📏</div>
+            <div class="confirm-title">ระยะทาง</div>
+            <div class="confirm-text" id="measureResultText"></div>
+            <div class="confirm-footer">
+                <button class="modal-btn modal-btn-cancel" id="measureModalClose">ปิด</button>
+                <button class="modal-btn modal-btn-save" id="measureModalClear">ลบเส้น</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SHARE/EXPORT MODAL (mobile-friendly) ══ -->
+    <div class="modal-overlay" id="shareModalOverlay">
+        <div class="modal confirm-modal">
+            <div class="confirm-icon">📤</div>
+            <div class="confirm-title">Export ข้อมูล</div>
+            <div class="confirm-text" id="shareModalText">เลือกวิธี export</div>
+            <div class="confirm-footer" style="flex-direction:column;gap:8px;">
+                <button class="modal-btn modal-btn-save" id="shareBtnDownload" style="width:100%;">💾 ดาวน์โหลดไฟล์ JSON</button>
+                <button class="modal-btn modal-btn-save" id="shareBtnShare" style="width:100%;background:#059669;" id="shareBtnShare">📱 แชร์ผ่าน (Share API)</button>
+                <button class="modal-btn modal-btn-save" id="shareBtnCopy" style="width:100%;background:#7b1fa2;">📋 คัดลอก JSON</button>
+                <button class="modal-btn modal-btn-cancel" id="shareBtnCancel">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ IMPORT DATA MODAL ══ -->
+    <div class="modal-overlay" id="importModalOverlay">
+        <div class="modal" style="width:420px;max-width:90vw;">
+            <div class="modal-header">นำเข้าข้อมูล</div>
             <div class="modal-body">
-                <label>ชื่อ</label>
-                <input type="text" id="modalName" placeholder="ชื่อจุด">
-                <label>รายการ (List)</label>
-                <input type="text" id="modalList" placeholder="เช่น BT-Topup, ดินแดง">
-                <label>เขต (City)</label>
-                <input type="text" id="modalCity" placeholder="เขต/อำเภอ">
-                <label>Latitude</label>
-                <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
-                <label>Longitude</label>
-                <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+                <div class="frow">
+                    <label>วาง JSON โดยตรง</label>
+                    <textarea id="importJsonText" rows="6" placeholder="[{&quot;name&quot;:&quot;...&quot;, &quot;lat&quot;:13.7, &quot;lng&quot;:100.5, &quot;list&quot;:&quot;...&quot;}]"></textarea>
+                </div>
+                <div style="text-align:center;color:var(--tx3);font-size:12px;margin:10px 0;">— หรือ —</div>
+                <div class="frow">
+                    <label>URL ข้อมูล (raw JSON)</label>
+                    <input type="text" id="importUrl" placeholder="https://.../data.json">
+                </div>
+                <div style="margin-top:12px;padding:10px;background:var(--s1);border-radius:8px;font-size:11px;color:var(--tx2);">
+                    <b>รองรับ:</b> Array ของจุด <code>[{name,lat,lng,list,city}]</code> หรือ <code>{lists:[{name,points:[]}]}</code>
+                </div>
             </div>
-            <div class="modal-btns">
-                <button class="btn btn-cancel" id="modalCancel">ยกเลิก</button>
-                <button class="btn btn-save" id="modalSave">บันทึก</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Modal -->
-    <div class="modal-overlay" id="statsModalOverlay">
-        <div class="modal" style="max-width:500px;">
-            <div class="modal-header">สถิติข้อมูล</div>
-            <div class="modal-body" id="statsBody" style="max-height:60vh;overflow-y:auto;"></div>
-            <div class="modal-btns">
-                <button class="btn btn-cancel" id="statsClose">ปิด</button>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeImportModal()">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save" onclick="doImportData()">นำเข้า</button>
             </div>
         </div>
     </div>
 
+    <div class="save-toast" id="saveToast"></div>
+    <input type="file" id="fileImport" accept=".json,.csv,.kml,.gpx,.geojson" style="display:none">
+
+    <script>
+    // Patch: sync tbLeft collapse with sidebar toggle on desktop
+    (function(){
+        var _origToggle;
+        function _patchSidebar(){
+            if(typeof toggleSidebar !== 'undefined'){
+                _origToggle = toggleSidebar;
+                window.toggleSidebar = function(){
+                    _origToggle();
+                    if(window.innerWidth >= 768){
+                        const sb = document.getElementById('sidebar');
+                        const tbl = document.getElementById('tbLeft');
+                        if(tbl) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open') && sb.style.display === 'none' || sb.classList.contains('open') === false);
+                    }
+                };
+            }
+        }
+        // Override btnMenu after app.js loads
+        document.addEventListener('DOMContentLoaded', function(){
+            setTimeout(function(){
+                var btn = document.getElementById('btnMenu');
+                if(btn){
+                    var orig = btn.onclick;
+                    btn.onclick = function(){
+                        if(orig) orig.call(this);
+                        if(window.innerWidth >= 768){
+                            var sb = document.getElementById('sidebar');
+                            var tbl = document.getElementById('tbLeft');
+                            if(tbl && sb) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open'));
+                        }
+                    };
+                }
+            }, 800);
+        });
+    })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="locations.js"></script>
     <script>
-
-        const STORAGE_KEY = 'bt_locations_data';
-        const undoStack = [];
-        const MAX_UNDO = 20;
-
-        function loadLocations() {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                try { return JSON.parse(saved); } catch(e) {}
-            }
-            return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
-        }
-
-        function pushUndo() {
-            undoStack.push(JSON.stringify(locations));
-            if (undoStack.length > MAX_UNDO) undoStack.shift();
-            document.getElementById('btnUndo').disabled = false;
-        }
-
-        function saveLocations() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
-        }
-
-        let locations = loadLocations();
-        let addMode = false;
-        let editingIndex = -1;
-
-        const map = L.map('map').setView([13.75, 100.5], 11);
-        const tileLayers = {
-            'Street': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OSM', maxZoom: 19
-            }),
-            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: '&copy; Esri', maxZoom: 19
-            }),
-            'Terrain': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenTopoMap', maxZoom: 17
-            })
+    (function(){
+        var v=Date.now();
+        var s1=document.createElement('script');
+        s1.src='locations.js?v='+v;
+        document.head.appendChild(s1);
+        s1.onload=function(){
+            var s2=document.createElement('script');
+            s2.src='app.js?v='+v;
+            document.head.appendChild(s2);
         };
-        const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; CartoDB', maxZoom: 19
-        });
-        const tileNames = Object.keys(tileLayers);
-        let currentTileIdx = 0;
-        let savedTileIdx = 0;
-        tileLayers[tileNames[0]].addTo(map);
-
-        let markerCluster = L.markerClusterGroup();
-        let currentMarkers = [];
-        let heatLayer = null;
-        let heatmapMode = false;
-
-        function getPopupHTML(loc, idx) {
-            return `<div class="popup-content">
-                <h3>${loc.name || 'ไม่มีชื่อ'}</h3>
-                <div class="popup-info">
-                    ${loc.city ? `<strong>เขต:</strong> ${loc.city}<br>` : ''}
-                    <strong>รายการ:</strong> ${loc.list}<br>
-                    <strong>พิกัด:</strong> ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}
-                </div>
-                <div class="popup-actions">
-                    <a class="link-gmaps" href="https://www.google.com/maps?q=${loc.lat},${loc.lng}" target="_blank">Google Maps</a>
-                    <button class="btn-popup-edit" onclick="openEdit(${idx})">✏️ แก้ไข</button>
-                    <button class="btn-popup-edit" onclick="measureFrom(${idx})" style="background:#059669;">📏 วัดระยะ</button>
-                </div>
-                <div class="popup-actions" style="margin-top:4px;">
-                    <button class="btn-popup-delete" onclick="confirmDelete(${idx})" style="font-size:11px;opacity:0.7;">� ลบจุดนี้</button>
-                </div>
-            </div>`;
-        }
-
-        let measureStart = null;
-        let measureLine = null;
-        function haversine(lat1,lng1,lat2,lng2) {
-            const R = 6371000;
-            const p1 = lat1*Math.PI/180, p2 = lat2*Math.PI/180;
-            const dp = (lat2-lat1)*Math.PI/180, dl = (lng2-lng1)*Math.PI/180;
-            const a = Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-        window.measureFrom = function(idx) {
-            const loc = locations[idx];
-            if (!measureStart) {
-                measureStart = loc;
-                map.closePopup();
-                alert(`เลือกจุดเริ่ม: ${loc.name || loc.list}\nคลิกหมุดอีกจุด แล้วกด "📏 วัดระยะ" เพื่อวัด`);
-            } else {
-                const d = haversine(measureStart.lat, measureStart.lng, loc.lat, loc.lng);
-                const km = (d/1000).toFixed(2);
-                if (measureLine) map.removeLayer(measureLine);
-                measureLine = L.polyline([[measureStart.lat,measureStart.lng],[loc.lat,loc.lng]], {color:'red',weight:3,dashArray:'8,8'}).addTo(map);
-                alert(`📏 ระยะทาง:\n${measureStart.name || measureStart.list} → ${loc.name || loc.list}\n${km} km (${Math.round(d)} m)`);
-                measureStart = null;
-            }
-        };
-
-        const listColors = {};
-        const colorPalette = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#5a67d8','#805ad5','#d53f8c','#718096'];
-        function getListColor(list) {
-            if (!listColors[list]) {
-                let h = 0;
-                for (let i = 0; i < list.length; i++) h = list.charCodeAt(i) + ((h << 5) - h);
-                listColors[list] = colorPalette[Math.abs(h) % colorPalette.length];
-            }
-            return listColors[list];
-        }
-
-        function renderMarkers(filtered) {
-            map.removeLayer(markerCluster);
-            markerCluster = L.markerClusterGroup();
-            currentMarkers = [];
-            filtered.forEach(loc => {
-                const idx = locations.indexOf(loc);
-                const color = getListColor(loc.list);
-                const marker = L.circleMarker([loc.lat, loc.lng], {
-                    radius: 10, fillColor: color, color: '#fff',
-                    weight: 3, opacity: 1, fillOpacity: 0.9,
-                    className: 'bt-marker'
-                });
-                const label = loc.name || loc.list;
-                marker.bindTooltip(label, {
-                    permanent: true, direction: 'top', offset: [0, -10],
-                    className: 'bt-label'
-                });
-                marker.bindPopup(getPopupHTML(loc, idx), {className: 'custom-popup'});
-                markerCluster.addLayer(marker);
-                currentMarkers.push({loc, marker, idx});
-            });
-            if (!heatmapMode) {
-                map.addLayer(markerCluster);
-            }
-
-            // Heatmap layer
-            if (heatLayer) map.removeLayer(heatLayer);
-            if (heatmapMode) {
-                const heatData = filtered.map(l => [l.lat, l.lng, 1]);
-                heatLayer = L.heatLayer(heatData, {radius: 25, blur: 15, maxZoom: 17}).addTo(map);
-            }
-            document.getElementById('count').textContent = filtered.length + ' จุด';
-        }
-
-        function getFiltered() {
-            const q = document.getElementById('search').value.toLowerCase();
-            const list = document.getElementById('listFilter').value;
-            const city = document.getElementById('cityFilter').value;
-            return locations.filter(l => {
-                const matchList = !list || l.list === list;
-                const matchCity = !city || l.city === city;
-                const matchSearch = !q || (l.name && l.name.toLowerCase().includes(q)) || l.list.toLowerCase().includes(q) || (l.city && l.city.toLowerCase().includes(q));
-                return matchList && matchCity && matchSearch;
-            });
-        }
-
-        let zoomToFiltered = false;
-        function update() {
-            const filtered = getFiltered();
-            renderMarkers(filtered);
-            renderList(filtered);
-            updateFilterOptions();
-            updateLegend();
-            if (zoomToFiltered && filtered.length > 0 && filtered.length < locations.length) {
-                const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
-                map.fitBounds(bounds, {padding: [30, 30]});
-            }
-        }
-
-        function updateFilterOptions() {
-            const sel = document.getElementById('listFilter');
-            const current = sel.value;
-            const lists = [...new Set(locations.map(l => l.list))].sort();
-            sel.innerHTML = '<option value="">ทุกรายการ</option>' + lists.map(l => `<option value="${l}">${l}</option>`).join('');
-            sel.value = current;
-
-            const citySel = document.getElementById('cityFilter');
-            const currentCity = citySel.value;
-            const cities = [...new Set(locations.map(l => l.city).filter(c => c))].sort();
-            citySel.innerHTML = '<option value="">ทุกเขต</option>' + cities.map(c => `<option value="${c}">${c}</option>`).join('');
-            citySel.value = currentCity;
-        }
-
-        document.getElementById('search').addEventListener('input', update);
-        document.getElementById('listFilter').addEventListener('change', update);
-        document.getElementById('cityFilter').addEventListener('change', update);
-
-        // List panel
-        const listBody = document.getElementById('listBody');
-        const listToggle = document.getElementById('listToggle');
-        const listPanel = document.getElementById('listPanel');
-
-        function renderList(filtered) {
-            listBody.innerHTML = '';
-            filtered.forEach(loc => {
-                const item = document.createElement('div');
-                item.className = 'list-item';
-                item.innerHTML = `<div><span class="name">${loc.name || 'ไม่มีชื่อ'}</span>${loc.city ? ` <span class="detail">(${loc.city})</span>` : ''}<br><span class="detail">${loc.list} | ${loc.lat}, ${loc.lng}</span></div>`;
-                item.onclick = () => {
-                    map.setView([loc.lat, loc.lng], 17);
-                    listPanel.classList.remove('open');
-                    const found = currentMarkers.find(m => m.loc === loc);
-                    if (found) {
-                        markerCluster.zoomToShowLayer(found.marker, () => found.marker.openPopup());
-                    }
-                };
-                listBody.appendChild(item);
-            });
-        }
-
-        listToggle.onclick = () => listPanel.classList.toggle('open');
-
-        // === ADD MODE ===
-        const addBanner = document.getElementById('addBanner');
-        document.getElementById('btnAdd').onclick = () => {
-            addMode = true;
-            addBanner.classList.add('show');
-            map.getContainer().style.cursor = 'crosshair';
-        };
-        document.getElementById('btnCancelAdd').onclick = () => {
-            addMode = false;
-            addBanner.classList.remove('show');
-            map.getContainer().style.cursor = '';
-        };
-
-        map.on('click', (e) => {
-            if (!addMode) return;
-            addMode = false;
-            addBanner.classList.remove('show');
-            map.getContainer().style.cursor = '';
-            editingIndex = -1;
-            document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
-            document.getElementById('modalName').value = '';
-            document.getElementById('modalList').value = '';
-            document.getElementById('modalCity').value = '';
-            document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
-            document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
-            document.getElementById('modalOverlay').classList.add('open');
-        });
-
-        // === EDIT ===
-        window.openEdit = function(idx) {
-            const loc = locations[idx];
-            if (!loc) return;
-            editingIndex = idx;
-            document.getElementById('modalTitle').textContent = 'แก้ไขจุด';
-            document.getElementById('modalName').value = loc.name || '';
-            document.getElementById('modalList').value = loc.list || '';
-            document.getElementById('modalCity').value = loc.city || '';
-            document.getElementById('modalLat').value = loc.lat;
-            document.getElementById('modalLng').value = loc.lng;
-            map.closePopup();
-            document.getElementById('modalOverlay').classList.add('open');
-        };
-
-        // === DELETE ===
-        window.confirmDelete = function(idx) {
-            const loc = locations[idx];
-            if (!loc) return;
-            const name = loc.name || loc.list || 'ไม่มีชื่อ';
-            if (!confirm(`⚠️ ยืนยันลบจุดนี้?
-
-"${name}"
-รายการ: ${loc.list}
-พิกัด: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}
-
-(กด Undo ได้ถ้าลบผิด)`)) return;
-            pushUndo();
-            locations.splice(idx, 1);
-            saveLocations();
-            map.closePopup();
-            update();
-        };
-        window.deleteLoc = window.confirmDelete;
-
-        // === MODAL ===
-        document.getElementById('modalCancel').onclick = () => {
-            document.getElementById('modalOverlay').classList.remove('open');
-        };
-        document.getElementById('modalOverlay').onclick = (e) => {
-            if (e.target === document.getElementById('modalOverlay'))
-                document.getElementById('modalOverlay').classList.remove('open');
-        };
-
-        document.getElementById('modalSave').onclick = () => {
-            const name = document.getElementById('modalName').value.trim();
-            const list = document.getElementById('modalList').value.trim() || 'ไม่มีรายการ';
-            const city = document.getElementById('modalCity').value.trim();
-            const lat = parseFloat(document.getElementById('modalLat').value);
-            const lng = parseFloat(document.getElementById('modalLng').value);
-            if (isNaN(lat) || isNaN(lng)) { alert('กรุณากรอก Lat/Lng ให้ถูกต้อง'); return; }
-
-            pushUndo();
-            if (editingIndex >= 0) {
-                locations[editingIndex] = { name, lat, lng, list, city };
-            } else {
-                locations.push({ name, lat, lng, list, city });
-            }
-            saveLocations();
-            document.getElementById('modalOverlay').classList.remove('open');
-            update();
-            if (editingIndex < 0) {
-                map.setView([lat, lng], 15);
-            }
-        };
-
-        // === EXPORT ===
-        document.getElementById('btnExport').onclick = () => {
-            const blob = new Blob([JSON.stringify(locations, null, 2)], {type: 'application/json'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'bt_locations_export.json';
-            a.click();
-        };
-
-        // === IMPORT ===
-        document.getElementById('btnImport').onclick = () => {
-            document.getElementById('fileImport').click();
-        };
-        document.getElementById('fileImport').onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                try {
-                    const imported = JSON.parse(ev.target.result);
-                    if (!Array.isArray(imported)) { alert('ไฟล์ไม่ถูกต้อง'); return; }
-                    if (confirm(`Import ${imported.length} จุด? (จะแทนที่ข้อมูลปัจจุบัน)`)) {
-                        pushUndo();
-                        locations = imported;
-                        saveLocations();
-                        update();
-                        alert('Import สำเร็จ!');
-                    }
-                } catch(err) { alert('ไฟล์ JSON ไม่ถูกต้อง'); }
-            };
-            reader.readAsText(file);
-            e.target.value = '';
-        };
-
-        // === MORE MENU ===
-        document.getElementById('btnMore').onclick = (e) => {
-            e.stopPropagation();
-            document.getElementById('moreMenu').classList.toggle('show');
-        };
-        document.addEventListener('click', () => {
-            document.getElementById('moreMenu').classList.remove('show');
-        });
-        document.getElementById('moreMenu').onclick = (e) => {
-            if (e.target.classList.contains('mm-item')) {
-                document.getElementById('moreMenu').classList.remove('show');
-            }
-        };
-
-        // === LEGEND ===
-        function updateLegend() {
-            const panel = document.getElementById('legendPanel');
-            if (!panel.classList.contains('show')) return;
-            const lists = [...new Set(getFiltered().map(l => l.list))].sort();
-            panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">Legend</div>' +
-                lists.map(l => `<div class="legend-item"><span class="legend-dot" style="background:${getListColor(l)}"></span>${l}</div>`).join('');
-        }
-        document.getElementById('btnLegend').onclick = () => {
-            const panel = document.getElementById('legendPanel');
-            panel.classList.toggle('show');
-            updateLegend();
-        };
-
-        // === DARK MODE ===
-        document.getElementById('btnDark').onclick = () => {
-            const isDark = !document.body.classList.contains('dark');
-            document.body.classList.toggle('dark', isDark);
-            document.getElementById('btnDark').textContent = isDark ? '☀️ Light mode' : '🌙 Dark mode';
-            if (isDark) {
-                savedTileIdx = currentTileIdx;
-                map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
-                darkTile.addTo(map);
-            } else {
-                map.removeLayer(darkTile);
-                tileLayers[tileNames[savedTileIdx]].addTo(map);
-                currentTileIdx = savedTileIdx;
-            }
-        };
-
-        // === MAP TILE ===
-        document.getElementById('btnTile').onclick = () => {
-            if (document.body.classList.contains('dark')) {
-                map.removeLayer(darkTile);
-                document.body.classList.remove('dark');
-                document.getElementById('btnDark').textContent = '🌙 Dark mode';
-            } else {
-                map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
-            }
-            currentTileIdx = (currentTileIdx + 1) % tileNames.length;
-            tileLayers[tileNames[currentTileIdx]].addTo(map);
-            document.getElementById('btnTile').textContent = '🗺️ ' + tileNames[currentTileIdx];
-        };
-
-        // === ZOOM TO FILTERED ===
-        document.getElementById('listFilter').addEventListener('change', () => {
-            zoomToFiltered = true;
-            update();
-            zoomToFiltered = false;
-        });
-        document.getElementById('cityFilter').addEventListener('change', () => {
-            zoomToFiltered = true;
-            update();
-            zoomToFiltered = false;
-        });
-
-        // === HEATMAP ===
-        document.getElementById('btnHeatmap').onclick = () => {
-            heatmapMode = !heatmapMode;
-            const btn = document.getElementById('btnHeatmap');
-            btn.textContent = heatmapMode ? 'Markers' : 'Heatmap';
-            btn.style.background = heatmapMode ? '#3182ce' : '#f97316';
-            update();
-        };
-
-        // === BULK DELETE ===
-        document.getElementById('btnBulkDel').onclick = () => {
-            const filtered = getFiltered();
-            if (filtered.length === locations.length) {
-                alert('กรุณาใช้ filter เลือกจุดที่ต้องการลบก่อน');
-                return;
-            }
-            if (!filtered.length) { alert('ไม่มีจุดที่แสดงอยู่'); return; }
-            if (!confirm(`ลบ ${filtered.length} จุดที่แสดงอยู่?`)) return;
-            pushUndo();
-            const toRemove = new Set(filtered);
-            locations = locations.filter(l => !toRemove.has(l));
-            saveLocations();
-            update();
-            alert(`ลบ ${filtered.length} จุดแล้ว`);
-        };
-
-        // === UNDO ===
-        document.getElementById('btnUndo').onclick = () => {
-            if (!undoStack.length) return;
-            locations = JSON.parse(undoStack.pop());
-            saveLocations();
-            update();
-            document.getElementById('btnUndo').disabled = undoStack.length === 0;
-        };
-
-        // === STATS ===
-        document.getElementById('btnStats').onclick = () => {
-            const listCount = {};
-            const cityCount = {};
-            locations.forEach(l => {
-                listCount[l.list] = (listCount[l.list] || 0) + 1;
-                if (l.city) cityCount[l.city] = (cityCount[l.city] || 0) + 1;
-            });
-            const sortedLists = Object.entries(listCount).sort((a,b) => b[1] - a[1]);
-            const sortedCities = Object.entries(cityCount).sort((a,b) => b[1] - a[1]);
-            let html = `<div style="margin-bottom:16px;"><strong>รวมทั้งหมด:</strong> ${locations.length} จุด</div>`;
-            html += `<div style="margin-bottom:12px;"><strong>ตามรายการ (${sortedLists.length}):</strong></div>`;
-            html += '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px;">';
-            sortedLists.forEach(([name, count]) => {
-                const pct = (count / locations.length * 100).toFixed(1);
-                html += `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:4px 8px;">${name}</td>
-                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${count}</td>
-                    <td style="padding:4px 8px;text-align:right;color:#888;">${pct}%</td>
-                </tr>`;
-            });
-            html += '</table>';
-            html += `<div style="margin-bottom:12px;"><strong>ตามเขต (${sortedCities.length}):</strong></div>`;
-            html += '<table style="width:100%;font-size:13px;border-collapse:collapse;">';
-            sortedCities.forEach(([name, count]) => {
-                html += `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:4px 8px;">${name}</td>
-                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${count}</td>
-                </tr>`;
-            });
-            html += '</table>';
-            document.getElementById('statsBody').innerHTML = html;
-            document.getElementById('statsModalOverlay').classList.add('open');
-        };
-        document.getElementById('statsClose').onclick = () => {
-            document.getElementById('statsModalOverlay').classList.remove('open');
-        };
-
-        // === RESET ===
-        document.getElementById('btnReset').onclick = async () => {
-            const msg = '⚠️ ยืนยันการรีเซ็ต?\n\n'
-                + '• ข้อมูลที่แก้ไขจะหายทั้งหมด\n'
-                + '• ระบบจะดึงข้อมูลล่าสุดจาก GitHub\n\n'
-                + 'แนะนำ: กด Export สำรองข้อมูลก่อน';
-            if (!confirm(msg)) return;
-            pushUndo();
-            localStorage.removeItem(STORAGE_KEY);
-            try {
-                const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
-                if (res.ok) {
-                    locations = await res.json();
-                    saveLocations();
-                    update();
-                    alert(`รีเซ็ตสำเร็จ! โหลด ${locations.length} จุดจาก GitHub`);
-                    return;
-                }
-            } catch(e) { console.warn('Fetch from GitHub failed', e); }
-            locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
-            saveLocations();
-            update();
-            alert('รีเซ็ตสำเร็จ (ใช้ข้อมูลเริ่มต้น)');
-        };
-
-        // === SAVE TO GITHUB ===
-        const GITHUB_TOKEN_KEY = 'bt_github_token';
-        const REPO_OWNER = 'valrinx';
-        const REPO_NAME = 'bt-locations';
-
-        function getToken() { return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; }
-        function setToken(t) { localStorage.setItem(GITHUB_TOKEN_KEY, t); }
-
-        function showSaveStatus(msg, isError) {
-            const el = document.getElementById('saveStatus');
-            el.textContent = msg;
-            el.className = 'save-status show' + (isError ? ' error' : '');
-            setTimeout(() => el.classList.remove('show'), 5000);
-        }
-
-        async function githubGetFile(path, token) {
-            const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
-                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
-            });
-            if (res.status === 404) return { sha: null, content: null };
-            if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-            const data = await res.json();
-            return { sha: data.sha, content: data.content };
-        }
-
-        async function githubPutFile(path, content, sha, token, msg) {
-            const body = { message: msg, content: btoa(unescape(encodeURIComponent(content))) };
-            if (sha) body.sha = sha;
-            const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.message || `GitHub error: ${res.status}`);
-            }
-            return await res.json();
-        }
-
-        document.getElementById('btnGithub').onclick = async () => {
-            let token = getToken();
-            if (!token) {
-                document.getElementById('tokenInput').value = '';
-                document.getElementById('tokenModalOverlay').classList.add('open');
-                return;
-            }
-            await doGithubSave(token);
-        };
-
-        document.getElementById('tokenCancel').onclick = () => {
-            document.getElementById('tokenModalOverlay').classList.remove('open');
-        };
-        document.getElementById('tokenModalOverlay').onclick = (e) => {
-            if (e.target === document.getElementById('tokenModalOverlay'))
-                document.getElementById('tokenModalOverlay').classList.remove('open');
-        };
-        document.getElementById('tokenSave').onclick = async () => {
-            const token = document.getElementById('tokenInput').value.trim();
-            if (!token) { alert('กรุณากรอก Token'); return; }
-            setToken(token);
-            document.getElementById('tokenModalOverlay').classList.remove('open');
-            await doGithubSave(token);
-        };
-
-        async function doGithubSave(token) {
-            const btn = document.getElementById('btnGithub');
-            btn.classList.add('saving');
-            btn.textContent = 'กำลังบันทึก...';
-            try {
-                const jsonContent = JSON.stringify(locations, null, 2);
-                // 1) Save all_locations.json
-                const fileInfo = await githubGetFile('all_locations.json', token);
-                await githubPutFile('all_locations.json', jsonContent, fileInfo.sha, token, 'Update locations from web app');
-                // 2) Also update docs/all_locations.json for GitHub Pages
-                const docsInfo = await githubGetFile('docs/all_locations.json', token);
-                await githubPutFile('docs/all_locations.json', jsonContent, docsInfo.sha, token, 'Sync docs/all_locations.json');
-                // 3) Update docs/locations.js
-                const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';\n';
-                const jsInfo = await githubGetFile('docs/locations.js', token);
-                await githubPutFile('docs/locations.js', jsContent, jsInfo.sha, token, 'Sync docs/locations.js');
-                showSaveStatus('บันทึกสำเร็จ! (3 ไฟล์)', false);
-            } catch(err) {
-                console.error(err);
-                if (err.message.includes('401') || err.message.includes('Bad credentials')) {
-                    localStorage.removeItem(GITHUB_TOKEN_KEY);
-                    showSaveStatus('Token ไม่ถูกต้อง กรุณาใส่ใหม่', true);
-                } else {
-                    showSaveStatus('ผิดพลาด: ' + err.message, true);
-                }
-            } finally {
-                btn.classList.remove('saving');
-                btn.textContent = '💾 GitHub';
-            }
-        }
-
-        // Init
-        update();
-
-        // Background sync: fetch latest data from GitHub
-        (async () => {
-            try {
-                const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/all_locations.json?t=${Date.now()}`);
-                if (!res.ok) return;
-                const text = await res.text();
-                if (!text.startsWith('[')) return;
-                const fresh = JSON.parse(text);
-                if (fresh.length > 0 && fresh.length >= locations.length && JSON.stringify(fresh) !== JSON.stringify(locations)) {
-                    locations = fresh;
-                    saveLocations();
-                    update();
-                    console.log('Synced', fresh.length, 'locations from GitHub');
-                }
-            } catch(e) {}
-        })();
+    })();
     </script>
 </body>
 </html>
