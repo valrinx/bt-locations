@@ -61,6 +61,12 @@
             --z-toast: 400;
             --z-crosshair: 500;
             --z-hint: 150;
+            /* Mobile layout heights — single source of truth */
+            --topbar-h: 52px;
+            --chips-h: 38px;
+            --nav-h: 58px;
+            --mob-map-top: calc(var(--topbar-h) + var(--chips-h));
+            --mob-above-nav: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
         }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: 'Noto Sans Thai', sans-serif; background: var(--bg); overflow: hidden; height: 100vh; color: var(--tx); }
@@ -488,11 +494,11 @@
         .place-card.open { bottom: 0; }
         @media (min-width: 600px) {
             .place-card {
-                position: fixed; top: 58px; bottom: auto;
+                position: fixed; top: 88px; bottom: auto;
                 left: 264px; /* sidebar 252px + 12px gap */
                 width: 280px; border-radius: var(--radius);
                 border: 0.5px solid var(--bd2); border-top: 0.5px solid var(--bd2);
-                max-height: calc(100vh - 76px); box-shadow: var(--shadow-lg);
+                max-height: calc(100vh - 100px); box-shadow: var(--shadow-lg);
                 opacity: 0; transform: translateY(8px) scale(0.98);
                 transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
                 pointer-events: none;
@@ -552,10 +558,10 @@
         .list-panel.open { bottom: 0; }
         @media (min-width: 600px) {
             .list-panel {
-                position: fixed; top: 58px; bottom: auto;
+                position: fixed; top: 88px; bottom: auto;
                 left: 264px; width: 280px; border-radius: var(--radius);
                 border: 0.5px solid var(--bd2);
-                max-height: calc(100vh - 76px); box-shadow: var(--shadow-lg);
+                max-height: calc(100vh - 100px); box-shadow: var(--shadow-lg);
             }
         }
         .list-panel-header {
@@ -801,7 +807,7 @@
         .mob-drawer-title { font-size: 14px; font-weight: 600; }
         .mob-drawer-close { width: 26px; height: 26px; border-radius: 6px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx2); font-size: 14px; }
 
-        .mob-sheet { position: fixed; left: 0; right: 0; bottom: 58px; background: var(--s1); border-radius: 14px 14px 0 0; border-top: 0.5px solid var(--bd2); z-index: 30; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.22,1,0.36,1); max-height: 55vh; display: flex; flex-direction: column; }
+        .mob-sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--s1); border-radius: 14px 14px 0 0; border-top: 0.5px solid var(--bd2); z-index: 30; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.22,1,0.36,1); max-height: 55vh; display: flex; flex-direction: column; }
         .mob-sheet.open { transform: translateY(0); }
         .mob-sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--bd2); margin: 10px auto 8px; flex-shrink: 0; cursor: pointer; }
         .mob-sheet-hd { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 10px; border-bottom: 0.5px solid var(--bd); flex-shrink: 0; }
@@ -823,52 +829,6 @@
             .sidebar { position: static; width: 252px; transform: none !important; }
             .search-bar { display: none !important; }
             .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
-        }
-
-        /* ══ MOBILE ══ */
-        @media (max-width: 767px) {
-            .app { padding-bottom: env(safe-area-inset-bottom, 0); }
-            .body { flex-direction: column; position: relative; }
-            .sidebar { display: none; }
-            .sidebar-backdrop { display: none !important; }
-            .main { position: relative; flex: 1; }
-            /* Topbar mobile: hide center + brand, keep left icon + right */
-            .tb-left { width: auto; border-right: none; padding: 0 8px; gap: 6px; }
-            .tb-brand { display: none; }
-            .tb-center { display: none; }
-            .tb-right { border-left: none; padding: 0 8px; margin-left: auto; }
-            .pill-badge { display: none; }
-            .live-p { display: none; }
-            /* Show mobile components */
-            .mob-search-row { display: flex; }
-            .mob-chips-row { display: flex; }
-            .mob-nav { display: flex; }
-            /* vtabs */
-            .vtabs { overflow-x: auto; scrollbar-width: none; height: 36px; }
-            .vtabs::-webkit-scrollbar { display: none; }
-            .vt { white-space: nowrap; padding: 4px 9px; font-size: 11px; }
-            /* hide bottom bar, use mob-nav */
-            .btbar { display: none !important; }
-            /* zoom */
-            .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
-            .zb { width: 34px; height: 34px; font-size: 16px; }
-            /* stats + list views full screen */
-            .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
-            .sv-row { grid-template-columns: 1fr; }
-            .sv-inner { padding: 12px; }
-            /* modals */
-            .modal { width: calc(100vw - 24px); max-height: 85vh; border-radius: 14px; }
-        }
-
-        /* Small phones */
-        @media (max-width: 380px) {
-            .vt { padding: 3px 7px; font-size: 10px; }
-            .mob-nav { height: 52px; }
-            .mob-nb-ico { font-size: 16px; }
-            .mob-nb-lbl { font-size: 9px; }
-            .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
-            .mob-sheet { bottom: 52px; }
-            .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
         }
 
         /* Leaflet overrides */
@@ -954,30 +914,30 @@
         .bt-tooltip::before { display:none !important; }
 
         /* ════════════════════════════════════════
-           LAYOUT OVERRIDE — CSS only, no HTML change
-           PC ≥768px  |  Mobile <768px
+           LAYOUT — PC ≥768px | Mobile <768px
         ════════════════════════════════════════ */
-
-        /* ── PC: ไม่เปลี่ยนอะไร topbar เดิมดีอยู่แล้ว ── */
 
         /* ── MOBILE <768px ── */
         @media (max-width: 767px) {
 
             /* 1. App container */
-            .app { padding-bottom: env(safe-area-inset-bottom, 0); }
+            .app {
+                padding-bottom: 0;
+                /* ต้องให้ app เต็มจอ ไม่ padding ที่นี่ — nav จัดการเอง */
+            }
             .body { flex-direction: column; position: relative; }
             .sidebar { display: none !important; }
             .sidebar-backdrop { display: none !important; }
-            .main { position: relative; flex: 1; }
+            .main { position: relative; flex: 1; overflow: hidden; }
 
-            /* 2. Topbar: ปรับเป็น ☰ | Search pill | Avatar
-               โดยใช้ element เดิมทั้งหมด ไม่เพิ่มลบอะไร */
+            /* 2. Topbar mobile: ☰ | Search | Avatar */
             .topbar {
-                height: 52px;
+                height: var(--topbar-h);
                 padding: 0 10px;
                 gap: 8px;
+                position: relative;
+                z-index: 50;
             }
-            /* tb-left: ซ่อนทุกอย่าง เหลือแค่ปุ่ม hamburger */
             .tb-left {
                 width: auto !important;
                 flex-shrink: 0;
@@ -987,8 +947,6 @@
             }
             .tb-left .logo-sq { display: none; }
             .tb-brand { display: none; }
-
-            /* tb-center: search pill กลม */
             .tb-center {
                 flex: 1;
                 padding: 0 !important;
@@ -1001,75 +959,172 @@
                 border-radius: 20px !important;
                 padding: 0 12px !important;
             }
-
-            /* tb-right: เหลือแค่ avatar วงกลม */
             .tb-right {
                 border-left: none !important;
                 padding: 0 !important;
                 gap: 0 !important;
             }
-            .pill-badge,
-            .live-p,
-            .tb-sep,
-            #btnImportData,
-            #btnUpload,
+            .pill-badge, .live-p, .tb-sep,
+            #btnImportData, #btnUpload,
             #av2, #av3 { display: none !important; }
-
-            /* av1 → avatar กลม */
             .tb-right .avs { display: flex !important; }
             #av1 {
-                width: 32px !important;
-                height: 32px !important;
-                border-radius: 50% !important;
-                font-size: 12px !important;
-                font-weight: 700 !important;
-                margin-left: 0 !important;
+                width: 32px !important; height: 32px !important;
+                border-radius: 50% !important; font-size: 12px !important;
+                font-weight: 700 !important; margin-left: 0 !important;
                 border: 2px solid rgba(255,255,255,0.15) !important;
                 cursor: pointer;
             }
 
-            /* 3. mob-search-row: ซ่อน ไม่ต้องการแล้ว */
+            /* 3. mob-search-row: ซ่อน ใช้ search ใน topbar แทน */
             .mob-search-row { display: none !important; }
 
-            /* 4. mob-chips-row: แถว filter chips ใต้ topbar */
+            /* 4. mob-chips-row: แถว filter chips — fixed ใต้ topbar */
             .mob-chips-row {
                 display: flex !important;
+                position: fixed;
+                top: var(--topbar-h);
+                left: 0; right: 0;
+                z-index: 40;
+                height: var(--chips-h);
                 background: var(--s1);
                 border-bottom: 0.5px solid var(--bd);
-                padding: 6px 10px;
+                padding: 0 10px;
                 gap: 6px;
+                align-items: center;
+                overflow-x: auto;
+                scrollbar-width: none;
             }
+            .mob-chips-row::-webkit-scrollbar { display: none; }
 
             /* 5. vtabs: ซ่อน ใช้ mob-nav แทน */
             .vtabs { display: none !important; }
 
-            /* 6. Bottom nav */
-            .mob-nav { display: flex; }
+            /* 6. Bottom nav — fixed ล่างสุด + safe area */
+            .mob-nav {
+                display: flex !important;
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                z-index: 50;
+                background: var(--s1);
+                border-top: 0.5px solid var(--bd);
+            }
 
-            /* 7. Bottom toolbar บนแผนที่ — ซ่อน ใช้ mob-nav แทน */
+            /* 7. Bottom toolbar บนแผนที่ — ซ่อน */
             .btbar { display: none !important; }
 
-            /* 8. Zoom controls */
-            .zoom-c { right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
+            /* 8. view-area: ต้องเว้น topbar + chips บน, nav ล่าง */
+            .view-area {
+                position: absolute;
+                top: var(--chips-h); /* topbar handled by .main flex */
+                left: 0; right: 0;
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            }
+
+            /* 9. map-stats: ย้ายลงมาจาก top:12 → ให้ห่างจาก chips แต่ไม่ต้องปรับ
+               เพราะ view-area เริ่มต้นถัดจาก chips แล้ว → top:12 ใน view-area ก็โอเค */
+            .map-stats { top: 12px; }
+
+            /* 10. Zoom controls: bottom สัมพัทธ์กับ view-area = 0, ไม่ต้องปรับ
+               แต่ถ้าใช้ position:fixed ต้องชดเชย nav */
+            .zoom-c {
+                position: absolute;
+                right: 10px;
+                bottom: 14px; /* relative to view-area which already excludes nav */
+            }
             .zb { width: 34px; height: 34px; font-size: 16px; }
 
-            /* 9. Stats/List views */
+            /* 11. mob-sheet: อยู่เหนือ nav */
+            .mob-sheet {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            }
+
+            /* 12. place-card mobile: อยู่เหนือ nav */
+            .place-card {
+                bottom: -100%;
+                padding-bottom: 0;
+            }
+            .place-card.open {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            }
+
+            /* 13. list-panel mobile: อยู่เหนือ nav */
+            .list-panel {
+                bottom: -100%;
+            }
+            .list-panel.open {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            }
+
+            /* 14. info-panel mobile: bottom sheet เหนือ nav */
+            .info-panel {
+                top: auto; left: 0; right: 0; bottom: 0;
+                width: 100%; max-height: 75vh;
+                border-radius: 20px 20px 0 0;
+                transform: translateY(110%);
+                padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            }
+            .info-panel.open { transform: translateY(0); }
+
+            /* 15. FAB / GPS / banners / cancel buttons: ชดเชย nav */
+            #btnFab {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px) !important;
+                right: 16px !important;
+            }
+            #btnGps {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px) !important;
+                right: 72px !important;
+            }
+            #btnCancelAdd, #btnCancelMeasure {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px) !important;
+            }
+            #addBanner, #measureBanner, #directionsBanner {
+                top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important;
+            }
+            #countPill {
+                top: calc(var(--topbar-h) + var(--chips-h) + 8px) !important;
+            }
+            #latlngHint { display: none !important; }
+
+            /* 16. toast: เหนือ nav */
+            .toast, .save-toast {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
+            }
+
+            /* 17. Stats/List views */
             .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
             .sv-row { grid-template-columns: 1fr; }
             .sv-inner { padding: 12px; }
 
-            /* 10. Modals */
+            /* 18. Modals */
             .modal { width: calc(100vw - 24px); max-height: 85vh; border-radius: 14px; }
+
+            /* 19. gps-btn-wrap: ชดเชย nav */
+            .gps-btn-wrap {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
+            }
+
+            /* 20. count pill at bottom: ชดเชย nav */
+            .count-pill {
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
+            }
+
+            /* 21. add-banner / measure-banner top */
+            .add-banner, .measure-banner {
+                top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important;
+            }
         }
 
         /* ── Small phones ── */
         @media (max-width: 380px) {
-            .mob-nav { height: 52px; }
+            :root {
+                --nav-h: 52px;
+            }
             .mob-nb-ico { font-size: 16px; }
             .mob-nb-lbl { font-size: 9px; }
             .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
-            .mob-sheet { bottom: 52px; }
-            .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
         }
     </style>
 </head>
