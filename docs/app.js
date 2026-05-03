@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.19';
+const APP_VERSION = 'v6.6.20';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1473,27 +1473,27 @@ function renderSearchResults() {
 // FILTER CHIPS
 // ════════════════════════════════════════════
 
-// Dropdown toggle for "more" chip
-const _chipDropdown=document.getElementById('chipDropdown');
-const _chipMoreEl=document.getElementById('chipMore');
-if(_chipMoreEl && _chipDropdown) {
-    _chipMoreEl.addEventListener('click',e=>{
+// Dropdown toggle for "List Manager"
+const _listDropdown=document.getElementById('listDropdown');
+const _chipListEl=document.getElementById('chipList');
+if(_chipListEl && _listDropdown) {
+    _chipListEl.addEventListener('click',e=>{
         e.stopPropagation();
-        _chipDropdown.classList.toggle('open');
+        _listDropdown.classList.toggle('open');
     });
-    // Close on outside touch/click (mousedown fires before click, avoids timing issue)
+    // Close on outside touch/click
     document.addEventListener('mousedown',e=>{
-        if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
-            _chipDropdown.classList.remove('open');
+        if(_listDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
+            _listDropdown.classList.remove('open');
     });
     document.addEventListener('touchstart',e=>{
-        if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
-            _chipDropdown.classList.remove('open');
+        if(_listDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
+            _listDropdown.classList.remove('open');
     },{passive:true});
     // Each dropdown item closes menu after its handler runs
     document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
         item.addEventListener('click',()=>{
-            setTimeout(()=>_chipDropdown.classList.remove('open'),100);
+            setTimeout(()=>_listDropdown.classList.remove('open'),100);
         });
     });
 }
@@ -1529,7 +1529,7 @@ onClick('chipNearby', ()=>{
     }
 });
 
-onClick('chipList', ()=>{
+onClick('btnMergeList', ()=>{
     const counts={}; locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
     const lists=Object.keys(counts).filter(n=>n!==filterList).sort();
     if(!lists.length){showToast('ไม่มีรายการอื่นให้รวม',true);return;}
