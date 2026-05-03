@@ -314,6 +314,14 @@
         }
         .ctxt { font-size: 10px; color: var(--tx3); flex: 1; }
 
+        /* Toggle Switch */
+        .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--s3); border-radius: 24px; transition: 0.2s; border: 0.5px solid var(--bd2); }
+        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background: var(--tx2); border-radius: 50%; transition: 0.2s; }
+        input:checked + .toggle-slider { background: var(--bl-d); border-color: var(--bl-b); }
+        input:checked + .toggle-slider:before { transform: translateX(20px); background: var(--bl); }
+
         /* sidebar backdrop (mobile overlay) */
         .sidebar-backdrop {
             display: none; position: fixed; inset: 0;
@@ -1209,6 +1217,16 @@
                 <!-- populated by app.js -->
             </div>
 
+            <!-- Mobile Mode Toggle -->
+            <div class="sec-hd" style="margin-top:8px;">การแสดงผล</div>
+            <div class="mobile-toggle-row" style="padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <span style="font-size:13px;color:var(--tx2);">โหมดมือถือ</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="mobileModeToggle">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
             <!-- Footer -->
             <div class="sfoot">
                 <button class="add-btn" id="btnAddLocation">+ เพิ่มจุดใหม่</button>
@@ -1766,7 +1784,62 @@
         document.head.appendChild(s2);
     };
 })();
+
+// ── Mobile Mode Toggle ──
+(function(){
+    const MOBILE_MODE_KEY = 'bt_force_mobile_mode';
+    const toggle = document.getElementById('mobileModeToggle');
+    const body = document.body;
+    
+    // Check saved preference or auto-detect
+    const savedMode = localStorage.getItem(MOBILE_MODE_KEY);
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const forceMobile = savedMode === 'true' || (savedMode === null && isMobileDevice);
+    
+    // Apply initial state
+    if (forceMobile) {
+        body.classList.add('force-mobile');
+        if (toggle) toggle.checked = true;
+    }
+    
+    // Handle toggle change
+    if (toggle) {
+        toggle.addEventListener('change', function() {
+            if (this.checked) {
+                body.classList.add('force-mobile');
+                localStorage.setItem(MOBILE_MODE_KEY, 'true');
+            } else {
+                body.classList.remove('force-mobile');
+                localStorage.setItem(MOBILE_MODE_KEY, 'false');
+            }
+            // Refresh page to apply layout changes
+            window.location.reload();
+        });
+    }
+})();
 </script>
+
+<style>
+/* Force Mobile Mode Styles */
+body.force-mobile .sidebar { display: none !important; }
+body.force-mobile .sidebar-backdrop { display: none !important; }
+body.force-mobile .search-bar { display: none !important; }
+body.force-mobile .mob-search-row { display: flex !important; }
+body.force-mobile .mob-chips-row { display: flex !important; }
+body.force-mobile .mob-nav { display: flex !important; }
+body.force-mobile .place-card {
+    position: fixed; bottom: -100%; left: 0; right: 0;
+    width: 100%; border-radius: 14px 14px 0 0;
+    max-height: 55vh; transform: translateY(0);
+}
+body.force-mobile .place-card.open { transform: translateY(-100%); }
+@media (min-width: 768px) {
+    body.force-mobile .sidebar { display: none !important; }
+    body.force-mobile .mob-nav { display: flex !important; }
+    body.force-mobile .mob-chips-row { display: flex !important; }
+    body.force-mobile .topbar { height: var(--topbar-h); }
+}
+</style>
 
 </body>
 </html>
