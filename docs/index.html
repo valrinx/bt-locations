@@ -3718,17 +3718,20 @@
             <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
             <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
             <div class="chip-more-wrap">
-                <button class="chip" id="chipList" data-filter="list">&#9660; รายการ</button>
+                <button class="chip" id="chipList" data-filter="list">&#9660; จัดการรายการ</button>
                 <div class="chip-dropdown" id="listDropdown">
-                    <button class="chip-dropdown-item" id="chipRoute">
-                        <span style="font-size:16px;">🛤️</span> วางแผนเส้นทาง
+                    <button class="chip-dropdown-item" id="btnPlanMultipleRoutes">
+                        <span style="font-size:16px;">🗺️</span> วางแผนหลายเส้นทาง
                     </button>
+                    <button class="chip-dropdown-item" id="chipRoute">
+                        <span style="font-size:16px;">🛤️</span> วางแผนเส้นทาง (ปัจจุบัน)
+                    </button>
+                    <div style="height:1px; background:var(--bd); margin:4px 0;"></div>
                     <button class="chip-dropdown-item" onclick="openMobDrawer()">
                         <span style="font-size:16px;">📂</span> เลือกรายการ...
                     </button>
                 </div>
             </div>
-            <button class="chip" id="chipCity" data-filter="city">&#9660; เมือง</button>
         </div>
 
         <!-- ── MOBILE NAV ── -->
