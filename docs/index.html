@@ -14,40 +14,44 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ════════════════════════════════════════
+           DESIGN TOKENS
+        ════════════════════════════════════════ */
         :root {
-            --bg: #0b0c10;
-            --s1: #12131a;
-            --s2: #191a23;
-            --s3: #20212c;
-            --s4: #272836;
-            --bd: rgba(255,255,255,0.06);
-            --bd2: rgba(255,255,255,0.11);
-            --bd3: rgba(255,255,255,0.18);
-            --tx: #eceaf5;
-            --tx2: #9494a8;
-            --tx3: #5a5a6e;
-            --bl: #5b8fff;
-            --bl-d: rgba(91,143,255,0.13);
+            --bg:  #0b0c10;
+            --s1:  #111218;
+            --s2:  #181921;
+            --s3:  #1e1f2a;
+            --s4:  #252634;
+            --bd:  rgba(255,255,255,0.055);
+            --bd2: rgba(255,255,255,0.10);
+            --bd3: rgba(255,255,255,0.16);
+            --tx:  #eceaf5;
+            --tx2: #8f8fa8;
+            --tx3: #52526a;
+            --bl:  #5b8fff;
+            --bl-d: rgba(91,143,255,0.12);
             --bl-b: rgba(91,143,255,0.26);
-            --gn: #2ecc90;
-            --gn-d: rgba(46,204,144,0.11);
-            --gn-b: rgba(46,204,144,0.26);
-            --am: #f5a623;
-            --am-d: rgba(245,166,35,0.11);
-            --rd: #ff5c5c;
-            --rd-d: rgba(255,92,92,0.11);
-            --pu: #a78bfa;
-            --pu-d: rgba(167,139,250,0.11);
-            --or: #ff7f5c;
-            --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
-            --shadow-md: 0 2px 12px rgba(0,0,0,0.5);
-            --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
-            --radius: 14px;
-            --sidebar-w: 260px;
-            /* color aliases used by app.js */
+            --gn:  #2ecc90;
+            --gn-d: rgba(46,204,144,0.10);
+            --gn-b: rgba(46,204,144,0.25);
+            --am:  #f5a623;
+            --am-d: rgba(245,166,35,0.10);
+            --rd:  #ff5c5c;
+            --rd-d: rgba(255,92,92,0.10);
+            --pu:  #a78bfa;
+            --pu-d: rgba(167,139,250,0.10);
+            --or:  #ff7f5c;
+            /* app.js color aliases */
             --red: #ff5c5c; --green: #2ecc90; --yellow: #f5a623;
+            /* shadows */
+            --shadow-sm: 0 1px 4px rgba(0,0,0,0.45);
+            --shadow-md: 0 2px 14px rgba(0,0,0,0.55);
+            --shadow-lg: 0 8px 36px rgba(0,0,0,0.65);
+            --radius: 12px;
+            --sidebar-w: 256px;
             /* z-index layers */
             --z-map: 0;
             --z-controls: 100;
@@ -61,439 +65,479 @@
             --z-toast: 400;
             --z-crosshair: 500;
             --z-hint: 150;
-            /* Mobile layout heights — single source of truth */
+            /* mobile layout */
             --topbar-h: 52px;
             --chips-h: 38px;
             --nav-h: 58px;
             --mob-map-top: calc(var(--topbar-h) + var(--chips-h));
-            --mob-above-nav: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+            --mob-above-nav: calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Noto Sans Thai', sans-serif; background: var(--bg); overflow: hidden; height: 100vh; color: var(--tx); }
 
-        /* ══ APP CONTAINER ══ */
+        *, *::before, *::after {
+            margin: 0; padding: 0; box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            background: var(--bg);
+            overflow: hidden;
+            height: 100vh;
+            color: var(--tx);
+        }
+
+        /* ════════════════════════════════════════
+           LOADER
+        ════════════════════════════════════════ */
+        .loader {
+            position: fixed; inset: 0; background: var(--bg);
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px; z-index: 9999;
+            transition: opacity 0.4s ease;
+        }
+        .loader.done { opacity: 0; pointer-events: none; }
+        .loader-logo {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+        }
+        .spin {
+            width: 28px; height: 28px;
+            border: 2px solid var(--bd2); border-top-color: var(--bl);
+            border-radius: 50%; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader-t { font-size: 12px; color: var(--tx3); }
+
+        /* ════════════════════════════════════════
+           APP SHELL
+        ════════════════════════════════════════ */
         .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* ══ TOPBAR — 3-zone aligned ══ */
+        /* ── TOPBAR ── */
         .topbar {
-            height: 50px; flex-shrink: 0;
+            height: 48px; flex-shrink: 0;
             display: flex; align-items: stretch;
-            background: var(--s1); border-bottom: 0.5px solid var(--bd);
+            background: var(--s1);
+            border-bottom: 0.5px solid var(--bd2);
+            position: relative; z-index: 60;
         }
-        /* LEFT: exact width match with sidebar */
         .tb-left {
-            width: 252px; flex-shrink: 0;
-            display: flex; align-items: center; gap: 8px; padding: 0 12px;
-            border-right: 0.5px solid var(--bd2); overflow: hidden;
+            width: var(--sidebar-w); flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px;
+            padding: 0 14px;
+            border-right: 0.5px solid var(--bd);
+            overflow: hidden;
         }
-        .tb-brand { font-size: 13px; font-weight: 700; color: var(--tx); white-space: nowrap; }
-        /* CENTER: search bar fills remaining space */
-        .tb-center { flex: 1; display: flex; align-items: center; padding: 0 12px; min-width: 0; }
-        /* RIGHT: fixed actions */
-        .tb-right { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-left: 0.5px solid var(--bd2); }
-        .logo { display: flex; align-items: center; gap: 7px; cursor: pointer; }
-        .logo-sq { width: 24px; height: 24px; border-radius: 6px; background: var(--bl-d); border: 0.5px solid var(--bl-b); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--bl); flex-shrink: 0; }
-        .logo-txt { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--bl); text-transform: uppercase; }
+        .tb-center {
+            flex: 1; display: flex; align-items: center;
+            padding: 0 12px; gap: 10px; min-width: 0;
+        }
+        .tb-right {
+            display: flex; align-items: center; gap: 6px;
+            padding: 0 12px;
+            border-left: 0.5px solid var(--bd);
+        }
 
-        /* ════════════════════════════════════
-           LOADING SCREEN
-        ════════════════════════════════════ */
-        .loader { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 9999; transition: opacity 0.4s ease; }
-        .loader.done { opacity: 0; pointer-events: none; }
-        .spin { width: 32px; height: 32px; border: 2px solid var(--bd2); border-top-color: var(--bl); border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loader-t { font-size: 13px; color: var(--tx2); }
-        .tb-sep { width: 0.5px; height: 18px; background: var(--bd2); margin: 0 2px; }
+        /* logo */
+        .logo-sq {
+            width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0;
+            background: var(--bl-d); border: 0.5px solid var(--bl-b);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 800; color: var(--bl);
+        }
+        .logo-txt {
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.1em; color: var(--bl); text-transform: uppercase;
+        }
+        .tb-brand { font-size: 12px; font-weight: 600; color: var(--tx2); }
+        .version-badge {
+            font-size: 9px; color: var(--tx3);
+            background: var(--s3); border: 0.5px solid var(--bd);
+            border-radius: 4px; padding: 1px 5px; white-space: nowrap;
+        }
+
+        /* search box */
         .search-box {
-            flex: 1; max-width: 440px; height: 32px;
+            flex: 1; max-width: 400px; height: 30px;
             display: flex; align-items: center; gap: 7px;
-            background: var(--s2); border: 0.5px solid var(--bd); border-radius: 8px; padding: 0 10px;
+            background: var(--s2); border: 0.5px solid var(--bd);
+            border-radius: 8px; padding: 0 10px;
             transition: border-color 0.15s;
         }
         .search-box:focus-within { border-color: var(--bl-b); }
-        .search-box input { background: none; border: none; outline: none; color: var(--tx); font-size: 12px; width: 100%; }
+        .search-box .si { font-size: 12px; color: var(--tx3); flex-shrink: 0; }
+        .search-box input {
+            background: none; border: none; outline: none;
+            color: var(--tx); font-size: 12px; width: 100%;
+            font-family: inherit;
+        }
         .search-box input::placeholder { color: var(--tx3); }
-        .si { font-size: 12px; color: var(--tx3); }
-        .pill-badge { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
-        .version-pill { background: var(--s2); border: 0.5px solid var(--bd2); color: var(--tx3); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 12px; margin-left: 6px; }
-        .live-p { display: flex; align-items: center; gap: 6px; background: rgba(45,255,160,0.12); border: 0.5px solid rgba(45,255,160,0.3); border-radius: 20px; padding: 4px 10px; }
-        .live-p .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gn); animation: livePulse 2s ease infinite; }
-        .live-p span { font-size: 11px; color: var(--gn); font-weight: 600; }
+        .search-box .kbd {
+            font-size: 9px; color: var(--tx3);
+            background: var(--s3); border: 0.5px solid var(--bd);
+            border-radius: 3px; padding: 1px 5px; white-space: nowrap; flex-shrink: 0;
+        }
+
+        /* topbar pills & controls */
+        .live-p {
+            display: flex; align-items: center; gap: 5px;
+            background: var(--s2); border: 0.5px solid var(--bd);
+            border-radius: 20px; padding: 3px 9px;
+        }
+        .live-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--gn); animation: livePulse 2s ease infinite;
+        }
+        @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+        .live-p span { font-size: 10px; color: var(--tx2); }
+        .pill-badge {
+            background: var(--bl-d); border: 0.5px solid var(--bl-b);
+            color: var(--bl); font-size: 10px; font-weight: 600;
+            padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+        }
         .avs { display: flex; }
-        .av { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--bg); border: 1.5px solid var(--bg); margin-left: -5px; cursor: pointer; }
-        .tb-icon-btn { width: 28px; height: 28px; border-radius: 7px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; color: var(--tx2); transition: all 0.12s; }
+        .av {
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 9px; font-weight: 800; color: var(--bg);
+            border: 1.5px solid var(--s1); margin-left: -5px; cursor: pointer;
+        }
+        .tb-sep { width: 0.5px; height: 16px; background: var(--bd2); margin: 0 2px; }
+        .tb-icon-btn {
+            width: 28px; height: 28px; border-radius: 7px;
+            border: 0.5px solid var(--bd); background: var(--s2);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 13px; color: var(--tx2);
+            transition: all 0.12s;
+        }
         .tb-icon-btn:hover { background: var(--s3); color: var(--tx); }
         .tb-icon-btn.active { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); }
 
-        /* ══ BODY LAYOUT ══ */
+        /* ── BODY LAYOUT ── */
         .body { display: flex; flex: 1; overflow: hidden; }
 
-        /* ══ SIDEBAR ══ */
+        /* ════════════════════════════════════════
+           SIDEBAR (Desktop)
+        ════════════════════════════════════════ */
         .sidebar {
-            width: 252px; flex-shrink: 0;
-            background: var(--s1); border-right: 0.5px solid var(--bd);
+            width: var(--sidebar-w); flex-shrink: 0;
+            background: var(--s1);
+            border-right: 0.5px solid var(--bd2);
             display: flex; flex-direction: column; overflow: hidden;
-            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
         }
-        .sec-hd { padding: 14px 14px 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tx3); flex-shrink: 0; }
-        .flist { flex-shrink: 0; padding: 0 10px; display: flex; flex-direction: column; }
-        .fl { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); border: 0.5px solid transparent; }
-        .fl:hover { background: var(--s2); color: var(--tx); }
 
-        /* Sidebar filter items with colored dots and counts */
-        .flist-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: all 0.12s; font-size: 13px; color: var(--tx2); margin-bottom: 2px; }
-        .flist-item:hover { background: var(--s2); color: var(--tx); }
-        .flist-item.active { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); }
-        .fl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .fl-name { flex: 1; font-weight: 500; }
-        .fl-count { font-size: 11px; color: var(--tx3); background: var(--s2); padding: 2px 8px; border-radius: 12px; font-weight: 600; }
-        .flist-item.active .fl-count { background: rgba(91,143,255,0.2); color: var(--bl); }
-
-        /* Mobile drawer filter items */
-        .fi { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: all 0.12s; font-size: 13px; color: var(--tx2); margin-bottom: 3px; }
-        .fi:hover { background: var(--s2); }
-        .fi.on { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); }
-        .fdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-        .fn { flex: 1; font-weight: 500; }
-        .fc { font-size: 12px; color: var(--tx3); background: var(--s2); padding: 3px 10px; border-radius: 12px; font-weight: 600; }
-        .fi.on .fc { background: rgba(91,143,255,0.2); color: var(--bl); }
-
-        /* City list items */
-        .clist-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: all 0.12s; font-size: 13px; color: var(--tx2); margin-bottom: 2px; }
-        .clist-item:hover { background: var(--s2); color: var(--tx); }
-        .clist-item.active { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); }
-
-        .sdiv { height: 0.5px; background: var(--bd); margin: 10px 14px; flex-shrink: 0; }
-        .clist { flex: 1; overflow-y: auto; padding: 0 10px; }
-        .cl { display: flex; align-items: center; gap: 9px; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.12s; font-size: 12px; color: var(--tx2); }
-        .cl:hover { background: var(--s2); color: var(--tx); }
-        .cl.on { background: var(--s2); color: var(--tx); }
-        .cd { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-        .cn { flex: 1; }
-        .cc { font-size: 10px; color: var(--tx3); margin-left: auto; }
-        .sfoot { padding: 10px 12px; border-top: 0.5px solid var(--bd); flex-shrink: 0; background: var(--s1); }
-        .add-btn { width: 100%; padding: 9px; border-radius: 9px; border: none; background: var(--s2); color: var(--tx); font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.12s; }
-        .add-btn:hover { background: var(--bl-d); color: var(--bl); }
-        .collab { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-        .cav { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: var(--bg); border: 1.5px solid var(--s1); }
-        .ctxt { font-size: 11px; color: var(--tx3); }
-
-        /* ══ MAIN ══ */
-        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-
-        /* View tabs */
+        /* View Switcher 2×2 grid */
         .vtabs {
-            height: 38px; flex-shrink: 0;
-            display: flex; align-items: center; gap: 2px; padding: 0 12px;
-            background: var(--s1); border-bottom: 0.5px solid var(--bd);
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 6px; padding: 12px 10px 10px;
+            border-bottom: 0.5px solid var(--bd);
+            flex-shrink: 0;
         }
         .vt {
-            display: flex; align-items: center; gap: 5px;
-            padding: 5px 11px; border-radius: 7px;
-            font-size: 12px; font-weight: 500; color: var(--tx2); cursor: pointer;
-            border: 0.5px solid transparent; transition: all 0.13s;
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 10px; border-radius: 8px;
+            cursor: pointer; font-size: 11.5px; color: var(--tx3);
+            border: 0.5px solid transparent;
+            transition: all 0.12s; user-select: none;
         }
-        .vt:hover { color: var(--tx); background: var(--s2); }
-        .vt.on { color: var(--bl); background: var(--bl-d); border-color: var(--bl-b); }
-        .vt-i { font-size: 13px; }
+        .vt:hover { background: var(--s2); color: var(--tx2); }
+        .vt.on {
+            background: var(--bl-d); border-color: var(--bl-b);
+            color: var(--bl); font-weight: 600;
+        }
+        .vt-i {
+            font-size: 13px; line-height: 1;
+            width: 16px; text-align: center; flex-shrink: 0;
+        }
+        .vt.on .vt-i { color: var(--bl); }
 
+        /* section headers */
+        .sec-hd {
+            padding: 12px 14px 5px;
+            font-size: 9px; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: var(--tx3); flex-shrink: 0;
+        }
+
+        /* filter list */
+        .flist {
+            flex-shrink: 0; padding: 0 8px;
+            display: flex; flex-direction: column; gap: 1px;
+        }
+        .fl {
+            display: flex; align-items: center; gap: 9px;
+            padding: 6px 9px; border-radius: 7px;
+            cursor: pointer; font-size: 11.5px; color: var(--tx2);
+            border: 0.5px solid transparent; transition: all 0.11s;
+        }
+        .fl:hover { background: var(--s2); color: var(--tx); }
+        .fl.on {
+            background: var(--bl-d); border-color: var(--bl-b);
+            color: var(--bl); font-weight: 600;
+        }
+        .fd { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .fn { flex: 1; }
+        .fc {
+            font-size: 9.5px; color: var(--tx3);
+            background: var(--s2); padding: 1px 6px; border-radius: 8px;
+        }
+        .fl.on .fc { background: rgba(91,143,255,0.18); color: var(--bl); }
+
+        .sdiv { height: 0.5px; background: var(--bd); margin: 8px 14px; flex-shrink: 0; }
+
+        /* city list */
+        .clist { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+        .clist::-webkit-scrollbar { width: 3px; }
+        .clist::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
+
+        /* sidebar footer */
+        .sfoot { padding: 8px; flex-shrink: 0; border-top: 0.5px solid var(--bd); }
+        .add-btn {
+            width: 100%; padding: 9px 0;
+            background: var(--bl-d); border: 0.5px solid var(--bl-b);
+            border-radius: 8px; color: var(--bl);
+            font-size: 12px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.13s; text-align: center;
+            display: block;
+        }
+        .add-btn:hover { background: rgba(91,143,255,0.2); }
+        .add-btn:active { transform: scale(0.98); }
+
+        .collab {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 6px 2px;
+        }
+        .cav {
+            width: 20px; height: 20px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 8px; font-weight: 800; color: var(--bg);
+            border: 1.5px solid var(--s1);
+        }
+        .ctxt { font-size: 10px; color: var(--tx3); flex: 1; }
+
+        /* sidebar backdrop (mobile overlay) */
+        .sidebar-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); z-index: var(--z-panel);
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-backdrop.show { display: block; }
+
+        /* ════════════════════════════════════════
+           MAIN AREA
+        ════════════════════════════════════════ */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+        /* view area fills main */
         .view-area { flex: 1; position: relative; overflow: hidden; }
 
-        /* Map view */
-        .map-view { position: absolute; inset: 0; background: #0d0e14; display: none; }
+        /* ════════════════════════════════════════
+           MAP VIEW
+        ════════════════════════════════════════ */
+        .map-view { position: absolute; inset: 0; }
         .map-view.show { display: block; }
-        .mgrid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.013) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.013) 1px,transparent 1px); background-size: 44px 44px; pointer-events: none; }
-        #map { position: absolute; inset: 0; z-index: 1; }
+        #map { position: absolute; inset: 0; z-index: var(--z-map); }
 
-        /* Map popup */
-        .map-popup {
-            position: absolute; right: 14px; top: 14px; width: 214px;
-            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 13px; padding: 13px 14px;
-            z-index: 100; display: none;
+        /* subtle map grid texture */
+        .mgrid {
+            position: absolute; inset: 0; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 1;
         }
-        .map-popup.show { display: block; }
-        .pp-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--bl); margin-bottom: 3px; }
-        .pp-name { font-size: 14px; font-weight: 600; margin-bottom: 1px; }
-        .pp-sub { font-size: 11px; color: var(--tx2); margin-bottom: 10px; }
-        .pp-meta { display: flex; gap: 12px; padding: 8px 0; border-top: 0.5px solid var(--bd); border-bottom: 0.5px solid var(--bd); margin-bottom: 10px; }
-        .pp-mi { font-size: 11px; color: var(--tx2); }
-        .pp-mi b { color: var(--tx); font-weight: 500; }
-        .pp-btns { display: flex; gap: 5px; }
-        .ppb { flex: 1; padding: 6px 4px; border-radius: 7px; border: 0.5px solid var(--bd2); background: var(--s2); color: var(--tx2); font-size: 11px; font-weight: 500; text-align: center; cursor: pointer; transition: all 0.12s; }
-        .ppb:hover { color: var(--tx); background: var(--s3); }
-        .ppb.p { background: var(--bl); border-color: var(--bl); color: white; font-weight: 700; }
-        .ppb.p:hover { opacity: 0.85; }
 
-        /* Map stats - concept style */
-        .map-stats { position: absolute; left: 12px; top: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 50; }
-        .msc { background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 10px; padding: 10px 14px; min-width: 88px; }
-        .msv { font-size: 20px; font-weight: 700; line-height: 1; }
-        .msl { font-size: 10px; color: var(--tx3); margin-top: 3px; letter-spacing: 0.02em; }
-
-        /* Zoom controls */
-        .zoom-c { position: absolute; right: 14px; bottom: 58px; display: flex; flex-direction: column; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 8px; overflow: hidden; z-index: 50; }
-        .zb { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--tx2); cursor: pointer; background: none; border: none; transition: all 0.12s; }
-        .zb:hover { background: var(--s2); color: var(--tx); }
-        .zsep { height: 0.5px; background: var(--bd); }
-
-        /* Bottom toolbar */
-        .btbar { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 30px; padding: 4px 7px; z-index: 50; }
-        .bt { display: flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 500; color: var(--tx2); cursor: pointer; border: none; background: none; transition: all 0.13s; }
-        .bt:hover { background: var(--s2); color: var(--tx); }
-        .bt.on { background: var(--bl-d); color: var(--bl); }
-        .bt-i { font-size: 12px; }
-
-        /* List view */
-        .list-view { position: absolute; inset: 0; background: var(--bg); display: none; flex-direction: column; }
-        .list-view.show { display: flex; }
-        .lv-toolbar { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--s1); border-bottom: 0.5px solid var(--bd); }
-        .lv-tb-btn { height: 26px; padding: 0 10px; border-radius: 7px; border: 0.5px solid var(--bd2); background: var(--s2); color: var(--tx2); font-size: 11.5px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.12s; white-space: nowrap; }
-        .lv-tb-btn:hover { color: var(--tx); background: var(--s3); }
-        .lv-tb-btn.danger:hover { color: var(--rd); border-color: rgba(255,92,92,0.3); }
-        .lv-count { font-size: 11px; color: var(--tx3); margin-left: auto; }
-        .ltable { flex: 1; overflow-y: auto; }
-
-        /* Stats view */
-        .stats-view { position: absolute; inset: 0; background: var(--bg); display: none; overflow-y: auto; }
-        .stats-view.show { display: block; }
-        .sv-inner { padding: 16px; }
-        .sv-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
-        .sv-card { background: var(--s1); border: 0.5px solid var(--bd); border-radius: 10px; padding: 12px 14px; }
-        .sv-v { font-size: 22px; font-weight: 700; }
-        .sv-l { font-size: 11px; color: var(--tx3); margin-top: 2px; }
-        .sv-h { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--tx3); margin-bottom: 10px; }
-        .sv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-        .sv-panel { background: var(--s1); border: 0.5px solid var(--bd); border-radius: 10px; padding: 14px; }
-        .donut-wrap { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
-        .donut-legend { display: flex; flex-direction: column; gap: 6px; }
-        .dl-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--tx2); }
-        .dl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .dl-val { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--tx); }
-        .recent-list { display: flex; flex-direction: column; gap: 1px; margin-top: 10px; }
-        .ri { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 0.5px solid var(--bd); }
-        .ri:last-child { border-bottom: none; }
-        .ri-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .ri-info { flex: 1; }
-        .ri-name { font-size: 12px; font-weight: 500; }
-        .ri-meta { font-size: 11px; color: var(--tx3); }
-        .ri-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px; }
-
-        /* Toast */
-        .toast {
-            position: fixed; bottom: 58px; left: 50%; transform: translateX(-50%);
-            background: var(--s2); border: 0.5px solid var(--bd2); border-radius: 20px;
-            padding: 7px 14px; display: flex; align-items: center; gap: 9px;
-            font-size: 12px; color: var(--tx); white-space: nowrap;
-            opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 400;
+        /* ── Map stats (top-right inline) ── */
+        .map-stats {
+            position: absolute; top: 12px; right: 56px;
+            display: flex; gap: 4px; z-index: var(--z-controls);
+            pointer-events: none;
         }
-        .toast.show { opacity: 1; pointer-events: auto; }
-
-        /* ══ SEARCH BAR (mobile only) ══ */
-        .search-bar {
-            position: fixed; top: 10px; left: 10px;
-            width: min(calc(100vw - 20px), var(--sidebar-w));
-            z-index: var(--z-controls); display: flex; flex-direction: column; gap: 0;
-        }
-        .search-box {
-            background: var(--s1); border-radius: var(--radius);
-            border: 0.5px solid var(--bd2);
-            box-shadow: var(--shadow-md); display: flex; align-items: center;
-            padding: 0 14px 0 10px; height: 48px; gap: 8px;
-            transition: box-shadow 0.2s, border-color 0.2s;
-            backdrop-filter: blur(12px);
-        }
-        .search-box.focused { border-color: var(--bl); box-shadow: 0 0 0 2px var(--bl-d), var(--shadow-md); border-radius: var(--radius) var(--radius) 0 0; }
-        .search-box.focused + .search-results { display: block; }
-        .search-menu-btn {
-            width: 36px; height: 36px; border-radius: 8px; border: none; background: none;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            color: var(--tx2); flex-shrink: 0; transition: background 0.15s;
-        }
-        .search-menu-btn:hover { background: var(--s2); color: var(--tx); }
-        .search-menu-btn svg { width: 18px; height: 18px; }
-        .search-input {
-            flex: 1; border: none; outline: none; font-size: 14px; font-family: inherit;
-            color: var(--tx); background: transparent; caret-color: var(--bl);
-        }
-        .search-input::placeholder { color: var(--tx3); }
-        .search-clear {
-            width: 28px; height: 28px; border-radius: 6px; border: none; background: none;
-            cursor: pointer; display: none; align-items: center; justify-content: center;
-            color: var(--tx3); flex-shrink: 0; font-size: 12px;
-        }
-        .search-clear.show { display: flex; }
-        .search-clear:hover { background: var(--s2); color: var(--tx); }
-        .search-divider { width: 1px; height: 18px; background: var(--bd2); flex-shrink: 0; }
-        .search-avatar {
-            width: 28px; height: 28px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--bl), var(--gn));
-            color: #0d0d0f;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: 700; flex-shrink: 0; cursor: pointer;
-        }
-        /* live dot */
-        .live-indicator { display:flex; align-items:center; gap:5px; }
-        .live-dot { width:6px; height:6px; border-radius:50%; background:var(--gn); animation:livePulse 2s ease infinite; flex-shrink:0; }
-        @keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
-        .live-label { font-size:10px; color:var(--tx3); letter-spacing:0.05em; }
-        .search-results {
-            display: none; background: var(--s1);
-            border: 0.5px solid var(--bd2); border-top: none;
-            border-radius: 0 0 var(--radius) var(--radius);
-            box-shadow: var(--shadow-lg); overflow: hidden;
-            max-height: 360px; overflow-y: auto;
-        }
-        .search-result-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 9px 14px; cursor: pointer; transition: background 0.1s;
-        }
-        .search-result-item:hover { background: var(--s2); }
-        .search-result-icon {
-            width: 32px; height: 32px; border-radius: 8px;
-            background: var(--bl-d); color: var(--bl);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; font-size: 14px;
-        }
-        .search-result-text { flex: 1; min-width: 0; }
-        .search-result-name { font-size: 13px; font-weight: 500; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .search-result-sub { font-size: 11px; color: var(--tx3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* ══ FILTER CHIPS ══ */
-        .filter-chips {
-            display: flex; gap: 6px; align-items: center;
-            padding: 6px 2px 2px; overflow: visible;
-        }
-        .chip {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 5px 12px; border-radius: 20px;
-            background: var(--s1); border: 0.5px solid var(--bd2);
-            font-size: 12px; font-family: inherit; font-weight: 500; color: var(--tx2);
-            cursor: pointer; flex-shrink: 0;
-            transition: all 0.15s; white-space: nowrap;
+        .msc {
+            background: rgba(17,18,24,0.85); border: 0.5px solid var(--bd2);
+            border-radius: 7px; padding: 5px 10px; text-align: center;
             backdrop-filter: blur(8px);
         }
-        .chip:hover { background: var(--s2); color: var(--tx); border-color: var(--bd2); }
-        .chip.active { background: var(--bl-d); color: var(--bl); border-color: var(--bl-b); font-weight: 600; }
-        .chip svg { width: 14px; height: 14px; }
-        .chip-more-wrap { position: relative; }
-        .chip-dropdown {
-            display: none; position: absolute; top: calc(100% + 6px); right: 0;
-            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 12px; box-shadow: var(--shadow-lg);
-            min-width: 160px; z-index: 1100; overflow: hidden;
-            animation: chipDropIn 0.15s ease-out;
-        }
-        @keyframes chipDropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-        .chip-dropdown.open { display: block; }
-        .chip-dropdown-item {
-            display: flex; align-items: center; gap: 8px;
-            width: 100%; padding: 9px 14px; border: none; background: none;
-            font-size: 12px; font-family: inherit; color: var(--tx2); cursor: pointer;
-            transition: background 0.1s; text-align: left;
-        }
-        .chip-dropdown-item:hover { background: var(--s2); color: var(--tx); }
-        .chip-dropdown-item:active { background: var(--s3); }
-        .chip-dropdown-item.active { color: var(--bl); font-weight: 600; background: var(--bl-d); }
-        .chip-dropdown-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .msv { font-size: 14px; font-weight: 700; line-height: 1; }
+        .msl { font-size: 9px; color: var(--tx3); margin-top: 1px; }
 
-        /* ══ RIGHT-SIDE CONTROLS ══ */
-        .gps-btn-wrap { position: fixed; right: 12px; bottom: 80px; z-index: var(--z-controls); }
+        /* ── Right map controls column ── */
         .map-controls {
-            position: fixed; right: 12px; top: 50%;
-            transform: translateY(-50%); z-index: var(--z-controls);
+            position: absolute; right: 10px; top: 50%;
+            transform: translateY(-50%);
+            z-index: var(--z-controls);
             display: flex; flex-direction: column; gap: 4px;
         }
-        .map-btn {
-            width: 38px; height: 38px; border-radius: 8px;
-            background: var(--s1); border: 0.5px solid var(--bd2); cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: var(--shadow-md); color: var(--tx2);
-            transition: all 0.15s; flex-shrink: 0;
-            position: relative; overflow: hidden; backdrop-filter: blur(8px);
-        }
-        .map-btn:hover { background: var(--s2); color: var(--tx); }
-        .map-btn:active { transform: scale(0.9); background: var(--s3); }
-        .map-btn.active { color: var(--bl); background: var(--bl-d); border-color: var(--bl-b); }
-        .map-btn svg { width: 18px; height: 18px; transition: transform 0.2s; }
-        .map-btn.gps-searching { color: var(--yellow); animation: gps-btn-pulse 1.2s ease-in-out infinite; }
-        .map-btn.gps-found { color: var(--bl); }
-        .map-btn.gps-tracking { color: var(--bl); box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md); animation: gps-track-pulse 2s ease-in-out infinite; }
-        @keyframes gps-track-pulse { 0%,100% { box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md); } 50% { box-shadow: 0 0 0 5px rgba(79,138,255,0.1), var(--shadow-md); } }
-        @keyframes gps-btn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .map-btn-group {
-            background: var(--s1); border-radius: 8px;
+            background: rgba(17,18,24,0.9);
             border: 0.5px solid var(--bd2);
-            box-shadow: var(--shadow-md); overflow: hidden;
+            border-radius: 9px; overflow: hidden;
+            box-shadow: var(--shadow-md);
             display: flex; flex-direction: column;
         }
-        .map-btn-group .map-btn { width: 38px; height: 38px; border-radius: 0; box-shadow: none; border: none; }
-        .map-btn-group .map-btn:not(:last-child) { border-bottom: 0.5px solid var(--bd3); }
+        .map-btn-group .map-btn {
+            border-radius: 0; box-shadow: none; border: none;
+            border-bottom: 0.5px solid var(--bd);
+        }
+        .map-btn-group .map-btn:last-child { border-bottom: none; }
+        .map-btn {
+            width: 36px; height: 36px; border-radius: 8px;
+            background: rgba(17,18,24,0.9); border: 0.5px solid var(--bd2);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-md); color: var(--tx2);
+            transition: all 0.14s; flex-shrink: 0;
+            backdrop-filter: blur(8px);
+        }
+        .map-btn:hover { background: var(--s3); color: var(--tx); }
+        .map-btn:active { transform: scale(0.92); }
+        .map-btn.active { color: var(--bl); background: var(--bl-d); border-color: var(--bl-b); }
+        .map-btn svg { width: 16px; height: 16px; transition: transform 0.2s; }
+        .map-btn.gps-searching { color: var(--yellow); animation: gps-btn-pulse 1.2s ease-in-out infinite; }
+        .map-btn.gps-found { color: var(--bl); }
+        .map-btn.gps-tracking {
+            color: var(--bl); background: var(--bl-d);
+            box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md);
+            animation: gps-track-pulse 2s ease-in-out infinite;
+        }
+        @keyframes gps-track-pulse { 0%,100%{box-shadow:0 0 0 2px var(--bl-b),var(--shadow-md)} 50%{box-shadow:0 0 0 5px rgba(79,138,255,0.1),var(--shadow-md)} }
+        @keyframes gps-btn-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-        /* ══ FAB ══ */
-        .fab {
-            position: fixed; right: 14px; bottom: 20px; z-index: var(--z-fab);
-            background: var(--bl); border: none; border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(79,138,255,0.4); padding: 11px 18px;
-            display: flex; align-items: center; gap: 8px;
-            font-size: 13px; font-weight: 600; font-family: inherit;
-            color: #fff; cursor: pointer; transition: all 0.2s;
+        /* ── Zoom controls ── */
+        .zoom-c {
+            position: absolute; right: 10px; bottom: 20px;
+            z-index: var(--z-controls);
+            background: rgba(17,18,24,0.9);
+            border: 0.5px solid var(--bd2); border-radius: 9px;
+            box-shadow: var(--shadow-md); overflow: hidden;
         }
-        .fab:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(79,138,255,0.5); }
-        .fab:active { transform: scale(0.96); }
-        .fab svg { color: white; width: 18px; height: 18px; }
-        .fab.add-mode { background: var(--red); box-shadow: 0 4px 20px rgba(255,95,95,0.4); }
-        .fab.add-mode svg { color: white; }
+        .zb {
+            width: 36px; height: 36px; background: none; border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--tx2); font-size: 18px;
+            font-weight: 300; transition: all 0.12s;
+        }
+        .zb:hover { background: var(--s3); color: var(--tx); }
+        .zb:active { background: var(--s4); }
+        .zsep { height: 0.5px; background: var(--bd2); }
 
-        /* ══ COUNT BADGE ══ */
-        .count-pill {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            z-index: var(--z-fab);
-            background: var(--s1); border: 0.5px solid var(--bd2); color: var(--tx);
-            border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 500;
-            box-shadow: var(--shadow-md); pointer-events: none;
-            opacity: 0; transition: opacity 0.3s; white-space: nowrap;
+        /* ── Bottom toolbar (desktop map) ── */
+        .btbar {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 4px; z-index: var(--z-controls);
+            background: rgba(17,18,24,0.92);
+            border: 0.5px solid var(--bd2); border-radius: 12px;
+            padding: 4px; box-shadow: var(--shadow-md);
+            backdrop-filter: blur(12px);
         }
-        .count-pill.show { opacity: 1; }
+        .bt {
+            padding: 7px 14px; border-radius: 8px; border: none;
+            background: none; cursor: pointer; font-size: 11.5px;
+            font-family: inherit; color: var(--tx2);
+            transition: all 0.12s; display: flex; align-items: center; gap: 5px;
+        }
+        .bt:hover { background: var(--s3); color: var(--tx); }
+        .bt.on { background: var(--bl-d); color: var(--bl); font-weight: 600; }
+        .bt-i { font-size: 11px; }
 
-        /* ══ INFO PANEL ══ */
-        .info-panel {
-            position: fixed; top: 0; left: 0; bottom: 0;
-            width: min(320px, 85vw); background: var(--s1); z-index: var(--z-info-panel);
-            border-right: 0.5px solid var(--bd2);
-            box-shadow: var(--shadow-lg); transform: translateX(-110%);
-            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-            display: flex; flex-direction: column; overflow: hidden;
+        /* ── Map popup card ── */
+        .map-popup {
+            position: absolute; top: 12px; left: 12px;
+            width: 240px; z-index: var(--z-place-card);
+            background: rgba(17,18,24,0.97);
+            border: 0.5px solid var(--bd2); border-radius: 12px;
+            padding: 12px 14px 14px;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(12px);
+            opacity: 0; transform: translateY(6px) scale(0.98);
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.22s cubic-bezier(0.34,1.2,0.64,1);
         }
-        .info-panel.open { transform: translateX(0); }
-        .info-panel-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: var(--z-info-backdrop); }
-        .info-panel-backdrop.show { display: block; }
-        .info-panel-header {
-            padding: 14px 14px 8px; display: flex; align-items: center; gap: 8px;
-            border-bottom: 0.5px solid var(--bd3); flex-shrink: 0;
+        .map-popup.show {
+            opacity: 1; transform: translateY(0) scale(1);
+            pointer-events: auto;
         }
-        .info-panel-close {
-            width: 32px; height: 32px; border-radius: 8px; border: none; background: none;
-            cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--tx2); flex-shrink: 0;
+        .pp-tag { font-size: 9px; font-weight: 700; color: var(--bl); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+        .pp-name { font-size: 15px; font-weight: 700; color: var(--tx); line-height: 1.3; margin-bottom: 3px; }
+        .pp-sub { font-size: 11px; color: var(--tx2); margin-bottom: 10px; }
+        .pp-meta {
+            display: flex; gap: 0;
+            border: 0.5px solid var(--bd); border-radius: 7px;
+            overflow: hidden; margin-bottom: 10px;
         }
-        .info-panel-close:hover { background: var(--s2); color: var(--tx); }
-        .info-panel-title { font-size: 15px; font-weight: 600; flex: 1; letter-spacing: 0.02em; }
-        .info-panel-body { flex: 1; overflow-y: auto; background: var(--s2); }
-        /* Mobile: bottom sheet — ไม่บังแผนที่ */
-        @media (max-width: 599px) {
-            .info-panel {
-                top: auto; left: 0; right: 0; bottom: 0;
-                width: 100%; max-height: 75vh;
-                border-radius: 20px 20px 0 0;
-                transform: translateY(110%);
-                transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-            }
-            .info-panel.open { transform: translateY(0); }
-            .info-panel-header { padding-top: 8px; }
-            .info-panel-drag {
-                width: 36px; height: 4px; background: var(--bd3);
-                border-radius: 2px; margin: 8px auto 4px; display: block;
-            }
+        .pp-mi {
+            flex: 1; padding: 6px 8px; font-size: 9.5px;
+            color: var(--tx3); border-right: 0.5px solid var(--bd);
+            line-height: 1.5;
         }
+        .pp-mi:last-child { border-right: none; }
+        .pp-mi b { display: block; color: var(--tx); font-size: 11px; font-weight: 600; }
+        .pp-btns { display: flex; gap: 5px; }
+        .ppb {
+            flex: 1; padding: 6px 0; text-align: center;
+            border-radius: 7px; font-size: 11px; font-weight: 600;
+            cursor: pointer; border: 0.5px solid var(--bd2);
+            background: var(--s3); color: var(--tx2);
+            transition: all 0.12s;
+        }
+        .ppb:hover { background: var(--s4); color: var(--tx); }
+        .ppb.p { background: var(--bl); border-color: var(--bl); color: white; }
+        .ppb.p:hover { opacity: 0.9; }
 
+        /* ════════════════════════════════════════
+           LIST VIEW
+        ════════════════════════════════════════ */
+        .list-view {
+            position: absolute; inset: 0;
+            background: var(--bg); display: none; flex-direction: column;
+        }
+        .list-view.show { display: flex; }
+        .lv-toolbar {
+            display: flex; align-items: center; gap: 6px;
+            padding: 10px 14px; border-bottom: 0.5px solid var(--bd2);
+            flex-shrink: 0; background: var(--s1);
+        }
+        .lv-tb-btn {
+            padding: 5px 11px; border-radius: 7px;
+            border: 0.5px solid var(--bd2); background: var(--s2);
+            font-size: 11.5px; color: var(--tx2); cursor: pointer;
+            transition: all 0.12s; font-family: inherit;
+        }
+        .lv-tb-btn:hover { background: var(--s3); color: var(--tx); }
+        .lv-tb-btn.danger { color: var(--rd); border-color: rgba(255,92,92,0.25); }
+        .lv-count { margin-left: auto; font-size: 11px; color: var(--tx3); }
+        .ltable { flex: 1; overflow-y: auto; }
+        .ltable::-webkit-scrollbar { width: 4px; }
+        .ltable::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
+
+        /* ════════════════════════════════════════
+           STATS VIEW
+        ════════════════════════════════════════ */
+        .stats-view {
+            position: absolute; inset: 0;
+            background: var(--s2); overflow-y: auto; display: none;
+        }
+        .stats-view.show { display: block; }
+        .sv-inner { padding: 18px; max-width: 900px; margin: 0 auto; }
+        .sv-grid {
+            display: grid; grid-template-columns: repeat(4,1fr); gap: 10px;
+            margin-bottom: 16px;
+        }
+        .sv-card {
+            background: var(--s1); border: 0.5px solid var(--bd2);
+            border-radius: 10px; padding: 14px; text-align: center;
+        }
+        .sv-v { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+        .sv-l { font-size: 10px; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.08em; }
+        .sv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .sv-panel {
+            background: var(--s1); border: 0.5px solid var(--bd2);
+            border-radius: 10px; padding: 14px;
+        }
+        .sv-h { font-size: 10px; font-weight: 700; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+        .donut-wrap { display: flex; align-items: center; gap: 16px; }
+        .donut-legend { flex: 1; }
+
+        /* stats panel items */
         .stats-section { padding: 14px; }
         .stats-header { font-size: 10px; font-weight: 600; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
         .stats-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--bd3); }
@@ -503,23 +547,29 @@
         .stats-count { font-size: 12px; font-weight: 600; color: var(--tx2); }
         .stats-bar-wrap { width: 50px; height: 3px; background: var(--bd3); border-radius: 2px; }
         .stats-bar { height: 100%; border-radius: 2px; background: var(--bl); }
+        .recent-list { display: flex; flex-direction: column; gap: 2px; }
 
-        /* ══ PLACE CARD ══ */
+        /* ════════════════════════════════════════
+           PLACE CARD (desktop popup / mobile sheet)
+        ════════════════════════════════════════ */
         .place-card {
             position: fixed; bottom: -100%; left: 0; right: 0;
             background: var(--s1); border-top: 0.5px solid var(--bd2);
             border-radius: 16px 16px 0 0;
-            box-shadow: 0 -4px 30px rgba(0,0,0,.5); z-index: var(--z-place-card);
+            box-shadow: 0 -4px 30px rgba(0,0,0,.5);
+            z-index: var(--z-place-card);
             max-height: 60vh; overflow-y: auto;
+            transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1);
         }
         .place-card.open { bottom: 0; }
         @media (min-width: 600px) {
             .place-card {
-                position: fixed; top: 88px; bottom: auto;
-                left: 264px; /* sidebar 252px + 12px gap */
+                position: fixed; top: 72px; bottom: auto;
+                left: calc(var(--sidebar-w) + 14px);
                 width: 280px; border-radius: var(--radius);
                 border: 0.5px solid var(--bd2); border-top: 0.5px solid var(--bd2);
-                max-height: calc(100vh - 100px); box-shadow: var(--shadow-lg);
+                max-height: calc(100vh - 86px);
+                box-shadow: var(--shadow-lg);
                 opacity: 0; transform: translateY(8px) scale(0.98);
                 transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34,1.2,0.64,1);
                 pointer-events: none;
@@ -530,305 +580,313 @@
         @media (min-width: 600px) { .place-card-drag { display: none; } }
         .place-card-close {
             position: absolute; top: 8px; right: 10px;
-            width: 28px; height: 28px; border-radius: 8px;
+            width: 26px; height: 26px; border-radius: 7px;
             border: none; background: var(--s2); cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            color: var(--tx3); font-size: 14px; transition: all 0.15s;
-            z-index: 10; pointer-events: auto;
+            color: var(--tx3); font-size: 13px; z-index: 10;
+            transition: all 0.13s;
         }
         .place-card-close:hover { background: var(--s3); color: var(--tx); }
         .place-card-content { padding: 6px 14px 20px; }
-        .place-card-name { font-size: 18px; font-weight: 600; color: var(--tx); margin-bottom: 3px; padding-right: 36px; line-height: 1.3; }
-        .place-card-meta { font-size: 12px; color: var(--tx2); margin-bottom: 12px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .place-card-name { font-size: 17px; font-weight: 700; color: var(--tx); margin-bottom: 3px; padding-right: 34px; line-height: 1.3; }
+        .place-card-meta { font-size: 11.5px; color: var(--tx2); margin-bottom: 12px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         .place-card-meta .dot { color: var(--tx3); }
-        .place-card-actions { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-        .place-action-btn {
-            flex: 1; min-width: 54px; display: flex; flex-direction: column;
-            align-items: center; gap: 3px; padding: 9px 4px;
-            background: var(--s2); border: 0.5px solid var(--bd3); border-radius: 10px;
-            cursor: pointer; transition: all 0.15s; text-decoration: none;
+        .place-card-actions { display: flex; gap: 6px; margin-bottom: 12px; }
+        .pca-btn {
+            flex: 1; padding: 8px 0; text-align: center;
+            border-radius: 8px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 0.5px solid var(--bd2);
+            background: var(--s2); color: var(--tx2); font-family: inherit;
+            transition: all 0.12s;
         }
-        .place-action-btn:hover { background: var(--s3); transform: translateY(-1px); border-color: var(--bd2); }
-        .place-action-btn:active { transform: scale(0.95); }
-        .place-action-btn.red { background: rgba(255,95,95,0.1); border-color: rgba(255,95,95,0.2); }
-        .place-action-btn.green { background: rgba(45,255,160,0.08); border-color: rgba(45,255,160,0.2); }
-        .place-action-btn.yellow { background: rgba(255,184,48,0.1); border-color: rgba(255,184,48,0.2); }
-        .place-action-btn.purple { background: rgba(176,111,255,0.1); border-color: rgba(176,111,255,0.2); }
-        .place-action-btn.orange { background: rgba(255,122,92,0.1); border-color: rgba(255,122,92,0.2); }
-        .place-action-icon { font-size: 18px; }
-        .place-action-label { font-size: 10px; font-weight: 600; color: var(--tx2); font-family: inherit; }
-        .place-action-btn.red .place-action-label { color: var(--red); }
-        .place-action-btn.green .place-action-label { color: var(--green); }
-        .place-action-btn.yellow .place-action-label { color: var(--yellow); }
-        .place-action-btn.purple .place-action-label { color: #b06fff; }
-        .place-action-btn.orange .place-action-label { color: #ff7a5c; }
-        .place-card-divider { height: 0.5px; background: var(--bd3); margin: 10px 0; }
-        .place-card-row { display: flex; align-items: flex-start; gap: 12px; padding: 7px 0; }
-        .place-card-row-icon { color: var(--tx3); width: 18px; flex-shrink: 0; margin-top: 1px; font-size: 14px; }
-        .place-card-row-text { flex: 1; font-size: 13px; color: var(--tx); line-height: 1.5; }
-        .place-card-row-text small { color: var(--tx3); font-size: 11px; }
+        .pca-btn:hover { background: var(--s3); color: var(--tx); }
+        .pca-btn.primary { background: var(--bl); border-color: var(--bl); color: white; }
+        .pca-btn.danger { background: var(--rd-d); border-color: rgba(255,92,92,0.25); color: var(--rd); }
+        .place-card-note { font-size: 12px; color: var(--tx2); line-height: 1.6; }
+        .place-card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+        .tag-pill {
+            padding: 3px 9px; border-radius: 20px; font-size: 11px;
+            background: var(--s3); border: 0.5px solid var(--bd2); color: var(--tx2);
+        }
+        .place-card-photo { width: 100%; border-radius: 8px; margin-bottom: 12px; object-fit: cover; max-height: 160px; }
+        .place-card-fav {
+            position: absolute; top: 8px; right: 44px;
+            width: 26px; height: 26px; border-radius: 7px;
+            border: none; background: var(--s2); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; z-index: 10; transition: all 0.13s;
+        }
+        .place-card-fav:hover { background: var(--s3); }
 
-        /* ══ LIST PANEL ══ */
+        /* ════════════════════════════════════════
+           INFO PANEL (edit / add)
+        ════════════════════════════════════════ */
+        .info-panel {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: min(340px, 88vw); background: var(--s1);
+            z-index: var(--z-info-panel);
+            border-right: 0.5px solid var(--bd2);
+            box-shadow: var(--shadow-lg);
+            transform: translateX(-110%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .info-panel.open { transform: translateX(0); }
+        .info-panel-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+            z-index: var(--z-info-backdrop);
+        }
+        .info-panel-backdrop.show { display: block; }
+        .info-panel-header {
+            padding: 14px 14px 10px;
+            display: flex; align-items: center; gap: 8px;
+            border-bottom: 0.5px solid var(--bd2); flex-shrink: 0;
+        }
+        .info-panel-close {
+            width: 30px; height: 30px; border-radius: 7px;
+            border: none; background: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--tx2); flex-shrink: 0;
+        }
+        .info-panel-close:hover { background: var(--s2); color: var(--tx); }
+        .info-panel-title { font-size: 14px; font-weight: 700; flex: 1; }
+        .info-panel-body { flex: 1; overflow-y: auto; background: var(--s2); }
+        @media (max-width: 599px) {
+            .info-panel {
+                top: auto; left: 0; right: 0; bottom: 0;
+                width: 100%; max-height: 75vh;
+                border-radius: 20px 20px 0 0;
+                transform: translateY(110%);
+            }
+            .info-panel.open { transform: translateY(0); }
+            .info-panel-drag { width: 36px; height: 4px; background: var(--bd3); border-radius: 2px; margin: 8px auto 4px; display: block; }
+        }
+
+        /* ── form fields ── */
+        .frow { display: flex; flex-direction: column; gap: 5px; padding: 0 14px 12px; }
+        .frow label { font-size: 10px; font-weight: 700; color: var(--tx3); text-transform: uppercase; letter-spacing: 0.08em; }
+        .frow input, .frow select, .frow textarea {
+            background: var(--s1); border: 0.5px solid var(--bd2);
+            border-radius: 8px; padding: 8px 11px; color: var(--tx);
+            font-size: 13px; font-family: inherit; outline: none;
+            transition: border-color 0.15s;
+        }
+        .frow input:focus, .frow select:focus, .frow textarea:focus { border-color: var(--bl-b); }
+        .frow input::placeholder, .frow textarea::placeholder { color: var(--tx3); }
+        .frow select option { background: var(--s2); }
+        .frow textarea { resize: vertical; min-height: 70px; }
+        .frow-inline { display: flex; gap: 8px; }
+        .form-actions { display: flex; gap: 8px; padding: 10px 14px; border-top: 0.5px solid var(--bd2); flex-shrink: 0; }
+        .form-btn {
+            flex: 1; padding: 9px 0; border-radius: 8px;
+            border: 0.5px solid var(--bd2); background: var(--s2);
+            color: var(--tx2); font-size: 12px; font-weight: 600;
+            font-family: inherit; cursor: pointer; transition: all 0.12s;
+        }
+        .form-btn.primary { background: var(--bl); border-color: var(--bl); color: white; }
+        .form-btn.danger { background: var(--rd-d); border-color: rgba(255,92,92,0.2); color: var(--rd); }
+        .form-btn:hover { filter: brightness(1.1); }
+
+        /* ════════════════════════════════════════
+           LIST PANEL
+        ════════════════════════════════════════ */
         .list-panel {
-            position: fixed; bottom: -100%; left: 0; right: 0;
-            background: var(--s1); border-top: 0.5px solid var(--bd2); border-radius: 16px 16px 0 0;
-            box-shadow: 0 -4px 30px rgba(0,0,0,.5); z-index: var(--z-list-panel);
+            position: fixed; left: 0; right: 0; bottom: -100%;
+            background: var(--s1); border-top: 0.5px solid var(--bd2);
+            border-radius: 16px 16px 0 0; z-index: var(--z-list-panel);
+            max-height: 55vh; display: flex; flex-direction: column;
             transition: bottom 0.3s cubic-bezier(0.4,0,0.2,1);
-            max-height: 60vh; display: flex; flex-direction: column;
+            box-shadow: 0 -6px 30px rgba(0,0,0,0.5);
         }
         .list-panel.open { bottom: 0; }
-        @media (min-width: 600px) {
-            .list-panel {
-                position: fixed; top: 88px; bottom: auto;
-                left: 264px; width: 280px; border-radius: var(--radius);
-                border: 0.5px solid var(--bd2);
-                max-height: calc(100vh - 100px); box-shadow: var(--shadow-lg);
-            }
-        }
-        .list-panel-header {
-            padding: 14px 14px 8px; display: flex; align-items: center;
-            justify-content: space-between; border-bottom: 0.5px solid var(--bd3); flex-shrink: 0;
-        }
-        .list-panel-title { font-size: 14px; font-weight: 600; color: var(--tx); }
-        .list-panel-close {
-            border: none; background: var(--s2); font-size: 14px; cursor: pointer; color: var(--tx2);
-            width: 30px; height: 30px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            position: relative; z-index: 1060; pointer-events: auto;
-            flex-shrink: 0; margin-left: 6px; transition: all 0.15s;
-        }
-        .list-panel-close:hover { background: var(--s3); color: var(--tx); }
-        .list-panel-close:active { transform: scale(0.9); }
-        .list-body { overflow-y: auto; flex: 1; }
-        .list-sort-bar {
-            display: flex; gap: 5px; padding: 7px 10px; border-bottom: 0.5px solid var(--bd3);
-            overflow-x: auto; scrollbar-width: none; flex-shrink: 0;
-        }
-        .list-sort-bar::-webkit-scrollbar { display: none; }
-        .sort-btn {
-            padding: 3px 10px; border-radius: 12px; border: 0.5px solid var(--bd3); background: var(--s2);
-            font-size: 11px; font-family: inherit; color: var(--tx3); cursor: pointer;
-            white-space: nowrap; transition: all 0.12s;
-        }
-        .sort-btn.active { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 600; }
-        .list-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 14px; cursor: pointer; border-bottom: 0.5px solid var(--bd3);
-            transition: background 0.1s;
-        }
-        .list-item:hover { background: var(--s2); }
-        .list-item:last-child { border-bottom: none; }
-        .list-item-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
-        .list-item-text { flex: 1; min-width: 0; }
-        .list-item-name { font-size: 13px; font-weight: 500; color: var(--tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .list-item-sub { font-size: 11px; color: var(--tx3); }
-        .list-item-chevron { color: var(--tx3); font-size: 14px; }
+        .list-panel-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--bd2); margin: 10px auto 8px; flex-shrink: 0; cursor: pointer; }
+        .list-panel-header { padding: 0 14px 10px; border-bottom: 0.5px solid var(--bd); flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+        .list-panel-title { font-size: 13px; font-weight: 700; flex: 1; }
+        .list-panel-close { font-size: 16px; color: var(--tx3); cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .list-panel-list { flex: 1; overflow-y: auto; }
+        .list-panel-list::-webkit-scrollbar { display: none; }
+        .lp-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--bd); cursor: pointer; }
+        .lp-item:hover { background: var(--s2); }
+        .lp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .lp-info { flex: 1; min-width: 0; }
+        .lp-name { font-size: 13px; font-weight: 500; }
+        .lp-meta { font-size: 11px; color: var(--tx3); }
+        .lp-chevron { font-size: 12px; color: var(--tx3); }
 
-        /* ══ MODAL ══ */
-        .modal-overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.7); z-index: var(--z-modal);
-            align-items: center; justify-content: center;
-            padding: 16px; backdrop-filter: blur(6px);
+        /* ════════════════════════════════════════
+           FAB
+        ════════════════════════════════════════ */
+        .fab {
+            position: fixed; right: 16px; bottom: 22px;
+            z-index: var(--z-fab); background: var(--bl);
+            border: none; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(91,143,255,0.45);
+            padding: 10px 18px;
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; font-weight: 600; font-family: inherit;
+            color: #fff; cursor: pointer; transition: all 0.2s;
         }
-        .modal-overlay.open { display: flex; }
-        .modal {
-            background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 20px;
-            width: 100%; max-width: 420px;
-            max-height: calc(100vh - 48px); max-height: calc(100dvh - 48px);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-            display: flex; flex-direction: column;
-            animation: modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        @keyframes modalIn { from{opacity:0;transform:scale(0.9) translateY(16px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        .modal-header { padding: 20px 20px 0; font-size: 17px; font-weight: 600; color: var(--tx); flex-shrink: 0; letter-spacing: 0.01em; }
-        .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; min-height: 0; }
-        .modal-field { margin-bottom: 14px; }
-        .modal-field label { display: block; font-size: 10px; font-weight: 600; color: var(--bl); margin-bottom: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
-        .modal-field input, .modal-field select, .modal-field textarea {
-            width: 100%; padding: 10px 12px; border: 0.5px solid var(--bd2); border-radius: 10px;
-            font-size: 14px; font-family: inherit; color: var(--tx);
-            outline: none; transition: border-color 0.15s, box-shadow 0.15s; background: var(--s2);
-        }
-        .modal-field textarea { resize: vertical; min-height: 64px; }
-        .modal-field input:focus, .modal-field select:focus, .modal-field textarea:focus { border-color: var(--bl); box-shadow: 0 0 0 2px var(--bl-d); }
-        .latlng-row { display: flex; gap: 8px; }
-        .latlng-row .modal-field { flex: 1; }
-        .gps-modal-btn {
-            width: 100%; padding: 9px;
-            border: 0.5px dashed var(--bd2); border-radius: 10px;
-            background: var(--s2); color: var(--bl);
-            font-size: 12px; font-weight: 600; font-family: inherit;
-            cursor: pointer; transition: all 0.15s; margin-bottom: 14px;
-        }
-        .gps-modal-btn:hover { border-color: var(--bl); background: var(--bl-d); }
-        .modal-footer { padding: 10px 0 4px; display: flex; gap: 8px; justify-content: flex-end; position: sticky; bottom: -16px; margin: 0 -20px -16px; padding: 10px 20px 16px; background: var(--s1); border-top: 0.5px solid var(--bd3); z-index: 1; }
-        .modal-btn { padding: 8px 20px; border-radius: 20px; border: none; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; }
-        .modal-btn-cancel { background: none; color: var(--tx2); border: 0.5px solid var(--bd2); }
-        .modal-btn-cancel:hover { background: var(--s2); color: var(--tx); }
-        .modal-btn-save { background: var(--bl); color: white; }
-        .modal-btn-save:hover { filter: brightness(1.1); box-shadow: 0 2px 12px rgba(79,138,255,.4); }
+        .fab:hover { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(91,143,255,0.55); }
+        .fab:active { transform: scale(0.96); }
+        .fab svg { width: 17px; height: 17px; color: white; }
+        .fab.add-mode { background: var(--rd); box-shadow: 0 4px 20px rgba(255,95,95,0.4); }
 
-        /* ══ FILTER MODAL ══ */
-        .filter-choice-list { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow-y: auto; padding: 4px 0; }
-        .filter-choice-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 8px 12px; border-radius: 10px; cursor: pointer;
-            border: 0.5px solid transparent; transition: all 0.12s;
-            font-size: 13px; color: var(--tx2);
-        }
-        .filter-choice-item:hover { background: var(--s2); color: var(--tx); }
-        .filter-choice-item.selected { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 600; }
-        .filter-choice-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .filter-choice-count { margin-left: auto; font-size: 11px; color: var(--tx3); font-weight: 600; background: var(--s2); padding: 1px 7px; border-radius: 10px; }
+        /* GPS wrap */
+        .gps-btn-wrap { position: fixed; right: 14px; bottom: 80px; z-index: var(--z-controls); }
 
-        .token-modal { max-width: 380px; }
-        .token-icon { text-align: center; font-size: 48px; margin: 24px 0 8px; }
-        .token-title { text-align: center; font-size: 20px; font-weight: 600; padding: 0 24px; }
-        .token-sub { text-align: center; font-size: 14px; color: var(--tx2); padding: 8px 24px 4px; line-height: 1.6; }
-        .confirm-modal { max-width: 320px; }
-        .confirm-icon { text-align: center; font-size: 36px; padding: 24px 24px 8px; }
-        .confirm-title { font-size: 20px; font-weight: 600; padding: 0 24px; }
-        .confirm-text { font-size: 14px; color: var(--tx2); padding: 8px 24px 16px; line-height: 1.6; }
-        .confirm-footer { padding: 8px 16px 16px; display: flex; gap: 8px; justify-content: flex-end; }
-        .btn-danger { background: var(--red) !important; }
-        .btn-danger:hover { background: #b31412 !important; }
+        /* ════════════════════════════════════════
+           COUNT PILL
+        ════════════════════════════════════════ */
+        .count-pill {
+            position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+            z-index: var(--z-fab);
+            background: var(--s1); border: 0.5px solid var(--bd2); color: var(--tx);
+            border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 500;
+            box-shadow: var(--shadow-md); pointer-events: none;
+            opacity: 0; transition: opacity 0.3s; white-space: nowrap;
+        }
+        .count-pill.show { opacity: 1; }
 
-        /* ══ ADD BANNER ══ */
-        .add-banner {
-            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-            z-index: 1500; background: var(--s1); border: 0.5px solid var(--bl); color: var(--tx);
-            padding: 9px 16px; border-radius: 20px; font-size: 12px; font-weight: 500;
-            box-shadow: 0 0 0 2px var(--bl-d), var(--shadow-lg); display: none; align-items: center; gap: 8px; white-space: nowrap;
-        }
-        .add-banner.show { display: flex; }
-        .add-banner-cancel {
-            background: rgba(255,95,95,0.15); border: none; color: var(--red);
-            padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; font-family: inherit;
-        }
-        .add-banner-cancel:hover { background: rgba(255,95,95,0.25); }
-
-        /* ══ MEASURE BANNER ══ */
-        .measure-banner {
-            position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
-            z-index: 1500; background: var(--s1); border: 0.5px solid #b06fff; color: var(--tx);
-            padding: 9px 16px; border-radius: 20px; font-size: 12px; font-weight: 500;
-            box-shadow: 0 0 0 2px rgba(176,111,255,0.15), var(--shadow-lg); display: none; align-items: center; gap: 8px; white-space: nowrap;
-        }
-        .measure-banner.show { display: flex; }
-        .measure-banner-cancel {
-            background: rgba(176,111,255,0.15); border: none; color: #b06fff;
-            padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; font-family: inherit;
-        }
-
-        #crosshair {
-            display: none; position: fixed; pointer-events: none; z-index: var(--z-crosshair);
-            transform: translate(-50%, -100%); font-size: 28px;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,.4));
-        }
-        #crosshair.show { display: block; }
-
-        /* ══ LAT/LNG HINT — desktop only ══ */
-        .latlng-hint {
-            position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
-            z-index: var(--z-hint); background: rgba(32,33,36,0.7); color: white;
-            padding: 4px 10px; border-radius: 8px; font-size: 11px;
-            pointer-events: none; opacity: 0; transition: opacity 0.3s;
-            white-space: nowrap;
-        }
-        .latlng-hint.show { opacity: 0.6; }
-        /* ซ่อนบนมือถือ */
-        @media (max-width: 599px) {
-            .latlng-hint { display: none !important; }
-        }
-
-        /* ══ TOAST ══ */
-        .save-toast {
-            position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%);
+        /* ════════════════════════════════════════
+           TOAST
+        ════════════════════════════════════════ */
+        .toast, .save-toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
             z-index: var(--z-toast);
             background: var(--s1); border: 0.5px solid var(--bd2); color: var(--tx);
-            padding: 9px 18px; border-radius: 10px;
-            font-size: 13px; box-shadow: var(--shadow-lg);
-            opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+            border-radius: 10px; padding: 9px 18px;
+            font-size: 12px; font-weight: 500;
+            box-shadow: var(--shadow-md);
+            opacity: 0; transition: opacity 0.2s; pointer-events: none;
+            white-space: nowrap; max-width: 90vw;
         }
-        .save-toast.show { opacity: 1; }
-        .save-toast.error { background: rgba(255,95,95,0.15); border-color: rgba(255,95,95,0.3); color: var(--red); }
-        .save-toast.success { background: rgba(45,255,160,0.1); border-color: rgba(45,255,160,0.25); color: var(--green); }
+        .toast.show { opacity: 1; pointer-events: auto; }
 
-        /* ══ INFO PANEL MENU ══ */
-        .om-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 14px; border: none; background: none;
-            width: 100%; text-align: left;
-            font-size: 13px; font-family: inherit; color: var(--tx2); cursor: pointer;
-            transition: background 0.12s;
-        }
-        .om-item:not(:last-child) { border-bottom: 0.5px solid var(--bd3); }
-        .om-item:hover { background: var(--s2); color: var(--tx); }
-        .om-item:active { background: var(--s3); }
-        .om-item svg { width: 15px; height: 15px; color: var(--tx3); flex-shrink: 0; }
-        .om-item.red { color: var(--red); }
-        .om-item.red svg { color: var(--red); }
-        .om-sep { height: 0.5px; background: var(--bd3); margin: 4px 0; }
-
-        /* ══ YOU-ARE-HERE ══ */
-        .you-are-here-wrap { position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
-        .you-are-here-ring { position: absolute; width: 48px; height: 48px; border-radius: 50%; background: rgba(26,115,232,0.15); animation: gps-ring 2.4s ease-out infinite; }
-        .you-are-here-ring:nth-child(2) { animation-delay: 0.8s; }
-        .you-are-here-ring:nth-child(3) { animation-delay: 1.6s; }
-        @keyframes gps-ring { 0% { transform: scale(0.4); opacity: 0.8; } 100% { transform: scale(1.8); opacity: 0; } }
-        .you-are-here { position: relative; width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid white; box-shadow: 0 2px 8px rgba(26,115,232,0.5); z-index: 1; }
-
-        /* ══ DISTANCE BADGE ══ */
-        .distance-badge { display: inline-block; background: var(--bl-d); color: var(--bl); font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; margin-left: 5px; border: 0.5px solid var(--bl-b); }
-
-        /* ══ LIGHT MODE override (default is dark) ══ */
-        body.light {
-            --surface: #ffffff; --surface2: #f8f9fa; --surface3: #f1f3f4; --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
-            --text: #202124; --text2: #5f6368; --text3: #9aa0a6;
-            --accent: #1a73e8; --accent2: #188038;
-            --pill: rgba(26,115,232,0.1); --pill-border: rgba(26,115,232,0.3);
-            background: #e8eaed;
-        }
-        body.light .search-input { color: var(--tx); }
-        body.light .modal-field input, body.light .modal-field select, body.light .modal-field textarea { background: var(--s2); color: var(--tx); }
-
-        /* ══ DESKTOP ══ */
-        /* ══════════════════════════════════════
-           MOBILE COMPONENTS (hidden on desktop)
+        /* ════════════════════════════════════════
+           MODALS
         ════════════════════════════════════════ */
-        .mob-search-row { display: none; flex-shrink: 0; padding: 8px 12px 0; }
-        .mob-search { height: 38px; display: flex; align-items: center; gap: 7px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 10px; padding: 0 11px; width: 100%; cursor: text; }
-        .mob-search:focus-within { border-color: var(--bl-b); }
-        .mob-search input { background: none; border: none; outline: none; color: var(--tx); font-size: 13px; width: 100%; font-family: inherit; }
-        .mob-search input::placeholder { color: var(--tx3); }
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: var(--z-modal);
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: var(--s1); border: 0.5px solid var(--bd2);
+            border-radius: 14px; width: 420px; max-width: 92vw;
+            max-height: 88vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            box-shadow: var(--shadow-lg);
+            animation: modalIn 0.2s ease-out;
+        }
+        @keyframes modalIn { from { opacity:0; transform:scale(0.96) translateY(8px) } to { opacity:1; transform:none } }
+        .modal-header {
+            padding: 14px 16px 10px;
+            font-size: 14px; font-weight: 700;
+            border-bottom: 0.5px solid var(--bd2); flex-shrink: 0;
+        }
+        .modal-body { padding: 14px 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .modal-footer { padding: 10px 16px; border-top: 0.5px solid var(--bd2); display: flex; gap: 8px; flex-shrink: 0; }
+        .modal-btn {
+            flex: 1; padding: 9px 0; border-radius: 8px;
+            border: 0.5px solid var(--bd2); background: var(--s2);
+            color: var(--tx2); font-size: 12px; font-weight: 600;
+            font-family: inherit; cursor: pointer; transition: all 0.12s;
+        }
+        .modal-btn:hover { background: var(--s3); color: var(--tx); }
+        .modal-btn-save { background: var(--bl); border-color: var(--bl); color: white; }
+        .modal-btn-save:hover { opacity: 0.9; background: var(--bl); }
+        .modal-btn-cancel { }
+        .btn-danger { background: var(--rd) !important; border-color: var(--rd) !important; color: white !important; }
+        .confirm-modal { width: 340px; text-align: center; }
+        .confirm-icon { font-size: 32px; margin-bottom: 8px; padding-top: 10px; }
+        .confirm-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+        .confirm-text { font-size: 13px; color: var(--tx2); line-height: 1.6; margin-bottom: 4px; }
+        .confirm-footer { display: flex; gap: 8px; padding: 14px 16px; border-top: 0.5px solid var(--bd2); }
 
-        .mob-chips-row { display: none; gap: 6px; padding: 8px 12px 4px; overflow-x: auto; flex-shrink: 0; }
+        /* ════════════════════════════════════════
+           MOBILE CHIPS ROW
+        ════════════════════════════════════════ */
+        .mob-chips-row {
+            display: none; gap: 6px; padding: 0 10px;
+            overflow-x: auto; flex-shrink: 0; align-items: center;
+        }
         .mob-chips-row::-webkit-scrollbar { display: none; }
-        .chip { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; border: 0.5px solid var(--bd2); background: var(--s2); font-size: 11.5px; color: var(--tx2); white-space: nowrap; cursor: pointer; transition: all 0.13s; user-select: none; flex-shrink: 0; }
+        .chip {
+            display: flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px;
+            border: 0.5px solid var(--bd2); background: var(--s2);
+            font-size: 11px; color: var(--tx2); white-space: nowrap;
+            cursor: pointer; transition: all 0.13s;
+            user-select: none; flex-shrink: 0; font-family: inherit;
+        }
         .chip:hover { color: var(--tx); }
-        .chip.on { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); }
+        .chip.on { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); font-weight: 600; }
         .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
-        .mob-nav { display: none; height: 58px; flex-shrink: 0; background: var(--s1); border-top: 0.5px solid var(--bd); align-items: center; z-index: 20; }
-        .mob-nb { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; height: 100%; user-select: none; }
+        /* ════════════════════════════════════════
+           MOBILE NAV
+        ════════════════════════════════════════ */
+        .mob-nav {
+            display: none; height: 58px; flex-shrink: 0;
+            background: var(--s1); border-top: 0.5px solid var(--bd2);
+            align-items: center; z-index: 50;
+        }
+        .mob-nb {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 2px; cursor: pointer; height: 100%; user-select: none;
+        }
         .mob-nb-ico { font-size: 18px; color: var(--tx3); transition: color 0.13s; }
         .mob-nb-lbl { font-size: 9.5px; color: var(--tx3); transition: color 0.13s; }
         .mob-nb.on .mob-nb-ico { color: var(--bl); }
         .mob-nb.on .mob-nb-lbl { color: var(--bl); }
-        .mob-nb-add { width: 46px; height: 46px; border-radius: 50%; background: var(--bl); display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; box-shadow: 0 4px 16px rgba(91,143,255,0.4); }
+        .mob-nb-add {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: var(--bl); display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: white;
+            box-shadow: 0 4px 16px rgba(91,143,255,0.4);
+        }
 
+        /* ════════════════════════════════════════
+           MOBILE DRAWER
+        ════════════════════════════════════════ */
         .mob-drawer { position: fixed; inset: 0; z-index: 80; display: none; }
         .mob-drawer.show { display: block; }
-        .mob-drawer-bg { position: absolute; inset: 0; background: rgba(18,19,26,0.7); }
-        .mob-drawer-panel { position: absolute; left: 0; top: 0; bottom: 0; width: 280px; background: var(--s1); border-right: 0.5px solid var(--bd2); display: flex; flex-direction: column; overflow: hidden; animation: slideRight 0.22s ease; }
+        .mob-drawer-bg { position: absolute; inset: 0; background: rgba(11,12,16,0.7); }
+        .mob-drawer-panel {
+            position: absolute; left: 0; top: 0; bottom: 0;
+            width: 280px; background: var(--s1);
+            border-right: 0.5px solid var(--bd2);
+            display: flex; flex-direction: column; overflow: hidden;
+            animation: slideRight 0.22s ease;
+        }
         @keyframes slideRight { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-        .mob-drawer-hd { padding: 16px 14px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 0.5px solid var(--bd); }
-        .mob-drawer-title { font-size: 14px; font-weight: 600; }
-        .mob-drawer-close { width: 26px; height: 26px; border-radius: 6px; border: 0.5px solid var(--bd); background: var(--s2); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx2); font-size: 14px; }
+        .mob-drawer-hd {
+            padding: 16px 14px 8px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 0.5px solid var(--bd);
+        }
+        .mob-drawer-title { font-size: 14px; font-weight: 700; }
+        .mob-drawer-close {
+            width: 26px; height: 26px; border-radius: 6px;
+            border: 0.5px solid var(--bd); background: var(--s2);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--tx2); font-size: 14px;
+        }
 
-        .mob-sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--s1); border-radius: 14px 14px 0 0; border-top: 0.5px solid var(--bd2); z-index: 30; transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.22,1,0.36,1); max-height: 55vh; display: flex; flex-direction: column; }
+        /* ════════════════════════════════════════
+           MOBILE BOTTOM SHEET
+        ════════════════════════════════════════ */
+        .mob-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            background: var(--s1); border-radius: 14px 14px 0 0;
+            border-top: 0.5px solid var(--bd2); z-index: 30;
+            transform: translateY(100%);
+            transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+            max-height: 55vh; display: flex; flex-direction: column;
+        }
         .mob-sheet.open { transform: translateY(0); }
         .mob-sheet-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--bd2); margin: 10px auto 8px; flex-shrink: 0; cursor: pointer; }
         .mob-sheet-hd { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 10px; border-bottom: 0.5px solid var(--bd); flex-shrink: 0; }
@@ -837,7 +895,7 @@
         .mob-sheet-list { flex: 1; overflow-y: auto; }
         .mob-sheet-list::-webkit-scrollbar { display: none; }
 
-        /* Mobile list items */
+        /* mobile list items (in sheet) */
         .ms-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--bd); cursor: pointer; }
         .ms-item:hover { background: var(--s2); }
         .ms-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -846,313 +904,226 @@
         .ms-meta { font-size: 11px; color: var(--tx3); }
         .ms-chevron { font-size: 12px; color: var(--tx3); }
 
-        @media (min-width: 768px) {
-            .sidebar { position: static; width: 252px; transform: none !important; }
-            .search-bar { display: none !important; }
-            .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
+        /* mobile search row */
+        .mob-search-row { display: none; flex-shrink: 0; padding: 8px 12px 0; }
+        .mob-search {
+            height: 38px; display: flex; align-items: center; gap: 7px;
+            background: var(--s2); border: 0.5px solid var(--bd); border-radius: 10px;
+            padding: 0 11px; width: 100%; cursor: text;
+        }
+        .mob-search:focus-within { border-color: var(--bl-b); }
+        .mob-search input {
+            background: none; border: none; outline: none;
+            color: var(--tx); font-size: 13px; width: 100%; font-family: inherit;
+        }
+        .mob-search input::placeholder { color: var(--tx3); }
+
+        /* ════════════════════════════════════════
+           BANNERS
+        ════════════════════════════════════════ */
+        .add-banner, .measure-banner {
+            display: none; position: fixed;
+            top: 70px; left: 50%; transform: translateX(-50%);
+            z-index: var(--z-modal);
+            background: rgba(17,18,24,0.96);
+            border: 0.5px solid var(--bd2);
+            border-radius: 24px; padding: 8px 18px;
+            font-size: 13px; color: var(--tx);
+            box-shadow: var(--shadow-md); gap: 12px;
+            align-items: center; backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+        .add-banner.show, .measure-banner.show { display: flex; }
+        .add-banner-cancel, .measure-banner-cancel {
+            background: none; border: 0.5px solid var(--bd2);
+            border-radius: 6px; padding: 3px 10px;
+            font-size: 12px; color: var(--tx2); cursor: pointer;
+            font-family: inherit;
         }
 
-        /* Leaflet overrides */
+        /* ════════════════════════════════════════
+           SYNC INDICATORS
+        ════════════════════════════════════════ */
+        .sync-ok    { color: var(--gn) !important; }
+        .sync-pending { color: var(--yellow) !important; }
+        .sync-error { color: var(--rd) !important; }
+        .sync-active { color: var(--bl) !important; animation: sync-spin 1s linear infinite; }
+        @keyframes sync-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* ════════════════════════════════════════
+           LEAFLET OVERRIDES
+        ════════════════════════════════════════ */
         .leaflet-control-zoom { display: none; }
         .leaflet-popup-content-wrapper { border-radius: 12px !important; box-shadow: var(--shadow-lg) !important; padding: 0 !important; overflow: hidden; }
         .leaflet-popup-content { margin: 0 !important; }
         .leaflet-popup-tip-container { display: none; }
         .leaflet-control-attribution { font-size: 10px; }
+        .bt-tooltip { background: var(--s1) !important; color: var(--tx) !important; border: 0.5px solid var(--bd2) !important; border-radius: 6px !important; font-size: 11px !important; padding: 3px 8px !important; box-shadow: var(--shadow-md) !important; }
+        .bt-tooltip::before { display: none !important; }
 
-        /* Route number tooltip */
-        .route-number-tooltip {
-            background: #4285f4 !important; color: #fff !important;
-            border: none !important; border-radius: 50% !important;
-            padding: 0 !important; width: 20px !important; height: 20px !important;
-            line-height: 20px !important; text-align: center !important;
-            font-size: 10px !important; font-weight: 700 !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,.3) !important;
-        }
+        /* Cluster markers */
+        .marker-cluster { background-clip: padding-box; border-radius: 50%; transition: transform 0.15s ease, opacity 0.15s ease; will-change: transform; }
+        .marker-cluster div { width: 30px; height: 30px; margin: 5px; text-align: center; border-radius: 50%; font: bold 12px 'Noto Sans Thai', sans-serif; color: #fff; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(255,255,255,0.2); }
+        .cluster-density-low     { background: rgba(45,255,160,0.15) !important; }
+        .cluster-density-low div { background: rgba(45,255,160,0.85) !important; color: #0d0d0f !important; }
+        .cluster-density-medium     { background: rgba(255,184,48,0.15) !important; }
+        .cluster-density-medium div { background: rgba(255,184,48,0.85) !important; color: #0d0d0f !important; }
+        .cluster-density-high     { background: rgba(255,95,95,0.15) !important; }
+        .cluster-density-high div { background: rgba(255,95,95,0.85) !important; }
+        .cluster-density-extreme     { background: rgba(176,111,255,0.15) !important; }
+        .cluster-density-extreme div { background: rgba(176,111,255,0.85) !important; }
+        .leaflet-cluster-anim .leaflet-marker-icon, .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.25s ease, top 0.25s ease, opacity 0.2s ease !important; }
+        .leaflet-marker-icon div[data-idx] { transition: transform 0.15s ease; }
+        .route-number-tooltip { background: #4285f4 !important; color: #fff !important; border: none !important; border-radius: 50% !important; padding: 0 !important; width: 20px !important; height: 20px !important; line-height: 20px !important; text-align: center !important; font-size: 10px !important; font-weight: 700 !important; box-shadow: 0 1px 3px rgba(0,0,0,.3) !important; }
         .route-number-tooltip::before { display: none !important; }
 
-        /* Sync indicator */
-        .sync-ok { color: var(--gn) !important; }
-        .sync-pending { color: var(--yellow) !important; }
-        .sync-error { color: var(--red) !important; }
-        .sync-active { color: var(--bl) !important; animation: sync-spin 1s linear infinite; }
-        @keyframes sync-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bl); animation: sync-dot 1s linear infinite; }
-        @keyframes sync-dot { 0% { transform: scale(1); } 50% { transform: scale(0.5); } 100% { transform: scale(1); } }
-
-        /* Cluster */
-        .marker-cluster {
-            background-clip: padding-box;
-            border-radius: 50%;
-            transition: transform 0.15s ease, opacity 0.15s ease;
-            will-change: transform;
-        }
-        .marker-cluster div {
-            width: 30px; height: 30px;
-            margin: 5px;
-            text-align: center; border-radius: 50%;
-            font: bold 12px 'Noto Sans Thai', sans-serif;
-            color: #fff;
-            display: flex; align-items: center; justify-content: center;
-            border: 1.5px solid rgba(255,255,255,0.2);
-        }
-        .cluster-density-low    { background: rgba(45,255,160,0.15) !important; }
-        .cluster-density-low div    { background: rgba(45,255,160,0.85) !important; color: #0d0d0f !important; }
-        .cluster-density-medium { background: rgba(255,184,48,0.15) !important; }
-        .cluster-density-medium div { background: rgba(255,184,48,0.85) !important; color: #0d0d0f !important; }
-        .cluster-density-high   { background: rgba(255,95,95,0.15) !important; }
-        .cluster-density-high div   { background: rgba(255,95,95,0.85) !important; }
-        .cluster-density-extreme{ background: rgba(176,111,255,0.15) !important; }
-        .cluster-density-extreme div{ background: rgba(176,111,255,0.85) !important; }
-        /* Leaflet cluster default animation override */
-        .leaflet-cluster-anim .leaflet-marker-icon,
-        .leaflet-cluster-anim .leaflet-marker-shadow {
-            transition: left 0.25s ease, top 0.25s ease, opacity 0.2s ease !important;
-        }
-        /* dot marker smooth */
-        .leaflet-marker-icon div[data-idx] {
-            transition: transform 0.15s ease;
-        }
-
-        /* ══ PERFORMANCE HINTS ══ */
-        .leaflet-map-pane,
-        .leaflet-tile-pane,
-        .leaflet-overlay-pane { will-change: transform; }
+        /* ════════════════════════════════════════
+           PERFORMANCE
+        ════════════════════════════════════════ */
+        .leaflet-map-pane, .leaflet-tile-pane, .leaflet-overlay-pane { will-change: transform; }
         .info-panel  { will-change: transform; }
         .place-card  { will-change: transform, opacity; }
         .list-panel  { will-change: transform; contain: layout style; }
         .modal-overlay { contain: layout style; }
         .save-toast  { will-change: opacity; }
-        /* place-card: mobile uses bottom slide, desktop uses opacity+transform */
-        @media (max-width: 599px) {
-            .place-card { transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1); }
-        }
-
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
-        /* bt-tooltip dark */
-        .bt-tooltip { background: var(--s1) !important; color: var(--tx) !important; border: 0.5px solid var(--bd2) !important; border-radius: 6px !important; font-size: 11px !important; padding: 3px 8px !important; box-shadow: var(--shadow-md) !important; }
-        .bt-tooltip::before { display:none !important; }
+
+        /* chip filter items */
+        .chip-more-wrap { position: relative; }
+        .chip-dropdown { display: none; position: absolute; top: calc(100% + 6px); right: 0; background: var(--s1); border: 0.5px solid var(--bd2); border-radius: 12px; box-shadow: var(--shadow-lg); min-width: 160px; z-index: 1100; overflow: hidden; animation: chipDropIn 0.15s ease-out; }
+        @keyframes chipDropIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+        .chip-dropdown.open { display: block; }
+        .chip-dropdown-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 14px; border: none; background: none; font-size: 12px; font-family: inherit; color: var(--tx2); cursor: pointer; transition: background 0.1s; text-align: left; }
+        .chip-dropdown-item:hover { background: var(--s2); color: var(--tx); }
+        .chip-dropdown-item.active { color: var(--bl); font-weight: 600; background: var(--bl-d); }
 
         /* ════════════════════════════════════════
-           LAYOUT — PC ≥768px | Mobile <768px
+           RESPONSIVE — MOBILE < 768px
         ════════════════════════════════════════ */
-
-        /* ── MOBILE <768px ── */
         @media (max-width: 767px) {
-
-            /* 1. App container */
-            .app {
-                padding-bottom: 0;
-                /* ต้องให้ app เต็มจอ ไม่ padding ที่นี่ — nav จัดการเอง */
-            }
+            .app { padding-bottom: 0; }
             .body { flex-direction: column; position: relative; }
             .sidebar { display: none !important; }
             .sidebar-backdrop { display: none !important; }
             .main { position: relative; flex: 1; overflow: hidden; }
 
-            /* 2. Topbar mobile: ☰ | Search | Avatar */
-            .topbar {
-                height: var(--topbar-h);
-                padding: 0 10px;
-                gap: 8px;
-                position: relative;
-                z-index: 50;
-            }
-            .tb-left {
-                width: auto !important;
-                flex-shrink: 0;
-                border-right: none !important;
-                padding: 0 !important;
-                gap: 0 !important;
-            }
+            /* topbar */
+            .topbar { height: var(--topbar-h); padding: 0 10px; gap: 8px; position: relative; z-index: 50; }
+            .tb-left { width: auto !important; flex-shrink: 0; border-right: none !important; padding: 0 !important; gap: 0 !important; }
             .tb-left .logo-sq { display: none; }
             .tb-brand { display: none; }
-            .tb-center {
-                flex: 1;
-                padding: 0 !important;
-                min-width: 0;
-            }
-            .search-box {
-                width: 100% !important;
-                max-width: none !important;
-                height: 36px !important;
-                border-radius: 20px !important;
-                padding: 0 12px !important;
-            }
-            .tb-right {
-                border-left: none !important;
-                padding: 0 !important;
-                gap: 0 !important;
-            }
-            .pill-badge, .live-p, .tb-sep,
-            #btnImportData, #btnUpload,
-            #av2, #av3 { display: none !important; }
+            .tb-center { flex: 1; padding: 0 !important; min-width: 0; }
+            .search-box { width: 100% !important; max-width: none !important; height: 36px !important; border-radius: 20px !important; padding: 0 12px !important; }
+            .tb-right { border-left: none !important; padding: 0 !important; gap: 0 !important; }
+            .pill-badge, .live-p, .tb-sep, #btnImportData, #btnUpload, #av2, #av3 { display: none !important; }
             .tb-right .avs { display: flex !important; }
-            #av1 {
-                width: 32px !important; height: 32px !important;
-                border-radius: 50% !important; font-size: 12px !important;
-                font-weight: 700 !important; margin-left: 0 !important;
-                border: 2px solid rgba(255,255,255,0.15) !important;
-                cursor: pointer;
-            }
+            #av1 { width: 32px !important; height: 32px !important; border-radius: 50% !important; font-size: 12px !important; font-weight: 700 !important; margin-left: 0 !important; border: 2px solid rgba(255,255,255,0.15) !important; cursor: pointer; }
 
-            /* 3. mob-search-row: ซ่อน ใช้ search ใน topbar แทน */
             .mob-search-row { display: none !important; }
 
-            /* 4. mob-chips-row: แถว filter chips — fixed ใต้ topbar */
+            /* chips row */
             .mob-chips-row {
                 display: flex !important;
-                position: fixed;
-                top: var(--topbar-h);
-                left: 0; right: 0;
-                z-index: 40;
-                height: var(--chips-h);
-                background: var(--s1);
-                border-bottom: 0.5px solid var(--bd);
-                padding: 0 10px;
-                gap: 6px;
-                align-items: center;
-                overflow-x: auto;
-                scrollbar-width: none;
+                position: fixed; top: var(--topbar-h); left: 0; right: 0;
+                z-index: 40; height: var(--chips-h);
+                background: var(--s1); border-bottom: 0.5px solid var(--bd);
+                padding: 0 10px; gap: 6px; align-items: center;
+                overflow-x: auto; scrollbar-width: none;
             }
-            .mob-chips-row::-webkit-scrollbar { display: none; }
 
-            /* 5. vtabs: ซ่อน ใช้ mob-nav แทน */
+            /* view tabs hide, use mob-nav */
             .vtabs { display: none !important; }
 
-            /* 6. Bottom nav — fixed ล่างสุด + safe area */
+            /* bottom nav */
             .mob-nav {
                 display: flex !important;
-                position: fixed;
-                bottom: 0; left: 0; right: 0;
-                height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-                padding-bottom: env(safe-area-inset-bottom, 0px);
+                position: fixed; bottom: 0; left: 0; right: 0;
+                height: calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
+                padding-bottom: env(safe-area-inset-bottom,0px);
                 z-index: 50;
-                background: var(--s1);
-                border-top: 0.5px solid var(--bd);
             }
-
-            /* 7. Bottom toolbar บนแผนที่ — ซ่อน */
             .btbar { display: none !important; }
 
-            /* 8. view-area: ต้องเว้น topbar + chips บน, nav ล่าง */
+            /* view area offsets */
             .view-area {
                 position: absolute;
-                top: var(--chips-h); /* topbar handled by .main flex */
+                top: var(--chips-h);
                 left: 0; right: 0;
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
             }
 
-            /* 9. map-stats: ย้ายลงมาจาก top:12 → ให้ห่างจาก chips แต่ไม่ต้องปรับ
-               เพราะ view-area เริ่มต้นถัดจาก chips แล้ว → top:12 ใน view-area ก็โอเค */
+            /* map controls */
             .map-stats { top: 12px; }
-
-            /* 10. Zoom controls: bottom สัมพัทธ์กับ view-area = 0, ไม่ต้องปรับ
-               แต่ถ้าใช้ position:fixed ต้องชดเชย nav */
-            .zoom-c {
-                position: absolute;
-                right: 10px;
-                bottom: 14px; /* relative to view-area which already excludes nav */
-            }
+            .map-controls { position: absolute; right: 8px; top: 50%; }
+            .zoom-c { position: absolute; right: 8px; bottom: 14px; }
             .zb { width: 34px; height: 34px; font-size: 16px; }
 
-            /* 11. mob-sheet: อยู่เหนือ nav */
-            .mob-sheet {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-            }
+            /* mob-sheet */
+            .mob-sheet { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)); }
 
-            /* 12. place-card mobile: อยู่เหนือ nav */
-            .place-card {
-                bottom: -100%;
-                padding-bottom: 0;
-            }
-            .place-card.open {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-            }
+            /* place-card mobile */
+            .place-card { bottom: -100%; padding-bottom: 0; }
+            .place-card.open { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)); }
 
-            /* 13. list-panel mobile: อยู่เหนือ nav */
-            .list-panel {
-                bottom: -100%;
-            }
-            .list-panel.open {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
-            }
+            /* list-panel mobile */
+            .list-panel { bottom: -100%; }
+            .list-panel.open { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)); }
 
-            /* 14. info-panel mobile: bottom sheet เหนือ nav */
+            /* info-panel mobile bottom sheet */
             .info-panel {
                 top: auto; left: 0; right: 0; bottom: 0;
                 width: 100%; max-height: 75vh;
                 border-radius: 20px 20px 0 0;
                 transform: translateY(110%);
-                padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+                padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px));
             }
             .info-panel.open { transform: translateY(0); }
 
-            /* 15. FAB / GPS / banners / cancel buttons: ชดเชย nav */
-            #btnFab {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px) !important;
-                right: 16px !important;
-            }
-            #btnGps {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px) !important;
-                right: 72px !important;
-            }
-            #btnCancelAdd, #btnCancelMeasure {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px) !important;
-            }
-            #addBanner, #measureBanner, #directionsBanner {
-                top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important;
-            }
-            #countPill {
-                top: calc(var(--topbar-h) + var(--chips-h) + 8px) !important;
-            }
+            /* FAB / GPS / banners */
+            #btnFab { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; right: 16px !important; }
+            .gps-btn-wrap { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px); }
+            #btnCancelAdd, #btnCancelMeasure { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; }
+            #addBanner, #measureBanner, #directionsBanner { top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important; }
+            #countPill { top: calc(var(--topbar-h) + var(--chips-h) + 8px) !important; }
             #latlngHint { display: none !important; }
 
-            /* 16. toast: เหนือ nav */
-            .toast, .save-toast {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
-            }
+            /* toast */
+            .toast, .save-toast { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px); }
+            .count-pill { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px); }
+            .add-banner, .measure-banner { top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important; }
 
-            /* 17. Stats/List views */
+            /* stats/list */
             .sv-grid { grid-template-columns: repeat(2,1fr); gap: 8px; }
             .sv-row { grid-template-columns: 1fr; }
             .sv-inner { padding: 12px; }
-
-            /* 18. Modals */
             .modal { width: calc(100vw - 24px); max-height: 85vh; border-radius: 14px; }
-
-            /* 19. gps-btn-wrap: ชดเชย nav */
-            .gps-btn-wrap {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
-            }
-
-            /* 20. count pill at bottom: ชดเชย nav */
-            .count-pill {
-                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
-            }
-
-            /* 21. add-banner / measure-banner top */
-            .add-banner, .measure-banner {
-                top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important;
-            }
         }
 
-        /* ── Small phones ── */
+        /* small phones */
         @media (max-width: 380px) {
-            :root {
-                --nav-h: 52px;
-            }
+            :root { --nav-h: 52px; }
             .mob-nb-ico { font-size: 16px; }
             .mob-nb-lbl { font-size: 9px; }
             .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
         }
+
+        /* desktop: fix sidebar always visible */
+        @media (min-width: 768px) {
+            .sidebar { position: static; width: var(--sidebar-w); transform: none !important; }
+            .search-bar { display: none !important; }
+            .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
+        }
     </style>
 </head>
 <body>
-<!-- LOADING SCREEN -->
+
+<!-- ════════════════════════════════════════
+     LOADING SCREEN
+════════════════════════════════════════ -->
 <div class="loader" id="loader">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+    <div class="loader-logo">
         <div class="logo-sq">BT</div>
         <span style="font-size:15px;font-weight:700;color:var(--tx);">BT Locations</span>
     </div>
@@ -1160,34 +1131,36 @@
     <div class="loader-t" id="loaderTxt">กำลังโหลดข้อมูล...</div>
 </div>
 
+<!-- ════════════════════════════════════════
+     APP
+════════════════════════════════════════ -->
 <div class="app" id="app" style="display:none;">
-    <!-- ══ TOPBAR ══ -->
+
+    <!-- ── TOPBAR ── -->
     <div class="topbar">
-        <!-- LEFT: aligns with sidebar -->
         <div class="tb-left" id="tbLeft">
             <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
             <div class="logo-sq">BT</div>
-            <span class="tb-brand">BT Locations</span>
-            <span class="version-pill" id="versionPill">v5</span>
+            <span class="logo-txt">Locations</span>
+            <span class="version-badge" id="versionBadge">v6</span>
         </div>
-        <!-- CENTER: search -->
         <div class="tb-center">
             <div class="search-box">
                 <span class="si">⌕</span>
                 <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+                <span class="kbd">⌘K</span>
             </div>
-        </div>
-        <!-- RIGHT: status + actions -->
-        <div class="tb-right">
-            <div class="pill-badge" id="totalBadge">0 จุด</div>
             <div class="live-p">
                 <div class="live-dot"></div>
-                <span>live</span>
+                <span>Live</span>
             </div>
+        </div>
+        <div class="tb-right">
+            <div class="pill-badge" id="totalBadge">0 จุด</div>
             <div class="avs">
                 <div class="av" id="av1" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
-                <div class="av" id="av2" style="background:linear-gradient(135deg,#f5a623,#ff5c5c); margin-left:-5px;">A</div>
-                <div class="av" id="av3" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c); margin-left:-5px;">K</div>
+                <div class="av" id="av2" style="background:linear-gradient(135deg,#f5a623,#ff5c5c);margin-left:-5px;">A</div>
+                <div class="av" id="av3" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c);margin-left:-5px;">K</div>
             </div>
             <div class="tb-sep"></div>
             <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
@@ -1195,53 +1168,75 @@
         </div>
     </div>
 
-    <!-- ══ SIDEBAR BACKDROP (mobile) ══ -->
+    <!-- ── SIDEBAR BACKDROP ── -->
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
-    <!-- ══ BODY ══ -->
+    <!-- ── BODY ── -->
     <div class="body">
-        <!-- ══ SIDEBAR ══ -->
+
+        <!-- ════════════════════════════════
+             SIDEBAR
+        ════════════════════════════════ -->
         <div class="sidebar" id="sidebar">
+
+            <!-- View Switcher 2×2 -->
+            <div class="vtabs">
+                <div class="vt on" id="vt-map" data-view="map">
+                    <span class="vt-i">◉</span> แผนที่
+                </div>
+                <div class="vt" id="vt-list" data-view="list">
+                    <span class="vt-i">≡</span> รายการ
+                </div>
+                <div class="vt" id="vt-stats" data-view="stats">
+                    <span class="vt-i">◧</span> สถิติ
+                </div>
+                <div class="vt" id="vt-heat" data-view="heat">
+                    <span class="vt-i">◈</span> Heatmap
+                </div>
+            </div>
+
+            <!-- Lists filter -->
             <div class="sec-hd">Lists</div>
             <div class="flist" id="listContainer">
-                <!-- Populated by JS -->
+                <!-- populated by app.js -->
             </div>
+
             <div class="sdiv"></div>
+
+            <!-- City filter -->
             <div class="sec-hd">เมือง</div>
             <div class="clist" id="cityContainer">
-                <!-- Populated by JS -->
+                <!-- populated by app.js -->
             </div>
+
+            <!-- Footer -->
             <div class="sfoot">
                 <button class="add-btn" id="btnAddLocation">+ เพิ่มจุดใหม่</button>
                 <div class="collab">
                     <div class="avs">
                         <div class="cav" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
-                        <div class="cav" style="background:linear-gradient(135deg,#f5a623,#ff5c5c); margin-left:-3px;">A</div>
-                        <div class="cav" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c); margin-left:-3px;">K</div>
+                        <div class="cav" style="background:linear-gradient(135deg,#f5a623,#ff5c5c);margin-left:-3px;">A</div>
+                        <div class="cav" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c);margin-left:-3px;">K</div>
                     </div>
                     <span class="ctxt" id="onlineCount">3 คนออนไลน์</span>
                 </div>
             </div>
         </div>
 
-        <!-- ══ MAIN ══ -->
+        <!-- ════════════════════════════════
+             MAIN
+        ════════════════════════════════ -->
         <div class="main">
-            <!-- View tabs -->
-            <div class="vtabs">
-                <div class="vt on" id="vt-map" data-view="map"><span class="vt-i">◉</span> แผนที่</div>
-                <div class="vt" id="vt-list" data-view="list"><span class="vt-i">≡</span> รายการ</div>
-                <div class="vt" id="vt-stats" data-view="stats"><span class="vt-i">◧</span> สถิติ</div>
-                <div class="vt" id="vt-heat" data-view="heat"><span class="vt-i">◈</span> Heatmap</div>
-            </div>
 
-            <!-- View area -->
+            <!-- View Area -->
             <div class="view-area">
-                <!-- Map view -->
+
+                <!-- ── MAP VIEW ── -->
                 <div class="map-view show" id="view-map">
                     <div class="mgrid"></div>
                     <div id="map"></div>
-                    
-                    <!-- Map popup (concept style) -->
+
+                    <!-- Map popup card -->
                     <div class="map-popup" id="mapPopup" style="display:none;">
                         <div class="pp-tag" id="ppTag">List · City</div>
                         <div class="pp-name" id="ppName">Location Name</div>
@@ -1252,9 +1247,9 @@
                             <div class="pp-mi" id="ppTime">-</div>
                         </div>
                         <div class="pp-btns">
-                            <div class="ppb" id="ppEdit" style="background:rgba(91,143,255,0.15);color:var(--bl);">แก้ไข</div>
-                            <div class="ppb p" id="ppNav" style="background:rgba(45,255,160,0.15);color:var(--gn);">เส้นทาง</div>
-                            <div class="ppb" id="ppDelete" style="background:rgba(255,95,95,0.15);color:var(--red);">ลบ</div>
+                            <div class="ppb p" id="ppNav">นำทาง</div>
+                            <div class="ppb" id="ppEdit">แก้ไข</div>
+                            <div class="ppb" id="ppRoute">Route +</div>
                         </div>
                     </div>
 
@@ -1270,42 +1265,79 @@
                         </div>
                     </div>
 
-                    <!-- Zoom controls -->
-                    <div class="zoom-c">
-                        <button class="zb" id="btnZoomIn">+</button>
-                        <div class="zsep"></div>
-                        <button class="zb" id="btnZoomOut">−</button>
+                    <!-- Right map controls -->
+                    <div class="map-controls" id="mapControlsCol">
+                        <div class="map-btn-group">
+                            <button class="map-btn" id="btnZoomIn" title="Zoom in">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                            </button>
+                            <button class="map-btn" id="btnZoomOut" title="Zoom out">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg>
+                            </button>
+                        </div>
+                        <div class="map-btn-group" style="margin-top:4px;">
+                            <button class="map-btn" id="btnGps" title="ตำแหน่งของฉัน">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+                            </button>
+                            <button class="map-btn" id="btnMeasure" title="วัดระยะ">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21l4-4m10-10l4-4M3 17l8-8M11 17l6-6M7 21l10-10"/></svg>
+                            </button>
+                            <button class="map-btn" id="btnFullscreen" title="Fullscreen">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Bottom toolbar -->
+                    <!-- Zoom controls (kept for app.js compat — hidden, using map-controls above) -->
+                    <div class="zoom-c" style="display:none;">
+                        <button class="zb" id="_btnZoomInAlt">+</button>
+                        <div class="zsep"></div>
+                        <button class="zb" id="_btnZoomOutAlt">−</button>
+                    </div>
+
+                    <!-- Bottom toolbar (desktop) -->
                     <div class="btbar">
-                        <button class="bt on" id="btMap"><span class="bt-i">◉</span> แผนที่</button>
-                        <button class="bt" id="btRoute"><span class="bt-i">◎</span> เส้นทาง</button>
-                        <button class="bt" id="btHeat"><span class="bt-i">◈</span> Heatmap</button>
-                        <button class="bt" id="btAdd"><span class="bt-i">+</span> เพิ่ม</button>
+                        <button class="bt on" id="btMap"><span class="bt-i">◉</span> Map</button>
+                        <button class="bt" id="btRoute"><span class="bt-i">◎</span> Route</button>
+                        <button class="bt" id="btHeat"><span class="bt-i">◈</span> Heat</button>
+                        <button class="bt" id="btAdd"><span class="bt-i">+</span> Add</button>
                     </div>
                 </div>
 
-                <!-- List view -->
+                <!-- ── LIST VIEW ── -->
                 <div class="list-view" id="view-list" style="display:none;">
                     <div class="lv-toolbar">
                         <div class="lv-tb-btn" id="lvSelectAll">☐ เลือกทั้งหมด</div>
                         <div class="lv-tb-btn" id="lvAdd">+ เพิ่มจุด</div>
                         <div class="lv-tb-btn" id="lvExport">↑ Export</div>
-                        <div class="lv-tb-btn danger" id="lvBulkDel" style="display:none;">🗑 ลบที่เลือก (<span id="selCount">0</span>)</div>
+                        <div class="lv-tb-btn danger" id="lvBulkDel" style="display:none;">
+                            🗑 ลบที่เลือก (<span id="selCount">0</span>)
+                        </div>
                         <span class="lv-count" id="lvCount">แสดง 0 จาก 0 จุด</span>
                     </div>
                     <div class="ltable" id="listTable"></div>
                 </div>
 
-                <!-- Stats view -->
+                <!-- ── STATS VIEW ── -->
                 <div class="stats-view" id="view-stats" style="display:none;">
                     <div class="sv-inner">
                         <div class="sv-grid">
-                            <div class="sv-card"><div class="sv-v" style="color:var(--bl);" id="svTotal">0</div><div class="sv-l">จุดทั้งหมด</div></div>
-                            <div class="sv-card"><div class="sv-v" style="color:var(--gn);" id="svCities">0</div><div class="sv-l">เมือง</div></div>
-                            <div class="sv-card"><div class="sv-v" style="color:var(--am);" id="svLists">0</div><div class="sv-l">Lists</div></div>
-                            <div class="sv-card"><div class="sv-v" style="color:var(--pu);" id="svOnline">3</div><div class="sv-l">ผู้ใช้ออนไลน์</div></div>
+                            <div class="sv-card">
+                                <div class="sv-v" style="color:var(--bl);" id="svTotal">0</div>
+                                <div class="sv-l">จุดทั้งหมด</div>
+                            </div>
+                            <div class="sv-card">
+                                <div class="sv-v" style="color:var(--gn);" id="svCities">0</div>
+                                <div class="sv-l">เมือง</div>
+                            </div>
+                            <div class="sv-card">
+                                <div class="sv-v" style="color:var(--am);" id="svLists">0</div>
+                                <div class="sv-l">Lists</div>
+                            </div>
+                            <div class="sv-card">
+                                <div class="sv-v" style="color:var(--pu);" id="svOnline">3</div>
+                                <div class="sv-l">ผู้ใช้ออนไลน์</div>
+                            </div>
                         </div>
                         <div class="sv-row">
                             <div class="sv-panel">
@@ -1327,7 +1359,7 @@
                     </div>
                 </div>
 
-                <!-- Heatmap view -->
+                <!-- ── HEATMAP VIEW ── -->
                 <div class="map-view" id="view-heat" style="display:none;">
                     <div class="mgrid"></div>
                     <div id="heatmap"></div>
@@ -1340,13 +1372,75 @@
                         <button class="bt on"><span class="bt-i">◈</span> Heatmap</button>
                     </div>
                 </div>
+
+            </div><!-- /view-area -->
+        </div><!-- /main -->
+    </div><!-- /body -->
+
+    <!-- ── MOBILE CHIPS ROW ── -->
+    <div class="mob-chips-row" id="mobChipsRow">
+        <!-- populated by app.js renderMobChips() -->
+    </div>
+
+    <!-- ── MOBILE NAV ── -->
+    <div class="mob-nav">
+        <div class="mob-nb on" id="mn-map" onclick="mobSwitchView('map')">
+            <div class="mob-nb-ico">🗺</div>
+            <div class="mob-nb-lbl">แผนที่</div>
+        </div>
+        <div class="mob-nb" id="mn-list" onclick="mobSwitchView('list')">
+            <div class="mob-nb-ico">📋</div>
+            <div class="mob-nb-lbl">รายการ</div>
+        </div>
+        <div class="mob-nb" onclick="openAddMode()">
+            <div class="mob-nb-add">+</div>
+        </div>
+        <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
+            <div class="mob-nb-ico">📊</div>
+            <div class="mob-nb-lbl">สถิติ</div>
+        </div>
+        <div class="mob-nb" onclick="openMobDrawer()">
+            <div class="mob-nb-ico">☰</div>
+            <div class="mob-nb-lbl">เมนู</div>
+        </div>
+    </div>
+
+    <!-- ── MOBILE DRAWER ── -->
+    <div class="mob-drawer" id="mobDrawer">
+        <div class="mob-drawer-bg" onclick="closeMobDrawer()"></div>
+        <div class="mob-drawer-panel">
+            <div class="mob-drawer-hd">
+                <span class="mob-drawer-title">BT Locations</span>
+                <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
+            </div>
+            <div style="overflow-y:auto;flex:1;padding:8px;">
+                <div class="sec-hd">Lists</div>
+                <div id="mobDrawerLists"></div>
+                <div class="sdiv"></div>
+                <div class="sec-hd">เมือง</div>
+                <div id="mobDrawerCities"></div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- ── MOBILE BOTTOM SHEET ── -->
+    <div class="mob-sheet" id="mobSheet">
+        <div class="mob-sheet-handle" onclick="closeMobSheet()"></div>
+        <div class="mob-sheet-hd">
+            <span class="mob-sheet-title" id="mobSheetTitle">รายการ</span>
+            <div class="mob-sheet-close" onclick="closeMobSheet()">✕</div>
+        </div>
+        <div class="mob-sheet-list" id="mobSheetList"></div>
+    </div>
+
+</div><!-- /app -->
+
+<!-- ════════════════════════════════════════
+     FLOATING ELEMENTS (app.js needs these IDs)
+════════════════════════════════════════ -->
 
 <!-- Crosshair for add mode -->
-<div id="crosshair" style="display:none; position:fixed; pointer-events:none; z-index:200; font-size:28px; transform:translate(-50%,-100%);">📍</div>
+<div id="crosshair" style="display:none;position:fixed;pointer-events:none;z-index:200;font-size:28px;transform:translate(-50%,-100%);">📍</div>
 
 <!-- Add mode banner -->
 <div id="addBanner" class="add-banner">
@@ -1361,51 +1455,51 @@
 </div>
 
 <!-- Directions banner -->
-<div id="directionsBanner" style="display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); z-index:500; background:#059669; color:#fff; padding:8px 18px; border-radius:20px; font-size:13px; font-weight:600; pointer-events:none; white-space:nowrap;">🗺️ กำลังคำนวณเส้นทาง...</div>
+<div id="directionsBanner" style="display:none;position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:500;background:#059669;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;pointer-events:none;white-space:nowrap;">🗺️ กำลังคำนวณเส้นทาง...</div>
 
-<!-- FAB button (mobile add) -->
+<!-- FAB (mobile add) -->
 <button id="btnFab" class="fab" style="display:none;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
     เพิ่มจุด
 </button>
 
-<!-- GPS button -->
+<!-- GPS wrap (legacy compat — actual GPS btn now in map-controls column) -->
 <div class="gps-btn-wrap" id="btnGpsWrap" style="display:none;">
-    <button id="btnGps" class="map-btn" title="ตำแหน่งของฉัน">
+    <button id="_btnGpsLegacy" class="map-btn" title="ตำแหน่งของฉัน">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
     </button>
 </div>
 
-<!-- Cancel add button -->
-<button id="btnCancelAdd" style="display:none; position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:500; padding:8px 20px; background:var(--s2); color:var(--tx); border:1px solid var(--bd); border-radius:20px; font-size:13px; cursor:pointer;">ยกเลิก</button>
+<!-- Cancel add -->
+<button id="btnCancelAdd" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:500;padding:8px 20px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;">ยกเลิก</button>
 
-<!-- Cancel measure button -->
-<button id="btnCancelMeasure" style="display:none; position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:500; padding:8px 20px; background:var(--s2); color:var(--tx); border:1px solid var(--bd); border-radius:20px; font-size:13px; cursor:pointer;">ยกเลิกวัดระยะ</button>
+<!-- Cancel measure -->
+<button id="btnCancelMeasure" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:500;padding:8px 20px;background:var(--s2);color:var(--tx);border:1px solid var(--bd);border-radius:20px;font-size:13px;cursor:pointer;font-family:inherit;">ยกเลิกวัดระยะ</button>
 
 <!-- Lat/Lng hint -->
-<div id="latlngHint" style="display:none; position:fixed; bottom:130px; left:50%; transform:translateX(-50%); z-index:400; background:rgba(0,0,0,0.7); color:#fff; padding:4px 12px; border-radius:10px; font-size:11px; font-family:monospace; pointer-events:none;"></div>
+<div id="latlngHint" style="display:none;position:fixed;bottom:130px;left:50%;transform:translateX(-50%);z-index:400;background:rgba(0,0,0,0.7);color:#fff;padding:4px 12px;border-radius:10px;font-size:11px;font-family:monospace;pointer-events:none;"></div>
 
 <!-- Sync badge -->
-<div id="syncBadge" style="display:none; position:fixed; top:10px; right:10px; z-index:999; background:#059669; color:#fff; border-radius:20px; padding:4px 10px; font-size:11px; font-weight:600;">● sync</div>
+<div id="syncBadge" style="display:none;position:fixed;top:10px;right:10px;z-index:999;background:#059669;color:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;">● sync</div>
 
 <!-- GitHub save button -->
-<button id="btnGithubSave" style="display:none; position:fixed; top:10px; right:70px; z-index:999; padding:4px 12px; background:var(--s2); border:1px solid var(--bd); border-radius:10px; font-size:12px; cursor:pointer; color:var(--tx);">💾 Save</button>
+<button id="btnGithubSave" style="display:none;position:fixed;top:10px;right:70px;z-index:999;padding:4px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;font-size:12px;cursor:pointer;color:var(--tx);font-family:inherit;">💾 Save</button>
 
-<!-- Count pill (active filter indicator) -->
-<div id="countPill" style="display:none; position:fixed; top:56px; left:50%; transform:translateX(-50%); z-index:400; background:var(--bl); color:#fff; border-radius:20px; padding:4px 14px; font-size:12px; font-weight:600;"></div>
+<!-- Count pill -->
+<div id="countPill" style="display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:400;background:var(--bl);color:#fff;border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;"></div>
 
-<!-- Search bar wrapper (desktop) -->
-<div id="searchBar" style="display:none; position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:600; width:380px; max-width:90vw;">
-    <div id="searchBox" style="display:flex; align-items:center; background:var(--s1); border:1px solid var(--bd2); border-radius:12px; padding:0 12px; height:40px; gap:8px;">
+<!-- Search bar (legacy floating — desktop) -->
+<div id="searchBar" style="display:none;position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:600;width:380px;max-width:90vw;">
+    <div id="searchBox" style="display:flex;align-items:center;background:var(--s1);border:1px solid var(--bd2);border-radius:12px;padding:0 12px;height:40px;gap:8px;">
         <span style="color:var(--tx3);">⌕</span>
-        <input type="text" id="searchInput" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off" style="flex:1; background:none; border:none; outline:none; color:var(--tx); font-size:13px;">
-        <button id="btnClearSearch" style="display:none; background:none; border:none; cursor:pointer; color:var(--tx3); font-size:16px; padding:0; line-height:1;">✕</button>
-        <div id="searchAvatar" style="width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,#5b8fff,#2ecc90); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#fff; flex-shrink:0;">V</div>
+        <input type="text" id="searchInput" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off" style="flex:1;background:none;border:none;outline:none;color:var(--tx);font-size:13px;">
+        <button id="btnClearSearch" style="display:none;background:none;border:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:0;line-height:1;">✕</button>
+        <div id="searchAvatar" style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#5b8fff,#2ecc90);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;">V</div>
     </div>
-    <div id="searchResults" style="display:none; position:absolute; top:44px; left:0; right:0; background:var(--s1); border:1px solid var(--bd2); border-radius:12px; max-height:300px; overflow-y:auto; z-index:601; box-shadow:0 8px 24px rgba(0,0,0,0.3);"></div>
+    <div id="searchResults" style="display:none;position:absolute;top:44px;left:0;right:0;background:var(--s1);border:1px solid var(--bd2);border-radius:12px;max-height:300px;overflow-y:auto;z-index:601;box-shadow:0 8px 24px rgba(0,0,0,0.3);"></div>
 </div>
 
-<!-- Filter chips (more dropdown) -->
+<!-- Filter chips (more dropdown — legacy) -->
 <div style="display:none;" class="chip-more-wrap" id="chipMoreWrap">
     <button id="chipMore" class="chip">⋯ เพิ่มเติม</button>
     <div id="chipDropdown" class="chip-dropdown">
@@ -1415,418 +1509,264 @@
     </div>
 </div>
 
-<!-- Chip labels for active filters -->
+<!-- Chip labels (app.js reads these) -->
 <span id="chipListLabel" style="display:none;"></span>
 <span id="chipCityLabel" style="display:none;"></span>
 
-<!-- Filter more button -->
-<button id="filterMoreBtn" style="display:none; padding:4px 12px; background:var(--s2); border:1px solid var(--bd); border-radius:10px; font-size:12px; cursor:pointer; color:var(--tx2);">▾ ตัวกรองเพิ่ม</button>
-
-<!-- Place card (slide-up detail panel) -->
-<div id="placeCard" class="place-card">
-    <div class="place-card-drag"></div>
-    <button id="placeCardClose" class="place-card-close">✕</button>
-    <div class="place-card-content" id="placeCardContent"></div>
-</div>
-
-<!-- List panel -->
-<div id="listPanel" class="list-panel">
-    <div class="list-panel-header">
-        <span id="listPanelTitle" class="list-panel-title">รายการจุด</span>
-        <button class="list-panel-close" onclick="window.closeListPanel&&window.closeListPanel()">✕</button>
-    </div>
-    <div id="listSortBar" class="list-sort-bar"></div>
-    <div id="listBody" class="list-body"></div>
-</div>
-
-<!-- Info panel -->
-<div id="infoPanel" class="info-panel">
-    <div id="infoPanelBackdrop" class="info-panel-backdrop" onclick="closeInfo&&closeInfo()"></div>
-    <div class="info-panel-header">
-        <span id="infoPanelTitle" class="info-panel-title">ข้อมูล</span>
-        <button id="infoPanelClose" class="info-panel-close" onclick="closeInfo&&closeInfo()">✕</button>
-    </div>
-    <div id="infoPanelBody" class="info-panel-body"></div>
-</div>
-
-<!-- Add banner (visible) bump -->
-<div id="addBannerInner" style="display:none;"></div>
-
-<!-- Avoid modal (route options) -->
-<div id="_avoidModal" style="display:none; position:fixed; inset:0; z-index:700; align-items:center; justify-content:center;">
-    <div id="_avoidBackdrop" style="position:absolute; inset:0; background:rgba(0,0,0,0.5);"></div>
-    <div style="position:relative; background:var(--s1); border-radius:16px; padding:20px; min-width:280px; z-index:1;">
-        <div style="font-weight:700; margin-bottom:12px;">ตัวเลือกเส้นทาง</div>
-        <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="_avMotorway"> หลีกเลี่ยงทางด่วน</label>
-        <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="_avToll"> หลีกเลี่ยงทางเสียค่าผ่าน</label>
-        <label style="display:flex; gap:8px; align-items:center; margin-bottom:8px; cursor:pointer;"><input type="checkbox" id="_avFerry"> หลีกเลี่ยงเรือข้ามฟาก</label>
-        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end;">
-            <button id="_nbClose" style="padding:6px 14px; background:var(--s2); border:1px solid var(--bd); border-radius:8px; cursor:pointer; color:var(--tx);">ปิด</button>
-            <button id="_nbMaps" style="padding:6px 14px; background:var(--bl); border:none; border-radius:8px; cursor:pointer; color:#fff;">Google Maps</button>
-        </div>
-        <div style="margin-top:8px; display:flex; gap:8px;">
-            <button id="_nbWaypoint" style="padding:6px 14px; background:var(--s2); border:1px solid var(--bd); border-radius:8px; cursor:pointer; color:var(--tx); font-size:12px;">+ เพิ่มจุดแวะ</button>
-            <button id="_nbAvoid" style="padding:6px 14px; background:var(--s2); border:1px solid var(--bd); border-radius:8px; cursor:pointer; color:var(--tx); font-size:12px;">หลีกเลี่ยง</button>
-        </div>
-    </div>
-</div>
-
-<!-- Merge list modal -->
-<div id="_mergeListTarget" style="display:none;"></div>
-<button id="_mergeListCancel" style="display:none;"></button>
-<button id="_mergeListConfirm" style="display:none;"></button>
-<div id="_mergeCityTarget" style="display:none;"></div>
-
-
-
-<!-- Toast notification -->
+<!-- Toast -->
 <div class="toast" id="toast"></div>
+<div class="save-toast" id="saveToast"></div>
 
-<div id="versionBadge" style="position:fixed;bottom:4px;left:4px;font-size:10px;color:rgba(255,255,255,0.2);z-index:9999;pointer-events:none;font-family:monospace;"></div>
+<!-- File import -->
+<input type="file" id="fileImport" accept=".json,.csv,.kml,.gpx,.geojson" style="display:none">
 
-<!-- ════════════════════════════════════════════════════════════════
-   MOBILE COMPONENTS (hidden on desktop)
-═══════════════════════════════════════════════════════════════════ -->
-
-<!-- Mobile search row -->
-<div class="mob-search-row" id="mobSearchRow">
-    <div class="mob-search">
-        <span class="si">🔍</span>
-        <input type="text" id="mobSearchInput" placeholder="ค้นหาจุด, เมือง, list...">
+<!-- ════════════════════════════════════════
+     PLACE CARD
+════════════════════════════════════════ -->
+<div class="place-card" id="placeCard">
+    <div class="place-card-drag"></div>
+    <button class="place-card-fav" id="placeCardFav" title="Favorite">☆</button>
+    <button class="place-card-close" id="placeCardClose">✕</button>
+    <div class="place-card-content">
+        <div class="place-card-name" id="placeCardName">Location Name</div>
+        <div class="place-card-meta" id="placeCardMeta">
+            <span id="placeCardList">-</span>
+            <span class="dot">•</span>
+            <span id="placeCardCity">-</span>
+        </div>
+        <img class="place-card-photo" id="placeCardPhoto" style="display:none;" src="" alt="">
+        <div class="place-card-actions">
+            <button class="pca-btn primary" id="placeCardNav">นำทาง</button>
+            <button class="pca-btn" id="placeCardEdit">แก้ไข</button>
+            <button class="pca-btn" id="placeCardRoute">Route +</button>
+            <button class="pca-btn danger" id="placeCardDelete">ลบ</button>
+        </div>
+        <div class="place-card-note" id="placeCardNote"></div>
+        <div class="place-card-tags" id="placeCardTags"></div>
     </div>
 </div>
 
-<!-- Mobile filter chips -->
-<div class="mob-chips-row" id="mobChipsRow">
-    <div class="chip on" id="chipAll" data-filter="all"><span class="chip-dot" style="background:var(--bl)"></span>ทั้งหมด</div>
-    <div class="chip" id="chipList" data-filter="list"><span class="chip-dot"></span>รายการ</div>
-    <div class="chip" id="chipCity" data-filter="city"><span class="chip-dot"></span>เมือง</div>
-    <div class="chip" id="chipFav" data-filter="fav">⭐ ชื่นชอบ</div>
-</div>
-
-<!-- Mobile bottom navigation -->
-<div class="mob-nav" id="mobNav">
-    <div class="mob-nb on" id="mn-map" onclick="mobSwitchView('map')">
-        <div class="mob-nb-ico">◉</div>
-        <div class="mob-nb-lbl">แผนที่</div>
+<!-- ════════════════════════════════════════
+     INFO PANEL (add / edit)
+════════════════════════════════════════ -->
+<div class="info-panel-backdrop" id="infoPanelBackdrop" onclick="closeInfoPanel()"></div>
+<div class="info-panel" id="infoPanel">
+    <div class="info-panel-drag" style="display:none;"></div>
+    <div class="info-panel-header">
+        <button class="info-panel-close" id="infoPanelClose" onclick="closeInfoPanel()">✕</button>
+        <div class="info-panel-title" id="infoPanelTitle">เพิ่มจุดใหม่</div>
     </div>
-    <div class="mob-nb" id="mn-list" onclick="mobSwitchView('list')">
-        <div class="mob-nb-ico">≡</div>
-        <div class="mob-nb-lbl">รายการ</div>
-    </div>
-    <div class="mob-nb" onclick="openAddMode()">
-        <div class="mob-nb-add">+</div>
-    </div>
-    <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
-        <div class="mob-nb-ico">◧</div>
-        <div class="mob-nb-lbl">สถิติ</div>
-    </div>
-    <div class="mob-nb" id="mn-heat" onclick="mobSwitchView('heat')">
-        <div class="mob-nb-ico">◈</div>
-        <div class="mob-nb-lbl">Heatmap</div>
+    <div class="info-panel-body" id="infoPanelBody">
+        <!-- populated by app.js -->
     </div>
 </div>
 
-<!-- Mobile drawer -->
-<div class="mob-drawer" id="mobDrawer">
-    <div class="mob-drawer-bg" onclick="closeMobDrawer()"></div>
-    <div class="mob-drawer-panel">
-        <div class="mob-drawer-hd">
-            <span class="mob-drawer-title">BT Locations</span>
-            <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
-        </div>
-        <div style="padding:8px;flex:1;overflow-y:auto;">
-            <div class="sec-hd" style="padding-left:6px;">Lists</div>
-            <div class="flist" id="mobDrawerLists">
-                <!-- Populated by JS -->
+<!-- ════════════════════════════════════════
+     LIST PANEL (mobile locations list)
+════════════════════════════════════════ -->
+<div class="list-panel" id="listPanel">
+    <div class="list-panel-handle" onclick="closeMobSheet()"></div>
+    <div class="list-panel-header">
+        <span class="list-panel-title" id="listPanelTitle">สถานที่</span>
+        <div class="list-panel-close" onclick="closeMobSheet()">✕</div>
+    </div>
+    <div class="list-panel-list" id="listPanelList"></div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MODALS
+════════════════════════════════════════ -->
+
+<!-- Add/Edit Location Modal -->
+<div class="modal-overlay" id="addModalOverlay">
+    <div class="modal" id="addModal">
+        <div class="modal-header" id="addModalTitle">เพิ่มสถานที่</div>
+        <div class="modal-body">
+            <div class="frow">
+                <label>ชื่อ</label>
+                <input type="text" id="locName" placeholder="ชื่อสถานที่">
             </div>
-            <div class="sdiv"></div>
-            <div class="sec-hd" style="padding-left:6px;">เมือง</div>
-            <div id="mobDrawerCities" style="padding:0 8px;">
-                <!-- Populated by JS -->
+            <div class="frow frow-inline">
+                <div style="flex:1;">
+                    <label>Lat</label>
+                    <input type="number" id="locLat" placeholder="13.7563" step="any">
+                </div>
+                <div style="flex:1;">
+                    <label>Lng</label>
+                    <input type="number" id="locLng" placeholder="100.5018" step="any">
+                </div>
+            </div>
+            <div class="frow">
+                <label>รายการ (List)</label>
+                <input type="text" id="locList" placeholder="ชื่อรายการ">
+            </div>
+            <div class="frow frow-inline">
+                <div style="flex:1;">
+                    <label>เขต</label>
+                    <input type="text" id="locDistrict" placeholder="เขต/แขวง">
+                </div>
+                <div style="flex:1;">
+                    <label>เมือง</label>
+                    <input type="text" id="locCity" placeholder="กรุงเทพ">
+                </div>
+            </div>
+            <div class="frow">
+                <label>หมายเหตุ</label>
+                <textarea id="locNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+            </div>
+            <div class="frow">
+                <label>Tags (คั่นด้วยลูกน้ำ)</label>
+                <input type="text" id="locTags" placeholder="อาหาร, ท่องเที่ยว, ...">
+            </div>
+            <div class="frow">
+                <label>URL รูปภาพ</label>
+                <input type="text" id="locPhoto" placeholder="https://...">
             </div>
         </div>
-        <div style="padding:12px;">
-            <button class="add-btn" onclick="openAddMode();closeMobDrawer()">+ เพิ่มจุดใหม่</button>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" id="addModalCancel">ยกเลิก</button>
+            <button class="modal-btn modal-btn-save" id="addModalSave">บันทึก</button>
         </div>
     </div>
 </div>
 
-<!-- Mobile bottom sheet -->
-<div class="mob-sheet" id="mobSheet">
-    <div class="mob-sheet-handle" onclick="toggleMobSheet()"></div>
-    <div class="mob-sheet-hd">
-        <span class="mob-sheet-title" id="mobSheetTitle">รายการจุด</span>
-        <span class="mob-sheet-close" onclick="closeMobSheet()">✕</span>
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="confirmOverlay">
+    <div class="modal confirm-modal">
+        <div class="confirm-icon">🗑</div>
+        <div class="confirm-title" id="confirmTitle">ยืนยันการลบ</div>
+        <div class="confirm-text" id="confirmText"></div>
+        <div class="confirm-footer">
+            <button class="modal-btn modal-btn-cancel" id="confirmCancel">ยกเลิก</button>
+            <button class="modal-btn modal-btn-save btn-danger" id="confirmOk">ยืนยัน</button>
+        </div>
     </div>
-    <div class="mob-sheet-list" id="mobSheetList"></div>
 </div>
 
-    <!-- ══ LIST FILTER MODAL ══ -->
-    <div class="modal-overlay" id="listFilterModalOverlay">
-        <div class="modal" style="max-width:360px;">
-            <div class="modal-header">กรองตามรายการ</div>
-            <div class="modal-body"><div class="filter-choice-list" id="listChoiceList"></div></div>
-            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
-                <button class="modal-btn" id="listRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
-                <button class="modal-btn" id="listMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมรายการ</button>
-                <div style="flex:1"></div>
-                <button class="modal-btn modal-btn-cancel" id="listFilterClear">ล้างตัวกรอง</button>
-                <button class="modal-btn modal-btn-save" id="listFilterClose">เสร็จ</button>
-            </div>
+<!-- Measure Result Modal -->
+<div class="modal-overlay" id="measureModalOverlay">
+    <div class="modal confirm-modal">
+        <div class="confirm-icon">📏</div>
+        <div class="confirm-title">ระยะทาง</div>
+        <div class="confirm-text" id="measureResultText"></div>
+        <div class="confirm-footer">
+            <button class="modal-btn modal-btn-cancel" id="measureModalClose">ปิด</button>
+            <button class="modal-btn modal-btn-save" id="measureModalClear">ลบเส้น</button>
         </div>
     </div>
+</div>
 
-    <!-- ══ CITY FILTER MODAL ══ -->
-    <div class="modal-overlay" id="cityFilterModalOverlay">
-        <div class="modal" style="max-width:360px;">
-            <div class="modal-header">กรองตามเขต</div>
-            <div class="modal-body"><div class="filter-choice-list" id="cityChoiceList"></div></div>
-            <div class="modal-footer" style="flex-wrap:wrap;gap:6px;">
-                <button class="modal-btn" id="cityRenameBtn" style="color:#1a73e8;font-size:12px;">✏️ เปลี่ยนชื่อ</button>
-                <button class="modal-btn" id="cityMergeBtn" style="color:#e67c00;font-size:12px;">🔗 รวมเขต</button>
-                <div style="flex:1"></div>
-                <button class="modal-btn modal-btn-cancel" id="cityFilterClear">ล้างตัวกรอง</button>
-                <button class="modal-btn modal-btn-save" id="cityFilterClose">เสร็จ</button>
-            </div>
+<!-- Share / Export Modal -->
+<div class="modal-overlay" id="shareModalOverlay">
+    <div class="modal confirm-modal">
+        <div class="confirm-icon">📤</div>
+        <div class="confirm-title">Export ข้อมูล</div>
+        <div class="confirm-text" id="shareModalText">เลือกวิธี export</div>
+        <div class="confirm-footer" style="flex-direction:column;gap:8px;">
+            <button class="modal-btn modal-btn-save" id="shareBtnDownload" style="width:100%;">💾 ดาวน์โหลดไฟล์ JSON</button>
+            <button class="modal-btn modal-btn-save" id="shareBtnShare" style="width:100%;background:#059669;">📱 แชร์ผ่าน (Share API)</button>
+            <button class="modal-btn modal-btn-save" id="shareBtnCopy" style="width:100%;background:#7b1fa2;">📋 คัดลอก JSON</button>
+            <button class="modal-btn modal-btn-cancel" id="shareBtnCancel">ยกเลิก</button>
         </div>
     </div>
+</div>
 
-    <!-- ══ ADD/EDIT MODAL ══ -->
-    <div class="modal-overlay" id="editModalOverlay">
-        <div class="modal">
-            <div class="modal-header" id="editModalTitle">เพิ่มสถานที่</div>
-            <div class="modal-body">
-                <div class="modal-field">
-                    <label>ชื่อสถานที่</label>
-                    <input type="text" id="modalName" placeholder="เช่น ร้านซ่อมฉัตรชัย">
-                </div>
-                <div class="modal-field">
-                    <label>รายการ (List)</label>
-                    <input type="text" id="modalList" placeholder="เช่น บางเขน" list="listSuggestions">
-                    <datalist id="listSuggestions"></datalist>
-                </div>
-                <div class="modal-field">
-                    <label>เขต (City)</label>
-                    <input type="text" id="modalCity" placeholder="เขต/อำเภอ" list="citySuggestions">
-                    <datalist id="citySuggestions"></datalist>
-                </div>
-                <div class="modal-field">
-                    <label>หมายเหตุ (ไม่บังคับ)</label>
-                    <textarea id="modalNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
-                </div>
-                <div class="modal-field">
-                    <label>แท็ก (ไม่บังคับ, คั่นด้วย ,)</label>
-                    <input type="text" id="modalTags" placeholder="เช่น 7-11, ปั๊ม, ร้านชำ">
-                </div>
-                <div class="modal-field">
-                    <label>รูปภาพ (ไม่บังคับ)</label>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <label for="modalPhotoInput" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--s2);border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);border:1.5px dashed var(--bd3);transition:all .15s;">
-                            📷 เลือกรูป
-                        </label>
-                        <input type="file" id="modalPhotoInput" accept="image/*" style="display:none;">
-                        <button type="button" id="modalPhotoRemove" style="display:none;padding:6px 12px;background:#fce8e6;border:none;border-radius:8px;cursor:pointer;font-size:12px;color:var(--red);">ลบรูป</button>
-                    </div>
-                    <img id="modalPhotoPreview" style="display:none;max-width:100%;max-height:160px;border-radius:10px;margin-top:8px;object-fit:cover;border:1px solid var(--bd3);">
-                </div>
-                <button class="gps-modal-btn" id="btnUseGpsModal">📍 ใช้ตำแหน่งของฉัน</button>
-                <div class="latlng-row">
-                    <div class="modal-field">
-                        <label>Latitude</label>
-                        <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
-                    </div>
-                    <div class="modal-field">
-                        <label>Longitude</label>
-                        <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
-                    </div>
-                </div>
-                <p style="font-size:12px;color:var(--blue);margin-top:-8px;">✅ หรือคลิกบนแผนที่เพื่อเลือกพิกัด</p>
-                <div class="modal-footer">
-                    <button class="modal-btn modal-btn-cancel" id="editModalCancel">ยกเลิก</button>
-                    <button class="modal-btn modal-btn-save" id="editModalSave">บันทึก</button>
-                </div>
+<!-- Import Data Modal -->
+<div class="modal-overlay" id="importModalOverlay">
+    <div class="modal" style="width:420px;max-width:90vw;">
+        <div class="modal-header">นำเข้าข้อมูล</div>
+        <div class="modal-body">
+            <div class="frow">
+                <label>วาง JSON โดยตรง</label>
+                <textarea id="importJsonText" rows="6" placeholder='[{"name":"...", "lat":13.7, "lng":100.5, "list":"..."}]'></textarea>
+            </div>
+            <div style="text-align:center;color:var(--tx3);font-size:12px;margin:10px 0;">— หรือ —</div>
+            <div class="frow">
+                <label>URL ข้อมูล (raw JSON)</label>
+                <input type="text" id="importUrl" placeholder="https://.../data.json">
+            </div>
+            <div style="margin-top:12px;padding:10px;background:var(--s1);border-radius:8px;font-size:11px;color:var(--tx2);">
+                <b>รองรับ:</b> Array ของจุด <code>[{name,lat,lng,list,city}]</code> หรือ <code>{lists:[{name,points:[]}]}</code>
             </div>
         </div>
-    </div>
-
-    <!-- ══ TOKEN MODAL ══ -->
-    <div class="modal-overlay" id="tokenModalOverlay">
-        <div class="modal token-modal">
-            <div class="token-icon">🔑</div>
-            <div class="token-title">ตั้งค่า Sync</div>
-            <div class="token-sub">เลือกวิธี sync: ใช้ Worker (แนะนำ) หรือ Token โดยตรง</div>
-            <div class="modal-body">
-                <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px;">☁️ Cloudflare Worker (แนะนำ)</div>
-                <div class="modal-field">
-                    <label>Worker URL</label>
-                    <input type="url" id="workerUrlInput" placeholder="https://bt-locations-api.xxx.workers.dev">
-                </div>
-                <div class="modal-field">
-                    <label>API Key (ถ้ามี)</label>
-                    <input type="password" id="apiKeyInput" placeholder="optional">
-                </div>
-                <div style="border-top:1px solid var(--bd3);margin:12px 0;"></div>
-                <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px;">🔑 GitHub Token (ถ้าไม่มี Worker)</div>
-                <div class="modal-field">
-                    <label>Token</label>
-                    <input type="password" id="tokenInput" placeholder="github_pat_...">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn modal-btn-cancel" id="tokenCancel">ยกเลิก</button>
-                <button class="modal-btn modal-btn-save" id="tokenSave">บันทึก &amp; Sync</button>
-            </div>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" onclick="closeImportModal()">ยกเลิก</button>
+            <button class="modal-btn modal-btn-save" onclick="doImportData()">นำเข้า</button>
         </div>
     </div>
+</div>
 
-    <!-- ══ CONFIRM MODAL ══ -->
-    <div class="modal-overlay" id="confirmModalOverlay">
-        <div class="modal confirm-modal">
-            <div class="confirm-icon" id="confirmIcon">⚠️</div>
-            <div class="confirm-title" id="confirmTitle">ยืนยัน</div>
-            <div class="confirm-text" id="confirmText"></div>
-            <div class="confirm-footer">
-                <button class="modal-btn modal-btn-cancel" id="confirmCancel">ยกเลิก</button>
-                <button class="modal-btn modal-btn-save btn-danger" id="confirmOk">ยืนยัน</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ══ MEASURE RESULT ══ -->
-    <div class="modal-overlay" id="measureModalOverlay">
-        <div class="modal confirm-modal">
-            <div class="confirm-icon">📏</div>
-            <div class="confirm-title">ระยะทาง</div>
-            <div class="confirm-text" id="measureResultText"></div>
-            <div class="confirm-footer">
-                <button class="modal-btn modal-btn-cancel" id="measureModalClose">ปิด</button>
-                <button class="modal-btn modal-btn-save" id="measureModalClear">ลบเส้น</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ══ SHARE/EXPORT MODAL (mobile-friendly) ══ -->
-    <div class="modal-overlay" id="shareModalOverlay">
-        <div class="modal confirm-modal">
-            <div class="confirm-icon">📤</div>
-            <div class="confirm-title">Export ข้อมูล</div>
-            <div class="confirm-text" id="shareModalText">เลือกวิธี export</div>
-            <div class="confirm-footer" style="flex-direction:column;gap:8px;">
-                <button class="modal-btn modal-btn-save" id="shareBtnDownload" style="width:100%;">💾 ดาวน์โหลดไฟล์ JSON</button>
-                <button class="modal-btn modal-btn-save" id="shareBtnShare" style="width:100%;background:#059669;" id="shareBtnShare">📱 แชร์ผ่าน (Share API)</button>
-                <button class="modal-btn modal-btn-save" id="shareBtnCopy" style="width:100%;background:#7b1fa2;">📋 คัดลอก JSON</button>
-                <button class="modal-btn modal-btn-cancel" id="shareBtnCancel">ยกเลิก</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ══ IMPORT DATA MODAL ══ -->
-    <div class="modal-overlay" id="importModalOverlay">
-        <div class="modal" style="width:420px;max-width:90vw;">
-            <div class="modal-header">นำเข้าข้อมูล</div>
-            <div class="modal-body">
-                <div class="frow">
-                    <label>วาง JSON โดยตรง</label>
-                    <textarea id="importJsonText" rows="6" placeholder="[{&quot;name&quot;:&quot;...&quot;, &quot;lat&quot;:13.7, &quot;lng&quot;:100.5, &quot;list&quot;:&quot;...&quot;}]"></textarea>
-                </div>
-                <div style="text-align:center;color:var(--tx3);font-size:12px;margin:10px 0;">— หรือ —</div>
-                <div class="frow">
-                    <label>URL ข้อมูล (raw JSON)</label>
-                    <input type="text" id="importUrl" placeholder="https://.../data.json">
-                </div>
-                <div style="margin-top:12px;padding:10px;background:var(--s1);border-radius:8px;font-size:11px;color:var(--tx2);">
-                    <b>รองรับ:</b> Array ของจุด <code>[{name,lat,lng,list,city}]</code> หรือ <code>{lists:[{name,points:[]}]}</code>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn modal-btn-cancel" onclick="closeImportModal()">ยกเลิก</button>
-                <button class="modal-btn modal-btn-save" onclick="doImportData()">นำเข้า</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="save-toast" id="saveToast"></div>
-    <input type="file" id="fileImport" accept=".json,.csv,.kml,.gpx,.geojson" style="display:none">
-
-    <script>
-    // Patch: sync tbLeft collapse with sidebar toggle on desktop
-    (function(){
-        var _origToggle;
-        function _patchSidebar(){
-            if(typeof toggleSidebar !== 'undefined'){
-                _origToggle = toggleSidebar;
-                window.toggleSidebar = function(){
-                    _origToggle();
+<!-- ════════════════════════════════════════
+     INLINE SCRIPTS — wire IDs / patches
+════════════════════════════════════════ -->
+<script>
+/* ── Sidebar toggle syncs tb-left width on desktop ── */
+(function(){
+    document.addEventListener('DOMContentLoaded', function(){
+        setTimeout(function(){
+            /* Menu button */
+            var btn = document.getElementById('btnMenu');
+            if(btn){
+                var orig = btn.onclick;
+                btn.onclick = function(){
+                    if(orig) orig.call(this);
                     if(window.innerWidth >= 768){
-                        const sb = document.getElementById('sidebar');
-                        const tbl = document.getElementById('tbLeft');
-                        if(tbl) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open') && sb.style.display === 'none' || sb.classList.contains('open') === false);
+                        var sb = document.getElementById('sidebar');
+                        var tbl = document.getElementById('tbLeft');
+                        if(tbl && sb) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open'));
                     }
                 };
             }
-        }
-        // Override btnMenu after app.js loads
-        document.addEventListener('DOMContentLoaded', function(){
-            setTimeout(function(){
-                var btn = document.getElementById('btnMenu');
-                if(btn){
-                    var orig = btn.onclick;
-                    btn.onclick = function(){
-                        if(orig) orig.call(this);
-                        if(window.innerWidth >= 768){
-                            var sb = document.getElementById('sidebar');
-                            var tbl = document.getElementById('tbLeft');
-                            if(tbl && sb) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open'));
-                        }
-                    };
-                }
-            }, 800);
-        });
-    })();
-    </script>
-    <script>
-    // Wire up new banner cancel buttons to existing functions
-    document.addEventListener('DOMContentLoaded', function(){
-        setTimeout(function(){
-            // Banner cancel buttons
-            var btnCancelAddBanner = document.getElementById('btnCancelAddBanner');
-            if(btnCancelAddBanner && typeof cancelAddMode === 'function'){
-                btnCancelAddBanner.onclick = cancelAddMode;
-            }
-            var btnCancelMeasureBanner = document.getElementById('btnCancelMeasureBanner');
-            if(btnCancelMeasureBanner && typeof cancelMeasureMode === 'function'){
-                btnCancelMeasureBanner.onclick = cancelMeasureMode;
-            }
-            // FAB click handler
-            var btnFab = document.getElementById('btnFab');
-            if(btnFab && typeof openAddMode === 'function'){
-                btnFab.onclick = openAddMode;
-            }
-            // GPS button click handler
-            var btnGps = document.getElementById('btnGps');
-            if(btnGps && typeof gpsButtonClick === 'function'){
-                btnGps.onclick = gpsButtonClick;
-            }
-        }, 1500);
+            /* Wire cancel banners */
+            var ba = document.getElementById('btnCancelAddBanner');
+            if(ba && typeof cancelAddMode==='function') ba.onclick = cancelAddMode;
+            var bm = document.getElementById('btnCancelMeasureBanner');
+            if(bm && typeof cancelMeasureMode==='function') bm.onclick = cancelMeasureMode;
+            /* FAB */
+            var fab = document.getElementById('btnFab');
+            if(fab && typeof openAddMode==='function') fab.onclick = openAddMode;
+            /* GPS btn — proxy to in-map control */
+            var gps = document.getElementById('btnGps');
+            if(gps && typeof gpsButtonClick==='function') gps.onclick = gpsButtonClick;
+            /* Zoom compat — proxy old IDs to map methods */
+            var zi = document.getElementById('btnZoomIn');
+            if(zi && typeof map!=='undefined') zi.onclick = function(){ map.zoomIn(); };
+            var zo = document.getElementById('btnZoomOut');
+            if(zo && typeof map!=='undefined') zo.onclick = function(){ map.zoomOut(); };
+            /* Fullscreen */
+            var fs = document.getElementById('btnFullscreen');
+            if(fs) fs.onclick = function(){
+                if(!document.fullscreenElement){ document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+                else { document.exitFullscreen && document.exitFullscreen(); }
+            };
+            /* Measure */
+            var ms = document.getElementById('btnMeasure');
+            if(ms && typeof startMeasureMode==='function') ms.onclick = startMeasureMode;
+        }, 800);
     });
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script>
-    (function(){
-        var v=Date.now();
-        var s1=document.createElement('script');
-        s1.src='locations.js?v='+v;
-        document.head.appendChild(s1);
-        s1.onload=function(){
-            var s2=document.createElement('script');
-            s2.src='app.js?v='+v;
-            document.head.appendChild(s2);
-        };
-    })();
-    </script>
+})();
+</script>
+
+<!-- ════════════════════════════════════════
+     SCRIPT LOADING
+════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+(function(){
+    var v = Date.now();
+    var s1 = document.createElement('script');
+    s1.src = 'locations.js?v=' + v;
+    document.head.appendChild(s1);
+    s1.onload = function(){
+        var s2 = document.createElement('script');
+        s2.src = 'app.js?v=' + v;
+        document.head.appendChild(s2);
+    };
+})();
+</script>
+
 </body>
 </html>
