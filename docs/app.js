@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.9.1';
+const APP_VERSION = 'v5.10.0';
 const STORAGE_KEY = 'bt_locations_data';
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
@@ -1022,13 +1022,150 @@ function update() {
     _updateMobChips(); // Sync mobile chip state
 }
 
-// Init
-(function _init(){
-    // Set avatar letters
-    const un=localStorage.getItem('bt_username')||'';
-    const a1=document.getElementById('av1');
-    if(a1) a1.textContent = (un[0]||'V').toUpperCase();
-})();
+// ════════════════════════════════════════════
+// DATA LOADING (like prototype)
+// ════════════════════════════════════════════
+const REPO = 'valrinx/bt-locations';
+
+function setLoader(txt){
+    const el = document.getElementById('loaderTxt');
+    if(el) el.textContent = txt;
+}
+
+async function initApp(){
+    setLoader('กำลังเชื่อมต่อ GitHub...');
+    try {
+        // Try to fetch data files from the repo
+        await fetchRepoData();
+    } catch(e) {
+        console.warn('GitHub fetch failed, using local data:', e);
+        setLoader('โหลดข้อมูล local...');
+        // Keep existing locations data (from localStorage or sample)
+        if(locations.length === 0) loadSampleData();
+    }
+    
+    setLoader('กำลังเริ่มต้นแผนที่...');
+    initMap(); // This will call update() which renders everything
+    
+    setLoader('พร้อมใช้งาน');
+    setTimeout(() => {
+        document.getElementById('loader').classList.add('done');
+        document.getElementById('app').style.display = '';
+    }, 300);
+    
+    // Set avatar
+    const un = localStorage.getItem('bt_username') || '';
+    const a1 = document.getElementById('av1');
+    if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
+}
+
+async function fetchRepoData(){
+    // Try common data file names (like prototype)
+    const attempts = [
+        `https://raw.githubusercontent.com/${REPO}/main/data.json`,
+        `https://raw.githubusercontent.com/${REPO}/main/locations.json`,
+        `https://raw.githubusercontent.com/${REPO}/main/docs/data.json`,
+        `https://raw.githubusercontent.com/${REPO}/master/data.json`,
+    ];
+    
+    for(const url of attempts){
+        try {
+            const res = await fetch(url);
+            if(!res.ok) continue;
+            const json = await res.json();
+            if(parseDataFormat(json)) return;
+        } catch(e){ continue; }
+    }
+    
+    // Try GitHub API to list contents
+    try {
+        const apiRes = await fetch(`https://api.github.com/repos/${REPO}/git/trees/main?recursive=1`);
+        if(apiRes.ok){
+            const tree = await apiRes.json();
+            const jsonFiles = (tree.tree || []).filter(f => f.path.endsWith('.json') && f.type === 'blob');
+            for(const f of jsonFiles.slice(0, 5)){
+                try {
+                    const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/${f.path}`);
+                    if(!r.ok) continue;
+                    const j = await r.json();
+                    if(parseDataFormat(j)) return;
+                } catch(e){ continue; }
+            }
+        }
+    } catch(e){ console.warn('GitHub API failed:', e); }
+    
+    throw new Error('No data found in repo');
+}
+
+function parseDataFormat(json){
+    // Format 1: array of points [{name,lat,lng,list}]
+    if(Array.isArray(json) && json.length > 0 && (json[0].lat !== undefined || json[0].latitude !== undefined)){
+        locations = json.map((p, i) => ({
+            id: p.id || i,
+            name: p.name || p.title || 'จุดที่ ' + (i+1),
+            lat: parseFloat(p.lat || p.latitude || p.y || 0),
+            lng: parseFloat(p.lng || p.lon || p.longitude || p.x || 0),
+            list: p.list || p.group || p.category || 'ทั้งหมด',
+            district: p.district || p.area || p.zone || '',
+            city: p.city || p.province || p.district || '',
+            note: p.note || p.desc || '',
+            tags: p.tags || [],
+            photo: p.photo || '',
+            added_by: p.added_by || p.addedBy || '',
+            date: p.date || p.created_at || new Date().toLocaleDateString('th-TH'),
+            updated_at: p.updated_at || ''
+        })).filter(p => p.lat && p.lng);
+        invalidateMarkerCache();
+        return locations.length > 0;
+    }
+    // Format 2: {lists:[{name,points:[...]}]}
+    if(json.lists && Array.isArray(json.lists)){
+        locations = [];
+        json.lists.forEach(l => {
+            (l.points || l.locations || l.items || []).forEach((p, i) => {
+                locations.push({
+                    id: p.id || locations.length,
+                    name: p.name || 'จุดที่ ' + (i+1),
+                    lat: parseFloat(p.lat || p.latitude || 0),
+                    lng: parseFloat(p.lng || p.longitude || 0),
+                    list: l.name || l.id || 'รายการ',
+                    district: p.district || '',
+                    city: p.city || '',
+                    note: p.note || '',
+                    tags: p.tags || [],
+                    photo: p.photo || '',
+                    date: p.date || ''
+                });
+            });
+        });
+        locations = locations.filter(p => p.lat && p.lng);
+        invalidateMarkerCache();
+        return locations.length > 0;
+    }
+    // Format 3: {points:[...]} or {locations:[...]} or {data:[...]}
+    if(json.points || json.locations || json.data){
+        return parseDataFormat(json.points || json.locations || json.data);
+    }
+    return false;
+}
+
+function loadSampleData(){
+    // Realistic sample data (similar to prototype)
+    const sample = [
+        {name:'ร้าน BT สาทร', lat:13.7201, lng:100.5301, list:'ยกกลับแล้ว', city:'สาทร', note:'ติดต่อคุณสมชาย'},
+        {name:'ร้าน BT สีลม', lat:13.7301, lng:100.5401, list:'ยกกลับแล้ว', city:'บางรัก', note:'เปิด 8:00-18:00'},
+        {name:'ร้าน BT อโศก', lat:13.7401, lng:100.5601, list:'คืนนายาว', city:'วัฒนา', note:'ใกล้ BTS'},
+        {name:'ร้าน BT รัชดา', lat:13.7601, lng:100.5701, list:'มีนบุรี', city:'ห้วยขวาง', note:'มีที่จอดรถ'},
+        {name:'ร้าน BT ลาดพร้าว', lat:13.7801, lng:100.5801, list:'เมืองนนทบุรี', city:'จตุจักร', note:'ติดต่อ 081-xxx-xxxx'},
+    ];
+    locations = sample.map((p, i) => ({...p, id: i, date: new Date().toLocaleDateString('th-TH')}));
+    invalidateMarkerCache();
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', initApp);
 
 function refreshDatalistSuggestions() {
     document.getElementById('listSuggestions').innerHTML=[...new Set(locations.map(l=>l.list).filter(Boolean))].map(l=>`<option value="${l}">`).join('');
