@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.11.3';
+const APP_VERSION = 'v5.11.4';
 const STORAGE_KEY = 'bt_locations_data';
 
 // ════════════════════════════════════════════
@@ -716,13 +716,13 @@ function normalizeLocation(l) {
     };
 }
 
-// Default locations fallback (in case locations.js fails to load)
-const DEFAULT_LOCATIONS = (typeof window.DEFAULT_LOCATIONS !== 'undefined') ? window.DEFAULT_LOCATIONS : [];
-
+// Note: DEFAULT_LOCATIONS is declared in locations.js which loads before app.js
 let locations = (() => {
     try { 
         const s = localStorage.getItem(STORAGE_KEY); 
-        const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)); 
+        // Use DEFAULT_LOCATIONS from locations.js, or empty array if not available
+        const defaultData = (typeof DEFAULT_LOCATIONS !== 'undefined') ? DEFAULT_LOCATIONS : [];
+        const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(defaultData)); 
         return raw.map(normalizeLocation); 
     }
     catch(e) { 
