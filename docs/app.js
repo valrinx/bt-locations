@@ -1,4 +1,4 @@
-﻿// ════════════════════════════════════════════
+// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
 const APP_VERSION = 'v5.11.8';
@@ -155,7 +155,7 @@ function _renderMobDrawer(){
     const lists = Object.entries(lc).sort((a,b)=>b[1]-a[1]);
     let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:#5b8fff"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
     lists.forEach(([name,count],i)=>{
-        const col=_listColors[i % _listColors.length];
+        const col=colorPalette[i % colorPalette.length];
         listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
     });
     listContainer.innerHTML = listHtml;
@@ -165,7 +165,7 @@ function _renderMobDrawer(){
     const cities = Object.entries(cc).sort((a,b)=>b[1]-a[1]);
     let cityHtml = '';
     cities.forEach(([name,count],i)=>{
-        const col=_listColors[i % _listColors.length];
+        const col=colorPalette[i % colorPalette.length];
         cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span></div>`;
     });
     cityContainer.innerHTML = cityHtml;
