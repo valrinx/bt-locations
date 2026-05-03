@@ -16,11 +16,11 @@ function onClick(id, handler) {
 // ════════════════════════════════════════════
 // DATA FORMAT UTILS (used early by import)
 // ════════════════════════════════════════════
-function tryParseDataFormat(json) {
-    if (Array.isArray(json) && json.length > 0 && (json[0].lat !== undefined || json[0].latitude !== undefined)) {
+function tryParseDataFormat(json){
+    if(Array.isArray(json) && json.length > 0 && (json[0].lat !== undefined || json[0].latitude !== undefined)){
         return json.map((p, i) => ({
             id: p.id || i,
-            name: p.name || p.title || 'จุดที่ ' + (i + 1),
+            name: p.name || p.title || 'จุดที่ ' + (i+1),
             lat: parseFloat(p.lat || p.latitude || p.y || 0),
             lng: parseFloat(p.lng || p.lon || p.longitude || p.x || 0),
             list: p.list || p.group || p.category || 'ทั้งหมด',
@@ -34,13 +34,13 @@ function tryParseDataFormat(json) {
             updated_at: p.updated_at || ''
         })).filter(p => p.lat && p.lng);
     }
-    if (json.lists && Array.isArray(json.lists)) {
+    if(json.lists && Array.isArray(json.lists)){
         const data = [];
         json.lists.forEach(l => {
             (l.points || l.locations || l.items || []).forEach((p, i) => {
                 data.push({
                     id: p.id || data.length,
-                    name: p.name || 'จุดที่ ' + (i + 1),
+                    name: p.name || 'จุดที่ ' + (i+1),
                     lat: parseFloat(p.lat || p.latitude || 0),
                     lng: parseFloat(p.lng || p.longitude || 0),
                     list: l.name || l.id || 'รายการ',
@@ -55,7 +55,7 @@ function tryParseDataFormat(json) {
         });
         return data.filter(p => p.lat && p.lng);
     }
-    if (json.points || json.locations || json.data) {
+    if(json.points || json.locations || json.data){
         return tryParseDataFormat(json.points || json.locations || json.data);
     }
     return null;
@@ -71,45 +71,45 @@ const TRACKING_KEY = 'bt_tracked_paths';
 const TAG_COLOR_KEY = 'bt_tag_colors';
 const REPO_OWNER = 'valrinx', REPO_NAME = 'bt-locations';
 // ── Tag Color System ──
-let tagColors = (() => { try { return JSON.parse(localStorage.getItem(TAG_COLOR_KEY) || '{}'); } catch { return {}; } })();
-function saveTagColors() { localStorage.setItem(TAG_COLOR_KEY, JSON.stringify(tagColors)); }
-function getTagColor(tag) { return tagColors[tag] || null; }
+let tagColors = (() => { try { return JSON.parse(localStorage.getItem(TAG_COLOR_KEY)||'{}'); } catch { return {}; } })();
+function saveTagColors(){ localStorage.setItem(TAG_COLOR_KEY, JSON.stringify(tagColors)); }
+function getTagColor(tag){ return tagColors[tag]||null; }
 // Get first tag color for a location (used for marker override)
-function getLocTagColor(loc) { if (!loc.tags || !loc.tags.length) return null; for (const t of loc.tags) { const c = getTagColor(t); if (c) return c; } return null; }
+function getLocTagColor(loc){ if(!loc.tags||!loc.tags.length)return null; for(const t of loc.tags){const c=getTagColor(t);if(c)return c;} return null; }
 // Sanitize DMS coordinate names
-function _cleanDMSName(n) { return (n && /\d+[°ºᵒ˚]/.test(n)) ? '' : n; }
+function _cleanDMSName(n){return(n&&/\d+[°ºᵒ˚]/.test(n))?'':n;}
 // ── Supabase ──
 const _SB_URL = 'https://uemvtttfedpvofqhnwoo.supabase.co';
 const _SB_KEY = 'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh';
 const _sb = supabase.createClient(_SB_URL, _SB_KEY);
 // Worker URL: kept for fallback compat
 const DEFAULT_WORKER_URL = 'https://bt-locations.teenson4.workers.dev';
-function getWorkerUrl() { return localStorage.getItem(WORKER_URL_KEY) || DEFAULT_WORKER_URL; }
-function getApiKey() { return localStorage.getItem(API_KEY_KEY) || ''; }
-function useWorker() { return !!getWorkerUrl(); }
+function getWorkerUrl(){return localStorage.getItem(WORKER_URL_KEY)||DEFAULT_WORKER_URL;}
+function getApiKey(){return localStorage.getItem(API_KEY_KEY)||'';}
+function useWorker(){return !!getWorkerUrl();}
 const undoStack = [], redoStack = [], MAX_UNDO = 20;
 let favorites = new Set((() => { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; } })());
 function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); }
 // Avatar init
-(function _initAvatar() { const un = localStorage.getItem('bt_username') || ''; const el = document.getElementById('searchAvatar'); if (el) el.textContent = (un[0] || 'B').toUpperCase(); })();
+(function _initAvatar(){ const un=localStorage.getItem('bt_username')||''; const el=document.getElementById('searchAvatar'); if(el)el.textContent=(un[0]||'B').toUpperCase(); })();
 
 // ════════════════════════════════════════════
 // CONCEPT UI FUNCTIONS
 // ════════════════════════════════════════════
 let currentView = 'map';
-function switchView(view) {
+function switchView(view){
     currentView = view;
-    document.querySelectorAll('.vt').forEach(v => v.classList.remove('on'));
-    document.getElementById('vt-' + view).classList.add('on');
-    document.querySelectorAll('.map-view, .list-view, .stats-view').forEach(el => el.classList.remove('show'));
-    document.getElementById('view-' + view).classList.add('show');
-    if (view === 'stats') renderStatsView();
-    if (view === 'list') renderListView();
-    if (view === 'heat') { heatmapMode = true; update(); } else if (view !== 'map') { heatmapMode = false; update(); }
+    document.querySelectorAll('.vt').forEach(v=>v.classList.remove('on'));
+    document.getElementById('vt-'+view).classList.add('on');
+    document.querySelectorAll('.map-view, .list-view, .stats-view').forEach(el=>el.classList.remove('show'));
+    document.getElementById('view-'+view).classList.add('show');
+    if(view==='stats') renderStatsView();
+    if(view==='list') renderListView();
+    if(view==='heat') { heatmapMode=true; update(); } else if(view!=='map') { heatmapMode=false; update(); }
 }
 
 // View tab click handlers
-document.querySelectorAll('.vt').forEach(v => {
+document.querySelectorAll('.vt').forEach(v=>{
     v.onclick = () => switchView(v.dataset.view);
 });
 
@@ -124,80 +124,80 @@ onClick('btAdd', () => openAddMode());
 // ════════════════════════════════════════════
 
 // Mobile view switcher (for bottom nav)
-function mobSwitchView(view) {
+function mobSwitchView(view){
     switchView(view);
     // Update mobile nav active state
     document.querySelectorAll('.mob-nb').forEach(nb => nb.classList.remove('on'));
-    document.getElementById('mn-' + view)?.classList.add('on');
+    document.getElementById('mn-'+view)?.classList.add('on');
     // Close bottom sheet if open
     closeMobSheet();
 }
 
 // Mobile drawer
-function openMobDrawer() {
+function openMobDrawer(){
     const drawer = document.getElementById('mobDrawer');
-    if (drawer) drawer.classList.add('show');
+    if(drawer) drawer.classList.add('show');
     _renderMobDrawer();
 }
-function closeMobDrawer() {
+function closeMobDrawer(){
     const drawer = document.getElementById('mobDrawer');
-    if (drawer) drawer.classList.remove('show');
+    if(drawer) drawer.classList.remove('show');
 }
 
 // Render mobile drawer content
-function _renderMobDrawer() {
+function _renderMobDrawer(){
     const listContainer = document.getElementById('mobDrawerLists');
     const cityContainer = document.getElementById('mobDrawerCities');
-    if (!listContainer || !cityContainer) return;
-
+    if(!listContainer || !cityContainer) return;
+    
     // Lists
-    const lc = {}; locations.forEach(l => { lc[l.list] = (lc[l.list] || 0) + 1; });
-    const lists = Object.entries(lc).sort((a, b) => b[1] - a[1]);
-    let listHtml = `<div class="fi ${!filterList ? 'on' : ''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:#5b8fff"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
-    lists.forEach(([name, count], i) => {
-        const col = colorPalette[i % colorPalette.length];
-        listHtml += `<div class="fi ${filterList === name ? 'on' : ''}" onclick="setFilterList('${name.replace(/'/g, "\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
+    const lc={}; locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
+    const lists = Object.entries(lc).sort((a,b)=>b[1]-a[1]);
+    let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:#5b8fff"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
+    lists.forEach(([name,count],i)=>{
+        const col=colorPalette[i % colorPalette.length];
+        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
     });
     listContainer.innerHTML = listHtml;
-
+    
     // Cities
-    const cc = {}; locations.forEach(l => { if (l.city) cc[l.city] = (cc[l.city] || 0) + 1; });
-    const cities = Object.entries(cc).sort((a, b) => b[1] - a[1]);
+    const cc={}; locations.forEach(l=>{if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
+    const cities = Object.entries(cc).sort((a,b)=>b[1]-a[1]);
     let cityHtml = '';
-    cities.forEach(([name, count], i) => {
-        const col = colorPalette[i % colorPalette.length];
-        cityHtml += `<div class="ci ${filterCity === name ? 'on' : ''}" onclick="setFilterCity('${name.replace(/'/g, "\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span></div>`;
+    cities.forEach(([name,count],i)=>{
+        const col=colorPalette[i % colorPalette.length];
+        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span></div>`;
     });
     cityContainer.innerHTML = cityHtml;
 }
 
-function _renderSidebar() {
+function _renderSidebar(){
     const listContainer = document.getElementById('listContainer');
     const cityContainer = document.getElementById('cityContainer');
-    if (!listContainer || !cityContainer) { _renderMobDrawer(); return; }
-
-    const lists = [...new Set(locations.map(l => l.list))].filter(Boolean).sort();
-    const cities = [...new Set(locations.map(l => l.city))].filter(Boolean).sort();
-
+    if(!listContainer || !cityContainer) { _renderMobDrawer(); return; }
+    
+    const lists = [...new Set(locations.map(l=>l.list))].filter(Boolean).sort();
+    const cities = [...new Set(locations.map(l=>l.city))].filter(Boolean).sort();
+    
     listContainer.innerHTML = lists.map(name =>
-        `<div class="flist-item${filterList === name ? ' active' : ''}" onclick="setFilterList('${name.replace(/'/g, "\\'")}')">
+        `<div class="flist-item${filterList===name?' active':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}')">
             <span class="fl-dot" style="background:${getColor(name)}"></span>
             <span class="fl-name">${name}</span>
-            <span class="fl-count">${locations.filter(l => l.list === name).length}</span>
+            <span class="fl-count">${locations.filter(l=>l.list===name).length}</span>
         </div>`
     ).join('');
-
+    
     cityContainer.innerHTML = cities.map(name =>
-        `<div class="clist-item${filterCity === name ? ' active' : ''}" onclick="setFilterCity('${name.replace(/'/g, "\\'")}')">
+        `<div class="clist-item${filterCity===name?' active':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}')">
             <span class="fl-name">${name}</span>
-            <span class="fl-count">${locations.filter(l => l.city === name).length}</span>
+            <span class="fl-count">${locations.filter(l=>l.city===name).length}</span>
         </div>`
     ).join('');
-
+    
     _renderMobDrawer();
 }
 // Filter setters for mobile
-function setFilterList(name) {
+function setFilterList(name){
     filterList = name;
     filterCity = '';
     _lastFilteredKey = null;
@@ -205,7 +205,7 @@ function setFilterList(name) {
     _renderSidebar();
     _updateMobChips();
 }
-function setFilterCity(name) {
+function setFilterCity(name){
     filterCity = name;
     filterList = '';
     _lastFilteredKey = null;
@@ -213,41 +213,41 @@ function setFilterCity(name) {
     _renderSidebar();
     _updateMobChips();
     // Zoom to city
-    const cityLocs = locations.filter(l => l.city === filterCity);
-    if (cityLocs.length && map) {
-        const group = L.featureGroup(cityLocs.map(l => L.marker([l.lat, l.lng])));
-        map.fitBounds(group.getBounds().pad(0.15), { animate: false, maxZoom: 16 });
+    const cityLocs = locations.filter(l=>l.city===filterCity);
+    if(cityLocs.length && map){
+        const group = L.featureGroup(cityLocs.map(l=>L.marker([l.lat,l.lng])));
+        map.fitBounds(group.getBounds().pad(0.15), {animate:false, maxZoom:16});
     }
 }
 
 // Mobile chips update
-function _updateMobChips() {
+function _updateMobChips(){
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
-    if (!filterList && !filterCity && !filterFavorites) {
+    if(!filterList && !filterCity && !filterFavorites){
         document.getElementById('chipAll')?.classList.add('on');
-    } else if (filterFavorites) {
+    } else if(filterFavorites){
         document.getElementById('chipFav')?.classList.add('on');
-    } else if (filterList) {
+    } else if(filterList){
         document.getElementById('chipList')?.classList.add('on');
-    } else if (filterCity) {
+    } else if(filterCity){
         document.getElementById('chipCity')?.classList.add('on');
     }
 }
 
 // Chip click handlers
-document.querySelectorAll('.chip').forEach(chip => {
+document.querySelectorAll('.chip').forEach(chip=>{
     chip.onclick = () => {
         const filter = chip.dataset.filter;
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
         chip.classList.add('on');
-        if (filter === 'all') {
+        if(filter === 'all'){
             filterList = ''; filterCity = ''; filterFavorites = false;
-        } else if (filter === 'fav') {
+        } else if(filter === 'fav'){
             filterFavorites = true; filterList = ''; filterCity = '';
-        } else if (filter === 'list') {
+        } else if(filter === 'list'){
             // Open drawer to select list
             openMobDrawer();
-        } else if (filter === 'city') {
+        } else if(filter === 'city'){
             // Open drawer to select city
             openMobDrawer();
         }
@@ -258,33 +258,33 @@ document.querySelectorAll('.chip').forEach(chip => {
 });
 
 // Mobile search sync
-document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e) => {
+document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e)=>{
     const si = document.getElementById('search');
-    if (si) si.value = e.target.value;
+    if(si) si.value = e.target.value;
     update();
 }, 150));
 
 // Sync top search to mobile
-document.getElementById('search')?.addEventListener('input', debounce((e) => {
+document.getElementById('search')?.addEventListener('input', debounce((e)=>{
     const mi = document.getElementById('mobSearchInput'); // mobile not in Google UI
-    if (mi) mi.value = e.target.value;
+    if(mi) mi.value = e.target.value;
 }, 150));
 
 // Mobile bottom sheet
 let mobSheetOpen = false;
-function openMobSheet(title, items) {
+function openMobSheet(title, items){
     const sheet = document.getElementById('mobSheet');
     const titleEl = document.getElementById('mobSheetTitle');
     const listEl = document.getElementById('mobSheetList');
     const chipList = document.getElementById('chipList');
     const chipCity = document.getElementById('chipCity');
     const filterMoreBtn = document.getElementById('filterMoreBtn'); // May not exist in Google UI
-    if (!sheet) return;
-    if (titleEl) titleEl.textContent = title || 'รายการ';
-    if (listEl && items) {
-        listEl.innerHTML = items.map((item, i) => `
+    if(!sheet) return;
+    if(titleEl) titleEl.textContent = title || 'รายการ';
+    if(listEl && items){
+        listEl.innerHTML = items.map((item,i) => `
             <div class="ms-item" onclick="mobSheetItemClick(${i})">
-                <div class="ms-dot" style="background:${item.color || 'var(--bl)'}"></div>
+                <div class="ms-dot" style="background:${item.color||'var(--bl)'}"></div>
                 <div class="ms-info">
                     <div class="ms-name">${item.name}</div>
                     <div class="ms-meta">${item.meta || ''}</div>
@@ -296,23 +296,23 @@ function openMobSheet(title, items) {
     sheet.classList.add('open');
     mobSheetOpen = true;
 }
-function closeMobSheet() {
+function closeMobSheet(){
     const sheet = document.getElementById('mobSheet');
-    if (sheet) sheet.classList.remove('open');
+    if(sheet) sheet.classList.remove('open');
     mobSheetOpen = false;
 }
-function toggleMobSheet() {
-    if (mobSheetOpen) closeMobSheet();
+function toggleMobSheet(){
+    if(mobSheetOpen) closeMobSheet();
 }
-function mobSheetItemClick(index) {
+function mobSheetItemClick(index){
     // Override this to handle item clicks
     console.log('Sheet item clicked:', index);
 }
 
 // Show location details in bottom sheet (mobile) or popup (desktop)
-function showLocationDetails(loc, idx) {
+function showLocationDetails(loc, idx){
     const isMobile = window.innerWidth < 768;
-    if (isMobile) {
+    if(isMobile){
         // Mobile: show in bottom sheet
         const color = getLocTagColor(loc) || getColor(loc.list);
         openMobSheet(loc.name || loc.list, [{
@@ -330,16 +330,16 @@ function showLocationDetails(loc, idx) {
 }
 
 // Override cluster click to use bottom sheet on mobile
-function handleClusterClick(childMarkers) {
+function handleClusterClick(childMarkers){
     const isMobile = window.innerWidth < 768;
     const clusterLocs = childMarkers.map(m => {
         const idx = m._locIdx;
         return (idx !== undefined && locations[idx]) ? locations[idx] : null;
     }).filter(Boolean);
-
-    if (clusterLocs.length === 0) return;
-
-    if (isMobile) {
+    
+    if(clusterLocs.length === 0) return;
+    
+    if(isMobile){
         // Mobile: show in bottom sheet
         const items = clusterLocs.map(loc => {
             const color = getLocTagColor(loc) || getColor(loc.list);
@@ -352,10 +352,10 @@ function handleClusterClick(childMarkers) {
         });
         openMobSheet(`${clusterLocs.length} จุดในบริเวณนี้`, items);
         // Setup item click handlers
-        window.mobSheetItemClick = function (i) {
+        window.mobSheetItemClick = function(i){
             const item = items[i];
-            if (item && item.loc) {
-                map.flyTo([item.loc.lat, item.loc.lng], 16, { animate: true, duration: 0.5 });
+            if(item && item.loc){
+                map.flyTo([item.loc.lat, item.loc.lng], 16, {animate: true, duration: 0.5});
                 // Show single location after fly
                 setTimeout(() => showLocationDetails(item.loc, getLocIndex(item.loc)), 600);
             }
@@ -363,14 +363,14 @@ function handleClusterClick(childMarkers) {
     } else {
         // Desktop: show list panel
         const lp = document.getElementById('listPanel');
-        if (lp) lp.classList.add('open');
+        if(lp) lp.classList.add('open');
         closePlaceCard();
         renderListPanel(clusterLocs);
     }
 }
 
 // Search box
-document.getElementById('search')?.addEventListener('input', debounce(() => {
+document.getElementById('search')?.addEventListener('input', debounce(()=>{
     update();
 }, 150));
 
@@ -382,38 +382,38 @@ onClick('btnUpload', () => doExport());
 onClick('btnImportData', () => openImportModal());
 
 // Import modal functions
-window.openImportModal = function () {
+window.openImportModal = function(){
     document.getElementById('importModalOverlay').classList.add('open');
     document.getElementById('importJsonText').value = '';
     document.getElementById('importUrl').value = '';
 };
-window.closeImportModal = function () {
+window.closeImportModal = function(){
     document.getElementById('importModalOverlay').classList.remove('open');
 };
-window.doImportData = async function () {
+window.doImportData = async function(){
     const jsonText = document.getElementById('importJsonText').value.trim();
     const url = document.getElementById('importUrl').value.trim();
-
+    
     let data = null;
-
-    if (jsonText) {
+    
+    if(jsonText){
         // Parse pasted JSON
         try {
             const json = JSON.parse(jsonText);
             data = tryParseDataFormat(json);
-        } catch (e) {
+        } catch(e) {
             showToast('❌ JSON ไม่ถูกต้อง: ' + e.message, true);
             return;
         }
-    } else if (url) {
+    } else if(url){
         // Fetch from URL
         showToast('⏳ กำลังโหลดจาก URL...', false, true);
         try {
             const res = await fetchWithTimeout(url, 10000);
-            if (!res.ok) throw new Error('HTTP ' + res.status);
+            if(!res.ok) throw new Error('HTTP ' + res.status);
             const json = await res.json();
             data = tryParseDataFormat(json);
-        } catch (e) {
+        } catch(e) {
             showToast('❌ โหลดไม่สำเร็จ: ' + e.message, true);
             return;
         }
@@ -421,8 +421,8 @@ window.doImportData = async function () {
         showToast('⚠️ กรุณาวาง JSON หรือใส่ URL', true);
         return;
     }
-
-    if (data && data.length > 0) {
+    
+    if(data && data.length > 0){
         locations = data;
         invalidateMarkerCache();
         update();
@@ -435,17 +435,17 @@ window.doImportData = async function () {
 };
 
 // Sidebar toggle with backdrop
-function toggleSidebar() {
+function toggleSidebar(){
     const sb = document.getElementById('sidebar');
     const bd = document.getElementById('sidebarBackdrop');
     const isOpen = sb.classList.toggle('open');
-    if (bd) bd.classList.toggle('show', isOpen);
+    if(bd) bd.classList.toggle('show', isOpen);
 }
-window.closeSidebar = function () {
+window.closeSidebar = function(){
     const sb = document.getElementById('sidebar');
     const bd = document.getElementById('sidebarBackdrop');
     sb.classList.remove('open');
-    if (bd) bd.classList.remove('show');
+    if(bd) bd.classList.remove('show');
 };
 onClick('btnMenu', toggleSidebar);
 
@@ -495,17 +495,17 @@ function exportPaths() {
     const json = JSON.stringify(savedPaths, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `bt_paths_${new Date().toISOString().slice(0, 10)}.json`; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `bt_paths_${new Date().toISOString().slice(0,10)}.json`; a.click();
     URL.revokeObjectURL(url);
     showToast('📤 Export เส้นทางแล้ว');
 }
 
-function getChangelog() { try { return JSON.parse(localStorage.getItem(CHANGELOG_KEY) || '[]'); } catch { return []; } }
-function addChangelogEntry(action, loc) {
-    const log = getChangelog();
-    log.unshift({ t: Date.now(), a: action, n: loc.name || '', lat: loc.lat, lng: loc.lng, list: loc.list || '' });
-    if (log.length > MAX_CHANGELOG) log.length = MAX_CHANGELOG;
-    localStorage.setItem(CHANGELOG_KEY, JSON.stringify(log));
+function getChangelog(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
+function addChangelogEntry(action,loc){
+    const log=getChangelog();
+    log.unshift({t:Date.now(),a:action,n:loc.name||'',lat:loc.lat,lng:loc.lng,list:loc.list||''});
+    if(log.length>MAX_CHANGELOG)log.length=MAX_CHANGELOG;
+    localStorage.setItem(CHANGELOG_KEY,JSON.stringify(log));
 }
 
 function normalizeLocation(l) {
@@ -524,28 +524,28 @@ function normalizeLocation(l) {
 
 // Note: DEFAULT_LOCATIONS is declared in locations.js which loads before app.js
 let locations = (() => {
-    try {
-        const s = localStorage.getItem(STORAGE_KEY);
+    try { 
+        const s = localStorage.getItem(STORAGE_KEY); 
         // Use DEFAULT_LOCATIONS from locations.js, or empty array if not available
         const defaultData = (typeof DEFAULT_LOCATIONS !== 'undefined') ? DEFAULT_LOCATIONS : [];
-        const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(defaultData));
-        return raw.map(normalizeLocation);
+        const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(defaultData)); 
+        return raw.map(normalizeLocation); 
     }
-    catch (e) {
+    catch(e) { 
         console.error('Failed to load locations:', e);
         return []; // Return empty array as safe fallback
     }
 })();
 // Auto-clean DMS names from localStorage data on load
-(function () {
-    if (!Array.isArray(locations) || locations.length === 0) return;
-    let dirty = false;
-    locations.forEach(l => {
-        if (!l || !l.name) return;
-        const c = _cleanDMSName(l.name);
-        if (c !== l.name) { l.name = c || ''; dirty = true; }
+(function(){
+    if(!Array.isArray(locations) || locations.length === 0) return;
+    let dirty=false;
+    locations.forEach(l=>{
+        if(!l || !l.name) return;
+        const c=_cleanDMSName(l.name);
+        if(c!==l.name){l.name=c||'';dirty=true;}
     });
-    if (dirty) { localStorage.setItem(STORAGE_KEY, JSON.stringify(locations)); }
+    if(dirty){localStorage.setItem(STORAGE_KEY,JSON.stringify(locations));}
 })();
 
 let addMode = false, editingIndex = -1;
@@ -628,7 +628,7 @@ function _updateSyncBadge() {
 
     const colors = { ok: '#10b981', syncing: '#f5a623', dirty: '#f5a623', error: '#ef4444', idle: '#10b981' };
     const labels = { ok: 'Live', syncing: 'Syncing', dirty: 'Wait', error: 'Error', idle: 'Live' };
-
+    
     if (topBadge) {
         const color = colors[syncStatus] || '#10b981';
         topBadge.style.color = color;
@@ -645,46 +645,46 @@ function _updateSyncBadge() {
     const agoText = _lastSyncTime ? (ago < 60 ? `${ago}s ago` : `${Math.round(ago / 60)}m ago`) : '';
     const titles = { idle: '', ok: `Synced ${agoText}`, syncing: 'กำลัง sync...', dirty: 'ยังไม่ sync', error: 'Sync ล้มเหลว' };
     badge.title = titles[syncStatus] || '';
-
+    
     const btn = document.getElementById('btnGithubSave');
     if (btn) btn.title = `GitHub Sync ${icons[syncStatus] || ''} ${agoText}`.trim();
 }
 setInterval(_updateSyncBadge, 10000);
 
-function _canSync() { return true; }
-function _locRow(l) {
+function _canSync(){return true;}
+function _locRow(l){
     return {
-        name: _cleanDMSName(l.name) || '',
+        name: _cleanDMSName(l.name)||'',
         lat: l.lat, lng: l.lng,
-        list: l.list || '', city: l.city || '',
-        note: l.note || '',
-        tags: Array.isArray(l.tags) ? l.tags.join(',') : (l.tags || ''),
-        photo: l.photo || '',
-        added_by: localStorage.getItem('bt_username') || '',
-        updated_at: new Date(l.updatedAt || Date.now()).toISOString(),
+        list: l.list||'', city: l.city||'',
+        note: l.note||'',
+        tags: Array.isArray(l.tags)?l.tags.join(','):(l.tags||''),
+        photo: l.photo||'',
+        added_by: localStorage.getItem('bt_username')||'',
+        updated_at: new Date(l.updatedAt||Date.now()).toISOString(),
     };
 }
 // Supabase write-only helpers — do NOT touch local array or render.
 // Realtime subscription is the ONLY place that updates locations[] and calls update().
-async function sbInsert(loc) {
-    const { error } = await _sb.from('locations').insert(_locRow(loc));
-    if (error) { console.warn('sbInsert failed:', error.message); _setSyncStatus('error'); }
+async function sbInsert(loc){
+    const {error}=await _sb.from('locations').insert(_locRow(loc));
+    if(error){console.warn('sbInsert failed:',error.message);_setSyncStatus('error');}
     // Realtime INSERT event will add to locations[] and render
 }
-async function sbUpdate(loc) {
-    if (!loc.sb_id) { await sbInsert(loc); return; }
-    const { error } = await _sb.from('locations').update(_locRow(loc)).eq('id', loc.sb_id);
-    if (error) { console.warn('sbUpdate failed:', error.message); _setSyncStatus('error'); }
+async function sbUpdate(loc){
+    if(!loc.sb_id){await sbInsert(loc);return;}
+    const {error}=await _sb.from('locations').update(_locRow(loc)).eq('id',loc.sb_id);
+    if(error){console.warn('sbUpdate failed:',error.message);_setSyncStatus('error');}
     // Realtime UPDATE event will update locations[] and render
 }
-async function sbDelete(loc) {
-    if (!loc.sb_id) return;
-    const { error } = await _sb.from('locations').delete().eq('id', loc.sb_id);
-    if (error) { console.warn('sbDelete failed:', error.message); _setSyncStatus('error'); }
+async function sbDelete(loc){
+    if(!loc.sb_id)return;
+    const {error}=await _sb.from('locations').delete().eq('id',loc.sb_id);
+    if(error){console.warn('sbDelete failed:',error.message);_setSyncStatus('error');}
     // Realtime DELETE event will remove from locations[] and render
 }
-async function sbBulkUpdate(locs) {
-    for (const loc of locs) { await sbUpdate(loc); }
+async function sbBulkUpdate(locs){
+    for(const loc of locs){await sbUpdate(loc);}
 }
 
 let _sbLoaded = false;
@@ -736,10 +736,10 @@ const _tileOpts = {
     keepBuffer: _mobile ? 2 : 4, // fewer buffer tiles on mobile
 };
 const tileLayers = {
-    'Street': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19, ..._tileOpts }),
+    'Street':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19, ..._tileOpts }),
     'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19, ..._tileOpts }),
-    'Terrain': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17, ..._tileOpts }),
-    'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19, ..._tileOpts })
+    'Terrain':   L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17, ..._tileOpts }),
+    'Dark':      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19, ..._tileOpts })
 };
 const tileNames = Object.keys(tileLayers);
 let currentTileIdx = 0;
@@ -756,7 +756,7 @@ function getDensityClass(count) {
 }
 function createClusterGroup() {
     return L.markerClusterGroup({
-        maxClusterRadius: function (zoom) {
+        maxClusterRadius: function(zoom) {
             if (zoom >= 18) return 10;
             if (zoom >= 16) return 20;
             if (zoom >= 14) return 30;
@@ -778,17 +778,17 @@ function createClusterGroup() {
             // Proportional sizing: 30px for small clusters, up to 60px for large
             const size = Math.min(60, Math.max(30, 30 + Math.sqrt(count) * 3));
             const fontSize = Math.min(16, Math.max(11, 11 + count / 20));
-            return L.divIcon({
-                html: `<div style="width:${size}px;height:${size}px;font-size:${fontSize}px;"><span>${count}</span></div>`,
-                className: `marker-cluster ${getDensityClass(count)}`,
-                iconSize: L.point(size, size)
+            return L.divIcon({ 
+                html: `<div style="width:${size}px;height:${size}px;font-size:${fontSize}px;"><span>${count}</span></div>`, 
+                className: `marker-cluster ${getDensityClass(count)}`, 
+                iconSize: L.point(size, size) 
             });
         }
     });
 }
 
 let markerCluster = createClusterGroup(), currentMarkers = [], heatLayer = null;
-const colorPalette = ['#ea4335', '#fbbc04', '#34a853', '#4285f4', '#9334e6', '#00897b', '#e91e63', '#ff6d00', '#0097a7', '#795548'];
+const colorPalette = ['#ea4335','#fbbc04','#34a853','#4285f4','#9334e6','#00897b','#e91e63','#ff6d00','#0097a7','#795548'];
 const listColors = {};
 function getColor(list) {
     if (!listColors[list]) {
@@ -798,38 +798,38 @@ function getColor(list) {
     return listColors[list];
 }
 function haversine(lat1, lng1, lat2, lng2) {
-    const R = 6371000, p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180, dp = (lat2 - lat1) * Math.PI / 180, dl = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const R=6371000, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180, dp=(lat2-lat1)*Math.PI/180, dl=(lng2-lng1)*Math.PI/180;
+    const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+    return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-function formatDist(m) { return m >= 1000 ? `${(m / 1000).toFixed(1)} กม.` : `${Math.round(m)} ม.`; }
+function formatDist(m) { return m>=1000?`${(m/1000).toFixed(1)} กม.`:`${Math.round(m)} ม.`; }
 
 // ════════════════════════════════════════════
 // RENDER
 // ════════════════════════════════════════════
 function matchCoords(l, q) {
-    const qClean = q.replace(/\s/g, '');
-    return String(l.lat).includes(q) || String(l.lng).includes(q) || (String(l.lat) + ',' + String(l.lng)).includes(qClean);
+    const qClean=q.replace(/\s/g,'');
+    return String(l.lat).includes(q)||String(l.lng).includes(q)||(String(l.lat)+','+String(l.lng)).includes(qClean);
 }
 
 function getFiltered() {
     const q = document.getElementById('search').value.toLowerCase().trim();
     return locations.filter(l => {
-        const ml = !filterList || l.list === filterList;
-        const mc = !filterCity || l.city === filterCity;
-        const ms = !q || (l.name || '').toLowerCase().includes(q) || l.list.toLowerCase().includes(q) || (l.city || '').toLowerCase().includes(q) || (l.tags || []).some(t => t.toLowerCase().includes(q)) || matchCoords(l, q);
-        const mn = !nearbyMode || !myLatLng || haversine(myLatLng.lat, myLatLng.lng, l.lat, l.lng) <= nearbyRadius;
-        const mf = !filterFavorites || isFavorite(l);
-        return ml && mc && ms && mn && mf;
+        const ml = !filterList || l.list===filterList;
+        const mc = !filterCity || l.city===filterCity;
+        const ms = !q||(l.name||'').toLowerCase().includes(q)||l.list.toLowerCase().includes(q)||(l.city||'').toLowerCase().includes(q)||(l.tags||[]).some(t=>t.toLowerCase().includes(q))||matchCoords(l,q);
+        const mn = !nearbyMode||!myLatLng||haversine(myLatLng.lat,myLatLng.lng,l.lat,l.lng)<=nearbyRadius;
+        const mf = !filterFavorites||isFavorite(l);
+        return ml&&mc&&ms&&mn&&mf;
     });
 }
 
 function getSorted(filtered) {
     const arr = [...filtered];
-    if (listSortMode === 'name') arr.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'th'));
-    else if (listSortMode === 'list') arr.sort((a, b) => a.list.localeCompare(b.list, 'th'));
-    else if (listSortMode === 'city') arr.sort((a, b) => (a.city || '').localeCompare(b.city || '', 'th'));
-    else if (listSortMode === 'near' && myLatLng) arr.sort((a, b) => haversine(myLatLng.lat, myLatLng.lng, a.lat, a.lng) - haversine(myLatLng.lat, myLatLng.lng, b.lat, b.lng));
+    if (listSortMode==='name') arr.sort((a,b)=>(a.name||'').localeCompare(b.name||'','th'));
+    else if (listSortMode==='list') arr.sort((a,b)=>a.list.localeCompare(b.list,'th'));
+    else if (listSortMode==='city') arr.sort((a,b)=>(a.city||'').localeCompare(b.city||'','th'));
+    else if (listSortMode==='near'&&myLatLng) arr.sort((a,b)=>haversine(myLatLng.lat,myLatLng.lng,a.lat,a.lng)-haversine(myLatLng.lat,myLatLng.lng,b.lat,b.lng));
     return arr;
 }
 
@@ -851,14 +851,14 @@ function _buildMarkerCache() {
             className: '',
             html: `<div style="
                 width:${size}px;height:${size}px;border-radius:50%;
-                background:${color};border:2.5px solid ${fav ? '#f9ab00' : '#fff'};
-                box-shadow:0 1px 4px rgba(0,0,0,.35)${fav ? ',0 0 6px rgba(249,171,0,.6)' : ''};
+                background:${color};border:2.5px solid ${fav?'#f9ab00':'#fff'};
+                box-shadow:0 1px 4px rgba(0,0,0,.35)${fav?',0 0 6px rgba(249,171,0,.6)':''};
                 box-sizing:border-box;
                 will-change:transform;
             " data-idx="${idx}"></div>`,
             iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
-            tooltipAnchor: [0, -size / 2],
+            iconAnchor: [size/2, size/2],
+            tooltipAnchor: [0, -size/2],
         });
         const marker = L.marker([loc.lat, loc.lng], {
             icon,
@@ -880,7 +880,7 @@ function _buildMarkerCache() {
     _clusterDirty = false;
 }
 
-function _heatZoom() { if (heatmapMode) { _lastFilteredKey = null; update(); } }
+function _heatZoom(){ if(heatmapMode){_lastFilteredKey=null;update();} }
 
 function renderMarkers(filtered) {
     // Hide normal markers in route mode to avoid overlap with route stops
@@ -897,15 +897,15 @@ function renderMarkers(filtered) {
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
     if (heatmapMode) {
         if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
-        const z = map.getZoom();
-        const hr = Math.max(8, Math.min(40, z <= 10 ? 10 : z <= 12 ? 18 : z <= 14 ? 28 : 40));
-        const hb = Math.round(hr * 0.6);
-        heatLayer = L.heatLayer(filtered.map(l => [l.lat, l.lng, 1]), { radius: hr, blur: hb, gradient: { 0.2: '#00f', 0.5: '#0ff', 0.7: '#0f0', 0.85: '#ff0', 1.0: '#f00' }, minOpacity: 0.4 }).addTo(map);
-        map.off('zoomend', _heatZoom).on('zoomend', _heatZoom);
-        const _cp = document.getElementById('countPill'); if (_cp) _cp.textContent = filtered.length + ' สถานที่';
-        const _cp2 = document.getElementById('countPill'); if (_cp2) _cp2.classList.add('show');
-        const _mst2 = document.getElementById('mapStatTotal'); if (_mst2) _mst2.textContent = filtered.length;
-        const _msc2 = document.getElementById('mapStatClusters'); if (_msc2) _msc2.textContent = 0;
+        const z=map.getZoom();
+        const hr=Math.max(8,Math.min(40, z<=10?10:z<=12?18:z<=14?28:40));
+        const hb=Math.round(hr*0.6);
+        heatLayer = L.heatLayer(filtered.map(l=>[l.lat,l.lng,1]),{radius:hr,blur:hb,gradient:{0.2:'#00f',0.5:'#0ff',0.7:'#0f0',0.85:'#ff0',1.0:'#f00'},minOpacity:0.4}).addTo(map);
+        map.off('zoomend',_heatZoom).on('zoomend',_heatZoom);
+        const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = filtered.length + ' สถานที่';
+        const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
+        const _mst2=document.getElementById('mapStatTotal');if(_mst2)_mst2.textContent=filtered.length;
+        const _msc2=document.getElementById('mapStatClusters');if(_msc2)_msc2.textContent=0;
         return;
     }
 
@@ -931,16 +931,16 @@ function renderMarkers(filtered) {
     requestAnimationFrame(() => {
         markerCluster.addLayers(layers, { chunkedLoading: true });
         map.addLayer(markerCluster);
-        const _cp = document.getElementById('countPill'); if (_cp) _cp.textContent = filtered.length + ' สถานที่';
-        const _cp2 = document.getElementById('countPill'); if (_cp2) _cp2.classList.add('show');
+        const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = filtered.length + ' สถานที่';
+        const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
 
         // Update map stat counters
-        const _mst = document.getElementById('mapStatTotal'); if (_mst) _mst.textContent = filtered.length;
-        const _msc = document.getElementById('mapStatClusters'); if (_msc) _msc.textContent = markerCluster.getLayers().length;
-        const _lvc = document.getElementById('lvCount'); if (_lvc) _lvc.textContent = 'แสดง ' + filtered.length + ' จาก ' + locations.length + ' จุด';
+        const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=filtered.length;
+        const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=markerCluster.getLayers().length;
+        const _lvc=document.getElementById('lvCount');if(_lvc)_lvc.textContent='แสดง '+filtered.length+' จาก '+locations.length+' จุด';
 
         // Cluster click → show list of locations (bottom sheet on mobile, list panel on desktop)
-        markerCluster.on('clusterclick', function (e) {
+        markerCluster.on('clusterclick', function(e) {
             const childMarkers = e.layer.getAllChildMarkers();
             handleClusterClick(childMarkers);
         });
@@ -961,12 +961,12 @@ function update() {
     const filtered = getFiltered();
     renderMarkers(filtered);
     // render list panel เฉพาะเมื่อเปิดอยู่ และไม่ได้อยู่ใน route mode
-    const _lp = document.getElementById('listPanel');
+    const _lp=document.getElementById('listPanel');
     if (_lp && _lp.classList.contains('open') && !routeMode) {
         renderListPanel(filtered);
     } else if (!routeMode) {
-        const _lpt = document.getElementById('listPanelTitle');
-        if (_lpt) _lpt.textContent = filtered.length + ' สถานที่';
+        const _lpt=document.getElementById('listPanelTitle');
+        if(_lpt) _lpt.textContent = filtered.length + ' สถานที่';
     }
     updateChipLabels();
     refreshDatalistSuggestions();
@@ -980,110 +980,110 @@ function update() {
 const REPO = 'valrinx/bt-locations';
 const FETCH_TIMEOUT = 4000; // 4 seconds timeout per URL
 
-function setLoader(txt) {
+function setLoader(txt){
     const el = document.getElementById('loaderTxt');
-    if (el) el.textContent = txt;
+    if(el) el.textContent = txt;
 }
 
 // Fetch with timeout to avoid hanging
-async function fetchWithTimeout(url, timeout = FETCH_TIMEOUT) {
+async function fetchWithTimeout(url, timeout = FETCH_TIMEOUT){
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timer);
         return res;
-    } catch (e) {
+    } catch(e) {
         clearTimeout(timer);
         throw e;
     }
 }
 
-async function initApp() {
+async function initApp(){
     try {
         console.log('[BT] initApp started');
-
+        
         // 1. Data already loaded from localStorage at module init (line ~720)
         // If no localStorage data, locations will be empty and we use sample data
         setLoader('กำลังเริ่มต้น...');
-        if (locations.length === 0) {
+        if(locations.length === 0) {
             console.log('[BT] No locations, loading sample data');
             loadSampleData();
             saveToStorage(); // Save sample data to localStorage for next time
         }
-
+        
         // 2. Render initial markers (map already initialized at line ~875)
         console.log('[BT] Calling update()...');
         update();
-
+        
         // 3. Show app immediately
         setLoader('พร้อมใช้งาน');
         setTimeout(() => {
             document.getElementById('loader').classList.add('done');
             document.getElementById('app').style.display = 'flex';
             console.log('[BT] Loader hidden');
-            setTimeout(() => { map.invalidateSize(); update(); }, 100);
+            setTimeout(()=>{map.invalidateSize();update();},100);
         }, 200);
-
+        
         // 4. Set avatar (if exists in UI)
         const un = localStorage.getItem('bt_username') || '';
         const a1 = document.getElementById('av1');
-        if (a1) a1.textContent = (un[0] || 'V').toUpperCase();
-
+        if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
+        
         _initMapEvents(); // Add this line
         console.log('[BT] initApp completed');
         // 5. No automatic fetch - user controls data via Import button
-    } catch (e) {
+    } catch(e) {
         console.error('[BT] initApp error:', e);
         document.getElementById('loaderTxt').textContent = 'เกิดข้อผิดพลาด: ' + e.message;
     }
 }
 
-async function fetchRepoDataWithTimeout() {
+async function fetchRepoDataWithTimeout(){
     const attempts = [
         `https://raw.githubusercontent.com/${REPO}/main/data.json`,
         `https://raw.githubusercontent.com/${REPO}/main/locations.json`,
         `https://raw.githubusercontent.com/${REPO}/main/docs/data.json`,
         `https://raw.githubusercontent.com/${REPO}/master/data.json`,
     ];
-
-    for (const url of attempts) {
+    
+    for(const url of attempts){
         try {
             const res = await fetchWithTimeout(url, FETCH_TIMEOUT);
-            if (!res.ok) continue;
+            if(!res.ok) continue;
             const json = await res.json();
             const parsed = tryParseDataFormat(json);
-            if (parsed && parsed.length > 0) return parsed;
-        } catch (e) { continue; }
+            if(parsed && parsed.length > 0) return parsed;
+        } catch(e){ continue; }
     }
-
+    
     // Try GitHub API as last resort
     try {
         const apiRes = await fetchWithTimeout(`https://api.github.com/repos/${REPO}/git/trees/main?recursive=1`, FETCH_TIMEOUT);
-        if (apiRes.ok) {
+        if(apiRes.ok){
             const tree = await apiRes.json();
             const jsonFiles = (tree.tree || []).filter(f => f.path.endsWith('.json') && f.type === 'blob');
-            for (const f of jsonFiles.slice(0, 3)) {
+            for(const f of jsonFiles.slice(0, 3)){
                 try {
                     const r = await fetchWithTimeout(`https://raw.githubusercontent.com/${REPO}/main/${f.path}`, FETCH_TIMEOUT);
-                    if (!r.ok) continue;
+                    if(!r.ok) continue;
                     const j = await r.json();
                     const parsed = tryParseDataFormat(j);
-                    if (parsed && parsed.length > 0) return parsed;
-                } catch (e) { continue; }
+                    if(parsed && parsed.length > 0) return parsed;
+                } catch(e){ continue; }
             }
         }
-    } catch (e) { /* ignore */ }
-
+    } catch(e){ /* ignore */ }
+    
     return null;
 }
 
-function parseDataFormat(json) {
+function parseDataFormat(json){
     // Format 1: array of points [{name,lat,lng,list}]
-    if (Array.isArray(json) && json.length > 0 && (json[0].lat !== undefined || json[0].latitude !== undefined)) {
+    if(Array.isArray(json) && json.length > 0 && (json[0].lat !== undefined || json[0].latitude !== undefined)){
         locations = json.map((p, i) => ({
             id: p.id || i,
-            name: p.name || p.title || 'จุดที่ ' + (i + 1),
+            name: p.name || p.title || 'จุดที่ ' + (i+1),
             lat: parseFloat(p.lat || p.latitude || p.y || 0),
             lng: parseFloat(p.lng || p.lon || p.longitude || p.x || 0),
             list: p.list || p.group || p.category || 'ทั้งหมด',
@@ -1100,13 +1100,13 @@ function parseDataFormat(json) {
         return locations.length > 0;
     }
     // Format 2: {lists:[{name,points:[...]}]}
-    if (json.lists && Array.isArray(json.lists)) {
+    if(json.lists && Array.isArray(json.lists)){
         locations = [];
         json.lists.forEach(l => {
             (l.points || l.locations || l.items || []).forEach((p, i) => {
                 locations.push({
                     id: p.id || locations.length,
-                    name: p.name || 'จุดที่ ' + (i + 1),
+                    name: p.name || 'จุดที่ ' + (i+1),
                     lat: parseFloat(p.lat || p.latitude || 0),
                     lng: parseFloat(p.lng || p.longitude || 0),
                     list: l.name || l.id || 'รายการ',
@@ -1124,22 +1124,22 @@ function parseDataFormat(json) {
         return locations.length > 0;
     }
     // Format 3: {points:[...]} or {locations:[...]} or {data:[...]}
-    if (json.points || json.locations || json.data) {
+    if(json.points || json.locations || json.data){
         return parseDataFormat(json.points || json.locations || json.data);
     }
     return false;
 }
 
-function loadSampleData() {
+function loadSampleData(){
     // Realistic sample data (similar to prototype)
     const sample = [
-        { name: 'ร้าน BT สาทร', lat: 13.7201, lng: 100.5301, list: 'ยกกลับแล้ว', city: 'สาทร', note: 'ติดต่อคุณสมชาย' },
-        { name: 'ร้าน BT สีลม', lat: 13.7301, lng: 100.5401, list: 'ยกกลับแล้ว', city: 'บางรัก', note: 'เปิด 8:00-18:00' },
-        { name: 'ร้าน BT อโศก', lat: 13.7401, lng: 100.5601, list: 'คืนนายาว', city: 'วัฒนา', note: 'ใกล้ BTS' },
-        { name: 'ร้าน BT รัชดา', lat: 13.7601, lng: 100.5701, list: 'มีนบุรี', city: 'ห้วยขวาง', note: 'มีที่จอดรถ' },
-        { name: 'ร้าน BT ลาดพร้าว', lat: 13.7801, lng: 100.5801, list: 'เมืองนนทบุรี', city: 'จตุจักร', note: 'ติดต่อ 081-xxx-xxxx' },
+        {name:'ร้าน BT สาทร', lat:13.7201, lng:100.5301, list:'ยกกลับแล้ว', city:'สาทร', note:'ติดต่อคุณสมชาย'},
+        {name:'ร้าน BT สีลม', lat:13.7301, lng:100.5401, list:'ยกกลับแล้ว', city:'บางรัก', note:'เปิด 8:00-18:00'},
+        {name:'ร้าน BT อโศก', lat:13.7401, lng:100.5601, list:'คืนนายาว', city:'วัฒนา', note:'ใกล้ BTS'},
+        {name:'ร้าน BT รัชดา', lat:13.7601, lng:100.5701, list:'มีนบุรี', city:'ห้วยขวาง', note:'มีที่จอดรถ'},
+        {name:'ร้าน BT ลาดพร้าว', lat:13.7801, lng:100.5801, list:'เมืองนนทบุรี', city:'จตุจักร', note:'ติดต่อ 081-xxx-xxxx'},
     ];
-    locations = sample.map((p, i) => ({ ...p, id: i, date: new Date().toLocaleDateString('th-TH') }));
+    locations = sample.map((p, i) => ({...p, id: i, date: new Date().toLocaleDateString('th-TH')}));
     invalidateMarkerCache();
 }
 
@@ -1150,13 +1150,13 @@ console.log('[BT] Script loaded, readyState:', document.readyState);
 console.log('[BT] locations count:', locations.length);
 
 try {
-    if (document.readyState === 'loading') {
+    if(document.readyState === 'loading'){
         document.addEventListener('DOMContentLoaded', initApp);
     } else {
         // DOM already ready (app.js loaded dynamically after DOMContentLoaded)
         initApp();
     }
-} catch (e) {
+} catch(e) {
     console.error('[BT] Init failed:', e);
     document.getElementById('loaderTxt').textContent = 'เกิดข้อผิดพลาด: ' + e.message;
 }
@@ -1164,8 +1164,8 @@ try {
 function refreshDatalistSuggestions() {
     const listSuggestions = document.getElementById('listSuggestions');
     const citySuggestions = document.getElementById('citySuggestions');
-    if (listSuggestions) listSuggestions.innerHTML = [...new Set(locations.map(l => l.list).filter(Boolean))].map(l => `<option value="${l}">`).join('');
-    if (citySuggestions) citySuggestions.innerHTML = [...new Set(locations.map(l => l.city).filter(Boolean))].map(c => `<option value="${c}">`).join('');
+    if(listSuggestions) listSuggestions.innerHTML=[...new Set(locations.map(l=>l.list).filter(Boolean))].map(l=>`<option value="${l}">`).join('');
+    if(citySuggestions) citySuggestions.innerHTML=[...new Set(locations.map(l=>l.city).filter(Boolean))].map(c=>`<option value="${c}">`).join('');
 }
 
 function updateChipLabels() {
@@ -1178,37 +1178,37 @@ function updateChipLabels() {
     const chipHeatmap = document.getElementById('chipHeatmap');
     const chipFav = document.getElementById('chipFav');
     const chipMore = document.getElementById('chipMore');
-    if (chipListLabel) chipListLabel.textContent = filterList || 'รายการ';
-    if (chipCityLabel) chipCityLabel.textContent = filterCity || 'เขต';
-    if (chipList) chipList.classList.toggle('active', !!filterList);
-    if (chipCity) chipCity.classList.toggle('active', !!filterCity);
+    if(chipListLabel) chipListLabel.textContent=filterList||'รายการ';
+    if(chipCityLabel) chipCityLabel.textContent=filterCity||'เขต';
+    if(chipList) chipList.classList.toggle('active',!!filterList);
+    if(chipCity) chipCity.classList.toggle('active',!!filterCity);
     // Dropdown items
-    if (chipAll) chipAll.classList.toggle('active', !filterList && !filterCity && !nearbyMode && !filterFavorites);
-    if (chipNearby) chipNearby.classList.toggle('active', nearbyMode);
-    if (chipHeatmap) chipHeatmap.classList.toggle('active', heatmapMode);
-    if (chipFav) chipFav.classList.toggle('active', filterFavorites);
+    if(chipAll) chipAll.classList.toggle('active',!filterList&&!filterCity&&!nearbyMode&&!filterFavorites);
+    if(chipNearby) chipNearby.classList.toggle('active',nearbyMode);
+    if(chipHeatmap) chipHeatmap.classList.toggle('active',heatmapMode);
+    if(chipFav) chipFav.classList.toggle('active',filterFavorites);
     // Highlight "more" button if any dropdown item is active
-    const anyDropActive = nearbyMode || heatmapMode || filterFavorites;
-    if (chipMore) chipMore.classList.toggle('active', anyDropActive);
+    const anyDropActive=nearbyMode||heatmapMode||filterFavorites;
+    if(chipMore) chipMore.classList.toggle('active',anyDropActive);
 }
 
 // ════════════════════════════════════════════
 // PLACE CARD
 // ════════════════════════════════════════════
 function showPlaceCard(loc, idx) {
-    const color = getColor(loc.list);
-    const dist = myLatLng ? haversine(myLatLng.lat, myLatLng.lng, loc.lat, loc.lng) : null;
-    const distHtml = dist !== null ? `<span class="distance-badge">📍 ${formatDist(dist)}</span>` : '';
-    document.getElementById('placeCardContent').innerHTML = `
-        <div class="place-card-name">${loc.name || 'ไม่มีชื่อ'}</div>
+    const color=getColor(loc.list);
+    const dist=myLatLng?haversine(myLatLng.lat,myLatLng.lng,loc.lat,loc.lng):null;
+    const distHtml=dist!==null?`<span class="distance-badge">📍 ${formatDist(dist)}</span>`:'';
+    document.getElementById('placeCardContent').innerHTML=`
+        <div class="place-card-name">${loc.name||'ไม่มีชื่อ'}</div>
         <div class="place-card-meta">
             <span style="color:${color};font-weight:600;">● ${loc.list}</span>
-            ${loc.city ? `<span class="dot">·</span><span>${loc.city}</span>` : ''}
+            ${loc.city?`<span class="dot">·</span><span>${loc.city}</span>`:''}
             ${distHtml}
         </div>
-        ${loc.tags && loc.tags.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t => { const tc = getTagColor(t); return `<span data-tag="${t}" title="กดเพื่อตั้งสี tag" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:${tc || 'var(--surface2)'};border-radius:12px;font-size:11px;color:${tc ? '#fff' : 'var(--gn)'};font-weight:500;cursor:pointer;border:1px solid ${tc || 'var(--gn)'};">🏷️ ${t}</span>`; }).join('')}</div>` : ''}
-        ${loc.photo ? `<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--gn);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>` : ''}
-        ${loc.note ? `<div style="font-size:13px;color:var(--gn);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>` : ''}
+        ${loc.tags&&loc.tags.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t=>{const tc=getTagColor(t);return`<span data-tag="${t}" title="กดเพื่อตั้งสี tag" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:${tc||'var(--surface2)'};border-radius:12px;font-size:11px;color:${tc?'#fff':'var(--gn)'};font-weight:500;cursor:pointer;border:1px solid ${tc||'var(--gn)'};">🏷️ ${t}</span>`;}).join('')}</div>`:''}
+        ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--gn);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
+        ${loc.note?`<div style="font-size:13px;color:var(--gn);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>`:''}
         <div class="place-card-actions">
             <button class="place-action-btn" onclick="openEdit(${idx})" style="background:rgba(91,143,255,0.15);border-color:rgba(91,143,255,0.3);">
                 <span class="place-action-icon">✏️</span>
@@ -1233,185 +1233,185 @@ function showPlaceCard(loc, idx) {
             <button onclick="copyCoords(${loc.lat},${loc.lng})"
                 style="border:none;background:none;cursor:pointer;color:var(--bl);font-size:13px;font-weight:500;padding:4px 8px;border-radius:8px;flex-shrink:0;">คัดลอก</button>
         </div>
-        ${loc.city ? `<div class="place-card-row"><div class="place-card-row-icon">🏙️</div><div class="place-card-row-text">${loc.city}</div></div>` : ''}
+        ${loc.city?`<div class="place-card-row"><div class="place-card-row-icon">🏙️</div><div class="place-card-row-text">${loc.city}</div></div>`:''}
     `;
     // Tag color click handler
-    document.getElementById('placeCardContent').querySelectorAll('[data-tag]').forEach(el => {
-        el.onclick = e => {
+    document.getElementById('placeCardContent').querySelectorAll('[data-tag]').forEach(el=>{
+        el.onclick=e=>{
             e.stopPropagation();
-            const tag = el.dataset.tag;
-            const cur = getTagColor(tag) || '#4caf50';
-            const inp = document.createElement('input'); inp.type = 'color'; inp.value = cur;
-            inp.style.cssText = 'position:fixed;opacity:0;width:0;height:0;';
+            const tag=el.dataset.tag;
+            const cur=getTagColor(tag)||'#4caf50';
+            const inp=document.createElement('input'); inp.type='color'; inp.value=cur;
+            inp.style.cssText='position:fixed;opacity:0;width:0;height:0;';
             document.body.appendChild(inp);
-            inp.addEventListener('change', () => {
-                tagColors[tag] = inp.value; saveTagColors();
-                _clusterDirty = true; invalidateCache(); update();
-                showPlaceCard(loc, idx);
+            inp.addEventListener('change',()=>{
+                tagColors[tag]=inp.value; saveTagColors();
+                _clusterDirty=true; invalidateCache(); update();
+                showPlaceCard(loc,idx);
                 document.body.removeChild(inp);
             });
-            inp.addEventListener('blur', () => { setTimeout(() => { if (document.body.contains(inp)) document.body.removeChild(inp); }, 200); });
+            inp.addEventListener('blur',()=>{ setTimeout(()=>{ if(document.body.contains(inp))document.body.removeChild(inp); },200); });
             inp.click();
         };
-        el.title = 'กดเพื่อตั้งสีให้ tag นี้ (ทุกจุดที่มี tag นี้จะเปลี่ยนสี)';
+        el.title='กดเพื่อตั้งสีให้ tag นี้ (ทุกจุดที่มี tag นี้จะเปลี่ยนสี)';
     });
     closePlaceCard();
-    setTimeout(() => {
+    setTimeout(()=>{
         const pc = document.getElementById('placeCard');
-        if (pc) pc.classList.add('open');
-    }, 10);
+        if(pc) pc.classList.add('open');
+    },10);
     const targetZoom = Math.max(map.getZoom(), _mobile ? 16 : 15);
-    map.flyTo([loc.lat, loc.lng], targetZoom, { animate: !_mobile, duration: _mobile ? 0.3 : 0.6 });
+    map.flyTo([loc.lat,loc.lng], targetZoom, {animate: !_mobile, duration: _mobile ? 0.3 : 0.6});
     closeListPanel();
 }
 
 // ══ คัดลอกพิกัด — รองรับมือถือ ══
-window.copyCoords = function (lat, lng) {
+window.copyCoords = function(lat, lng) {
     const text = `${lat},${lng}`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(() => showToast('✅ คัดลอกพิกัดแล้ว', false, true)).catch(() => fallbackCopy(text));
+        navigator.clipboard.writeText(text).then(()=>showToast('✅ คัดลอกพิกัดแล้ว',false,true)).catch(()=>fallbackCopy(text));
     } else { fallbackCopy(text); }
 };
 function fallbackCopy(text) {
     const ta = document.createElement('textarea');
-    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
     document.body.appendChild(ta); ta.focus(); ta.select();
-    try { document.execCommand('copy'); showToast('✅ คัดลอกแล้ว', false, true); }
-    catch (e) { showToast('ไม่สามารถคัดลอกได้'); }
+    try { document.execCommand('copy'); showToast('✅ คัดลอกแล้ว',false,true); }
+    catch(e) { showToast('ไม่สามารถคัดลอกได้'); }
     document.body.removeChild(ta);
 }
 
-function closePlaceCard() { const pc = document.getElementById('placeCard'); if (pc) pc.classList.remove('open'); }
-window.doToggleFavorite = function (idx) { const loc = locations[idx]; if (!loc) return; toggleFavorite(loc); invalidateCache(); update(); showPlaceCard(loc, idx); showToast(isFavorite(loc) ? '⭐ เพิ่มในรายการโปรดแล้ว' : '☆ นำออกจากรายการโปรดแล้ว'); };
+function closePlaceCard() { const pc = document.getElementById('placeCard'); if(pc) pc.classList.remove('open'); }
+window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'⭐ เพิ่มในรายการโปรดแล้ว':'☆ นำออกจากรายการโปรดแล้ว');};
 onClick('placeCardClose', closePlaceCard);
 
 // ════════════════════════════════════════════
 // LIST PANEL
 // ════════════════════════════════════════════
 function renderListPanel(filtered) {
-    const body = document.getElementById('listBody');
-    document.getElementById('listPanelTitle').textContent = `${filtered.length} สถานที่`;
-    const sorted = getSorted(filtered);
-    body.innerHTML = sorted.map(loc => {
-        const color = getColor(loc.list);
-        const idx = getLocIndex(loc);
-        const dist = myLatLng ? haversine(myLatLng.lat, myLatLng.lng, loc.lat, loc.lng) : null;
-        const distText = dist !== null ? ` · ${formatDist(dist)}` : '';
+    const body=document.getElementById('listBody');
+    document.getElementById('listPanelTitle').textContent=`${filtered.length} สถานที่`;
+    const sorted=getSorted(filtered);
+    body.innerHTML=sorted.map(loc=>{
+        const color=getColor(loc.list);
+        const idx=getLocIndex(loc);
+        const dist=myLatLng?haversine(myLatLng.lat,myLatLng.lng,loc.lat,loc.lng):null;
+        const distText=dist!==null?` · ${formatDist(dist)}`:'';
         return `<div class="list-item" onclick="showPlaceCard(locations[${idx}],${idx});closeListPanel();">
             <div class="list-item-icon" style="background:${color}20;"><span style="font-size:16px;">📍</span></div>
             <div class="list-item-text">
-                <div class="list-item-name">${_cleanDMSName(loc.name) || 'ไม่มีชื่อ'}</div>
-                <div class="list-item-sub">${loc.list}${loc.city ? ' · ' + loc.city : ''}${distText}</div>
+                <div class="list-item-name">${_cleanDMSName(loc.name)||'ไม่มีชื่อ'}</div>
+                <div class="list-item-sub">${loc.list}${loc.city?' · '+loc.city:''}${distText}</div>
             </div>
             <span class="list-item-chevron">›</span>
         </div>`;
     }).join('');
 }
-window.closeListPanel = () => { const _lp = document.getElementById('listPanel'); if (_lp) _lp.classList.remove('open'); };
+window.closeListPanel = ()=>{const _lp=document.getElementById('listPanel');if(_lp)_lp.classList.remove('open');};
 onClick('listPanelClose', closeListPanel);
 
-document.getElementById('listSortBar')?.addEventListener('click', e => {
-    const btn = e.target.closest('.sort-btn'); if (!btn) return;
-    const sort = btn.dataset.sort;
-    if (sort === 'near' && !myLatLng) { showToast('กรุณาเปิด GPS ก่อน', true); return; }
-    listSortMode = sort;
-    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === sort));
+document.getElementById('listSortBar')?.addEventListener('click',e=>{
+    const btn=e.target.closest('.sort-btn'); if(!btn) return;
+    const sort=btn.dataset.sort;
+    if(sort==='near'&&!myLatLng){showToast('กรุณาเปิด GPS ก่อน',true);return;}
+    listSortMode=sort;
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.toggle('active',b.dataset.sort===sort));
     renderListPanel(getFiltered());
 });
 
 // ════════════════════════════════════════════
 // SEARCH
 // ════════════════════════════════════════════
-const searchInput = document.getElementById('search');
-const searchBox = document.getElementById('searchBox');
-const searchResults = document.getElementById('searchResults');
-const btnClearSearch = document.getElementById('btnClearSearch');
+const searchInput=document.getElementById('search');
+const searchBox=document.getElementById('searchBox');
+const searchResults=document.getElementById('searchResults');
+const btnClearSearch=document.getElementById('btnClearSearch');
 
 const _debouncedUpdate = debounce(update, 120);
 
-if (searchInput) {
-    searchInput.addEventListener('focus', () => { if (searchBox) searchBox.classList.add('focused'); renderSearchResults(); });
-    searchInput.addEventListener('blur', () => setTimeout(() => { if (searchBox) searchBox.classList.remove('focused'); }, 200));
-    searchInput.addEventListener('input', () => {
-        if (btnClearSearch) btnClearSearch.classList.toggle('show', searchInput.value.length > 0);
-        if (!searchInput.value.trim()) _clearSearchMarker();
+if(searchInput){
+    searchInput.addEventListener('focus',()=>{if(searchBox)searchBox.classList.add('focused');renderSearchResults();});
+    searchInput.addEventListener('blur',()=>setTimeout(()=>{if(searchBox)searchBox.classList.remove('focused');},200));
+    searchInput.addEventListener('input',()=>{
+        if(btnClearSearch)btnClearSearch.classList.toggle('show',searchInput.value.length>0);
+        if(!searchInput.value.trim())_clearSearchMarker();
         renderSearchResults();
         _debouncedUpdate();
     });
 }
-if (btnClearSearch) btnClearSearch.onclick = () => { if (searchInput) searchInput.value = ''; if (btnClearSearch) btnClearSearch.classList.remove('show'); if (searchResults) searchResults.innerHTML = ''; _clearSearchMarker(); _lastFilteredKey = null; update(); };
+if(btnClearSearch) btnClearSearch.onclick=()=>{if(searchInput)searchInput.value='';if(btnClearSearch)btnClearSearch.classList.remove('show');if(searchResults)searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
 
 // Normalize ALL Unicode degree/quote variants → ASCII
-function _normDMS(s) {
-    return s.replace(/[°ºᵒ˚]/g, 'D')
-        .replace(/[''ʼ′‛`]/g, 'M')
-        .replace(/[""″‟˝]/g, 'S')
-        .replace(/\s+/g, ' ').trim();
+function _normDMS(s){
+    return s.replace(/[°ºᵒ˚]/g,'D')
+            .replace(/[''ʼ′‛`]/g,'M')
+            .replace(/[""″‟˝]/g,'S')
+            .replace(/\s+/g,' ').trim();
 }
 // Parse single DMS component: 13D45M40.4SN → decimal
-function _parseDMS(str) {
-    const m = str.match(/(\d+)\s*D\s*(\d+)\s*M\s*([\d.]+)\s*S?\s*([NSEWnsew])?/);
-    if (!m) return null;
-    let val = parseInt(m[1]) + parseInt(m[2]) / 60 + parseFloat(m[3]) / 3600;
-    if (m[4] && /[SsWw]/.test(m[4])) val = -val;
-    return { val, dir: (m[4] || '').toUpperCase() };
+function _parseDMS(str){
+    const m=str.match(/(\d+)\s*D\s*(\d+)\s*M\s*([\d.]+)\s*S?\s*([NSEWnsew])?/);
+    if(!m)return null;
+    let val=parseInt(m[1])+parseInt(m[2])/60+parseFloat(m[3])/3600;
+    if(m[4]&&/[SsWw]/.test(m[4]))val=-val;
+    return {val, dir:(m[4]||'').toUpperCase()};
 }
 function parseLatLng(q) {
-    const raw = q.replace(/\s+/g, ' ').trim();
+    const raw=q.replace(/\s+/g,' ').trim();
     // Decimal format: 13.761, 100.548
-    const m = raw.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
-    if (m) { const lat = parseFloat(m[1]), lng = parseFloat(m[2]); if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng }; }
+    const m=raw.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+    if(m){const lat=parseFloat(m[1]),lng=parseFloat(m[2]);if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180)return{lat,lng};}
     // DMS format — normalize then parse
-    const s = _normDMS(raw);
+    const s=_normDMS(raw);
     // Match two DMS groups
-    const dmsRe = /(\d+\s*D\s*\d+\s*M\s*[\d.]+\s*S?\s*[NSEWnsew]?)/g;
-    const groups = s.match(dmsRe);
-    if (groups && groups.length >= 2) {
-        const a = _parseDMS(groups[0]), b = _parseDMS(groups[1]);
-        if (a && b) {
-            let lat, lng;
-            if (a.dir === 'N' || a.dir === 'S') { lat = a.val; lng = b.val; }
-            else if (a.dir === 'E' || a.dir === 'W') { lat = b.val; lng = a.val; }
-            else if (b.dir === 'N' || b.dir === 'S') { lat = b.val; lng = a.val; }
-            else if (b.dir === 'E' || b.dir === 'W') { lat = a.val; lng = b.val; }
-            else { lat = Math.abs(a.val) <= 90 ? a.val : b.val; lng = Math.abs(a.val) <= 90 ? b.val : a.val; }
-            if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) return { lat, lng };
+    const dmsRe=/(\d+\s*D\s*\d+\s*M\s*[\d.]+\s*S?\s*[NSEWnsew]?)/g;
+    const groups=s.match(dmsRe);
+    if(groups&&groups.length>=2){
+        const a=_parseDMS(groups[0]),b=_parseDMS(groups[1]);
+        if(a&&b){
+            let lat,lng;
+            if(a.dir==='N'||a.dir==='S'){lat=a.val;lng=b.val;}
+            else if(a.dir==='E'||a.dir==='W'){lat=b.val;lng=a.val;}
+            else if(b.dir==='N'||b.dir==='S'){lat=b.val;lng=a.val;}
+            else if(b.dir==='E'||b.dir==='W'){lat=a.val;lng=b.val;}
+            else{lat=Math.abs(a.val)<=90?a.val:b.val;lng=Math.abs(a.val)<=90?b.val:a.val;}
+            if(lat>=-90&&lat<=90&&lng>=-180&&lng<=180)return{lat,lng};
         }
     }
     return null;
 }
 // Temp search marker
-let _searchMarker = null;
-function _showSearchMarker(lat, lng) {
-    if (_searchMarker) map.removeLayer(_searchMarker);
-    _searchMarker = L.marker([lat, lng], { icon: L.divIcon({ className: 'search-pin', html: '<div style="width:20px;height:20px;background:#e53935;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.4);animation:searchPulse 1.5s ease-in-out infinite"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(map);
+let _searchMarker=null;
+function _showSearchMarker(lat,lng){
+    if(_searchMarker)map.removeLayer(_searchMarker);
+    _searchMarker=L.marker([lat,lng],{icon:L.divIcon({className:'search-pin',html:'<div style="width:20px;height:20px;background:#e53935;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.4);animation:searchPulse 1.5s ease-in-out infinite"></div>',iconSize:[20,20],iconAnchor:[10,10]})}).addTo(map);
     _searchMarker.bindPopup(`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`).openPopup();
 }
-function _clearSearchMarker() { if (_searchMarker) { map.removeLayer(_searchMarker); _searchMarker = null; } }
+function _clearSearchMarker(){if(_searchMarker){map.removeLayer(_searchMarker);_searchMarker=null;}}
 // Inject pulse animation CSS
-(function () { const st = document.createElement('style'); st.textContent = '@keyframes searchPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}'; document.head.appendChild(st); })();
+(function(){const st=document.createElement('style');st.textContent='@keyframes searchPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}';document.head.appendChild(st);})();
 
 // Auto-convert DMS on paste → show decimal + fly to location + marker
-searchInput.addEventListener('paste', e => {
-    setTimeout(() => {
-        const coords = parseLatLng(searchInput.value.trim());
-        if (coords) {
-            searchInput.value = `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
+searchInput.addEventListener('paste',e=>{
+    setTimeout(()=>{
+        const coords=parseLatLng(searchInput.value.trim());
+        if(coords){
+            searchInput.value=`${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
             renderSearchResults();
-            map.flyTo([coords.lat, coords.lng], 16, { animate: true, duration: 0.8 });
-            _showSearchMarker(coords.lat, coords.lng);
-            showToast(`📍 ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`, false, true);
+            map.flyTo([coords.lat,coords.lng],16,{animate:true,duration:0.8});
+            _showSearchMarker(coords.lat,coords.lng);
+            showToast(`📍 ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,false,true);
         }
-    }, 50);
+    },50);
 });
 
 function renderSearchResults() {
-    const q = searchInput.value.toLowerCase().trim();
-    if (!q) { searchResults.innerHTML = ''; return; }
-    let html = '';
-    const coords = parseLatLng(searchInput.value.trim());
-    if (coords) {
-        html += `<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});_showSearchMarker(${coords.lat},${coords.lng});document.getElementById('search').blur();">
+    const q=searchInput.value.toLowerCase().trim();
+    if(!q){searchResults.innerHTML='';return;}
+    let html='';
+    const coords=parseLatLng(searchInput.value.trim());
+    if(coords){
+        html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});_showSearchMarker(${coords.lat},${coords.lng});document.getElementById('search').blur();">
             <div class="search-result-icon" style="background:var(--am);color:var(--bl)">🎯</div>
             <div class="search-result-text">
                 <div class="search-result-name">ไปที่พิกัด ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}</div>
@@ -1419,19 +1419,19 @@ function renderSearchResults() {
             </div>
         </div>`;
     }
-    const matches = locations.filter(l => (l.name || '').toLowerCase().includes(q) || l.list.toLowerCase().includes(q) || (l.city || '').toLowerCase().includes(q) || matchCoords(l, q)).slice(0, 8);
-    html += matches.map(loc => {
-        const color = getColor(loc.list);
-        const idx = getLocIndex(loc);
+    const matches=locations.filter(l=>(l.name||'').toLowerCase().includes(q)||l.list.toLowerCase().includes(q)||(l.city||'').toLowerCase().includes(q)||matchCoords(l,q)).slice(0,8);
+    html+=matches.map(loc=>{
+        const color=getColor(loc.list);
+        const idx=getLocIndex(loc);
         return `<div class="search-result-item" onclick="showPlaceCard(locations[${idx}],${idx});document.getElementById('search').blur();">
             <div class="search-result-icon" style="background:${color}20;color:${color}">📍</div>
             <div class="search-result-text">
-                <div class="search-result-name">${loc.name || 'ไม่มีชื่อ'}</div>
-                <div class="search-result-sub">${loc.list}${loc.city ? ' · ' + loc.city : ''} · ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}</div>
+                <div class="search-result-name">${loc.name||'ไม่มีชื่อ'}</div>
+                <div class="search-result-sub">${loc.list}${loc.city?' · '+loc.city:''} · ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}</div>
             </div>
         </div>`;
     }).join('');
-    searchResults.innerHTML = html;
+    searchResults.innerHTML=html;
 }
 
 // ════════════════════════════════════════════
@@ -1439,115 +1439,115 @@ function renderSearchResults() {
 // ════════════════════════════════════════════
 
 // Dropdown toggle for "more" chip
-const _chipDropdown = document.getElementById('chipDropdown');
-const _chipMoreEl = document.getElementById('chipMore');
-if (_chipMoreEl && _chipDropdown) {
-    _chipMoreEl.addEventListener('click', e => {
+const _chipDropdown=document.getElementById('chipDropdown');
+const _chipMoreEl=document.getElementById('chipMore');
+if(_chipMoreEl && _chipDropdown) {
+    _chipMoreEl.addEventListener('click',e=>{
         e.stopPropagation();
         _chipDropdown.classList.toggle('open');
     });
     // Close on outside touch/click (mousedown fires before click, avoids timing issue)
-    document.addEventListener('mousedown', e => {
-        if (_chipDropdown.classList.contains('open') && !e.target.closest('.chip-more-wrap'))
+    document.addEventListener('mousedown',e=>{
+        if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
             _chipDropdown.classList.remove('open');
     });
-    document.addEventListener('touchstart', e => {
-        if (_chipDropdown.classList.contains('open') && !e.target.closest('.chip-more-wrap'))
+    document.addEventListener('touchstart',e=>{
+        if(_chipDropdown.classList.contains('open')&&!e.target.closest('.chip-more-wrap'))
             _chipDropdown.classList.remove('open');
-    }, { passive: true });
+    },{passive:true});
     // Each dropdown item closes menu after its handler runs
-    document.querySelectorAll('.chip-dropdown-item').forEach(item => {
-        item.addEventListener('click', () => {
-            setTimeout(() => _chipDropdown.classList.remove('open'), 100);
+    document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
+        item.addEventListener('click',()=>{
+            setTimeout(()=>_chipDropdown.classList.remove('open'),100);
         });
     });
 }
 
-onClick('chipAll', () => { filterList = ''; filterCity = ''; nearbyMode = false; update(); });
+onClick('chipAll', ()=>{filterList='';filterCity='';nearbyMode=false;update();});
 
-onClick('chipFav', () => { filterFavorites = !filterFavorites; const el = document.getElementById('chipFav'); if (el) el.classList.toggle('active', filterFavorites); update(); });
+onClick('chipFav', ()=>{filterFavorites=!filterFavorites;const el=document.getElementById('chipFav');if(el)el.classList.toggle('active',filterFavorites);update();});
 
-onClick('chipNearby', () => {
-    if (!myLatLng) { showToast('กรุณาเปิด GPS ก่อน', true); return; }
-    nearbyMode = !nearbyMode; update();
-    if (nearbyMode) {
-        const f = getFiltered();
-        if (f.length > 0) map.flyToBounds(L.latLngBounds(f.map(l => [l.lat, l.lng])), { padding: [60, 60], animate: true, duration: 0.8 });
-        showToast(`📍 ${getFiltered().length} จุดใกล้ฉัน (${nearbyRadius / 1000} กม.)`);
+onClick('chipNearby', ()=>{
+    if(!myLatLng){showToast('กรุณาเปิด GPS ก่อน',true);return;}
+    nearbyMode=!nearbyMode; update();
+    if(nearbyMode){
+        const f=getFiltered();
+        if(f.length>0)map.flyToBounds(L.latLngBounds(f.map(l=>[l.lat,l.lng])),{padding:[60,60],animate:true,duration:0.8});
+        showToast(`📍 ${getFiltered().length} จุดใกล้ฉัน (${nearbyRadius/1000} กม.)`);
     }
 });
 
-onClick('chipList', () => {
-    const counts = {}; locations.forEach(l => { counts[l.list] = (counts[l.list] || 0) + 1; });
-    const lists = Object.keys(counts).filter(n => n !== filterList).sort();
-    if (!lists.length) { showToast('ไม่มีรายการอื่นให้รวม', true); return; }
+onClick('chipList', ()=>{
+    const counts={}; locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
+    const lists=Object.keys(counts).filter(n=>n!==filterList).sort();
+    if(!lists.length){showToast('ไม่มีรายการอื่นให้รวม',true);return;}
     // Build inline dropdown in the modal body
-    const container = document.getElementById('listChoiceList');
-    container.innerHTML = `
+    const container=document.getElementById('listChoiceList');
+    container.innerHTML=`
         <div style="padding:12px;">
             <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterList}" (${counts[filterList]} จุด) → ไปรายการไหน?</div>
             <select id="_mergeListTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gn);font-size:14px;background:var(--surface);">
-                ${lists.map(n => `<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
+                ${lists.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
             </select>
             <div style="display:flex;gap:8px;margin-top:12px;">
                 <button id="_mergeListConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
                 <button id="_mergeListCancel" style="flex:1;padding:10px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>`;
-    const _mergeListCancel = document.getElementById('_mergeListCancel');
-    const _mergeListConfirm = document.getElementById('_mergeListConfirm');
-    if (_mergeListCancel) _mergeListCancel.onclick = () => { const chipList = document.getElementById('chipList'); if (chipList) chipList.click(); };
-    if (_mergeListConfirm) _mergeListConfirm.onclick = () => {
-        const toList = document.getElementById('_mergeListTarget').value;
+    const _mergeListCancel=document.getElementById('_mergeListCancel');
+    const _mergeListConfirm=document.getElementById('_mergeListConfirm');
+    if(_mergeListCancel) _mergeListCancel.onclick=()=>{const chipList=document.getElementById('chipList');if(chipList)chipList.click();};
+    if(_mergeListConfirm) _mergeListConfirm.onclick=()=>{
+        const toList=document.getElementById('_mergeListTarget').value;
         pushUndo();
-        let count = 0;
-        const changedMergeList = [];
-        locations.forEach(l => { if (l.list === filterList) { l.list = toList; l.updatedAt = Date.now(); count++; changedMergeList.push(l); } });
+        let count=0;
+        const changedMergeList=[];
+        locations.forEach(l=>{if(l.list===filterList){l.list=toList;l.updatedAt=Date.now();count++;changedMergeList.push(l);}});
         showToast(`🔗 รวม "${filterList}" (${count} จุด) → "${toList}"`);
-        filterList = toList;
-        saveLocations(); invalidateCache();
-        if (_sbLoaded) sbBulkUpdate(changedMergeList);
+        filterList=toList;
+        saveLocations();invalidateCache();
+        if(_sbLoaded)sbBulkUpdate(changedMergeList);
         document.getElementById('listFilterModalOverlay').classList.remove('open');
         update();
     };
 });
 
-onClick('chipCity', () => {
-    const counts = {}; locations.forEach(l => { if (l.city) counts[l.city] = (counts[l.city] || 0) + 1; });
-    const cities = Object.keys(counts).filter(n => n !== filterCity).sort();
-    if (!cities.length) { showToast('ไม่มีเขตอื่นให้รวม', true); return; }
-    const container = document.getElementById('cityChoiceList');
-    container.innerHTML = `
+onClick('chipCity', ()=>{
+    const counts={}; locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
+    const cities=Object.keys(counts).filter(n=>n!==filterCity).sort();
+    if(!cities.length){showToast('ไม่มีเขตอื่นให้รวม',true);return;}
+    const container=document.getElementById('cityChoiceList');
+    container.innerHTML=`
         <div style="padding:12px;">
             <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔗 รวม "${filterCity}" (${counts[filterCity]} จุด) → ไปเขตไหน?</div>
             <select id="_mergeCityTarget" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--gn);font-size:14px;background:var(--surface);">
-                ${cities.map(n => `<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
+                ${cities.map(n=>`<option value="${n}">${n} (${counts[n]} จุด)</option>`).join('')}
             </select>
             <div style="display:flex;gap:8px;margin-top:12px;">
                 <button id="_mergeCityConfirm" style="flex:1;padding:10px;border:none;background:#e67c00;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;">✅ รวมเลย</button>
                 <button id="_mergeCityCancel" style="flex:1;padding:10px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>`;
-    onClick('_mergeCityCancel', () => { const el = document.getElementById('chipCity'); if (el) el.click(); });
-    onClick('_mergeCityConfirm', () => {
-        const toCity = document.getElementById('_mergeCityTarget').value;
+    onClick('_mergeCityCancel', ()=>{const el=document.getElementById('chipCity');if(el)el.click();});
+    onClick('_mergeCityConfirm', ()=>{
+        const toCity=document.getElementById('_mergeCityTarget').value;
         pushUndo();
-        let count = 0;
-        const changedMergeCity = [];
-        locations.forEach(l => { if (l.city === filterCity) { l.city = toCity; l.updatedAt = Date.now(); count++; changedMergeCity.push(l); } });
+        let count=0;
+        const changedMergeCity=[];
+        locations.forEach(l=>{if(l.city===filterCity){l.city=toCity;l.updatedAt=Date.now();count++;changedMergeCity.push(l);}});
         showToast(`🔗 รวม "${filterCity}" (${count} จุด) → "${toCity}"`);
-        filterCity = toCity;
-        saveLocations(); invalidateCache();
-        if (_sbLoaded) sbBulkUpdate(changedMergeCity);
+        filterCity=toCity;
+        saveLocations();invalidateCache();
+        if(_sbLoaded)sbBulkUpdate(changedMergeCity);
         document.getElementById('cityFilterModalOverlay').classList.remove('open');
         update();
     });
 });
 
-onClick('chipHeatmap', () => { heatmapMode = !heatmapMode; _lastFilteredKey = null; update(); });
-onClick('chipShowList', () => {
-    const lp = document.getElementById('listPanel');
-    if (lp.classList.contains('open')) { closeListPanel(); } else {
+onClick('chipHeatmap', ()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();});
+onClick('chipShowList', ()=>{
+    const lp=document.getElementById('listPanel');
+    if(lp.classList.contains('open')){closeListPanel();}else{
         lp.classList.add('open'); closePlaceCard();
         renderListPanel(getFiltered());
     }
@@ -1555,24 +1555,24 @@ onClick('chipShowList', () => {
 });
 
 const _chipAll = document.getElementById('chipAll');
-if (_chipAll) _chipAll.classList.add('active');
+if(_chipAll) _chipAll.classList.add('active');
 
 // ════════════════════════════════════════════
 // MAP CONTROLS
 // ════════════════════════════════════════════
-onClick('btnZoomIn', () => map.zoomIn());
-onClick('btnZoomOut', () => map.zoomOut());
-onClick('btnTile', () => {
+onClick('btnZoomIn', ()=>map.zoomIn());
+onClick('btnZoomOut', ()=>map.zoomOut());
+onClick('btnTile', ()=>{
     map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
-    currentTileIdx = (currentTileIdx + 1) % tileNames.length;
+    currentTileIdx=(currentTileIdx+1)%tileNames.length;
     tileLayers[tileNames[currentTileIdx]].addTo(map);
-    showToast('แผนที่: ' + tileNames[currentTileIdx]);
+    showToast('แผนที่: '+tileNames[currentTileIdx]);
 });
 
 // ════════════════════════════════════════════
 // GPS
 // ════════════════════════════════════════════
-const btnGps = document.getElementById('btnGps');
+const btnGps=document.getElementById('btnGps');
 
 // ── smooth pan ด้วย panTo แทน flyTo — ไม่กระตุกเมื่อตำแหน่งเปลี่ยนนิดเดียว ──
 function _smoothFollow(lat, lng) {
@@ -1581,7 +1581,7 @@ function _smoothFollow(lat, lng) {
     const dist = haversine(cur.lat, cur.lng, lat, lng);
     if (dist < 2) return; // ไม่ขยับถ้าใกล้มาก < 2ม.
     // panTo สมูทกว่า flyTo สำหรับการติดตาม
-    map.panTo([lat, lng], { animate: true, duration: 0.5, easeLinearity: 0.5, noMoveStart: true });
+    map.panTo([lat, lng], {animate: true, duration: 0.5, easeLinearity: 0.5, noMoveStart: true});
 }
 
 function updateGpsMarker(lat, lng, accuracy) {
@@ -1590,16 +1590,16 @@ function updateGpsMarker(lat, lng, accuracy) {
         myLocationCircle.setRadius(Math.min(accuracy, 500));
     } else {
         myLocationCircle = L.circle([lat, lng], {
-            radius: Math.min(accuracy, 500), color: '#1a73e8',
-            fillColor: '#1a73e8', fillOpacity: 0.08, weight: 1.5
+            radius: Math.min(accuracy, 500), color:'#1a73e8',
+            fillColor:'#1a73e8', fillOpacity:0.08, weight:1.5
         }).addTo(map);
     }
     const iconHtml = `<div class="you-are-here-wrap"><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"></div></div>`;
-    const icon = L.divIcon({ className: '', html: iconHtml, iconSize: [48, 48], iconAnchor: [24, 24] });
+    const icon = L.divIcon({className:'', html:iconHtml, iconSize:[48,48], iconAnchor:[24,24]});
     if (myLocationMarker) {
         myLocationMarker.setLatLng([lat, lng]);
     } else {
-        myLocationMarker = L.marker([lat, lng], { icon, zIndexOffset: 1000, interactive: true }).addTo(map)
+        myLocationMarker = L.marker([lat, lng], {icon, zIndexOffset:1000, interactive:true}).addTo(map)
             .bindPopup(`<div style="padding:12px;font-size:13px;min-width:180px;">
                 <b>📍 ตำแหน่งของฉัน</b><br>
                 <small style="color:var(--text3);">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
@@ -1607,12 +1607,12 @@ function updateGpsMarker(lat, lng, accuracy) {
                 <button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
             </div>`);
     }
-    myLatLng = { lat, lng };
+    myLatLng = {lat, lng};
     if (myLocationMarker.isPopupOpen()) {
         myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
     }
     _smoothFollow(lat, lng);
-    if (listSortMode === 'near' || nearbyMode) update();
+    if (listSortMode==='near' || nearbyMode) update();
 }
 
 // หยุดติดตามกล้องเมื่อผู้ใช้ลาก map
@@ -1633,25 +1633,39 @@ function _updateTooltipVisibility() {
         }
     });
 }
+map.on('zoomend', () => {
+    _updateTooltipVisibility();
+    _lastFilteredKey = null; // force re-render with new marker limit
+    update();
+});
 
+if(btnGps){
+map.on('dragstart', () => {
+    if (gpsTracking) {
+        gpsTracking = false;
+        btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
+        btnGps.classList.remove('gps-tracking');
+    }
+});
+}
 
 function stopGps() {
     if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
     gpsActive = false; gpsTracking = false; gpsCoarseShown = false; gpsFlyDone = false;
     gpsToastShown = false; gpsFineToastShown = false;
-    if (btnGps) btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking');
+    if(btnGps) btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking');
     _lastGpsLat = null; _lastGpsLng = null;
 }
 
 // btnGps: กดครั้งที่ 1 = เปิด GPS + เปิด tracking, กดครั้งที่ 2 = กล้องบินไปตำแหน่ง + เปิด tracking อีกครั้ง
-if (btnGps) btnGps.onclick = () => {
+if(btnGps) btnGps.onclick = () => {
     if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS', true); return; }
     if (gpsActive && myLocationMarker) {
         // toggle tracking: ถ้า tracking อยู่ → บินไปตำแหน่ง, ถ้าไม่ → เปิด tracking
         gpsTracking = true;
         btnGps.classList.add('gps-tracking');
         const ll = myLocationMarker.getLatLng();
-        map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17), { animate: true, duration: 0.8 });
+        map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17), {animate:true, duration:0.8});
         showToast('📍 ติดตามตำแหน่ง');
         return;
     }
@@ -1662,13 +1676,13 @@ if (btnGps) btnGps.onclick = () => {
     navigator.geolocation.getCurrentPosition(
         pos => {
             if (!gpsActive) return;
-            const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+            const {latitude:lat, longitude:lng, accuracy} = pos.coords;
             gpsCoarseShown = true;
             updateGpsMarker(lat, lng, accuracy);
             if (!gpsFlyDone) {
                 gpsFlyDone = true;
                 const z = accuracy > 1000 ? 13 : accuracy > 200 ? 15 : 17;
-                map.flyTo([lat, lng], z, { animate: true, duration: 1.0 });
+                map.flyTo([lat, lng], z, {animate:true, duration:1.0});
             }
             btnGps.classList.remove('gps-searching');
             btnGps.classList.add('gps-found');
@@ -1680,7 +1694,7 @@ if (btnGps) btnGps.onclick = () => {
             gpsWatcher = navigator.geolocation.watchPosition(
                 pos2 => {
                     if (!gpsActive) return;
-                    const { latitude: lat2, longitude: lng2, accuracy: acc2 } = pos2.coords;
+                    const {latitude:lat2, longitude:lng2, accuracy:acc2} = pos2.coords;
                     // กรอง noise: ถ้าตำแหน่งไม่เปลี่ยนมากพอ ไม่ต้อง update marker
                     if (_lastGpsLat !== null) {
                         const moved = haversine(_lastGpsLat, _lastGpsLng, lat2, lng2);
@@ -1693,102 +1707,142 @@ if (btnGps) btnGps.onclick = () => {
                         showToast(`✅ แม่นยำ ±${Math.round(acc2)}ม.`, false, true);
                     }
                 },
-                () => { },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 }
+                () => {},
+                {enableHighAccuracy:true, timeout:15000, maximumAge:1000}
             );
         },
         () => { stopGps(); showToast('ไม่สามารถหาตำแหน่งได้ กรุณาอนุญาต GPS', true); },
-        { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
+        {enableHighAccuracy:false, timeout:5000, maximumAge:30000}
     );
 };
 
 // GPS modal
 const btnUseGpsModal = document.getElementById('btnUseGpsModal');
-if (btnUseGpsModal) btnUseGpsModal.onclick = () => {
-    if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS', true); return; }
-    const btn = document.getElementById('btnUseGpsModal');
-    btn.textContent = '⏳ กำลังหาตำแหน่ง...';
-    navigator.geolocation.getCurrentPosition(pos => {
-        document.getElementById('modalLat').value = pos.coords.latitude.toFixed(6);
-        document.getElementById('modalLng').value = pos.coords.longitude.toFixed(6);
-        btn.textContent = '✅ ได้ตำแหน่งแล้ว';
-        setTimeout(() => btn.textContent = '📍 ใช้ตำแหน่งของฉัน', 2000);
-        if (pos.coords.accuracy > 100) {
-            navigator.geolocation.getCurrentPosition(p2 => {
-                document.getElementById('modalLat').value = p2.coords.latitude.toFixed(6);
-                document.getElementById('modalLng').value = p2.coords.longitude.toFixed(6);
-            }, () => { }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+if(btnUseGpsModal) btnUseGpsModal.onclick=()=>{
+    if(!navigator.geolocation){showToast('Browser ไม่รองรับ GPS',true);return;}
+    const btn=document.getElementById('btnUseGpsModal');
+    btn.textContent='⏳ กำลังหาตำแหน่ง...';
+    navigator.geolocation.getCurrentPosition(pos=>{
+        document.getElementById('modalLat').value=pos.coords.latitude.toFixed(6);
+        document.getElementById('modalLng').value=pos.coords.longitude.toFixed(6);
+        btn.textContent='✅ ได้ตำแหน่งแล้ว';
+        setTimeout(()=>btn.textContent='📍 ใช้ตำแหน่งของฉัน',2000);
+        if(pos.coords.accuracy>100){
+            navigator.geolocation.getCurrentPosition(p2=>{
+                document.getElementById('modalLat').value=p2.coords.latitude.toFixed(6);
+                document.getElementById('modalLng').value=p2.coords.longitude.toFixed(6);
+            },()=>{},{enableHighAccuracy:true,timeout:8000,maximumAge:0});
         }
-    }, () => { btn.textContent = '📍 ใช้ตำแหน่งของฉัน'; showToast('ไม่สามารถหาตำแหน่งได้', true); }, { enableHighAccuracy: false, timeout: 4000, maximumAge: 30000 });
+    },()=>{btn.textContent='📍 ใช้ตำแหน่งของฉัน';showToast('ไม่สามารถหาตำแหน่งได้',true);},{enableHighAccuracy:false,timeout:4000,maximumAge:30000});
 };
 
 // ════════════════════════════════════════════
 // ADD MODE
 // ════════════════════════════════════════════
-const crosshair = document.getElementById('crosshair'), addBanner = document.getElementById('addBanner'), fab = document.getElementById('btnFab');
+const crosshair=document.getElementById('crosshair'), addBanner=document.getElementById('addBanner'), fab=document.getElementById('btnFab');
 
-fab.onclick = () => {
-    if (addMode) { cancelAddMode(); return; }
-    addMode = true; fab.classList.add('add-mode');
-    fab.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>ยกเลิก`;
+fab.onclick=()=>{
+    if(addMode){cancelAddMode();return;}
+    addMode=true; fab.classList.add('add-mode');
+    fab.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>ยกเลิก`;
     addBanner.classList.add('show'); crosshair.classList.add('show');
     document.getElementById('map').classList.add('add-cursor');
     closePlaceCard(); cancelMeasureMode();
 };
 
-const btnCancelAdd = document.getElementById('btnCancelAdd');
-if (btnCancelAdd) btnCancelAdd.onclick = cancelAddMode;
+const btnCancelAdd=document.getElementById('btnCancelAdd');
+if(btnCancelAdd) btnCancelAdd.onclick=cancelAddMode;
 function cancelAddMode() {
-    addMode = false; fab.classList.remove('add-mode');
-    fab.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>เพิ่มจุด`;
+    addMode=false; fab.classList.remove('add-mode');
+    fab.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>เพิ่มจุด`;
     addBanner.classList.remove('show'); crosshair.classList.remove('show');
     document.getElementById('map').classList.remove('add-cursor');
 }
 
-document.getElementById('map').addEventListener('mousemove', throttle(e => {
-    if (!addMode) return; crosshair.style.left = e.clientX + 'px'; crosshair.style.top = e.clientY + 'px';
+document.getElementById('map').addEventListener('mousemove', throttle(e=>{
+    if(!addMode)return; crosshair.style.left=e.clientX+'px'; crosshair.style.top=e.clientY+'px';
 }, 16)); // ~60fps cap
 
 // ════════════════════════════════════════════
 // MAP CLICK
 // ════════════════════════════════════════════
+map.on('click',e=>{
+    // Waypoint Mode Hook
+    if (typeof _handleMapClickForWaypoint === 'function' && _isAddingWaypoint) {
+        _handleMapClickForWaypoint(e);
+        return;
+    }
+    const{lat,lng}=e.latlng;
+    const editModalOverlay = document.getElementById('editModalOverlay');
+    if(editModalOverlay && editModalOverlay.classList.contains('open')){
+        document.getElementById('modalLat').value=lat.toFixed(6);
+        document.getElementById('modalLng').value=lng.toFixed(6);
+        ['modalLat','modalLng'].forEach(id=>{const el=document.getElementById(id);el.style.borderColor='#34a853';setTimeout(()=>el.style.borderColor='',800);});
+        return;
+    }
+    if(measureMode&&measureStart){
+        const straightDist=haversine(measureStart.lat,measureStart.lng,lat,lng);
+        if(measureLine)map.removeLayer(measureLine);
+        // Draw straight line immediately
+        measureLine=L.polyline([[measureStart.lat,measureStart.lng],[lat,lng]],{color:'#7b1fa2',weight:3,dashArray:'8,6'}).addTo(map);
+        const fromName=measureStart.name||measureStart.list||'จุดเริ่ม';
+        document.getElementById('measureResultText').textContent=`📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
+        document.getElementById('measureModalOverlay').classList.add('open');
+        // Try OSRM for road distance
+        const osrmUrl=`https://router.project-osrm.org/route/v1/driving/${measureStart.lng},${measureStart.lat};${lng},${lat}?overview=full&geometries=geojson`;
+        fetch(osrmUrl).then(r=>r.json()).then(data=>{
+            if(data.routes&&data.routes.length){
+                const route=data.routes[0];
+                const roadDist=route.distance;
+                const mins=Math.round(route.duration/60);
+                const coords=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+                if(measureLine)map.removeLayer(measureLine);
+                measureLine=L.polyline(coords,{color:'#7b1fa2',weight:4,opacity:0.85}).addTo(map);
+                document.getElementById('measureResultText').textContent=`🛣️ ${formatDist(roadDist)} · ~${mins} นาที (ถนน)\n📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
+            }
+        }).catch(()=>{});
+        cancelMeasureMode(); return;
+    }
+    if(!addMode)return;
+    cancelAddMode(); openAddAt(lat,lng);
+});
 
-window.openAddAt = function (lat, lng) {
-    map.closePopup(); editingIndex = -1;
-    document.getElementById('editModalTitle').textContent = 'เพิ่มสถานที่';
-    document.getElementById('modalName').value = '';
-    document.getElementById('modalNote').value = '';
-    document.getElementById('modalTags').value = '';
+window.openAddAt=function(lat,lng){
+    map.closePopup(); editingIndex=-1;
+    document.getElementById('editModalTitle').textContent='เพิ่มสถานที่';
+    document.getElementById('modalName').value='';
+    document.getElementById('modalNote').value='';
+    document.getElementById('modalTags').value='';
     setPhotoPreview('');
-    document.getElementById('modalLat').value = parseFloat(lat).toFixed(6);
-    document.getElementById('modalLng').value = parseFloat(lng).toFixed(6);
+    document.getElementById('modalLat').value=parseFloat(lat).toFixed(6);
+    document.getElementById('modalLng').value=parseFloat(lng).toFixed(6);
 
     // Auto-fill list/city: use active filter first, then nearest location
-    let autoList = filterList || '';
-    let autoCity = filterCity || '';
-    if (!autoList || !autoCity) {
-        let bestDist = Infinity, bestLoc = null;
-        locations.forEach(l => {
-            const d = haversine(lat, lng, l.lat, l.lng);
-            if (d < bestDist) { bestDist = d; bestLoc = l; }
+    let autoList=filterList||'';
+    let autoCity=filterCity||'';
+    if(!autoList||!autoCity){
+        let bestDist=Infinity, bestLoc=null;
+        locations.forEach(l=>{
+            const d=haversine(lat,lng,l.lat,l.lng);
+            if(d<bestDist){bestDist=d;bestLoc=l;}
         });
-        if (bestLoc && bestDist < 10000) { // within 10km
-            if (!autoList) autoList = bestLoc.list || '';
-            if (!autoCity) autoCity = bestLoc.city || '';
+        if(bestLoc&&bestDist<10000){ // within 10km
+            if(!autoList)autoList=bestLoc.list||'';
+            if(!autoCity)autoCity=bestLoc.city||'';
         }
         // Fallback: most-used list overall
-        if (!autoList && locations.length) {
-            const cnt = {}; locations.forEach(l => { if (l.list) cnt[l.list] = (cnt[l.list] || 0) + 1; });
-            autoList = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+        if(!autoList&&locations.length){
+            const cnt={};locations.forEach(l=>{if(l.list)cnt[l.list]=(cnt[l.list]||0)+1;});
+            autoList=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
         }
     }
-    document.getElementById('modalList').value = autoList;
-    document.getElementById('modalCity').value = autoCity;
+    document.getElementById('modalList').value=autoList;
+    document.getElementById('modalCity').value=autoCity;
 
     // Reverse geocode for city/district name
-    _reverseGeocodeCity(lat, lng).then(city => {
-        if (city && !filterCity) {
-            document.getElementById('modalCity').value = city;
+    _reverseGeocodeCity(lat,lng).then(city=>{
+        if(city&&!filterCity){
+            document.getElementById('modalCity').value=city;
         }
     });
 
@@ -1796,194 +1850,197 @@ window.openAddAt = function (lat, lng) {
 };
 
 // Reverse geocode: get district/city name from coordinates
-async function _reverseGeocodeCity(lat, lng) {
-    try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1&accept-language=th`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.address) {
+async function _reverseGeocodeCity(lat,lng){
+    try{
+        const url=`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1&accept-language=th`;
+        const res=await fetch(url);
+        const data=await res.json();
+        if(data.address){
             // Priority: suburb → city_district → district → city → town → county
-            let name = data.address.suburb || data.address.city_district || data.address.district ||
-                data.address.city || data.address.town || data.address.county || '';
+            let name=data.address.suburb||data.address.city_district||data.address.district||
+                   data.address.city||data.address.town||data.address.county||'';
             // Strip Thai admin prefixes: เขต, อำเภอ, แขวง, ตำบล, อ., ต.
-            name = name.replace(/^(เขต|อำเภอ|แขวง|ตำบล|อ\.|ต\.)\s*/, '').trim();
+            name=name.replace(/^(เขต|อำเภอ|แขวง|ตำบล|อ\.|ต\.)\s*/,'').trim();
             return name;
         }
-    } catch (e) { console.warn('Reverse geocode failed:', e); }
+    }catch(e){console.warn('Reverse geocode failed:',e);}
     return '';
 }
 
 // lat/lng hint — desktop only (ซ่อนบนมือถือผ่าน CSS)
+const latlngHint=document.getElementById('latlngHint');
+map.on('mousemove', throttle(e=>{ latlngHint.textContent=`${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`; latlngHint.classList.add('show'); }, 50));
+map.on('mouseout',()=>latlngHint.classList.remove('show'));
 
 // ════════════════════════════════════════════
 // EDIT / ADD MODAL
 // ════════════════════════════════════════════
-let _modalPhoto = ''; // temp base64
-const photoPreview = document.getElementById('modalPhotoPreview');
-const photoInput = document.getElementById('modalPhotoInput');
-const photoRemoveBtn = document.getElementById('modalPhotoRemove');
+let _modalPhoto=''; // temp base64
+const photoPreview=document.getElementById('modalPhotoPreview');
+const photoInput=document.getElementById('modalPhotoInput');
+const photoRemoveBtn=document.getElementById('modalPhotoRemove');
 
-function setPhotoPreview(dataUrl) {
-    _modalPhoto = dataUrl || '';
-    if (_modalPhoto) {
-        photoPreview.src = _modalPhoto; photoPreview.style.display = 'block';
-        photoRemoveBtn.style.display = 'inline-block';
-    } else {
-        photoPreview.src = ''; photoPreview.style.display = 'none';
-        photoRemoveBtn.style.display = 'none';
+function setPhotoPreview(dataUrl){
+    _modalPhoto=dataUrl||'';
+    if(_modalPhoto){
+        photoPreview.src=_modalPhoto;photoPreview.style.display='block';
+        photoRemoveBtn.style.display='inline-block';
+    }else{
+        photoPreview.src='';photoPreview.style.display='none';
+        photoRemoveBtn.style.display='none';
     }
 }
-photoInput.onchange = e => {
-    const file = e.target.files[0]; if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showToast('รูปใหญ่เกิน 2MB', true); e.target.value = ''; return; }
-    const reader = new FileReader();
-    reader.onload = ev => {
+photoInput.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    if(file.size>2*1024*1024){showToast('รูปใหญ่เกิน 2MB',true);e.target.value='';return;}
+    const reader=new FileReader();
+    reader.onload=ev=>{
         // resize to max 800px
-        const img = new Image();
-        img.onload = () => {
-            const max = 800; let w = img.width, h = img.height;
-            if (w > max || h > max) { const r = Math.min(max / w, max / h); w *= r; h *= r; }
-            const c = document.createElement('canvas'); c.width = w; c.height = h;
-            c.getContext('2d').drawImage(img, 0, 0, w, h);
-            setPhotoPreview(c.toDataURL('image/jpeg', 0.7));
+        const img=new Image();
+        img.onload=()=>{
+            const max=800;let w=img.width,h=img.height;
+            if(w>max||h>max){const r=Math.min(max/w,max/h);w*=r;h*=r;}
+            const c=document.createElement('canvas');c.width=w;c.height=h;
+            c.getContext('2d').drawImage(img,0,0,w,h);
+            setPhotoPreview(c.toDataURL('image/jpeg',0.7));
         };
-        img.src = ev.target.result;
+        img.src=ev.target.result;
     };
-    reader.readAsDataURL(file); e.target.value = '';
+    reader.readAsDataURL(file);e.target.value='';
 };
-photoRemoveBtn.onclick = () => setPhotoPreview('');
+photoRemoveBtn.onclick=()=>setPhotoPreview('');
 
-window.openEdit = function (idx) {
-    const loc = locations[idx]; if (!loc) return;
-    editingIndex = idx;
-    document.getElementById('editModalTitle').textContent = 'แก้ไขสถานที่';
-    document.getElementById('modalName').value = loc.name || '';
-    document.getElementById('modalList').value = loc.list || '';
-    document.getElementById('modalCity').value = loc.city || '';
-    document.getElementById('modalNote').value = loc.note || '';
-    document.getElementById('modalTags').value = (loc.tags || []).join(', ');
-    document.getElementById('modalLat').value = loc.lat;
-    document.getElementById('modalLng').value = loc.lng;
-    setPhotoPreview(loc.photo || '');
+window.openEdit=function(idx){
+    const loc=locations[idx]; if(!loc)return;
+    editingIndex=idx;
+    document.getElementById('editModalTitle').textContent='แก้ไขสถานที่';
+    document.getElementById('modalName').value=loc.name||'';
+    document.getElementById('modalList').value=loc.list||'';
+    document.getElementById('modalCity').value=loc.city||'';
+    document.getElementById('modalNote').value=loc.note||'';
+    document.getElementById('modalTags').value=(loc.tags||[]).join(', ');
+    document.getElementById('modalLat').value=loc.lat;
+    document.getElementById('modalLng').value=loc.lng;
+    setPhotoPreview(loc.photo||'');
     closePlaceCard();
     document.getElementById('editModalOverlay').classList.add('open');
 };
 
-const editModalCancel = document.getElementById('editModalCancel');
-const editModalOverlay = document.getElementById('editModalOverlay');
-if (editModalCancel) editModalCancel.onclick = () => { if (editModalOverlay) editModalOverlay.classList.remove('open'); };
-if (editModalOverlay) editModalOverlay.onclick = e => { if (e.target === editModalOverlay && editModalOverlay) editModalOverlay.classList.remove('open'); };
+const editModalCancel=document.getElementById('editModalCancel');
+const editModalOverlay=document.getElementById('editModalOverlay');
+if(editModalCancel) editModalCancel.onclick=()=>{if(editModalOverlay)editModalOverlay.classList.remove('open');};
+if(editModalOverlay) editModalOverlay.onclick=e=>{if(e.target===editModalOverlay&&editModalOverlay)editModalOverlay.classList.remove('open');};
 
-const editModalSave = document.getElementById('editModalSave');
-if (editModalSave) editModalSave.onclick = () => {
-    const name = _cleanDMSName(document.getElementById('modalName').value.trim());
-    const list = document.getElementById('modalList').value.trim() || 'ไม่มีรายการ';
-    const city = document.getElementById('modalCity').value.trim();
-    const note = document.getElementById('modalNote').value.trim();
-    const lat = parseFloat(document.getElementById('modalLat').value);
-    const lng = parseFloat(document.getElementById('modalLng').value);
-    if (isNaN(lat) || isNaN(lng)) { showToast('กรุณากรอก Lat/Lng', true); return; }
+const editModalSave=document.getElementById('editModalSave');
+if(editModalSave) editModalSave.onclick=()=>{
+    const name=_cleanDMSName(document.getElementById('modalName').value.trim());
+    const list=document.getElementById('modalList').value.trim()||'ไม่มีรายการ';
+    const city=document.getElementById('modalCity').value.trim();
+    const note=document.getElementById('modalNote').value.trim();
+    const lat=parseFloat(document.getElementById('modalLat').value);
+    const lng=parseFloat(document.getElementById('modalLng').value);
+    if(isNaN(lat)||isNaN(lng)){showToast('กรุณากรอก Lat/Lng',true);return;}
     pushUndo();
-    const photo = _modalPhoto || '';
-    const tagsRaw = document.getElementById('modalTags').value;
-    const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
-    const entry = { name, lat, lng, list, city, note, updatedAt: Date.now() };
-    if (tags.length) entry.tags = tags;
-    if (photo) entry.photo = photo;
-    addChangelogEntry(editingIndex >= 0 ? 'edit' : 'add', entry);
+    const photo=_modalPhoto||'';
+    const tagsRaw=document.getElementById('modalTags').value;
+    const tags=tagsRaw?tagsRaw.split(',').map(t=>t.trim()).filter(Boolean):[];
+    const entry={name,lat,lng,list,city,note,updatedAt:Date.now()};
+    if(tags.length)entry.tags=tags;
+    if(photo)entry.photo=photo;
+    addChangelogEntry(editingIndex>=0?'edit':'add',entry);
     document.getElementById('editModalOverlay').classList.remove('open');
-    showToast(editingIndex >= 0 ? 'บันทึกสำเร็จ' : 'เพิ่มสถานที่แล้ว', false, true);
-    if (_sbLoaded) {
+    showToast(editingIndex>=0?'บันทึกสำเร็จ':'เพิ่มสถานที่แล้ว',false,true);
+    if(_sbLoaded){
         // Realtime will update locations[] and render for everyone including self
-        if (editingIndex >= 0) {
-            const existing = locations[editingIndex];
-            entry.sb_id = existing.sb_id;
+        if(editingIndex>=0){
+            const existing=locations[editingIndex];
+            entry.sb_id=existing.sb_id;
             sbUpdate(entry);
         } else {
-            if (editingIndex < 0) map.flyTo([lat, lng], 15, { animate: true, duration: 0.7 });
+            if(editingIndex<0)map.flyTo([lat,lng],15,{animate:true,duration:0.7});
             sbInsert(entry);
         }
     } else {
         // Offline fallback
-        if (editingIndex >= 0) { locations[editingIndex] = entry; } else { locations.push(entry); }
-        saveLocations(); invalidateCache(); update();
+        if(editingIndex>=0){locations[editingIndex]=entry;}else{locations.push(entry);}
+        saveLocations();invalidateCache();update();
     }
 };
 
 // ════════════════════════════════════════════
 // DELETE
 // ════════════════════════════════════════════
-window.doConfirmDelete = function (idx) {
-    const loc = locations[idx]; if (!loc) return;
-    showConfirm('🗑️', 'ลบสถานที่?', `"${loc.name || loc.list}" จะถูกลบ (Undo ได้)`, () => {
-        addChangelogEntry('delete', loc);
-        pushUndo(); locations.splice(idx, 1); saveLocations(); invalidateCache(); closePlaceCard(); update(); showToast('ลบแล้ว');
-        if (_sbLoaded) sbDelete(loc);
+window.doConfirmDelete=function(idx){
+    const loc=locations[idx]; if(!loc)return;
+    showConfirm('🗑️','ลบสถานที่?',`"${loc.name||loc.list}" จะถูกลบ (Undo ได้)`,()=>{
+        addChangelogEntry('delete',loc);
+        pushUndo();locations.splice(idx,1);saveLocations();invalidateCache();closePlaceCard();update();showToast('ลบแล้ว');
+        if(_sbLoaded)sbDelete(loc);
     });
 };
 
 // ════════════════════════════════════════════
 // MEASURE
 // ════════════════════════════════════════════
-window.startMeasureMode = function (idx) {
-    const loc = locations[idx]; measureStart = loc; measureMode = true;
+window.startMeasureMode=function(idx){
+    const loc=locations[idx]; measureStart=loc; measureMode=true;
     document.getElementById('measureBanner').classList.add('show');
     document.getElementById('map').classList.add('measure-cursor');
     closePlaceCard();
 };
-const btnCancelMeasure = document.getElementById('btnCancelMeasure');
-if (btnCancelMeasure) btnCancelMeasure.onclick = cancelMeasureMode;
-function cancelMeasureMode() {
-    measureMode = false; measureStart = null;
+const btnCancelMeasure=document.getElementById('btnCancelMeasure');
+if(btnCancelMeasure) btnCancelMeasure.onclick=cancelMeasureMode;
+function cancelMeasureMode(){
+    measureMode=false;measureStart=null;
     document.getElementById('measureBanner').classList.remove('show');
     document.getElementById('map').classList.remove('measure-cursor');
 }
-const measureModalClose = document.getElementById('measureModalClose');
-const measureModalClear = document.getElementById('measureModalClear');
-const measureModalOverlay2 = document.getElementById('measureModalOverlay');
-if (measureModalClose) measureModalClose.onclick = () => { if (measureModalOverlay2) measureModalOverlay2.classList.remove('open'); };
-if (measureModalClear) measureModalClear.onclick = () => { if (measureLine) { map.removeLayer(measureLine); measureLine = null; } if (measureModalOverlay2) measureModalOverlay2.classList.remove('open'); };
-if (measureModalOverlay2) measureModalOverlay2.onclick = e => { if (e.target === measureModalOverlay2) measureModalOverlay2.classList.remove('open'); };
+const measureModalClose=document.getElementById('measureModalClose');
+const measureModalClear=document.getElementById('measureModalClear');
+const measureModalOverlay2=document.getElementById('measureModalOverlay');
+if(measureModalClose) measureModalClose.onclick=()=>{if(measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
+if(measureModalClear) measureModalClear.onclick=()=>{if(measureLine){map.removeLayer(measureLine);measureLine=null;}if(measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
+if(measureModalOverlay2) measureModalOverlay2.onclick=e=>{if(e.target===measureModalOverlay2)measureModalOverlay2.classList.remove('open');};
 
 // ════════════════════════════════════════════
 // DIRECTIONS (Live navigation + auto-reroute)
 // ════════════════════════════════════════════
 // Route avoidance preferences (shared by nav + route planning)
-let _routeAvoid = JSON.parse(localStorage.getItem('routeAvoid') || '{}');
+let _routeAvoid = JSON.parse(localStorage.getItem('routeAvoid')||'{}');
 // Keys: toll, ferry, motorway  (OSRM exclude values)
-function _saveRouteAvoid() { localStorage.setItem('routeAvoid', JSON.stringify(_routeAvoid)); }
-function _osrmExcludeParam() {
-    const ex = [];
-    if (_routeAvoid.toll) ex.push('toll');
-    if (_routeAvoid.ferry) ex.push('ferry');
-    if (_routeAvoid.motorway) ex.push('motorway');
-    return ex.length ? `&exclude=${ex.join(',')}` : '';
+function _saveRouteAvoid(){localStorage.setItem('routeAvoid',JSON.stringify(_routeAvoid));}
+function _osrmExcludeParam(){
+    const ex=[];
+    if(_routeAvoid.toll)ex.push('toll');
+    if(_routeAvoid.ferry)ex.push('ferry');
+    if(_routeAvoid.motorway)ex.push('motorway');
+    return ex.length?`&exclude=${ex.join(',')}`:'';
 }
-window._showAvoidSettings = function () {
+window._showAvoidSettings=function(){
     // Anti-spam & Toggle logic: If open, close it and return
     const old = document.getElementById('_avoidModal');
-    if (old) {
+    if(old) {
         old.remove();
         const backdrop = document.getElementById('_avoidBackdrop');
-        if (backdrop) backdrop.remove();
+        if(backdrop) backdrop.remove();
         return;
     }
 
-    const html = `
+    const html=`
         <div id="_avoidModal" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:rgba(15,23,42,0.95);backdrop-filter:blur(16px);padding:24px;border-radius:24px;box-shadow:0 20px 50px rgba(0,0,0,0.6);min-width:300px;border:1px solid rgba(255,255,255,0.1);color:#fff;font-family:inherit;">
             <div style="font-weight:700;font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;color:var(--bl);">
                 <i class="fa-solid fa-shield-halved"></i> ตั้งค่าเส้นทาง
             </div>
             <label style="display:flex;align-items:center;gap:12px;padding:12px 0;font-size:14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);">
-                <input type="checkbox" id="_avToll" ${_routeAvoid.toll ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--bl);"> 
+                <input type="checkbox" id="_avToll" ${_routeAvoid.toll?'checked':''} style="width:18px;height:18px;accent-color:var(--bl);"> 
                 <span>หลีกเลี่ยงทางด่วน / เก็บเงิน</span>
             </label>
             <label style="display:flex;align-items:center;gap:12px;padding:12px 0;font-size:14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);">
-                <input type="checkbox" id="_avFerry" ${_routeAvoid.ferry ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--bl);"> 
+                <input type="checkbox" id="_avFerry" ${_routeAvoid.ferry?'checked':''} style="width:18px;height:18px;accent-color:var(--bl);"> 
                 <span>หลีกเลี่ยงทางเรือ / เรือข้ามฟาก</span>
             </label>
             <label style="display:flex;align-items:center;gap:12px;padding:12px 0;font-size:14px;cursor:pointer;margin-bottom:8px;">
-                <input type="checkbox" id="_avMotorway" ${_routeAvoid.motorway ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--bl);"> 
+                <input type="checkbox" id="_avMotorway" ${_routeAvoid.motorway?'checked':''} style="width:18px;height:18px;accent-color:var(--bl);"> 
                 <span>หลีกเลี่ยงทางหลวง / มอเตอร์เวย์</span>
             </label>
             <div style="display:flex;gap:10px;margin-top:20px;">
@@ -1992,18 +2049,18 @@ window._showAvoidSettings = function () {
             </div>
         </div>
         <div id="_avoidBackdrop" onclick="document.getElementById('_avoidModal').remove();this.remove();" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);"></div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
+    document.body.insertAdjacentHTML('beforeend',html);
 };
-window._applyAvoidSettings = function () {
-    _routeAvoid.toll = document.getElementById('_avToll').checked;
-    _routeAvoid.ferry = document.getElementById('_avFerry').checked;
-    _routeAvoid.motorway = document.getElementById('_avMotorway').checked;
+window._applyAvoidSettings=function(){
+    _routeAvoid.toll=document.getElementById('_avToll').checked;
+    _routeAvoid.ferry=document.getElementById('_avFerry').checked;
+    _routeAvoid.motorway=document.getElementById('_avMotorway').checked;
     _saveRouteAvoid();
     document.getElementById('_avoidModal').remove();
     document.getElementById('_avoidBackdrop').remove();
     showToast('⚙️ บันทึกการตั้งค่าเส้นทางแล้ว');
     // Reroute if nav active
-    if (_navState.active && myLatLng) _navReroute(myLatLng.lat, myLatLng.lng);
+    if(_navState.active&&myLatLng)_navReroute(myLatLng.lat,myLatLng.lng);
 };
 
 let _navState = {
@@ -2024,8 +2081,7 @@ const REROUTE_COOLDOWN = 15000; // ms between reroutes
 const ARRIVAL_THRESHOLD = 50; // meters to consider "arrived"
 
 // Inject nav banner CSS once (Modern Premium Redesign)
-(function () {
-    const s = document.createElement('style'); s.textContent = `
+(function(){const s=document.createElement('style');s.textContent=`
 #directionsBanner{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:2000;
   background:rgba(15,23,42,0.9);backdrop-filter:blur(12px);padding:16px 20px;border-radius:24px;
   box-shadow:0 12px 40px rgba(0,0,0,0.5);font-size:14px;font-family:inherit;min-width:280px;
@@ -2044,44 +2100,43 @@ const ARRIVAL_THRESHOLD = 50; // meters to consider "arrived"
   border-radius:12px;cursor:pointer;font-size:16px;font-weight:bold;box-shadow:0 4px 10px rgba(255,77,77,0.3);
   transition:all .2s;display:flex;align-items:center;justify-content:center;}
 #directionsBanner .nav-close:hover{background:#ff2e2e;transform:scale(1.05);}
-`; document.head.appendChild(s);
-})();
+`;document.head.appendChild(s);})();
 
-let _navDestMarker = null;
-function clearDirections() {
-    if (_navState.line) { map.removeLayer(_navState.line); _navState.line = null; }
-    if (_navState.watchId !== null) { navigator.geolocation.clearWatch(_navState.watchId); _navState.watchId = null; }
-    if (_navState.myMarker) { map.removeLayer(_navState.myMarker); _navState.myMarker = null; }
-    if (_navDestMarker) { map.removeLayer(_navDestMarker); _navDestMarker = null; }
-    _navState.active = false;
-    _navState.waypoints = [];
-    _navState.routeCoords = [];
-    _navState.dest = null;
-    _navState.totalDist = 0;
-    _navState.totalDur = 0;
-    const banner = document.getElementById('directionsBanner');
-    if (banner) banner.remove();
+let _navDestMarker=null;
+function clearDirections(){
+    if(_navState.line){map.removeLayer(_navState.line);_navState.line=null;}
+    if(_navState.watchId!==null){navigator.geolocation.clearWatch(_navState.watchId);_navState.watchId=null;}
+    if(_navState.myMarker){map.removeLayer(_navState.myMarker);_navState.myMarker=null;}
+    if(_navDestMarker){map.removeLayer(_navDestMarker);_navDestMarker=null;}
+    _navState.active=false;
+    _navState.waypoints=[];
+    _navState.routeCoords=[];
+    _navState.dest=null;
+    _navState.totalDist=0;
+    _navState.totalDur=0;
+    const banner=document.getElementById('directionsBanner');
+    if(banner)banner.remove();
 }
-window.clearDirections = clearDirections;
+window.clearDirections=clearDirections;
 
 // Escape key / map click to cancel nav
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && _navState.active) { clearDirections(); showToast('ยกเลิกการนำทาง'); } });
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_navState.active){clearDirections();showToast('ยกเลิกการนำทาง');}});
 
-function _updateNavBanner() {
-    if (!_navState.active) return;
+function _updateNavBanner(){
+    if(!_navState.active)return;
     // Remove old banner to prevent duplicates
-    let old = document.getElementById('directionsBanner');
-    if (old) old.remove();
+    let old=document.getElementById('directionsBanner');
+    if(old)old.remove();
 
-    const banner = document.createElement('div');
-    banner.id = 'directionsBanner';
+    const banner=document.createElement('div');
+    banner.id='directionsBanner';
     document.body.appendChild(banner);
 
-    const distKm = (_navState.totalDist / 1000).toFixed(1);
-    const etaMins = Math.round(_navState.totalDur / 60);
-    const destName = _navState.dest?.name || 'ปลายทาง';
-    const wpText = _navState.waypoints.length ? `<div style="font-size:11px;color:var(--bl);margin-top:4px;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-location-dot"></i> ${_navState.waypoints.length} จุดแวะ</div>` : '';
-    banner.innerHTML = `
+    const distKm=(_navState.totalDist/1000).toFixed(1);
+    const etaMins=Math.round(_navState.totalDur/60);
+    const destName=_navState.dest?.name||'ปลายทาง';
+    const wpText=_navState.waypoints.length?`<div style="font-size:11px;color:var(--bl);margin-top:4px;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-location-dot"></i> ${_navState.waypoints.length} จุดแวะ</div>`:'';
+    banner.innerHTML=`
         <div class="nav-row">
             <i class="fa-solid fa-compass" style="font-size:20px;color:var(--bl);"></i>
             <strong style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${destName}</strong>
@@ -2099,26 +2154,26 @@ function _updateNavBanner() {
         </div>`;
 
     // Bind buttons with addEventListener (reliable, no scope issues)
-    document.getElementById('_nbWaypoint').addEventListener('click', _navAddWaypoint);
-    document.getElementById('_nbAvoid').addEventListener('click', _showAvoidSettings);
-    document.getElementById('_nbMaps').addEventListener('click', _navOpenMaps);
-    document.getElementById('_nbClose').addEventListener('click', () => { clearDirections(); showToast('ยกเลิกการนำทาง'); });
+    document.getElementById('_nbWaypoint').addEventListener('click',_navAddWaypoint);
+    document.getElementById('_nbAvoid').addEventListener('click',_showAvoidSettings);
+    document.getElementById('_nbMaps').addEventListener('click',_navOpenMaps);
+    document.getElementById('_nbClose').addEventListener('click',()=>{clearDirections();showToast('ยกเลิกการนำทาง');});
 }
 
-function _navOpenMaps() {
-    if (!_navState.dest) return;
-    const d = _navState.dest;
-    let url = `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
-    if (_navState.waypoints.length) {
-        url += `&waypoints=${_navState.waypoints.map(w => `${w.lat},${w.lng}`).join('|')}`;
+function _navOpenMaps(){
+    if(!_navState.dest)return;
+    const d=_navState.dest;
+    let url=`https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}`;
+    if(_navState.waypoints.length){
+        url+=`&waypoints=${_navState.waypoints.map(w=>`${w.lat},${w.lng}`).join('|')}`;
     }
-    window.open(url, '_blank');
+    window.open(url,'_blank');
 }
 
 let _isAddingWaypoint = false;
 
-function _navAddWaypoint() {
-    if (!_navState.active) return;
+function _navAddWaypoint(){
+    if(!_navState.active) return;
     _isAddingWaypoint = true;
     showToast('📍 โปรดคลิกบนแผนที่เพื่อเลือกจุดแวะ');
     map.getContainer().style.cursor = 'crosshair';
@@ -2126,30 +2181,30 @@ function _navAddWaypoint() {
 
 // Add this to your map click handler logic
 function _handleMapClickForWaypoint(e) {
-    if (!_isAddingWaypoint) return;
-
+    if(!_isAddingWaypoint) return;
+    
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
-
+    
     _navState.waypoints.push({
         lat: lat,
         lng: lng,
         name: `จุดแวะ ${_navState.waypoints.length + 1}`
     });
-
+    
     _isAddingWaypoint = false;
     map.getContainer().style.cursor = '';
-
+    
     showToast(`📍 เพิ่มจุดแวะเรียบร้อยแล้ว`);
-    if (myLatLng) _navReroute(myLatLng.lat, myLatLng.lng);
+    if(myLatLng) _navReroute(myLatLng.lat, myLatLng.lng);
 }
 
 
-async function _navFetchRoute(fromLat, fromLng) {
+async function _navFetchRoute(fromLat,fromLng){
     // Build coordinates: from → waypoints → dest
-    const points = [[fromLng, fromLat]];
-    _navState.waypoints.forEach(w => points.push([w.lng, w.lat]));
-    points.push([_navState.dest.lng, _navState.dest.lat]);
+    const points=[[fromLng,fromLat]];
+    _navState.waypoints.forEach(w=>points.push([w.lng,w.lat]));
+    points.push([_navState.dest.lng,_navState.dest.lat]);
 
     // Filter out duplicates or points that are too close (prevents OSRM 400)
     const uniquePoints = [];
@@ -2162,7 +2217,7 @@ async function _navFetchRoute(fromLat, fromLng) {
 
     const coordStr = uniquePoints.map(c => c[0] + ',' + c[1]).join(';');
     const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
-
+    
     try {
         const res = await fetch(url);
         if (!res.ok) {
@@ -2179,36 +2234,36 @@ async function _navFetchRoute(fromLat, fromLng) {
 }
 
 
-async function _navReroute(lat, lng) {
-    _navState.lastReroute = Date.now();
-    try {
-        const route = await _navFetchRoute(lat, lng);
-        const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-        _navState.routeCoords = coords;
-        _navState.totalDist = route.distance;
-        _navState.totalDur = route.duration;
-        if (_navState.line) map.removeLayer(_navState.line);
-        _navState.line = L.polyline(coords, { color: '#1a73e8', weight: 5, opacity: 0.85 }).addTo(map);
+async function _navReroute(lat,lng){
+    _navState.lastReroute=Date.now();
+    try{
+        const route=await _navFetchRoute(lat,lng);
+        const coords=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+        _navState.routeCoords=coords;
+        _navState.totalDist=route.distance;
+        _navState.totalDur=route.duration;
+        if(_navState.line)map.removeLayer(_navState.line);
+        _navState.line=L.polyline(coords,{color:'#1a73e8',weight:5,opacity:0.85}).addTo(map);
         _updateNavBanner();
-    } catch (e) {
+    }catch(e){
         showToast('❌ ไม่สามารถคำนวณเส้นทางได้ (โปรดเลือกจุดบนถนน)', true);
-        if (_navState.waypoints.length > 0) _navState.waypoints.pop();
+        if(_navState.waypoints.length > 0) _navState.waypoints.pop();
     }
 }
 
-function _distToRoute(lat, lng, routeCoords) {
+function _distToRoute(lat,lng,routeCoords){
     // Min distance from point to any segment in route
-    let minD = Infinity;
+    let minD=Infinity;
     // Sample every ~5th point for performance
-    const step = Math.max(1, Math.floor(routeCoords.length / 200));
-    for (let i = 0; i < routeCoords.length; i += step) {
-        const d = haversine(lat, lng, routeCoords[i][0], routeCoords[i][1]);
-        if (d < minD) minD = d;
+    const step=Math.max(1,Math.floor(routeCoords.length/200));
+    for(let i=0;i<routeCoords.length;i+=step){
+        const d=haversine(lat,lng,routeCoords[i][0],routeCoords[i][1]);
+        if(d<minD)minD=d;
     }
     return minD;
 }
 
-window.doDirectionsTo = function (idx) {
+window.doDirectionsTo = function(idx) {
     const dest = locations[idx];
     if (!dest) { showToast('ไม่พบสถานที่', true); return; }
     closePlaceCard();
@@ -2219,65 +2274,65 @@ window.doDirectionsTo = function (idx) {
         return;
     }
 
-    _navState.dest = dest;
-    _navState.active = true;
-    _navState.trafficFactor = 1.0;
-    _navState.waypoints = [];
+    _navState.dest=dest;
+    _navState.active=true;
+    _navState.trafficFactor=1.0;
+    _navState.waypoints=[];
     // Add destination marker
-    _navDestMarker = L.marker([dest.lat, dest.lng]).addTo(map).bindPopup(`🏁 ${dest.name || 'ปลายทาง'}`);
+    _navDestMarker=L.marker([dest.lat,dest.lng]).addTo(map).bindPopup(`🏁 ${dest.name||'ปลายทาง'}`);
     showToast('📍 กำลังหาตำแหน่งและคำนวณเส้นทาง...');
 
     navigator.geolocation.getCurrentPosition(async pos => {
-        const fromLat = pos.coords.latitude, fromLng = pos.coords.longitude;
-        myLatLng = { lat: fromLat, lng: fromLng };
+        const fromLat=pos.coords.latitude, fromLng=pos.coords.longitude;
+        myLatLng={lat:fromLat,lng:fromLng};
 
-        try {
-            await _navReroute(fromLat, fromLng);
-            map.fitBounds(_navState.line.getBounds(), { padding: [80, 80] });
+        try{
+            await _navReroute(fromLat,fromLng);
+            map.fitBounds(_navState.line.getBounds(),{padding:[80,80]});
 
             // Start live tracking
-            _navState.watchId = navigator.geolocation.watchPosition(p => {
-                const lat = p.coords.latitude, lng = p.coords.longitude;
-                myLatLng = { lat, lng };
+            _navState.watchId=navigator.geolocation.watchPosition(p=>{
+                const lat=p.coords.latitude, lng=p.coords.longitude;
+                myLatLng={lat,lng};
 
                 // Update position marker
-                if (!_navState.myMarker) {
-                    _navState.myMarker = L.circleMarker([lat, lng], { radius: 8, color: '#fff', fillColor: '#4285f4', fillOpacity: 1, weight: 3 }).addTo(map);
-                } else {
-                    _navState.myMarker.setLatLng([lat, lng]);
+                if(!_navState.myMarker){
+                    _navState.myMarker=L.circleMarker([lat,lng],{radius:8,color:'#fff',fillColor:'#4285f4',fillOpacity:1,weight:3}).addTo(map);
+                }else{
+                    _navState.myMarker.setLatLng([lat,lng]);
                 }
 
                 // Check arrival
-                const distToDest = haversine(lat, lng, dest.lat, dest.lng);
-                if (distToDest < ARRIVAL_THRESHOLD) {
-                    showToast(`🎉 ถึงแล้ว! ${dest.name || 'ปลายทาง'}`, false, true);
+                const distToDest=haversine(lat,lng,dest.lat,dest.lng);
+                if(distToDest<ARRIVAL_THRESHOLD){
+                    showToast(`🎉 ถึงแล้ว! ${dest.name||'ปลายทาง'}`,false,true);
                     clearDirections();
                     return;
                 }
 
                 // Check if off-route → reroute
-                if (_navState.routeCoords.length > 0) {
-                    const distOff = _distToRoute(lat, lng, _navState.routeCoords);
-                    if (distOff > REROUTE_THRESHOLD && Date.now() - _navState.lastReroute > REROUTE_COOLDOWN) {
+                if(_navState.routeCoords.length>0){
+                    const distOff=_distToRoute(lat,lng,_navState.routeCoords);
+                    if(distOff>REROUTE_THRESHOLD && Date.now()-_navState.lastReroute>REROUTE_COOLDOWN){
                         showToast('🔄 ออกนอกเส้นทาง — กำลังหาเส้นทางใหม่...');
-                        _navReroute(lat, lng);
+                        _navReroute(lat,lng);
                     }
                 }
 
                 // Follow user position
-                map.panTo([lat, lng], { animate: true, duration: 0.5 });
-            }, err => console.warn('Nav GPS error:', err), { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 });
+                map.panTo([lat,lng],{animate:true,duration:0.5});
+            }, err=>console.warn('Nav GPS error:',err), {enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
-        } catch (e) {
+        }catch(e){
             showToast('❌ หาเส้นทางไม่ได้ — เปิด Google Maps');
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-            _navState.active = false;
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`,'_blank');
+            _navState.active=false;
         }
     }, err => {
         console.warn('GPS error:', err);
         showToast('📍 ไม่สามารถหาตำแหน่ง — เปิด Google Maps');
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
-        _navState.active = false;
+        _navState.active=false;
     }, { enableHighAccuracy: true, timeout: 10000 });
 };
 
@@ -2285,52 +2340,52 @@ window.doDirectionsTo = function (idx) {
 // ROUTE PLANNING (Smart TSP + Interactive Editor)
 // ════════════════════════════════════════════
 // routeLine & routeMode hoisted to top of file
-let _routeStops = []; // ordered stops [{lat,lng,name,list,city,...}]
-let _routeDist = 0, _routeDur = 0, _routeUseOSRM = false;
+let _routeStops=[]; // ordered stops [{lat,lng,name,list,city,...}]
+let _routeDist=0, _routeDur=0, _routeUseOSRM=false;
 
-function clearRoute() {
-    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-    routeMode = false;
-    _routeStops = [];
+function clearRoute(){
+    if(routeLine){map.removeLayer(routeLine);routeLine=null;}
+    routeMode=false;
+    _routeStops=[];
     document.getElementById('chipRoute').classList.remove('active');
     // Restore sort bar + markers
-    document.getElementById('listSortBar').style.display = '';
-    _lastFilteredKey = null; // force marker re-render
+    document.getElementById('listSortBar').style.display='';
+    _lastFilteredKey=null; // force marker re-render
     update();
 }
 
 // ── TSP solver: Nearest-Neighbor + 2-opt improvement ──
-function _tspSolve(points, startLat, startLng) {
+function _tspSolve(points, startLat, startLng){
     // Nearest-neighbor initial solution
-    const remaining = [...points];
-    const ordered = [];
-    let cLat = startLat, cLng = startLng;
-    while (remaining.length > 0) {
-        let bi = 0, bd = Infinity;
-        for (let i = 0; i < remaining.length; i++) {
-            const d = haversine(cLat, cLng, remaining[i].lat, remaining[i].lng);
-            if (d < bd) { bd = d; bi = i; }
+    const remaining=[...points];
+    const ordered=[];
+    let cLat=startLat, cLng=startLng;
+    while(remaining.length>0){
+        let bi=0, bd=Infinity;
+        for(let i=0;i<remaining.length;i++){
+            const d=haversine(cLat,cLng,remaining[i].lat,remaining[i].lng);
+            if(d<bd){bd=d;bi=i;}
         }
-        const next = remaining.splice(bi, 1)[0];
+        const next=remaining.splice(bi,1)[0];
         ordered.push(next);
-        cLat = next.lat; cLng = next.lng;
+        cLat=next.lat;cLng=next.lng;
     }
     // 2-opt improvement (up to 50 points for performance)
-    if (ordered.length <= 50) {
-        const dist = (a, b) => haversine(a.lat, a.lng, b.lat, b.lng);
-        let improved = true, iter = 0;
-        while (improved && iter < 500) {
-            improved = false; iter++;
-            for (let i = 0; i < ordered.length - 1; i++) {
-                for (let j = i + 2; j < ordered.length; j++) {
-                    const a = i === 0 ? { lat: startLat, lng: startLng } : ordered[i - 1];
-                    const d1 = dist(a, ordered[i]) + dist(ordered[j], j + 1 < ordered.length ? ordered[j + 1] : { lat: ordered[j].lat, lng: ordered[j].lng });
-                    const d2 = dist(a, ordered[j]) + dist(ordered[i], j + 1 < ordered.length ? ordered[j + 1] : { lat: ordered[j].lat, lng: ordered[j].lng });
-                    if (d2 < d1 - 0.001) {
+    if(ordered.length<=50){
+        const dist=(a,b)=>haversine(a.lat,a.lng,b.lat,b.lng);
+        let improved=true, iter=0;
+        while(improved&&iter<500){
+            improved=false;iter++;
+            for(let i=0;i<ordered.length-1;i++){
+                for(let j=i+2;j<ordered.length;j++){
+                    const a=i===0?{lat:startLat,lng:startLng}:ordered[i-1];
+                    const d1=dist(a,ordered[i])+dist(ordered[j],j+1<ordered.length?ordered[j+1]:{lat:ordered[j].lat,lng:ordered[j].lng});
+                    const d2=dist(a,ordered[j])+dist(ordered[i],j+1<ordered.length?ordered[j+1]:{lat:ordered[j].lat,lng:ordered[j].lng});
+                    if(d2<d1-0.001){
                         // Reverse segment i..j
-                        const seg = ordered.slice(i, j + 1).reverse();
-                        ordered.splice(i, j - i + 1, ...seg);
-                        improved = true;
+                        const seg=ordered.slice(i,j+1).reverse();
+                        ordered.splice(i,j-i+1,...seg);
+                        improved=true;
                     }
                 }
             }
@@ -2340,83 +2395,82 @@ function _tspSolve(points, startLat, startLng) {
 }
 
 // ── OSRM fetch for route planning (chunked, with avoidance) ──
-async function _routeFetchOSRM(waypoints) {
-    const CHUNK = 25;
-    const allCoords = [];
-    let totalDist = 0, totalDur = 0;
-    for (let i = 0; i < waypoints.length - 1; i += CHUNK - 1) {
-        const chunk = waypoints.slice(i, Math.min(i + CHUNK, waypoints.length));
-        if (chunk.length < 2) break;
-        const coordStr = chunk.map(c => c[0] + ',' + c[1]).join(';');
-        const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson${_osrmExcludeParam()}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.routes && data.routes.length) {
-            const r = data.routes[0];
-            const coords = r.geometry.coordinates.map(c => [c[1], c[0]]);
-            if (allCoords.length && coords.length) coords.shift();
+async function _routeFetchOSRM(waypoints){
+    const CHUNK=25;
+    const allCoords=[];
+    let totalDist=0, totalDur=0;
+    for(let i=0;i<waypoints.length-1;i+=CHUNK-1){
+        const chunk=waypoints.slice(i, Math.min(i+CHUNK, waypoints.length));
+        if(chunk.length<2)break;
+        const coordStr=chunk.map(c=>c[0]+','+c[1]).join(';');
+        const url=`https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson${_osrmExcludeParam()}`;
+        const res=await fetch(url);
+        const data=await res.json();
+        if(data.routes&&data.routes.length){
+            const r=data.routes[0];
+            const coords=r.geometry.coordinates.map(c=>[c[1],c[0]]);
+            if(allCoords.length&&coords.length)coords.shift();
             allCoords.push(...coords);
-            totalDist += r.distance;
-            totalDur += r.duration;
-        } else { throw new Error('No route'); }
+            totalDist+=r.distance;
+            totalDur+=r.duration;
+        }else{throw new Error('No route');}
     }
-    return { coords: allCoords, distance: totalDist, duration: totalDur };
+    return {coords:allCoords,distance:totalDist,duration:totalDur};
 }
 
 // ── Draw route on map ──
-async function _routeDraw() {
-    if (routeLine) { map.removeLayer(routeLine); }
-    if (_routeStops.length < 1) return;
+async function _routeDraw(){
+    if(routeLine){map.removeLayer(routeLine);}
+    if(_routeStops.length<1)return;
     // Remove normal markers/clusters
-    if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+    if(map.hasLayer(markerCluster))map.removeLayer(markerCluster);
 
-    const group = L.layerGroup();
-    const waypoints = [];
-    if (myLatLng) waypoints.push([myLatLng.lng, myLatLng.lat]);
-    _routeStops.forEach(l => waypoints.push([l.lng, l.lat]));
+    const group=L.layerGroup();
+    const waypoints=[];
+    if(myLatLng)waypoints.push([myLatLng.lng,myLatLng.lat]);
+    _routeStops.forEach(l=>waypoints.push([l.lng,l.lat]));
 
-    _routeUseOSRM = false;
-    if (waypoints.length <= 100) {
-        try {
-            const result = await _routeFetchOSRM(waypoints);
-            L.polyline(result.coords, { color: '#4285f4', weight: 4, opacity: 0.85 }).addTo(group);
-            _routeDist = result.distance;
-            _routeDur = result.duration;
-            _routeUseOSRM = true;
-        } catch (e) {
-            console.warn('OSRM route failed:', e.message);
+    _routeUseOSRM=false;
+    if(waypoints.length<=100){
+        try{
+            const result=await _routeFetchOSRM(waypoints);
+            L.polyline(result.coords,{color:'#4285f4',weight:4,opacity:0.85}).addTo(group);
+            _routeDist=result.distance;
+            _routeDur=result.duration;
+            _routeUseOSRM=true;
+        }catch(e){
+            console.warn('OSRM route failed:',e.message);
         }
     }
 
-    if (!_routeUseOSRM) {
-        _routeDist = 0;
-        const pts = [];
-        if (myLatLng) { pts.push([myLatLng.lat, myLatLng.lng]); _routeDist += haversine(myLatLng.lat, myLatLng.lng, _routeStops[0].lat, _routeStops[0].lng); }
-        _routeStops.forEach((l, i) => {
-            pts.push([l.lat, l.lng]);
-            if (i > 0) _routeDist += haversine(_routeStops[i - 1].lat, _routeStops[i - 1].lng, l.lat, l.lng);
+    if(!_routeUseOSRM){
+        _routeDist=0;
+        const pts=[];
+        if(myLatLng){pts.push([myLatLng.lat,myLatLng.lng]);_routeDist+=haversine(myLatLng.lat,myLatLng.lng,_routeStops[0].lat,_routeStops[0].lng);}
+        _routeStops.forEach((l,i)=>{
+            pts.push([l.lat,l.lng]);
+            if(i>0)_routeDist+=haversine(_routeStops[i-1].lat,_routeStops[i-1].lng,l.lat,l.lng);
         });
-        L.polyline(pts, { color: '#4285f4', weight: 3, opacity: 0.8, dashArray: '8,6' }).addTo(group);
-        _routeDur = 0;
+        L.polyline(pts,{color:'#4285f4',weight:3,opacity:0.8,dashArray:'8,6'}).addTo(group);
+        _routeDur=0;
     }
 
-    const allPts = [];
-    if (myLatLng) allPts.push([myLatLng.lat, myLatLng.lng]);
-    _routeStops.forEach((loc, i) => {
-        allPts.push([loc.lat, loc.lng]);
-        L.circleMarker([loc.lat, loc.lng], { radius: 10, color: '#fff', fillColor: '#4285f4', fillOpacity: 1, weight: 2 })
-            .bindTooltip(String(i + 1), { permanent: true, direction: 'center', className: 'route-number-tooltip' })
+    const allPts=[];
+    if(myLatLng)allPts.push([myLatLng.lat,myLatLng.lng]);
+    _routeStops.forEach((loc,i)=>{
+        allPts.push([loc.lat,loc.lng]);
+        L.circleMarker([loc.lat,loc.lng],{radius:10,color:'#fff',fillColor:'#4285f4',fillOpacity:1,weight:2})
+            .bindTooltip(String(i+1),{permanent:true,direction:'center',className:'route-number-tooltip'})
             .addTo(group);
     });
 
-    routeLine = group.addTo(map);
-    map.fitBounds(L.latLngBounds(allPts), { padding: [60, 60] });
+    routeLine=group.addTo(map);
+    map.fitBounds(L.latLngBounds(allPts),{padding:[60,60]});
     _renderRoutePanel();
 }
 
 // ── Inject route panel CSS ──
-(function () {
-    const s = document.createElement('style'); s.textContent = `
+(function(){const s=document.createElement('style');s.textContent=`
 .rp-toolbar{padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;}
 .rp-btn{flex:1;padding:7px 4px;border:1px solid var(--gn);border-radius:8px;background:var(--surface);
   cursor:pointer;font-size:11px;min-width:0;color:var(--text);transition:background .15s;}
@@ -2432,25 +2486,24 @@ async function _routeDraw() {
 .rp-stop-btn{border:none;background:none;cursor:pointer;font-size:14px;padding:4px;color:var(--text);min-width:28px;}
 .rp-stop-btn:active{background:var(--gn);border-radius:6px;}
 .rp-stop-btn.del{color:#ea4335;}
-`; document.head.appendChild(s);
-})();
+`;document.head.appendChild(s);})();
 
 // ── Interactive route panel (replaces list panel) ──
-function _renderRoutePanel() {
-    const lp = document.getElementById('listPanel');
+function _renderRoutePanel(){
+    const lp=document.getElementById('listPanel');
     lp.classList.add('open');
     // Hide sort bar in route mode
-    document.getElementById('listSortBar').style.display = 'none';
-    const distText = formatDist(_routeDist);
-    const etaMins = _routeUseOSRM ? Math.round(_routeDur / 60) : 0;
-    const modeText = _routeUseOSRM ? '🛣️' : '📏';
-    const etaText = _routeUseOSRM ? ` · ~${etaMins} นาที` : '';
+    document.getElementById('listSortBar').style.display='none';
+    const distText=formatDist(_routeDist);
+    const etaMins=_routeUseOSRM?Math.round(_routeDur/60):0;
+    const modeText=_routeUseOSRM?'🛣️':'📏';
+    const etaText=_routeUseOSRM?` · ~${etaMins} นาที`:'';
 
-    document.getElementById('listPanelTitle').textContent = `${modeText} เส้นทาง ${_routeStops.length} จุด · ${distText}${etaText}`;
+    document.getElementById('listPanelTitle').textContent=`${modeText} เส้นทาง ${_routeStops.length} จุด · ${distText}${etaText}`;
 
-    const body = document.getElementById('listBody');
+    const body=document.getElementById('listBody');
     // Build toolbar
-    let html = `<div class="rp-toolbar">
+    let html=`<div class="rp-toolbar">
         <button class="rp-btn" data-rp="optimize">🧠 จัดลำดับ</button>
         <button class="rp-btn" data-rp="avoid">⚙️ หลีกเลี่ยง</button>
         <button class="rp-btn" data-rp="add">➕ เพิ่มจุด</button>
@@ -2458,188 +2511,185 @@ function _renderRoutePanel() {
     </div><div style="padding:0 8px 8px;">`;
 
     // Build stop list
-    _routeStops.forEach((s, i) => {
-        html += `<div class="rp-stop">
-            <span class="rp-stop-num">${i + 1}</span>
+    _routeStops.forEach((s,i)=>{
+        html+=`<div class="rp-stop">
+            <span class="rp-stop-num">${i+1}</span>
             <div class="rp-stop-info">
-                <div class="rp-stop-name">${_cleanDMSName(s.name) || s.list || 'ไม่มีชื่อ'}</div>
-                <div class="rp-stop-sub">${s.list || ''}${s.city ? ' · ' + s.city : ''}</div>
+                <div class="rp-stop-name">${_cleanDMSName(s.name)||s.list||'ไม่มีชื่อ'}</div>
+                <div class="rp-stop-sub">${s.list||''}${s.city?' · '+s.city:''}</div>
             </div>
-            <button class="rp-stop-btn" data-rp="up" data-idx="${i}" ${i === 0 ? 'disabled' : ''}>▲</button>
-            <button class="rp-stop-btn" data-rp="down" data-idx="${i}" ${i === _routeStops.length - 1 ? 'disabled' : ''}>▼</button>
+            <button class="rp-stop-btn" data-rp="up" data-idx="${i}" ${i===0?'disabled':''}>▲</button>
+            <button class="rp-stop-btn" data-rp="down" data-idx="${i}" ${i===_routeStops.length-1?'disabled':''}>▼</button>
             <button class="rp-stop-btn del" data-rp="remove" data-idx="${i}">✕</button>
         </div>`;
     });
-    html += `</div>`;
-    body.innerHTML = html;
+    html+=`</div>`;
+    body.innerHTML=html;
 
     // Bind all buttons via event delegation
-    body.addEventListener('click', _routePanelClick);
+    body.addEventListener('click',_routePanelClick);
 }
 
-function _routePanelClick(e) {
-    const btn = e.target.closest('[data-rp]');
-    if (!btn) return;
-    const action = btn.dataset.rp;
-    const idx = parseInt(btn.dataset.idx);
-    switch (action) {
-        case 'optimize': _routeOptimize(); break;
-        case 'avoid': _showAvoidSettings(); break;
-        case 'add': _routeAddStop(); break;
-        case 'navigate': _routeNavigate(); break;
-        case 'up': _routeMoveStop(idx, -1); break;
-        case 'down': _routeMoveStop(idx, 1); break;
-        case 'remove': _routeRemoveStop(idx); break;
+function _routePanelClick(e){
+    const btn=e.target.closest('[data-rp]');
+    if(!btn)return;
+    const action=btn.dataset.rp;
+    const idx=parseInt(btn.dataset.idx);
+    switch(action){
+        case 'optimize':_routeOptimize();break;
+        case 'avoid':_showAvoidSettings();break;
+        case 'add':_routeAddStop();break;
+        case 'navigate':_routeNavigate();break;
+        case 'up':_routeMoveStop(idx,-1);break;
+        case 'down':_routeMoveStop(idx,1);break;
+        case 'remove':_routeRemoveStop(idx);break;
     }
 }
 
 // ── Route actions ──
-async function _routeOptimize() {
-    if (_routeStops.length < 3) { showToast('ต้องมีอย่างน้อย 3 จุดถึงจะจัดลำดับได้', true); return; }
+async function _routeOptimize(){
+    if(_routeStops.length<3){showToast('ต้องมีอย่างน้อย 3 จุดถึงจะจัดลำดับได้',true);return;}
     showToast('🧠 กำลังคำนวณเส้นทางที่ดีที่สุด...');
-    const startLat = myLatLng ? myLatLng.lat : _routeStops[0].lat;
-    const startLng = myLatLng ? myLatLng.lng : _routeStops[0].lng;
+    const startLat=myLatLng?myLatLng.lat:_routeStops[0].lat;
+    const startLng=myLatLng?myLatLng.lng:_routeStops[0].lng;
 
-    _routeStops = _tspSolve(_routeStops, startLat, startLng);
+    _routeStops=_tspSolve(_routeStops, startLat, startLng);
     await _routeDraw();
-    showToast('🧠 จัดลำดับเส้นทางใหม่แล้ว!', false, true);
+    showToast('🧠 จัดลำดับเส้นทางใหม่แล้ว!',false,true);
 }
 
-async function _routeMoveStop(idx, dir) {
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= _routeStops.length) return;
-    const tmp = _routeStops[idx];
-    _routeStops[idx] = _routeStops[newIdx];
-    _routeStops[newIdx] = tmp;
-    await _routeDraw();
-}
-
-async function _routeRemoveStop(idx) {
-    _routeStops.splice(idx, 1);
-    if (_routeStops.length < 1) { clearRoute(); closeListPanel(); showToast('ล้างเส้นทาง'); return; }
+async function _routeMoveStop(idx,dir){
+    const newIdx=idx+dir;
+    if(newIdx<0||newIdx>=_routeStops.length)return;
+    const tmp=_routeStops[idx];
+    _routeStops[idx]=_routeStops[newIdx];
+    _routeStops[newIdx]=tmp;
     await _routeDraw();
 }
 
-function _routeAddStop() {
-    const q = prompt('พิมพ์ชื่อสถานที่หรือพิกัด (lat,lng):', '');
-    if (!q) return;
-    const coords = parseLatLng(q);
-    if (coords) {
-        _routeStops.push({ lat: coords.lat, lng: coords.lng, name: `จุดกำหนด (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`, list: '', city: '' });
+async function _routeRemoveStop(idx){
+    _routeStops.splice(idx,1);
+    if(_routeStops.length<1){clearRoute();closeListPanel();showToast('ล้างเส้นทาง');return;}
+    await _routeDraw();
+}
+
+function _routeAddStop(){
+    const q=prompt('พิมพ์ชื่อสถานที่หรือพิกัด (lat,lng):','');
+    if(!q)return;
+    const coords=parseLatLng(q);
+    if(coords){
+        _routeStops.push({lat:coords.lat,lng:coords.lng,name:`จุดกำหนด (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`,list:'',city:''});
         _routeDraw();
         return;
     }
-    const matches = locations.filter(l => (l.name || '').toLowerCase().includes(q.toLowerCase()) || l.list.toLowerCase().includes(q.toLowerCase()));
-    if (!matches.length) { showToast('ไม่พบสถานที่', true); return; }
-    if (matches.length === 1) {
+    const matches=locations.filter(l=>(l.name||'').toLowerCase().includes(q.toLowerCase())||l.list.toLowerCase().includes(q.toLowerCase()));
+    if(!matches.length){showToast('ไม่พบสถานที่',true);return;}
+    if(matches.length===1){
         _routeStops.push(matches[0]);
         _routeDraw();
-        showToast(`➕ เพิ่ม "${matches[0].name || matches[0].list}"`);
+        showToast(`➕ เพิ่ม "${matches[0].name||matches[0].list}"`);
         return;
     }
-    const msg = matches.slice(0, 10).map((m, i) => `${i + 1}. ${m.name || m.list}`).join('\n');
-    const pick = prompt(`พบ ${matches.length} จุด เลือกเลข:\n${msg}`);
-    if (!pick) return;
-    const sel = matches[parseInt(pick) - 1];
-    if (sel) {
+    const msg=matches.slice(0,10).map((m,i)=>`${i+1}. ${m.name||m.list}`).join('\n');
+    const pick=prompt(`พบ ${matches.length} จุด เลือกเลข:\n${msg}`);
+    if(!pick)return;
+    const sel=matches[parseInt(pick)-1];
+    if(sel){
         _routeStops.push(sel);
         _routeDraw();
-        showToast(`➕ เพิ่ม "${sel.name || sel.list}"`);
+        showToast(`➕ เพิ่ม "${sel.name||sel.list}"`);
     }
 }
 
-function _routeNavigate() {
-    if (!_routeStops.length) return;
-    const last = _routeStops[_routeStops.length - 1];
-    let url = `https://www.google.com/maps/dir/?api=1&destination=${last.lat},${last.lng}`;
-    if (_routeStops.length > 1) {
-        const wps = _routeStops.slice(0, -1).map(s => `${s.lat},${s.lng}`).join('|');
-        url += `&waypoints=${wps}`;
+function _routeNavigate(){
+    if(!_routeStops.length)return;
+    const last=_routeStops[_routeStops.length-1];
+    let url=`https://www.google.com/maps/dir/?api=1&destination=${last.lat},${last.lng}`;
+    if(_routeStops.length>1){
+        const wps=_routeStops.slice(0,-1).map(s=>`${s.lat},${s.lng}`).join('|');
+        url+=`&waypoints=${wps}`;
     }
-    if (myLatLng) url += `&origin=${myLatLng.lat},${myLatLng.lng}`;
-    window.open(url, '_blank');
+    if(myLatLng)url+=`&origin=${myLatLng.lat},${myLatLng.lng}`;
+    window.open(url,'_blank');
 }
 
-async function doRoute() {
-    const filtered = getFiltered();
-    if (filtered.length < 2) { showToast('ต้องมีอย่างน้อย 2 จุด', true); return; }
-    if (filtered.length > 500) { showToast('มากเกินไป (สูงสุด 500 จุด)', true); return; }
+async function doRoute(){
+    const filtered=getFiltered();
+    if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
+    if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
 
     showToast('🛤️ กำลังวางแผนเส้นทาง...');
 
-    const startLat = myLatLng ? myLatLng.lat : filtered[0].lat;
-    const startLng = myLatLng ? myLatLng.lng : filtered[0].lng;
+    const startLat=myLatLng?myLatLng.lat:filtered[0].lat;
+    const startLng=myLatLng?myLatLng.lng:filtered[0].lng;
 
-    _routeStops = _tspSolve(filtered, startLat, startLng);
-    routeMode = true;
+    _routeStops=_tspSolve(filtered, startLat, startLng);
+    routeMode=true;
     document.getElementById('chipRoute').classList.add('active');
     await _routeDraw();
 }
 
-const chipRoute = document.getElementById('chipRoute');
-if (chipRoute) chipRoute.onclick = () => {
-    if (routeMode) { clearRoute(); closeListPanel(); showToast('ปิดเส้นทาง'); }
+const chipRoute=document.getElementById('chipRoute');
+if(chipRoute) chipRoute.onclick=()=>{
+    if(routeMode){clearRoute();closeListPanel();showToast('ปิดเส้นทาง');}
     else doRoute();
 };
 
 // ════════════════════════════════════════════
 // INFO PANEL (kept for compatibility)
 // ════════════════════════════════════════════
-const infoPanelClose = document.getElementById('infoPanelClose');
-const infoPanelBackdrop = document.getElementById('infoPanelBackdrop');
-if (infoPanelClose) infoPanelClose.onclick = closeInfo;
-if (infoPanelBackdrop) infoPanelBackdrop.onclick = closeInfo;
+const infoPanelClose=document.getElementById('infoPanelClose');
+const infoPanelBackdrop=document.getElementById('infoPanelBackdrop');
+if(infoPanelClose) infoPanelClose.onclick = closeInfo;
+if(infoPanelBackdrop) infoPanelBackdrop.onclick = closeInfo;
 
-function openInfoPanel(mode) {
-    const body = document.getElementById('infoPanelBody');
-    if (mode === 'changelog') {
-        document.getElementById('infoPanelTitle').textContent = 'ประวัติการแก้ไข';
-        const log = getChangelog();
-        const actionLabel = { add: 'เพิ่ม', edit: 'แก้ไข', delete: 'ลบ' };
-        const actionIcon = { add: '➕', edit: '✏️', delete: '🗑️' };
-        const actionColor = { add: '#34a853', edit: '#4285f4', delete: '#ea4335' };
-        if (!log.length) { body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e1b\u0e23\u0e30\u0e27\u0e31\u0e15\u0e34</div>'; }
-        else {
-            body.innerHTML = `<div style="padding:8px 16px;">
-            ${log.map(e => {
-                const d = new Date(e.t);
-                const ts = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+function openInfoPanel(mode){
+    const body=document.getElementById('infoPanelBody');
+    if(mode==='changelog'){
+        document.getElementById('infoPanelTitle').textContent='ประวัติการแก้ไข';
+        const log=getChangelog();
+        const actionLabel={add:'เพิ่ม',edit:'แก้ไข',delete:'ลบ'};
+        const actionIcon={add:'➕',edit:'✏️',delete:'🗑️'};
+        const actionColor={add:'#34a853',edit:'#4285f4',delete:'#ea4335'};
+        if(!log.length){body.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);">\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e1b\u0e23\u0e30\u0e27\u0e31\u0e15\u0e34</div>';}
+        else{body.innerHTML=`<div style="padding:8px 16px;">
+            ${log.map(e=>{
+                const d=new Date(e.t);
+                const ts=d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
                 return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--gn);">
-                    <span style="font-size:16px;margin-top:2px;">${actionIcon[e.a] || '❓'}</span>
+                    <span style="font-size:16px;margin-top:2px;">${actionIcon[e.a]||'❓'}</span>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-size:13px;font-weight:600;color:${actionColor[e.a] || 'var(--text)'};">${actionLabel[e.a] || e.a}</div>
-                        <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.n || '(\u0e44\u0e21\u0e48\u0e21\u0e35\u0e0a\u0e37\u0e48\u0e2d)'}</div>
+                        <div style="font-size:13px;font-weight:600;color:${actionColor[e.a]||'var(--text)'};">${actionLabel[e.a]||e.a}</div>
+                        <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.n||'(\u0e44\u0e21\u0e48\u0e21\u0e35\u0e0a\u0e37\u0e48\u0e2d)'}</div>
                         <div style="font-size:11px;color:var(--text3);">${e.list} · ${ts}</div>
                     </div>
-                </div>`;
-            }).join('')}
-        </div>`;
-        }
-    } else if (mode === 'stats') {
-        document.getElementById('infoPanelTitle').textContent = 'สถิติ';
-        const lc = {}, cc = {};
-        locations.forEach(l => { lc[l.list] = (lc[l.list] || 0) + 1; if (l.city) cc[l.city] = (cc[l.city] || 0) + 1; });
-        const maxL = Math.max(...Object.values(lc), 1);
-        const sl = Object.entries(lc).sort((a, b) => b[1] - a[1]);
-        const sc = Object.entries(cc).sort((a, b) => b[1] - a[1]);
-        body.innerHTML = `<div class="stats-section">
+                </div>`;}).join('')}
+        </div>`;}
+    } else if(mode==='stats'){
+        document.getElementById('infoPanelTitle').textContent='สถิติ';
+        const lc={},cc={};
+        locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;if(l.city)cc[l.city]=(cc[l.city]||0)+1;});
+        const maxL=Math.max(...Object.values(lc),1);
+        const sl=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
+        const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+        body.innerHTML=`<div class="stats-section">
             <div style="font-size:28px;font-weight:700;color:var(--bl);margin-bottom:4px;">${locations.length}</div>
             <div style="font-size:13px;color:var(--text3);margin-bottom:20px;">สถานที่ทั้งหมด</div>
             <div class="stats-header">ตามรายการ</div>
-            ${sl.map(([n, c]) => `<div class="stats-row"><span class="stats-dot" style="background:${getColor(n)}"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c / maxL * 100}%;background:${getColor(n)}"></div></div><span class="stats-count">${c}</span></div>`).join('')}
-            ${sc.length ? `<div class="stats-header" style="margin-top:20px;">ตามเขต</div>${sc.map(([n, c]) => `<div class="stats-row"><span class="stats-dot" style="background:var(--bl)"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c / Math.max(...sc.map(x => x[1])) * 100}%"></div></div><span class="stats-count">${c}</span></div>`).join('')}` : ''}
+            ${sl.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:${getColor(n)}"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/maxL*100}%;background:${getColor(n)}"></div></div><span class="stats-count">${c}</span></div>`).join('')}
+            ${sc.length?`<div class="stats-header" style="margin-top:20px;">ตามเขต</div>${sc.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:var(--bl)"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/Math.max(...sc.map(x=>x[1]))*100}%"></div></div><span class="stats-count">${c}</span></div>`).join('')}`:''}
         </div>`;
     } else {
-        document.getElementById('infoPanelTitle').textContent = 'BT Locations';
-        const _syncAgo = getToken() ? ` · ${Math.round((Date.now() - _lastSyncTime) / 1000)}s ago` : '';
-        const _darkLabel = document.body.classList.contains('light') ? '🌙 Dark mode' : '☀️ Light mode';
-        const _trackLabel = trackingActive ? '⏹ หยุดบันทึก' : '▶ บันทึกเส้นทาง';
-        const _menuSection = (title, items) => `
+        document.getElementById('infoPanelTitle').textContent='BT Locations';
+        const _syncAgo=getToken()?` · ${Math.round((Date.now()-_lastSyncTime)/1000)}s ago`:'';
+        const _darkLabel=document.body.classList.contains('light')?'🌙 Dark mode':'☀️ Light mode';
+        const _trackLabel=trackingActive?'⏹ หยุดบันทึก':'▶ บันทึกเส้นทาง';
+        const _menuSection=(title,items)=>`
             <div style="margin-bottom:8px;">
                 <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:12px 16px 4px;">${title}</div>
                 <div style="background:var(--surface);border-radius:14px;margin:0 12px;overflow:hidden;box-shadow:var(--shadow-sm);">
-                    ${items.map(([icon, label, id, cls]) => `
-                        <button class="om-item ${cls || ''}" id="${id}">
+                    ${items.map(([icon,label,id,cls])=>`
+                        <button class="om-item ${cls||''}" id="${id}">
                             <span style="font-size:16px;width:24px;text-align:center;">${icon}</span>
                             <span style="flex:1;font-size:14px;">${label}</span>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text3);opacity:0.4;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
@@ -2647,7 +2697,7 @@ function openInfoPanel(mode) {
                     `).join('')}
                 </div>
             </div>`;
-        body.innerHTML = `
+        body.innerHTML=`
             <div style="padding:8px 4px 4px;">
                 <div style="padding:16px 16px 8px;display:flex;align-items:center;gap:12px;">
                     <div style="width:44px;height:44px;border-radius:12px;background:var(--bl);display:flex;align-items:center;justify-content:center;">
@@ -2658,48 +2708,48 @@ function openInfoPanel(mode) {
                         <div style="font-size:12px;color:var(--text3);">${locations.length} สถานที่${_syncAgo}</div>
                     </div>
                 </div>
-                ${_menuSection('ข้อมูล', [
-            ['🔄', 'Sync', 'omSyncM', ''],
-            ['📤', 'Export', 'omExportM', ''],
-            ['📥', 'Import', 'omImportM', ''],
-            ['📊', 'สถิติ', 'omStatsM', ''],
-            ['📝', 'Changelog', 'omChangelogM', ''],
-        ])}
-                ${_menuSection('เครื่องมือ', [
-            [_darkLabel.split(' ')[0], _darkLabel.split(' ').slice(1).join(' '), 'omDarkM', ''],
-            ['📍', _trackLabel, 'omTrackM', ''],
-            ['🗺️', 'ดูเส้นทาง (' + savedPaths.length + ')', 'omShowPathsM', ''],
-            ['📤', 'Export เส้นทาง', 'omExportPathsM', ''],
-            ['🖼️', 'Export รูปแผนที่', 'omExportImgM', ''],
-        ])}
-                ${_menuSection('แก้ไข', [
-            ['↩️', 'เลิกทำ', 'omUndoM', ''],
-            ['↪️', 'ทำซ้ำ', 'omRedoM', ''],
-            ['🗑️', 'ลบที่กรอง', 'omBulkDelM', 'red'],
-            ['⚠️', 'รีเซ็ตข้อมูล', 'omResetM', 'red'],
-        ])}
+                ${_menuSection('ข้อมูล',[
+                    ['🔄','Sync','omSyncM',''],
+                    ['📤','Export','omExportM',''],
+                    ['📥','Import','omImportM',''],
+                    ['📊','สถิติ','omStatsM',''],
+                    ['📝','Changelog','omChangelogM',''],
+                ])}
+                ${_menuSection('เครื่องมือ',[
+                    [_darkLabel.split(' ')[0],_darkLabel.split(' ').slice(1).join(' '),'omDarkM',''],
+                    ['📍',_trackLabel,'omTrackM',''],
+                    ['🗺️','ดูเส้นทาง ('+savedPaths.length+')','omShowPathsM',''],
+                    ['📤','Export เส้นทาง','omExportPathsM',''],
+                    ['🖼️','Export รูปแผนที่','omExportImgM',''],
+                ])}
+                ${_menuSection('แก้ไข',[
+                    ['↩️','เลิกทำ','omUndoM',''],
+                    ['↪️','ทำซ้ำ','omRedoM',''],
+                    ['🗑️','ลบที่กรอง','omBulkDelM','red'],
+                    ['⚠️','รีเซ็ตข้อมูล','omResetM','red'],
+                ])}
             </div>`;
-        const b = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
-        b('omExportM', doExport);
+        const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
+        b('omExportM',  doExport);
         b('omExportImgM', doExportImage);
-        b('omImportM', () => { closeInfo(); document.getElementById('fileImport').click(); });
-        b('omStatsM', () => openInfoPanel('stats'));
-        b('omChangelogM', () => openInfoPanel('changelog'));
-        b('omSyncM', () => { closeInfo(); doSync(false); });
-        b('omHeatmapM', () => { heatmapMode = !heatmapMode; document.getElementById('chipHeatmap').classList.toggle('active', heatmapMode); update(); closeInfo(); });
-        b('omDarkM', toggleDark);
-        b('omTrackM', () => { closeInfo(); if (trackingActive) stopTracking(); else startTracking(); });
-        b('omShowPathsM', () => { closeInfo(); showSavedPaths(); });
-        b('omExportPathsM', () => { closeInfo(); exportPaths(); });
-        b('omUndoM', doUndo);
-        b('omRedoM', doRedo);
+        b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
+        b('omStatsM',   ()=>openInfoPanel('stats'));
+        b('omChangelogM',()=>openInfoPanel('changelog'));
+        b('omSyncM',    ()=>{closeInfo();doSync(false);});
+        b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
+        b('omDarkM',    toggleDark);
+        b('omTrackM',   ()=>{closeInfo();if(trackingActive)stopTracking();else startTracking();});
+        b('omShowPathsM',()=>{closeInfo();showSavedPaths();});
+        b('omExportPathsM',()=>{closeInfo();exportPaths();});
+        b('omUndoM',    doUndo);
+        b('omRedoM',    doRedo);
         b('omBulkDelM', doBulkDel);
-        b('omResetM', doReset);
+        b('omResetM',   doReset);
     }
     document.getElementById('infoPanel').classList.add('open');
     document.getElementById('infoPanelBackdrop').classList.add('show');
 }
-function closeInfo() { document.getElementById('infoPanel').classList.remove('open'); document.getElementById('infoPanelBackdrop').classList.remove('show'); }
+function closeInfo(){document.getElementById('infoPanel').classList.remove('open');document.getElementById('infoPanelBackdrop').classList.remove('show');}
 
 // ════════════════════════════════════════════
 // EXPORT IMAGE — capture map as PNG
@@ -2707,58 +2757,58 @@ function closeInfo() { document.getElementById('infoPanel').classList.remove('op
 function doExportImage() {
     closeInfo();
     showToast('กำลังสร้างรูป...');
-    setTimeout(() => {
-        const mapEl = document.getElementById('map');
-        const canvas = document.createElement('canvas');
-        const w = mapEl.offsetWidth, h = mapEl.offsetHeight;
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
+    setTimeout(()=>{
+        const mapEl=document.getElementById('map');
+        const canvas=document.createElement('canvas');
+        const w=mapEl.offsetWidth, h=mapEl.offsetHeight;
+        canvas.width=w; canvas.height=h;
+        const ctx=canvas.getContext('2d');
 
         // Draw map tiles
-        const tiles = mapEl.querySelectorAll('.leaflet-tile');
-        const origin = mapEl.querySelector('.leaflet-map-pane');
-        const transform = getComputedStyle(origin).transform;
-        let tx = 0, ty = 0;
-        if (transform && transform !== 'none') {
-            const m = transform.match(/matrix.*\((.+)\)/);
-            if (m) { const v = m[1].split(',').map(Number); tx = v[4] || 0; ty = v[5] || 0; }
+        const tiles=mapEl.querySelectorAll('.leaflet-tile');
+        const origin=mapEl.querySelector('.leaflet-map-pane');
+        const transform=getComputedStyle(origin).transform;
+        let tx=0,ty=0;
+        if(transform&&transform!=='none'){
+            const m=transform.match(/matrix.*\((.+)\)/);
+            if(m){const v=m[1].split(',').map(Number);tx=v[4]||0;ty=v[5]||0;}
         }
-        tiles.forEach(tile => {
-            try {
-                const tileContainer = tile.parentElement;
-                const containerTransform = getComputedStyle(tileContainer).transform;
-                let ctx2 = 0, cty = 0;
-                if (containerTransform && containerTransform !== 'none') {
-                    const m2 = containerTransform.match(/matrix.*\((.+)\)/);
-                    if (m2) { const v2 = m2[1].split(',').map(Number); ctx2 = v2[4] || 0; cty = v2[5] || 0; }
+        tiles.forEach(tile=>{
+            try{
+                const tileContainer=tile.parentElement;
+                const containerTransform=getComputedStyle(tileContainer).transform;
+                let ctx2=0,cty=0;
+                if(containerTransform&&containerTransform!=='none'){
+                    const m2=containerTransform.match(/matrix.*\((.+)\)/);
+                    if(m2){const v2=m2[1].split(',').map(Number);ctx2=v2[4]||0;cty=v2[5]||0;}
                 }
-                const x = parseInt(tile.style.left || 0) + tx + ctx2;
-                const y = parseInt(tile.style.top || 0) + ty + cty;
-                ctx.drawImage(tile, x, y, parseInt(tile.style.width || 256), parseInt(tile.style.height || 256));
-            } catch (e) { }
+                const x=parseInt(tile.style.left||0)+tx+ctx2;
+                const y=parseInt(tile.style.top||0)+ty+cty;
+                ctx.drawImage(tile,x,y,parseInt(tile.style.width||256),parseInt(tile.style.height||256));
+            }catch(e){}
         });
 
         // Draw info text
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.fillRect(0, h - 32, w, 32);
-        ctx.fillStyle = '#fff';
-        ctx.font = '13px sans-serif';
-        const center = map.getCenter();
-        const info = `BT Locations · ${getFiltered().length} sites · ${center.lat.toFixed(4)},${center.lng.toFixed(4)} · z${map.getZoom()}`;
-        ctx.fillText(info, 8, h - 10);
+        ctx.fillStyle='rgba(0,0,0,0.6)';
+        ctx.fillRect(0,h-32,w,32);
+        ctx.fillStyle='#fff';
+        ctx.font='13px sans-serif';
+        const center=map.getCenter();
+        const info=`BT Locations · ${getFiltered().length} sites · ${center.lat.toFixed(4)},${center.lng.toFixed(4)} · z${map.getZoom()}`;
+        ctx.fillText(info,8,h-10);
 
         // Download
-        canvas.toBlob(blob => {
-            if (!blob) { showToast('ไม่สามารถสร้างรูปได้ (CORS)', true); return; }
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `bt_map_${new Date().toISOString().slice(0, 10)}.png`;
+        canvas.toBlob(blob=>{
+            if(!blob){showToast('ไม่สามารถสร้างรูปได้ (CORS)',true);return;}
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');
+            a.href=url;
+            a.download=`bt_map_${new Date().toISOString().slice(0,10)}.png`;
             a.click();
             URL.revokeObjectURL(url);
-            showToast('บันทึกรูปแผนที่แล้ว', false, true);
-        }, 'image/png');
-    }, 300);
+            showToast('บันทึกรูปแผนที่แล้ว',false,true);
+        },'image/png');
+    },300);
 }
 
 // ════════════════════════════════════════════
@@ -2767,7 +2817,7 @@ function doExportImage() {
 function doExport() {
     closeInfo();
     const jsonStr = JSON.stringify(locations, null, 2);
-    const filename = `bt_locations_${new Date().toISOString().slice(0, 10)}.json`;
+    const filename = `bt_locations_${new Date().toISOString().slice(0,10)}.json`;
 
     // ถ้า Share API รองรับ (มือถือ)
     if (navigator.share && navigator.canShare) {
@@ -2785,7 +2835,7 @@ function doExport() {
 
 function fallbackExport(jsonStr, filename) {
     // แสดง modal เลือกวิธีบนมือถือ
-    document.getElementById('shareModalText').textContent = `${locations.length} สถานที่ · ${Math.round(jsonStr.length / 1024)} KB`;
+    document.getElementById('shareModalText').textContent = `${locations.length} สถานที่ · ${Math.round(jsonStr.length/1024)} KB`;
     document.getElementById('shareModalOverlay').classList.add('open');
 
     onClick('shareBtnDownload', () => {
@@ -2798,7 +2848,7 @@ function fallbackExport(jsonStr, filename) {
             a.href = url; a.download = filename; a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             showToast('✅ ดาวน์โหลดแล้ว', false, true);
-        } catch (e) {
+        } catch(e) {
             // วิธีที่ 2: data URI (มือถือ fallback)
             const a = document.createElement('a');
             a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(jsonStr);
@@ -2832,207 +2882,207 @@ function fallbackExport(jsonStr, filename) {
 // MULTI-FORMAT IMPORT (JSON/CSV/KML/GPX/GeoJSON)
 // ════════════════════════════════════════════
 function parseCSV(text) {
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length < 2) return [];
-    const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const iLat = header.findIndex(h => h === 'lat' || h === 'latitude');
-    const iLng = header.findIndex(h => h === 'lng' || h === 'lon' || h === 'longitude');
-    const iName = header.findIndex(h => h === 'name' || h === 'title');
-    const iList = header.findIndex(h => h === 'list' || h === 'category' || h === 'group');
-    const iCity = header.findIndex(h => h === 'city' || h === 'district');
-    const iUrl = header.findIndex(h => h === 'url');
-    if (iLat < 0 && iLng < 0 && iUrl < 0) return [];
-    const result = [];
-    for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim());
-        let lat, lng;
-        if (iLat >= 0 && iLng >= 0) { lat = parseFloat(cols[iLat]); lng = parseFloat(cols[iLng]); }
-        else if (iUrl >= 0) {
-            const m = cols[iUrl].match(/[/@]([-\d.]+),([-\d.]+)/);
-            if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+    if(lines.length<2)return[];
+    const header=lines[0].split(',').map(h=>h.trim().toLowerCase());
+    const iLat=header.findIndex(h=>h==='lat'||h==='latitude');
+    const iLng=header.findIndex(h=>h==='lng'||h==='lon'||h==='longitude');
+    const iName=header.findIndex(h=>h==='name'||h==='title');
+    const iList=header.findIndex(h=>h==='list'||h==='category'||h==='group');
+    const iCity=header.findIndex(h=>h==='city'||h==='district');
+    const iUrl=header.findIndex(h=>h==='url');
+    if(iLat<0&&iLng<0&&iUrl<0)return[];
+    const result=[];
+    for(let i=1;i<lines.length;i++){
+        const cols=lines[i].split(',').map(c=>c.trim());
+        let lat,lng;
+        if(iLat>=0&&iLng>=0){lat=parseFloat(cols[iLat]);lng=parseFloat(cols[iLng]);}
+        else if(iUrl>=0){
+            const m=cols[iUrl].match(/[/@]([-\d.]+),([-\d.]+)/);
+            if(m){lat=parseFloat(m[1]);lng=parseFloat(m[2]);}
         }
-        if (!lat || !lng || isNaN(lat) || isNaN(lng)) continue;
-        result.push({ name: cols[iName] || '', lat, lng, list: cols[iList] || 'Imported', city: cols[iCity] || '' });
+        if(!lat||!lng||isNaN(lat)||isNaN(lng))continue;
+        result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||'Imported',city:cols[iCity]||''});
     }
     return result;
 }
 function parseKML(text) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/xml');
-    const placemarks = doc.querySelectorAll('Placemark');
-    const result = [];
-    placemarks.forEach(pm => {
-        const nameEl = pm.querySelector('name');
-        const coordEl = pm.querySelector('coordinates');
-        if (!coordEl) return;
-        const parts = coordEl.textContent.trim().split(',');
-        if (parts.length < 2) return;
-        const lng = parseFloat(parts[0]), lat = parseFloat(parts[1]);
-        if (isNaN(lat) || isNaN(lng)) return;
-        result.push({ name: nameEl ? nameEl.textContent.trim() : '', lat, lng, list: 'KML Import', city: '' });
+    const parser=new DOMParser();
+    const doc=parser.parseFromString(text,'text/xml');
+    const placemarks=doc.querySelectorAll('Placemark');
+    const result=[];
+    placemarks.forEach(pm=>{
+        const nameEl=pm.querySelector('name');
+        const coordEl=pm.querySelector('coordinates');
+        if(!coordEl)return;
+        const parts=coordEl.textContent.trim().split(',');
+        if(parts.length<2)return;
+        const lng=parseFloat(parts[0]),lat=parseFloat(parts[1]);
+        if(isNaN(lat)||isNaN(lng))return;
+        result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:'KML Import',city:''});
     });
     return result;
 }
 function parseGPX(text) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/xml');
-    const wpts = doc.querySelectorAll('wpt');
-    const result = [];
-    wpts.forEach(wpt => {
-        const lat = parseFloat(wpt.getAttribute('lat'));
-        const lng = parseFloat(wpt.getAttribute('lon'));
-        if (isNaN(lat) || isNaN(lng)) return;
-        const nameEl = wpt.querySelector('name');
-        result.push({ name: nameEl ? nameEl.textContent.trim() : '', lat, lng, list: 'GPX Import', city: '' });
+    const parser=new DOMParser();
+    const doc=parser.parseFromString(text,'text/xml');
+    const wpts=doc.querySelectorAll('wpt');
+    const result=[];
+    wpts.forEach(wpt=>{
+        const lat=parseFloat(wpt.getAttribute('lat'));
+        const lng=parseFloat(wpt.getAttribute('lon'));
+        if(isNaN(lat)||isNaN(lng))return;
+        const nameEl=wpt.querySelector('name');
+        result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:'GPX Import',city:''});
     });
     // Also parse trk > trkseg > trkpt
-    doc.querySelectorAll('trkpt').forEach(pt => {
-        const lat = parseFloat(pt.getAttribute('lat'));
-        const lng = parseFloat(pt.getAttribute('lon'));
-        if (!isNaN(lat) && !isNaN(lng)) result.push({ name: '', lat, lng, list: 'GPX Track', city: '' });
+    doc.querySelectorAll('trkpt').forEach(pt=>{
+        const lat=parseFloat(pt.getAttribute('lat'));
+        const lng=parseFloat(pt.getAttribute('lon'));
+        if(!isNaN(lat)&&!isNaN(lng))result.push({name:'',lat,lng,list:'GPX Track',city:''});
     });
     return result;
 }
 function parseGeoJSON(obj) {
-    const result = [];
-    const features = obj.features || [obj];
-    features.forEach(f => {
-        if (!f.geometry || f.geometry.type !== 'Point') return;
-        const [lng, lat] = f.geometry.coordinates;
-        if (isNaN(lat) || isNaN(lng)) return;
-        const props = f.properties || {};
-        result.push({ name: props.name || props.title || '', lat, lng, list: props.list || 'GeoJSON Import', city: props.city || '' });
+    const result=[];
+    const features=obj.features||[obj];
+    features.forEach(f=>{
+        if(!f.geometry||f.geometry.type!=='Point')return;
+        const [lng,lat]=f.geometry.coordinates;
+        if(isNaN(lat)||isNaN(lng))return;
+        const props=f.properties||{};
+        result.push({name:props.name||props.title||'',lat,lng,list:props.list||'GeoJSON Import',city:props.city||''});
     });
     return result;
 }
 
-document.getElementById('fileImport').onchange = e => {
-    const file = e.target.files[0]; if (!file) return;
-    const ext = file.name.split('.').pop().toLowerCase();
-    const reader = new FileReader();
-    reader.onload = ev => {
-        const text = ev.target.result;
-        let imp = [];
+document.getElementById('fileImport').onchange=e=>{
+    const file=e.target.files[0]; if(!file)return;
+    const ext=file.name.split('.').pop().toLowerCase();
+    const reader=new FileReader();
+    reader.onload=ev=>{
+        const text=ev.target.result;
+        let imp=[];
         try {
-            if (ext === 'csv') {
-                imp = parseCSV(text);
-            } else if (ext === 'kml') {
-                imp = parseKML(text);
-            } else if (ext === 'gpx') {
-                imp = parseGPX(text);
-            } else if (ext === 'geojson') {
-                const obj = JSON.parse(text);
-                imp = parseGeoJSON(obj);
+            if(ext==='csv'){
+                imp=parseCSV(text);
+            } else if(ext==='kml'){
+                imp=parseKML(text);
+            } else if(ext==='gpx'){
+                imp=parseGPX(text);
+            } else if(ext==='geojson'){
+                const obj=JSON.parse(text);
+                imp=parseGeoJSON(obj);
             } else {
-                const obj = JSON.parse(text);
-                if (Array.isArray(obj)) imp = obj.filter(l => l && typeof l.lat === 'number' && typeof l.lng === 'number' && !isNaN(l.lat) && !isNaN(l.lng)).map(l => ({ name: l.name || '', lat: l.lat, lng: l.lng, list: l.list || l.category || l.group || 'Imported', city: l.city || l.district || '', note: l.note || '', ...(l.tags ? { tags: l.tags } : {}) }));
-                else if (obj.type === 'FeatureCollection' || obj.type === 'Feature') imp = parseGeoJSON(obj);
-                else { showToast('รูปแบบ JSON ไม่ถูกต้อง', true); return; }
+                const obj=JSON.parse(text);
+                if(Array.isArray(obj))imp=obj.filter(l=>l&&typeof l.lat==='number'&&typeof l.lng==='number'&&!isNaN(l.lat)&&!isNaN(l.lng)).map(l=>({name:l.name||'',lat:l.lat,lng:l.lng,list:l.list||l.category||l.group||'Imported',city:l.city||l.district||'',note:l.note||'',...(l.tags?{tags:l.tags}:{})}));
+                else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj);
+                else {showToast('รูปแบบ JSON ไม่ถูกต้อง',true);return;}
             }
-        } catch (err) { showToast('ไฟล์ไม่ถูกต้อง: ' + err.message, true); return; }
-        if (!imp.length) { showToast('ไม่พบข้อมูลพิกัดในไฟล์', true); return; }
-        showConfirm('📥', `Import ${imp.length} จุด?`, `จากไฟล์ ${file.name} (.${ext})\nเลือก Merge หรือ Replace`, () => {
-            pushUndo(); locations = imp; saveLocations(); invalidateCache(); update(); showToast(`Replace: ${imp.length} จุด`, false, true);
+        }catch(err){showToast('ไฟล์ไม่ถูกต้อง: '+err.message,true);return;}
+        if(!imp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
+        showConfirm('📥',`Import ${imp.length} จุด?`,`จากไฟล์ ${file.name} (.${ext})\nเลือก Merge หรือ Replace`,()=>{
+            pushUndo();locations=imp;saveLocations();invalidateCache();update();showToast(`Replace: ${imp.length} จุด`,false,true);
         });
         // Add merge button to confirm dialog
-        setTimeout(() => {
-            const footer = document.querySelector('.confirm-footer');
-            if (!footer || footer.querySelector('#btnMergeImport')) return;
-            const mergeBtn = document.createElement('button');
-            mergeBtn.id = 'btnMergeImport';
-            mergeBtn.className = 'modal-btn modal-btn-save';
-            mergeBtn.style.cssText = 'background:#059669;';
-            mergeBtn.textContent = '🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
-            mergeBtn.onclick = () => {
+        setTimeout(()=>{
+            const footer=document.querySelector('.confirm-footer');
+            if(!footer||footer.querySelector('#btnMergeImport'))return;
+            const mergeBtn=document.createElement('button');
+            mergeBtn.id='btnMergeImport';
+            mergeBtn.className='modal-btn modal-btn-save';
+            mergeBtn.style.cssText='background:#059669;';
+            mergeBtn.textContent='🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
+            mergeBtn.onclick=()=>{
                 pushUndo();
-                const existing = new Set(locations.map(l => l.lat.toFixed(5) + ',' + l.lng.toFixed(5)));
-                let added = 0;
-                imp.forEach(loc => {
-                    const key = loc.lat.toFixed(5) + ',' + loc.lng.toFixed(5);
-                    if (!existing.has(key)) { locations.push(loc); existing.add(key); added++; }
+                const existing=new Set(locations.map(l=>l.lat.toFixed(5)+','+l.lng.toFixed(5)));
+                let added=0;
+                imp.forEach(loc=>{
+                    const key=loc.lat.toFixed(5)+','+loc.lng.toFixed(5);
+                    if(!existing.has(key)){locations.push(loc);existing.add(key);added++;}
                 });
-                saveLocations(); invalidateCache(); update();
-                showToast(`Merge: เพิ่ม ${added} จุดใหม่ (ข้าม ${imp.length - added} ซ้ำ)`, false, true);
+                saveLocations();invalidateCache();update();
+                showToast(`Merge: เพิ่ม ${added} จุดใหม่ (ข้าม ${imp.length-added} ซ้ำ)`,false,true);
                 document.getElementById('confirmModalOverlay').classList.remove('open');
             };
-            footer.insertBefore(mergeBtn, footer.firstChild);
-        }, 100);
+            footer.insertBefore(mergeBtn,footer.firstChild);
+        },100);
     };
-    reader.readAsText(file); e.target.value = '';
+    reader.readAsText(file); e.target.value='';
 };
 
-function doUndo() { if (!undoStack.length) { showToast('ไม่มี Undo'); return; } redoStack.push(JSON.stringify(locations)); locations = JSON.parse(undoStack.pop()); saveLocations(); invalidateCache(); update(); showToast('Undo แล้ว'); closeInfo(); }
-function doRedo() { if (!redoStack.length) { showToast('ไม่มี Redo'); return; } undoStack.push(JSON.stringify(locations)); locations = JSON.parse(redoStack.pop()); saveLocations(); invalidateCache(); update(); showToast('Redo แล้ว'); closeInfo(); }
+function doUndo(){if(!undoStack.length){showToast('ไม่มี Undo');return;}redoStack.push(JSON.stringify(locations));locations=JSON.parse(undoStack.pop());saveLocations();invalidateCache();update();showToast('Undo แล้ว');closeInfo();}
+function doRedo(){if(!redoStack.length){showToast('ไม่มี Redo');return;}undoStack.push(JSON.stringify(locations));locations=JSON.parse(redoStack.pop());saveLocations();invalidateCache();update();showToast('Redo แล้ว');closeInfo();}
 
-function doBulkDel() {
-    const f = getFiltered();
-    if (!filterList && !filterCity && !document.getElementById('search').value && !nearbyMode) { showToast('กรุณา filter ก่อน', true); return; }
-    if (!f.length) { showToast('ไม่มีจุดในตัวกรอง', true); return; }
-    showConfirm('🗑️', `ลบ ${f.length} จุด?`, 'จุดที่อยู่ในตัวกรองปัจจุบันจะถูกลบทั้งหมด', () => {
-        pushUndo(); const rm = new Set(f); const toDelSb = [...rm]; locations = locations.filter(l => !rm.has(l)); saveLocations(); invalidateCache(); update(); showToast(`ลบ ${f.length} จุดแล้ว`);
-        if (_sbLoaded) toDelSb.forEach(l => sbDelete(l));
+function doBulkDel(){
+    const f=getFiltered();
+    if(!filterList&&!filterCity&&!document.getElementById('search').value&&!nearbyMode){showToast('กรุณา filter ก่อน',true);return;}
+    if(!f.length){showToast('ไม่มีจุดในตัวกรอง',true);return;}
+    showConfirm('🗑️',`ลบ ${f.length} จุด?`,'จุดที่อยู่ในตัวกรองปัจจุบันจะถูกลบทั้งหมด',()=>{
+        pushUndo();const rm=new Set(f);const toDelSb=[...rm];locations=locations.filter(l=>!rm.has(l));saveLocations();invalidateCache();update();showToast(`ลบ ${f.length} จุดแล้ว`);
+        if(_sbLoaded)toDelSb.forEach(l=>sbDelete(l));
     });
     closeInfo();
 }
 
-async function doReset() {
-    showConfirm('🔄', 'รีเซ็ตข้อมูล?', 'ข้อมูลที่แก้ไขจะหาย ระบบจะดึงข้อมูลใหม่จาก Supabase', async () => {
-        pushUndo(); localStorage.removeItem(STORAGE_KEY);
+async function doReset(){
+    showConfirm('🔄','รีเซ็ตข้อมูล?','ข้อมูลที่แก้ไขจะหาย ระบบจะดึงข้อมูลใหม่จาก Supabase',async()=>{
+        pushUndo();localStorage.removeItem(STORAGE_KEY);
         await doSync(false);
     });
     closeInfo();
 }
 
-function toggleDark() { document.body.classList.toggle('light'); const isLight = document.body.classList.contains('light'); showToast(isLight ? 'Light mode' : 'Dark mode'); closeInfo(); }
+function toggleDark(){document.body.classList.toggle('light');const isLight=document.body.classList.contains('light');showToast(isLight?'Light mode':'Dark mode');closeInfo();}
 
 // ════════════════════════════════════════════
 // SUPABASE SAVE (replaces GitHub save)
 // ════════════════════════════════════════════
-function getToken() { return ''; }
-function setToken(t) { }
+function getToken(){return '';}
+function setToken(t){}
 
-const btnGithubSave = document.getElementById('btnGithubSave');
-if (btnGithubSave) btnGithubSave.onclick = () => { showToast('⏳ กำลังซิงค์...'); _debouncedPush.flush ? _debouncedPush.flush() : _debouncedPush(); };
-const tokenCancel = document.getElementById('tokenCancel');
-const tokenSave = document.getElementById('tokenSave');
-const tokenModalOverlay = document.getElementById('tokenModalOverlay');
-if (tokenCancel) tokenCancel.onclick = () => { if (tokenModalOverlay) tokenModalOverlay.classList.remove('open'); };
-if (tokenSave) tokenSave.onclick = () => { if (tokenModalOverlay) tokenModalOverlay.classList.remove('open'); };
-if (tokenModalOverlay) tokenModalOverlay.onclick = e => { if (e.target === tokenModalOverlay) tokenModalOverlay.classList.remove('open'); };
+const btnGithubSave=document.getElementById('btnGithubSave');
+if(btnGithubSave) btnGithubSave.onclick=()=>{showToast('⏳ กำลังซิงค์...');_debouncedPush.flush?_debouncedPush.flush():_debouncedPush();};
+const tokenCancel=document.getElementById('tokenCancel');
+const tokenSave=document.getElementById('tokenSave');
+const tokenModalOverlay=document.getElementById('tokenModalOverlay');
+if(tokenCancel) tokenCancel.onclick=()=>{if(tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
+if(tokenSave) tokenSave.onclick=()=>{if(tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
+if(tokenModalOverlay) tokenModalOverlay.onclick=e=>{if(e.target===tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
 
-function _workerHeaders() { return { 'Content-Type': 'application/json' }; }
-async function githubFile(path, token) { return { sha: null }; }
-async function githubPut(path, content, sha, token, msg) { }
+function _workerHeaders(){return{'Content-Type':'application/json'};}
+async function githubFile(path,token){return{sha:null};}
+async function githubPut(path,content,sha,token,msg){}
 
 // ════════════════════════════════════════════
 // CONFIRM DIALOG
 // ════════════════════════════════════════════
-let confirmCallback = null;
-function showConfirm(icon, title, text, cb) {
-    document.getElementById('confirmIcon').textContent = icon;
-    document.getElementById('confirmTitle').textContent = title;
-    document.getElementById('confirmText').textContent = text;
-    confirmCallback = cb;
+let confirmCallback=null;
+function showConfirm(icon,title,text,cb){
+    document.getElementById('confirmIcon').textContent=icon;
+    document.getElementById('confirmTitle').textContent=title;
+    document.getElementById('confirmText').textContent=text;
+    confirmCallback=cb;
     document.getElementById('confirmModalOverlay').classList.add('open');
 }
-const confirmCancel = document.getElementById('confirmCancel');
-const confirmOk = document.getElementById('confirmOk');
-const confirmModalOverlay = document.getElementById('confirmModalOverlay');
-if (confirmCancel) confirmCancel.onclick = () => { if (confirmModalOverlay) confirmModalOverlay.classList.remove('open'); };
-if (confirmOk) confirmOk.onclick = () => {
-    if (confirmModalOverlay) confirmModalOverlay.classList.remove('open');
-    if (confirmCallback) { confirmCallback(); confirmCallback = null; }
+const confirmCancel=document.getElementById('confirmCancel');
+const confirmOk=document.getElementById('confirmOk');
+const confirmModalOverlay=document.getElementById('confirmModalOverlay');
+if(confirmCancel) confirmCancel.onclick=()=>{if(confirmModalOverlay)confirmModalOverlay.classList.remove('open');};
+if(confirmOk) confirmOk.onclick=()=>{
+    if(confirmModalOverlay)confirmModalOverlay.classList.remove('open');
+    if(confirmCallback){confirmCallback();confirmCallback=null;}
 };
-if (confirmModalOverlay) confirmModalOverlay.onclick = e => { if (e.target === confirmModalOverlay) confirmModalOverlay.classList.remove('open'); };
+if(confirmModalOverlay) confirmModalOverlay.onclick=e=>{if(e.target===confirmModalOverlay)confirmModalOverlay.classList.remove('open');};
 
 // ════════════════════════════════════════════
 // TOAST
 // ════════════════════════════════════════════
 let toastTimer;
-function showToast(msg, isError = false, isSuccess = false) {
-    const t = document.getElementById('saveToast');
-    t.textContent = msg; t.className = 'save-toast show' + (isError ? ' error' : isSuccess ? ' success' : '');
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+function showToast(msg,isError=false,isSuccess=false){
+    const t=document.getElementById('saveToast');
+    t.textContent=msg;t.className='save-toast show'+(isError?' error':isSuccess?' success':'');
+    clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
 // ════════════════════════════════════════════
@@ -3040,87 +3090,36 @@ function showToast(msg, isError = false, isSuccess = false) {
 // ════════════════════════════════════════════
 function _initMapEvents() {
     if (typeof map === 'undefined' || !map) return;
-
-    map.on('zoomend', () => {
-        _updateTooltipVisibility();
-        _lastFilteredKey = null;
-        update();
-    });
-
-    if (document.getElementById('btnGps')) {
-        map.on('dragstart', () => {
-            if (typeof gpsTracking !== 'undefined' && gpsTracking) {
-                gpsTracking = false;
-                const btnGps = document.getElementById('btnGps');
-                btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
-                btnGps.classList.remove('gps-tracking');
-            }
-        });
-    }
-
+    
     map.on('click', e => {
-        if (typeof _handleMapClickForWaypoint === 'function' && (window._isAddingWaypoint || _isAddingWaypoint)) {
+        // Waypoint Mode Hook
+        if (typeof _handleMapClickForWaypoint === 'function' && _isAddingWaypoint) {
             _handleMapClickForWaypoint(e);
             return;
         }
         const { lat, lng } = e.latlng;
         const editModalOverlay = document.getElementById('editModalOverlay');
         if (editModalOverlay && editModalOverlay.classList.contains('open')) {
-            document.getElementById('modalLat').value = lat.toFixed(6);
-            document.getElementById('modalLng').value = lng.toFixed(6);
-            ['modalLat', 'modalLng'].forEach(id => { const el = document.getElementById(id); el.style.borderColor = '#34a853'; setTimeout(() => el.style.borderColor = '', 800); });
             return;
         }
-        if (typeof measureMode !== 'undefined' && measureMode && measureStart) {
-            const straightDist = haversine(measureStart.lat, measureStart.lng, lat, lng);
-            if (measureLine) map.removeLayer(measureLine);
-            measureLine = L.polyline([[measureStart.lat, measureStart.lng], [lat, lng]], { color: '#7b1fa2', weight: 3, dashArray: '8,6' }).addTo(map);
-            const fromName = measureStart.name || measureStart.list || 'จุดเริ่ม';
-            document.getElementById('measureResultText').textContent = `📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
-            document.getElementById('measureModalOverlay').classList.add('open');
-            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${measureStart.lng},${measureStart.lat};${lng},${lat}?overview=full&geometries=geojson`;
-            fetch(osrmUrl).then(r => r.json()).then(data => {
-                if (data.routes && data.routes.length) {
-                    const route = data.routes[0];
-                    const roadDist = route.distance;
-                    const mins = Math.round(route.duration / 60);
-                    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
-                    if (measureLine) map.removeLayer(measureLine);
-                    measureLine = L.polyline(coords, { color: '#7b1fa2', weight: 4, opacity: 0.85 }).addTo(map);
-                    document.getElementById('measureResultText').textContent = `🛣️ ${formatDist(roadDist)} · ~${mins} นาที (ถนน)\n📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
-                }
-            }).catch(() => { });
-            cancelMeasureMode(); return;
-        }
-        if (typeof addMode !== 'undefined' && !addMode) return;
-        if (typeof cancelAddMode === 'function') cancelAddMode();
-        if (typeof openAddAt === 'function') openAddAt(lat, lng);
     });
-
-    const latlngHint = document.getElementById('latlngHint');
-    if (latlngHint) {
-        map.on('mousemove', throttle(e => { latlngHint.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`; latlngHint.classList.add('show'); }, 50));
-        map.on('mouseout', () => latlngHint.classList.remove('show'));
-    }
 
     map.on('click', () => {
-        if (typeof addMode !== 'undefined' && !addMode && typeof measureMode !== 'undefined' && !measureMode) {
-            if (typeof closePlaceCard === 'function') closePlaceCard();
-        }
-        if (typeof closeListPanel === 'function') closeListPanel();
-        if (typeof clearDirections === 'function') clearDirections();
+        if (!addMode && !measureMode) closePlaceCard();
+        closeListPanel();
+        clearDirections();
     });
 }
-window.showPlaceCard = showPlaceCard;
-window.closeListPanel = closeListPanel;
+window.showPlaceCard=showPlaceCard;
+window.closeListPanel=closeListPanel;
 
 // Keyboard shortcuts: Undo/Redo + ESC
-document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && !e.altKey) {
-        if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); return; }
-        if ((e.key === 'z' && e.shiftKey) || e.key === 'y') { e.preventDefault(); doRedo(); return; }
+document.addEventListener('keydown',(e)=>{
+    if((e.ctrlKey||e.metaKey)&&!e.altKey){
+        if(e.key==='z'&&!e.shiftKey){e.preventDefault();doUndo();return;}
+        if((e.key==='z'&&e.shiftKey)||e.key==='y'){e.preventDefault();doRedo();return;}
     }
-    if (e.key === 'Escape') {
+    if(e.key==='Escape'){
         closeInfo();
         closePlaceCard();
         closeListPanel();
@@ -3135,26 +3134,26 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Desktop: ปิด listPanel/placeCard เมื่อคลิกนอก (backdrop behavior)
-document.addEventListener('click', (e) => {
-    const listPanel = document.getElementById('listPanel');
-    const placeCard = document.getElementById('placeCard');
-    const searchBar = document.getElementById('searchBar');
-    const target = e.target;
+document.addEventListener('click',(e)=>{
+    const listPanel=document.getElementById('listPanel');
+    const placeCard=document.getElementById('placeCard');
+    const searchBar=document.getElementById('searchBar');
+    const target=e.target;
 
     // ปิด listPanel เมื่อคลิกนอก
-    if (listPanel && listPanel.classList.contains('open') &&
-        !listPanel.contains(target) &&
-        !(searchBar && searchBar.contains(target)) &&
-        !target.closest('.chip')) {
+    if(listPanel && listPanel.classList.contains('open') &&
+       !listPanel.contains(target) &&
+       !(searchBar && searchBar.contains(target)) &&
+       !target.closest('.chip')){
         closeListPanel();
     }
 
     // ปิด placeCard เมื่อคลิกนอก (ยกเว้นตอน add/measure mode)
-    if (!addMode && !measureMode &&
-        placeCard && placeCard.classList.contains('open') &&
-        !placeCard.contains(target) &&
-        !target.closest('.leaflet-marker-icon') &&
-        !target.closest('.search-result-item')) {
+    if(!addMode && !measureMode &&
+       placeCard && placeCard.classList.contains('open') &&
+       !placeCard.contains(target) &&
+       !target.closest('.leaflet-marker-icon') &&
+       !target.closest('.search-result-item')){
         closePlaceCard();
     }
 });
@@ -3164,49 +3163,49 @@ document.addEventListener('click', (e) => {
 // ════════════════════════════════════════════
 if (_mobile) {
     // Long-press on map → add location
-    let _lpTimer = null, _lpStart = null;
-    map.getContainer().addEventListener('touchstart', e => {
+    let _lpTimer=null, _lpStart=null;
+    map.getContainer().addEventListener('touchstart', e=>{
         if (e.touches.length !== 1) return;
-        _lpStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        _lpTimer = setTimeout(() => {
+        _lpStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
+        _lpTimer = setTimeout(()=>{
             if (!addMode && !measureMode) {
                 const latlng = map.containerPointToLatLng([_lpStart.x, _lpStart.y]);
                 if (navigator.vibrate) navigator.vibrate(30);
                 openAddAt(latlng.lat, latlng.lng);
             }
         }, 400);
-    }, { passive: true });
-    map.getContainer().addEventListener('touchmove', e => {
+    }, {passive: true});
+    map.getContainer().addEventListener('touchmove', e=>{
         if (_lpTimer && _lpStart) {
-            const dx = e.touches[0].clientX - _lpStart.x, dy = e.touches[0].clientY - _lpStart.y;
-            if (Math.sqrt(dx * dx + dy * dy) > 10) { clearTimeout(_lpTimer); _lpTimer = null; }
+            const dx=e.touches[0].clientX-_lpStart.x, dy=e.touches[0].clientY-_lpStart.y;
+            if (Math.sqrt(dx*dx+dy*dy)>10) { clearTimeout(_lpTimer); _lpTimer=null; }
         }
-    }, { passive: true });
-    map.getContainer().addEventListener('touchend', () => { clearTimeout(_lpTimer); _lpTimer = null; }, { passive: true });
+    }, {passive: true});
+    map.getContainer().addEventListener('touchend', ()=>{ clearTimeout(_lpTimer); _lpTimer=null; }, {passive: true});
 
     // Swipe-down on place card → close
     const _pc = document.getElementById('placeCard');
-    let _swipeStartY = 0, _swiping = false;
-    _pc.addEventListener('touchstart', e => {
-        if (e.touches.length !== 1) return;
-        _swipeStartY = e.touches[0].clientY; _swiping = true;
-    }, { passive: true });
-    _pc.addEventListener('touchmove', e => {
+    let _swipeStartY=0, _swiping=false;
+    _pc.addEventListener('touchstart', e=>{
+        if (e.touches.length!==1) return;
+        _swipeStartY=e.touches[0].clientY; _swiping=true;
+    }, {passive: true});
+    _pc.addEventListener('touchmove', e=>{
         if (!_swiping) return;
-        const dy = e.touches[0].clientY - _swipeStartY;
-        if (dy > 60) { closePlaceCard(); _swiping = false; if (navigator.vibrate) navigator.vibrate(15); }
-    }, { passive: true });
-    _pc.addEventListener('touchend', () => { _swiping = false; }, { passive: true });
+        const dy=e.touches[0].clientY-_swipeStartY;
+        if (dy>60) { closePlaceCard(); _swiping=false; if(navigator.vibrate)navigator.vibrate(15); }
+    }, {passive: true});
+    _pc.addEventListener('touchend', ()=>{ _swiping=false; }, {passive: true});
 }
 
 // ════════════════════════════════════════════
 // SHARE / PERMALINK
 // ════════════════════════════════════════════
-window.shareLocation = function (lat, lng, name) {
-    const url = location.origin + location.pathname + '#' + lat.toFixed(6) + ',' + lng.toFixed(6) + ',17';
-    if (navigator.share) {
-        navigator.share({ title: name || 'BT Location', text: name + ' (' + lat.toFixed(5) + ', ' + lng.toFixed(5) + ')', url: url }).catch(() => { });
-    } else {
+window.shareLocation=function(lat,lng,name){
+    const url=location.origin+location.pathname+'#'+lat.toFixed(6)+','+lng.toFixed(6)+',17';
+    if(navigator.share){
+        navigator.share({title:name||'BT Location',text:name+' ('+lat.toFixed(5)+', '+lng.toFixed(5)+')',url:url}).catch(()=>{});
+    }else{
         navigator.clipboard.writeText(url).then(() => showToast('📋 คัดลอกลิงก์แล้ว')).catch(() => {
             prompt('คัดลอกลิงก์:', url);
         });
@@ -3240,8 +3239,8 @@ rebuildIndexMap();
 
 update();
 
-const style = document.createElement('style');
-style.textContent = `.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#fff!important;border:none!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;white-space:nowrap!important;font-family:inherit!important;}
+const style=document.createElement('style');
+style.textContent=`.bt-tooltip{background:rgba(32,33,36,0.82)!important;color:#fff!important;border:none!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;white-space:nowrap!important;font-family:inherit!important;}
 .leaflet-marker-icon div { transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.15s ease !important; }
 .leaflet-marker-icon:hover div { transform: scale(1.35) !important; }
 .marker-cluster { transition: transform 0.25s cubic-bezier(0.34,1.4,0.64,1), opacity 0.2s ease !important; }
@@ -3254,123 +3253,123 @@ document.head.appendChild(style);
 // ════════════════════════════════════════════
 // SUPABASE SYNC — load + realtime
 // ════════════════════════════════════════════
-async function doSync(silent = true) {
-    if (_syncing) return;
-    _syncing = true;
+async function doSync(silent=true){
+    if(_syncing)return;
+    _syncing=true;
     _setSyncStatus('syncing');
-    try {
+    try{
         // Paginate: Supabase default limit = 1000 rows per request
-        let allData = [], from = 0, pageSize = 1000;
-        while (true) {
-            const { data, error } = await _sb.from('locations').select('*').order('created_at', { ascending: true }).range(from, from + pageSize - 1);
-            if (error) throw new Error(error.message);
-            allData = allData.concat(data);
-            if (data.length < pageSize) break;
-            from += pageSize;
+        let allData=[], from=0, pageSize=1000;
+        while(true){
+            const {data,error}=await _sb.from('locations').select('*').order('created_at',{ascending:true}).range(from,from+pageSize-1);
+            if(error)throw new Error(error.message);
+            allData=allData.concat(data);
+            if(data.length<pageSize)break;
+            from+=pageSize;
         }
-        const data = allData;
-        const loaded = data.map(r => normalizeLocation({
-            sb_id: r.id, name: r.name || '', lat: r.lat, lng: r.lng,
-            list: r.list || '', city: r.city || '', note: r.note || '',
-            tags: r.tags ? r.tags.split(',').filter(Boolean) : [],
-            photo: r.photo || '',
-            updatedAt: r.updated_at ? new Date(r.updated_at).getTime() : Date.now(),
+        const data=allData;
+        const loaded=data.map(r=>normalizeLocation({
+            sb_id:r.id, name:r.name||'', lat:r.lat, lng:r.lng,
+            list:r.list||'', city:r.city||'', note:r.note||'',
+            tags:r.tags?r.tags.split(',').filter(Boolean):[],
+            photo:r.photo||'',
+            updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now(),
         }));
-        locations = loaded;
+        locations=loaded;
         _clearDirty(); // clear BEFORE writeCache so saveLocations won't re-push
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(locations)); // bypass saveLocations
-        invalidateCache(); update();
-        _setSyncStatus('ok'); _lastSyncTime = Date.now();
-        if (!silent) showToast(`✅ โหลด ${locations.length} จุดจาก Supabase`, false, true);
-    } catch (err) {
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(locations)); // bypass saveLocations
+        invalidateCache();update();
+        _setSyncStatus('ok');_lastSyncTime=Date.now();
+        if(!silent)showToast(`✅ โหลด ${locations.length} จุดจาก Supabase`,false,true);
+    }catch(err){
         _setSyncStatus('error');
-        if (!silent) showToast('❌ Sync: ' + err.message, true);
-    } finally { _syncing = false; }
+        if(!silent)showToast('❌ Sync: '+err.message,true);
+    }finally{_syncing=false;}
 }
 
-function _locKey(l) { return l.lat.toFixed(6) + ',' + l.lng.toFixed(6); }
+function _locKey(l){return l.lat.toFixed(6)+','+l.lng.toFixed(6);}
 
 // Realtime subscription — all 8 users see live changes
-function startRealtimeSync() {
+function startRealtimeSync(){
     _sb.channel('locations-rt')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'locations' }, payload => {
-            const r = payload.new;
-            const exists = locations.find(l => l.sb_id === r.id);
-            if (!exists) {
-                const loc = normalizeLocation({ sb_id: r.id, name: r.name, lat: r.lat, lng: r.lng, list: r.list, city: r.city, note: r.note || '', tags: r.tags ? r.tags.split(',').filter(Boolean) : [], photo: r.photo || '', updatedAt: r.updated_at ? new Date(r.updated_at).getTime() : Date.now() });
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'locations'},payload=>{
+            const r=payload.new;
+            const exists=locations.find(l=>l.sb_id===r.id);
+            if(!exists){
+                const loc=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
                 locations.push(loc);
-                _writeCache(); invalidateCache(); update();
-                showToast(`📍 จุดใหม่: "${r.name || 'ไม่มีชื่อ'}"`);
+                _writeCache();invalidateCache();update();
+                showToast(`📍 จุดใหม่: "${r.name||'ไม่มีชื่อ'}"`);
             }
         })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'locations' }, payload => {
-            const r = payload.new;
-            const idx = locations.findIndex(l => l.sb_id === r.id);
-            if (idx >= 0) {
-                const photo = locations[idx].photo;
-                locations[idx] = normalizeLocation({ sb_id: r.id, name: r.name, lat: r.lat, lng: r.lng, list: r.list, city: r.city, note: r.note || '', tags: r.tags ? r.tags.split(',').filter(Boolean) : [], photo: photo || r.photo || '', updatedAt: r.updated_at ? new Date(r.updated_at).getTime() : Date.now() });
-                _writeCache(); invalidateCache(); update();
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locations'},payload=>{
+            const r=payload.new;
+            const idx=locations.findIndex(l=>l.sb_id===r.id);
+            if(idx>=0){
+                const photo=locations[idx].photo;
+                locations[idx]=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:photo||r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
+                _writeCache();invalidateCache();update();
             }
         })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'locations' }, payload => {
-            const id = payload.old.id;
-            locations = locations.filter(l => l.sb_id !== id);
-            _writeCache(); invalidateCache(); update();
+        .on('postgres_changes',{event:'DELETE',schema:'public',table:'locations'},payload=>{
+            const id=payload.old.id;
+            locations=locations.filter(l=>l.sb_id!==id);
+            _writeCache();invalidateCache();update();
         })
         .subscribe();
 }
 
-function mergeLocs(local, remote, base) {
+function mergeLocs(local, remote, base){
     // 3-way merge with DETERMINISTIC conflict resolution via updatedAt
     // Strategy: "latest wins" — item with newer updatedAt wins conflicts
     try {
-        const bMap = new Map(), lMap = new Map(), rMap = new Map();
-        (base || []).forEach(l => bMap.set(_locKey(l), l));
-        local.forEach(l => lMap.set(_locKey(l), l));
-        remote.forEach(l => rMap.set(_locKey(l), l));
-        const allKeys = new Set([...lMap.keys(), ...rMap.keys()]);
-        const merged = [];
-        let conflicts = 0, added = 0, removed = 0;
-        const conflictDetails = [];
-        allKeys.forEach(key => {
-            const inBase = bMap.has(key), inLocal = lMap.has(key), inRemote = rMap.has(key);
-            if (inLocal && inRemote) {
-                const ll = lMap.get(key), rl = rMap.get(key);
-                if (inBase) {
-                    const bl = bMap.get(key);
-                    const lStrip = JSON.stringify({ ...ll, photo: undefined });
-                    const rStrip = JSON.stringify({ ...rl, photo: undefined });
-                    const bStrip = JSON.stringify({ ...bl, photo: undefined });
-                    const localChanged = lStrip !== bStrip;
-                    const remoteChanged = rStrip !== bStrip;
-                    if (localChanged && remoteChanged) {
+        const bMap=new Map(), lMap=new Map(), rMap=new Map();
+        (base||[]).forEach(l=>bMap.set(_locKey(l),l));
+        local.forEach(l=>lMap.set(_locKey(l),l));
+        remote.forEach(l=>rMap.set(_locKey(l),l));
+        const allKeys=new Set([...lMap.keys(),...rMap.keys()]);
+        const merged=[];
+        let conflicts=0, added=0, removed=0;
+        const conflictDetails=[];
+        allKeys.forEach(key=>{
+            const inBase=bMap.has(key), inLocal=lMap.has(key), inRemote=rMap.has(key);
+            if(inLocal&&inRemote){
+                const ll=lMap.get(key), rl=rMap.get(key);
+                if(inBase){
+                    const bl=bMap.get(key);
+                    const lStrip=JSON.stringify({...ll,photo:undefined});
+                    const rStrip=JSON.stringify({...rl,photo:undefined});
+                    const bStrip=JSON.stringify({...bl,photo:undefined});
+                    const localChanged=lStrip!==bStrip;
+                    const remoteChanged=rStrip!==bStrip;
+                    if(localChanged&&remoteChanged){
                         // TRUE CONFLICT → latest wins (deterministic)
                         conflicts++;
-                        const lTime = ll.updatedAt || 0, rTime = rl.updatedAt || 0;
-                        const winner = lTime >= rTime ? 'local' : 'remote';
-                        const chosen = winner === 'local' ? ll : { ...rl, photo: ll.photo || undefined };
-                        conflictDetails.push({ key, name: ll.name || rl.name, local: ll, remote: rl, base: bl, winner, lTime, rTime });
-                        console.warn(`CONFLICT at ${key} "${ll.name || rl.name}" → ${winner} wins (local:${new Date(lTime).toISOString()} remote:${new Date(rTime).toISOString()})`);
+                        const lTime=ll.updatedAt||0, rTime=rl.updatedAt||0;
+                        const winner=lTime>=rTime?'local':'remote';
+                        const chosen=winner==='local'?ll:{...rl,photo:ll.photo||undefined};
+                        conflictDetails.push({key,name:ll.name||rl.name,local:ll,remote:rl,base:bl,winner,lTime,rTime});
+                        console.warn(`CONFLICT at ${key} "${ll.name||rl.name}" → ${winner} wins (local:${new Date(lTime).toISOString()} remote:${new Date(rTime).toISOString()})`);
                         merged.push(chosen);
-                    } else if (localChanged) {
+                    } else if(localChanged){
                         merged.push(ll);
                     } else {
-                        merged.push({ ...rl, photo: ll.photo || undefined });
+                        merged.push({...rl,photo:ll.photo||undefined});
                     }
                 } else {
                     // Both added same coords — latest wins
-                    const lTime = ll.updatedAt || 0, rTime = rl.updatedAt || 0;
-                    merged.push(lTime >= rTime ? ll : { ...rl, photo: ll.photo || undefined });
+                    const lTime=ll.updatedAt||0, rTime=rl.updatedAt||0;
+                    merged.push(lTime>=rTime?ll:{...rl,photo:ll.photo||undefined});
                 }
-            } else if (inLocal && !inRemote) {
-                if (inBase) {
+            } else if(inLocal&&!inRemote){
+                if(inBase){
                     console.warn('Remote deleted:', key, lMap.get(key).name);
                     removed++;
                 } else {
                     merged.push(lMap.get(key)); added++;
                 }
-            } else if (!inLocal && inRemote) {
-                if (inBase) {
+            } else if(!inLocal&&inRemote){
+                if(inBase){
                     console.warn('Local deleted:', key, rMap.get(key).name);
                     removed++;
                 } else {
@@ -3378,50 +3377,50 @@ function mergeLocs(local, remote, base) {
                 }
             }
         });
-        if (conflictDetails.length) console.warn('MERGE SUMMARY:', conflicts, 'conflicts', conflictDetails);
-        return { merged, conflicts, added, removed, conflictDetails };
-    } catch (mergeErr) {
+        if(conflictDetails.length) console.warn('MERGE SUMMARY:', conflicts, 'conflicts', conflictDetails);
+        return {merged, conflicts, added, removed, conflictDetails};
+    } catch(mergeErr) {
         // SAFE MODE: merge crashed → fallback to backup
         console.error('MERGE FAILED:', mergeErr);
         try {
-            const backup = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
-            if (backup && backup.length) {
-                showToast('⚠️ Merge ล้มเหลว — กู้คืนจาก backup', true);
-                return { merged: backup, conflicts: 0, added: 0, removed: 0, conflictDetails: [], recovered: true };
+            const backup=JSON.parse(localStorage.getItem(BACKUP_KEY)||'null');
+            if(backup&&backup.length){
+                showToast('⚠️ Merge ล้มเหลว — กู้คืนจาก backup',true);
+                return {merged:backup, conflicts:0, added:0, removed:0, conflictDetails:[], recovered:true};
             }
-        } catch (e) { }
+        } catch(e){}
         // Last resort: return local as-is
-        showToast('⚠️ Merge ล้มเหลว — ใช้ข้อมูล local', true);
-        return { merged: local, conflicts: 0, added: 0, removed: 0, conflictDetails: [], recovered: true };
+        showToast('⚠️ Merge ล้มเหลว — ใช้ข้อมูล local',true);
+        return {merged:local, conflicts:0, added:0, removed:0, conflictDetails:[], recovered:true};
     }
 }
 
-function setSyncIndicator(state) {
-    const btn = document.getElementById('btnGithubSave');
-    if (!btn) return;
-    btn.classList.remove('sync-ok', 'sync-pending', 'sync-error', 'sync-active');
-    if (state) btn.classList.add('sync-' + state);
+function setSyncIndicator(state){
+    const btn=document.getElementById('btnGithubSave');
+    if(!btn)return;
+    btn.classList.remove('sync-ok','sync-pending','sync-error','sync-active');
+    if(state)btn.classList.add('sync-'+state);
 }
 
 
 let _visibilityBound = false;
-function startAutoSync() {
+function startAutoSync(){
     startRealtimeSync();
     // Periodic pull every 60s as fallback
-    if (_syncTimer) clearInterval(_syncTimer);
-    _syncTimer = setInterval(() => {
-        if (document.visibilityState === 'visible' && Date.now() - _lastSyncTime > 55000) doSync(true);
-    }, 60000);
-    if (!_visibilityBound) {
-        _visibilityBound = true;
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && Date.now() - _lastSyncTime > 15000) doSync(true);
+    if(_syncTimer)clearInterval(_syncTimer);
+    _syncTimer=setInterval(()=>{
+        if(document.visibilityState==='visible'&&Date.now()-_lastSyncTime>55000)doSync(true);
+    },60000);
+    if(!_visibilityBound){
+        _visibilityBound=true;
+        document.addEventListener('visibilitychange',()=>{
+            if(document.visibilityState==='visible'&&Date.now()-_lastSyncTime>15000)doSync(true);
         });
     }
 }
 
 // Initial load: Supabase = SINGLE source of truth
-(async () => {
+(async()=>{
     // Initial load from Supabase (source of truth)
     await doSync(false);
     _sbLoaded = true;
@@ -3438,17 +3437,17 @@ window.btDebug = {
     get token() { return getToken() ? '✅ set' : '❌ none'; },
     get worker() { return useWorker() ? `✅ ${getWorkerUrl()}` : '❌ not set'; },
     get stats() {
-        const lc = {}; locations.forEach(l => { lc[l.list] = (lc[l.list] || 0) + 1; });
-        return { total: locations.length, lists: lc, mobile: _mobile, syncing: _syncing, dirty: _isDirty(), lastSync: new Date(_lastSyncTime).toLocaleString(), undoStack: undoStack.length, redoStack: redoStack.length };
+        const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
+        return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,dirty:_isDirty(),lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};
     },
-    forceSync: () => doSync(false),
-    clearCache: () => { invalidateCache(); update(); showToast('Cache cleared'); },
-    exportDebug: () => JSON.stringify({ locations: locations.length, lists: Object.keys(locations.reduce((a, l) => (a[l.list] = 1, a), {})), sha: localStorage.getItem(SYNC_SHA_KEY), ua: navigator.userAgent, screen: `${screen.width}x${screen.height}`, dpr: devicePixelRatio }, null, 2),
+    forceSync: ()=>doSync(false),
+    clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
+    exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
-console.log('%c🗺️ BT Locations Debug', 'font-size:14px;font-weight:bold;', '→ window.btDebug');
+console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
 // Version badge
-(function showVersion() {
+(function showVersion(){
     const badge = document.getElementById('versionBadge');
     if (badge) badge.textContent = `app:${APP_VERSION}`;
     // Detect SW cache version
