@@ -85,6 +85,29 @@
         .tb-center { flex: 1; display: flex; align-items: center; padding: 0 12px; min-width: 0; }
         /* RIGHT: fixed actions */
         .tb-right { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-left: 0.5px solid var(--bd2); }
+
+        /* ══ MOBILE TOPBAR ══ */
+        .mob-topbar {
+            display: none; height: 52px; flex-shrink: 0;
+            align-items: center; gap: 8px; padding: 0 10px;
+            background: var(--s1); border-bottom: 0.5px solid var(--bd);
+        }
+        .mob-topbar-search {
+            flex: 1; height: 36px; display: flex; align-items: center; gap: 7px;
+            background: var(--s2); border: 0.5px solid var(--bd2); border-radius: 20px;
+            padding: 0 12px; cursor: text; min-width: 0;
+        }
+        .mob-topbar-search input {
+            flex: 1; background: none; border: none; outline: none;
+            color: var(--tx); font-size: 13px; font-family: inherit; min-width: 0;
+        }
+        .mob-topbar-search input::placeholder { color: var(--tx3); }
+        .mob-topbar-avatar {
+            width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+            background: linear-gradient(135deg, var(--bl), var(--gn));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700; color: var(--bg); cursor: pointer;
+        }
         .logo { display: flex; align-items: center; gap: 7px; cursor: pointer; }
         .logo-sq { width: 24px; height: 24px; border-radius: 6px; background: var(--bl-d); border: 0.5px solid var(--bl-b); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--bl); flex-shrink: 0; }
         .logo-txt { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--bl); text-transform: uppercase; }
@@ -98,15 +121,15 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .loader-t { font-size: 13px; color: var(--tx2); }
         .tb-sep { width: 0.5px; height: 18px; background: var(--bd2); margin: 0 2px; }
-        .search-box {
+        .tb-search-box {
             flex: 1; max-width: 440px; height: 32px;
             display: flex; align-items: center; gap: 7px;
             background: var(--s2); border: 0.5px solid var(--bd); border-radius: 8px; padding: 0 10px;
             transition: border-color 0.15s;
         }
-        .search-box:focus-within { border-color: var(--bl-b); }
-        .search-box input { background: none; border: none; outline: none; color: var(--tx); font-size: 12px; width: 100%; }
-        .search-box input::placeholder { color: var(--tx3); }
+        .tb-search-box:focus-within { border-color: var(--bl-b); }
+        .tb-search-box input { background: none; border: none; outline: none; color: var(--tx); font-size: 12px; width: 100%; }
+        .tb-search-box input::placeholder { color: var(--tx3); }
         .si { font-size: 12px; color: var(--tx3); }
         .pill-badge { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
         .live-p { display: flex; align-items: center; gap: 5px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 20px; padding: 3px 9px; }
@@ -777,7 +800,7 @@
         .mob-search input { background: none; border: none; outline: none; color: var(--tx); font-size: 13px; width: 100%; font-family: inherit; }
         .mob-search input::placeholder { color: var(--tx3); }
 
-        .mob-chips-row { display: none; gap: 6px; padding: 8px 12px 4px; overflow-x: auto; flex-shrink: 0; }
+        .mob-chips-row { display: none; gap: 6px; padding: 6px 10px; overflow-x: auto; flex-shrink: 0; background: var(--s1); border-bottom: 0.5px solid var(--bd); }
         .mob-chips-row::-webkit-scrollbar { display: none; }
         .chip { display: flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 20px; border: 0.5px solid var(--bd2); background: var(--s2); font-size: 11.5px; color: var(--tx2); white-space: nowrap; cursor: pointer; transition: all 0.13s; user-select: none; flex-shrink: 0; }
         .chip:hover { color: var(--tx); }
@@ -822,7 +845,7 @@
         @media (min-width: 768px) {
             .sidebar { position: static; width: 252px; transform: none !important; }
             .search-bar { display: none !important; }
-            .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
+            .mob-topbar, .mob-search-row, .mob-chips-row, .mob-nav, .mob-drawer, .mob-sheet { display: none !important; }
         }
 
         /* ══ MOBILE ══ */
@@ -832,15 +855,11 @@
             .sidebar { display: none; }
             .sidebar-backdrop { display: none !important; }
             .main { position: relative; flex: 1; }
-            /* Topbar mobile: hide center + brand, keep left icon + right */
-            .tb-left { width: auto; border-right: none; padding: 0 8px; gap: 6px; }
-            .tb-brand { display: none; }
-            .tb-center { display: none; }
-            .tb-right { border-left: none; padding: 0 8px; margin-left: auto; }
-            .pill-badge { display: none; }
-            .live-p { display: none; }
+            /* ซ่อน desktop topbar ทั้งหมด — ใช้ mob-topbar แทน */
+            .topbar { display: none !important; }
+            /* แสดง mobile topbar */
+            .mob-topbar { display: flex; }
             /* Show mobile components */
-            .mob-search-row { display: flex; }
             .mob-chips-row { display: flex; }
             .mob-nav { display: flex; }
             /* vtabs */
@@ -869,6 +888,7 @@
             .mob-nb-add { width: 40px; height: 40px; font-size: 20px; }
             .mob-sheet { bottom: 52px; }
             .zoom-c { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); }
+            .mob-topbar { height: 48px; }
         }
 
         /* Leaflet overrides */
@@ -966,7 +986,7 @@
 </div>
 
 <div class="app" id="app" style="display:none;">
-    <!-- ══ TOPBAR ══ -->
+    <!-- ══ TOPBAR (desktop ≥768px) ══ -->
     <div class="topbar">
         <!-- LEFT: aligns with sidebar -->
         <div class="tb-left" id="tbLeft">
@@ -976,7 +996,7 @@
         </div>
         <!-- CENTER: search -->
         <div class="tb-center">
-            <div class="search-box">
+            <div class="tb-search-box">
                 <span class="si">⌕</span>
                 <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
             </div>
@@ -997,6 +1017,25 @@
             <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
             <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
         </div>
+    </div>
+
+    <!-- ══ MOBILE TOPBAR (mobile <768px) ══ -->
+    <div class="mob-topbar" id="mobTopbar">
+        <div class="tb-icon-btn" id="btnMenuMob" title="เมนู" style="flex-shrink:0;" onclick="if(typeof openMobDrawer==='function')openMobDrawer();">☰</div>
+        <div class="mob-topbar-search">
+            <span class="si" style="font-size:13px;">⌕</span>
+            <input type="text" id="searchMob" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off"
+                oninput="if(typeof handleSearch==='function')handleSearch(this.value)">
+        </div>
+        <div class="mob-topbar-avatar" id="mobAvatar" onclick="if(typeof openInfoPanel==='function')openInfoPanel();">V</div>
+    </div>
+
+    <!-- ══ MOBILE FILTER CHIPS (mobile <768px) ══ -->
+    <div class="mob-chips-row" id="mobChipsRow">
+        <div class="chip on" id="chipAll" data-filter="all"><span class="chip-dot" style="background:var(--bl)"></span>ทั้งหมด</div>
+        <div class="chip" id="chipList" data-filter="list"><span class="chip-dot"></span>รายการ</div>
+        <div class="chip" id="chipCity" data-filter="city"><span class="chip-dot"></span>เมือง</div>
+        <div class="chip" id="chipFav" data-filter="fav">⭐ ชื่นชอบ</div>
     </div>
 
     <!-- ══ SIDEBAR BACKDROP (mobile) ══ -->
@@ -1279,22 +1318,6 @@
    MOBILE COMPONENTS (hidden on desktop)
 ═══════════════════════════════════════════════════════════════════ -->
 
-<!-- Mobile search row -->
-<div class="mob-search-row" id="mobSearchRow">
-    <div class="mob-search">
-        <span class="si">🔍</span>
-        <input type="text" id="mobSearchInput" placeholder="ค้นหาจุด, เมือง, list...">
-    </div>
-</div>
-
-<!-- Mobile filter chips -->
-<div class="mob-chips-row" id="mobChipsRow">
-    <div class="chip on" id="chipAll" data-filter="all"><span class="chip-dot" style="background:var(--bl)"></span>ทั้งหมด</div>
-    <div class="chip" id="chipList" data-filter="list"><span class="chip-dot"></span>รายการ</div>
-    <div class="chip" id="chipCity" data-filter="city"><span class="chip-dot"></span>เมือง</div>
-    <div class="chip" id="chipFav" data-filter="fav">⭐ ชื่นชอบ</div>
-</div>
-
 <!-- Mobile bottom navigation -->
 <div class="mob-nav" id="mobNav">
     <div class="mob-nb on" id="mn-map" onclick="mobSwitchView('map')">
@@ -1541,6 +1564,30 @@
     <input type="file" id="fileImport" accept=".json,.csv,.kml,.gpx,.geojson" style="display:none">
 
     <script>
+    // Sync searchMob input with main search input
+    (function(){
+        document.addEventListener('DOMContentLoaded', function(){
+            var mobInput = document.getElementById('searchMob');
+            var desktopInput = document.getElementById('search');
+            if(mobInput && desktopInput){
+                mobInput.addEventListener('input', function(){
+                    desktopInput.value = this.value;
+                    desktopInput.dispatchEvent(new Event('input', {bubbles:true}));
+                });
+                desktopInput.addEventListener('input', function(){
+                    if(mobInput.value !== this.value) mobInput.value = this.value;
+                });
+            }
+            // Sync btnMenuMob with btnMenu
+            var btnMenuMob = document.getElementById('btnMenuMob');
+            var btnMenu = document.getElementById('btnMenu');
+            if(btnMenuMob && btnMenu){
+                btnMenuMob.addEventListener('click', function(){
+                    btnMenu.click();
+                });
+            }
+        });
+    })();
     // Patch: sync tbLeft collapse with sidebar toggle on desktop
     (function(){
         var _origToggle;
