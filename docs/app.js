@@ -1149,18 +1149,27 @@ function refreshDatalistSuggestions() {
 }
 
 function updateChipLabels() {
-    document.getElementById('chipListLabel').textContent=filterList||'รายการ';
-    document.getElementById('chipCityLabel').textContent=filterCity||'เขต';
-    document.getElementById('chipList').classList.toggle('active',!!filterList);
-    document.getElementById('chipCity').classList.toggle('active',!!filterCity);
+    const chipListLabel = document.getElementById('chipListLabel');
+    const chipCityLabel = document.getElementById('chipCityLabel');
+    const chipList = document.getElementById('chipList');
+    const chipCity = document.getElementById('chipCity');
+    const chipAll = document.getElementById('chipAll');
+    const chipNearby = document.getElementById('chipNearby');
+    const chipHeatmap = document.getElementById('chipHeatmap');
+    const chipFav = document.getElementById('chipFav');
+    const chipMore = document.getElementById('chipMore');
+    if(chipListLabel) chipListLabel.textContent=filterList||'รายการ';
+    if(chipCityLabel) chipCityLabel.textContent=filterCity||'เขต';
+    if(chipList) chipList.classList.toggle('active',!!filterList);
+    if(chipCity) chipCity.classList.toggle('active',!!filterCity);
     // Dropdown items
-    document.getElementById('chipAll').classList.toggle('active',!filterList&&!filterCity&&!nearbyMode&&!filterFavorites);
-    document.getElementById('chipNearby').classList.toggle('active',nearbyMode);
-    document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);
-    document.getElementById('chipFav').classList.toggle('active',filterFavorites);
+    if(chipAll) chipAll.classList.toggle('active',!filterList&&!filterCity&&!nearbyMode&&!filterFavorites);
+    if(chipNearby) chipNearby.classList.toggle('active',nearbyMode);
+    if(chipHeatmap) chipHeatmap.classList.toggle('active',heatmapMode);
+    if(chipFav) chipFav.classList.toggle('active',filterFavorites);
     // Highlight "more" button if any dropdown item is active
     const anyDropActive=nearbyMode||heatmapMode||filterFavorites;
-    document.getElementById('chipMore').classList.toggle('active',anyDropActive);
+    if(chipMore) chipMore.classList.toggle('active',anyDropActive);
 }
 
 // ════════════════════════════════════════════
@@ -1684,7 +1693,8 @@ btnGps.onclick = () => {
 };
 
 // GPS modal
-document.getElementById('btnUseGpsModal').onclick=()=>{
+const btnUseGpsModal = document.getElementById('btnUseGpsModal');
+if(btnUseGpsModal) btnUseGpsModal.onclick=()=>{
     if(!navigator.geolocation){showToast('Browser ไม่รองรับ GPS',true);return;}
     const btn=document.getElementById('btnUseGpsModal');
     btn.textContent='⏳ กำลังหาตำแหน่ง...';
