@@ -996,6 +996,7 @@ async function initApp(){
         setLoader('พร้อมใช้งาน');
         setTimeout(() => {
             document.getElementById('loader').classList.add('done');
+            document.getElementById('app').style.display = 'flex';
             console.log('[BT] Loader hidden');
         }, 200);
         
@@ -3343,3 +3344,4 @@ if ('serviceWorker' in navigator) {
         }
     });
 }
+
