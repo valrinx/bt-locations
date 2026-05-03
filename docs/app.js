@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.12.0';
+const APP_VERSION = 'v6.0.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -916,8 +916,8 @@ function renderMarkers(filtered) {
 
     const zoom = map.getZoom();
     const MAX_MARKERS = _mobile
-        ? (zoom >= 15 ? 600 : zoom >= 13 ? 400 : 250)
-        : (zoom >= 15 ? 2000 : zoom >= 13 ? 1200 : 600);
+        ? (zoom >= 15 ? 3000 : zoom >= 13 ? 1500 : 800)
+        : (zoom >= 15 ? 10000 : zoom >= 13 ? 5000 : 2500);
     const layers = [];
     let truncated = false;
     filteredIdxSet.forEach(idx => {
@@ -1030,6 +1030,7 @@ async function initApp(){
         const a1 = document.getElementById('av1');
         if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
         
+        _initMapEvents(); // Add this line
         console.log('[BT] initApp completed');
         // 5. No automatic fetch - user controls data via Import button
     } catch(e) {
@@ -1632,21 +1633,7 @@ function _updateTooltipVisibility() {
         }
     });
 }
-map.on('zoomend', () => {
-    _updateTooltipVisibility();
-    _lastFilteredKey = null; // force re-render with new marker limit
-    update();
-});
 
-if(btnGps){
-map.on('dragstart', () => {
-    if (gpsTracking) {
-        gpsTracking = false;
-        btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
-        btnGps.classList.remove('gps-tracking');
-    }
-});
-}
 
 function stopGps() {
     if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
@@ -1765,46 +1752,6 @@ document.getElementById('map').addEventListener('mousemove', throttle(e=>{
 // ════════════════════════════════════════════
 // MAP CLICK
 // ════════════════════════════════════════════
-map.on('click',e=>{
-    // Waypoint Mode Hook
-    if (typeof _handleMapClickForWaypoint === 'function' && _isAddingWaypoint) {
-        _handleMapClickForWaypoint(e);
-        return;
-    }
-    const{lat,lng}=e.latlng;
-    const editModalOverlay = document.getElementById('editModalOverlay');
-    if(editModalOverlay && editModalOverlay.classList.contains('open')){
-        document.getElementById('modalLat').value=lat.toFixed(6);
-        document.getElementById('modalLng').value=lng.toFixed(6);
-        ['modalLat','modalLng'].forEach(id=>{const el=document.getElementById(id);el.style.borderColor='#34a853';setTimeout(()=>el.style.borderColor='',800);});
-        return;
-    }
-    if(measureMode&&measureStart){
-        const straightDist=haversine(measureStart.lat,measureStart.lng,lat,lng);
-        if(measureLine)map.removeLayer(measureLine);
-        // Draw straight line immediately
-        measureLine=L.polyline([[measureStart.lat,measureStart.lng],[lat,lng]],{color:'#7b1fa2',weight:3,dashArray:'8,6'}).addTo(map);
-        const fromName=measureStart.name||measureStart.list||'จุดเริ่ม';
-        document.getElementById('measureResultText').textContent=`📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
-        document.getElementById('measureModalOverlay').classList.add('open');
-        // Try OSRM for road distance
-        const osrmUrl=`https://router.project-osrm.org/route/v1/driving/${measureStart.lng},${measureStart.lat};${lng},${lat}?overview=full&geometries=geojson`;
-        fetch(osrmUrl).then(r=>r.json()).then(data=>{
-            if(data.routes&&data.routes.length){
-                const route=data.routes[0];
-                const roadDist=route.distance;
-                const mins=Math.round(route.duration/60);
-                const coords=route.geometry.coordinates.map(c=>[c[1],c[0]]);
-                if(measureLine)map.removeLayer(measureLine);
-                measureLine=L.polyline(coords,{color:'#7b1fa2',weight:4,opacity:0.85}).addTo(map);
-                document.getElementById('measureResultText').textContent=`🛣️ ${formatDist(roadDist)} · ~${mins} นาที (ถนน)\n📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
-            }
-        }).catch(()=>{});
-        cancelMeasureMode(); return;
-    }
-    if(!addMode)return;
-    cancelAddMode(); openAddAt(lat,lng);
-});
 
 window.openAddAt=function(lat,lng){
     map.closePopup(); editingIndex=-1;
@@ -1867,9 +1814,6 @@ async function _reverseGeocodeCity(lat,lng){
 }
 
 // lat/lng hint — desktop only (ซ่อนบนมือถือผ่าน CSS)
-const latlngHint=document.getElementById('latlngHint');
-map.on('mousemove', throttle(e=>{ latlngHint.textContent=`${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`; latlngHint.classList.add('show'); }, 50));
-map.on('mouseout',()=>latlngHint.classList.remove('show'));
 
 // ════════════════════════════════════════════
 // EDIT / ADD MODAL
@@ -2215,7 +2159,8 @@ async function _navFetchRoute(fromLat,fromLng){
     });
 
     const coordStr = uniquePoints.map(c => c[0] + ',' + c[1]).join(';');
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
+    const radiuses = uniquePoints.map(() => '500').join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true&radiuses=${radiuses}${_osrmExcludeParam()}`;
     
     try {
         const res = await fetch(url);
@@ -3087,7 +3032,79 @@ function showToast(msg,isError=false,isSuccess=false){
 // ════════════════════════════════════════════
 // BACKDROP & KEYBOARD
 // ════════════════════════════════════════════
-map.on('click',()=>{if(!addMode&&!measureMode)closePlaceCard();closeListPanel();clearDirections();});
+function _initMapEvents() {
+    if (typeof map === 'undefined' || !map) return;
+    
+    map.on('zoomend', () => {
+        _updateTooltipVisibility();
+        _lastFilteredKey = null; 
+        update();
+    });
+
+    if(document.getElementById('btnGps')){
+        map.on('dragstart', () => {
+            if (typeof gpsTracking !== 'undefined' && gpsTracking) {
+                gpsTracking = false;
+                const btnGps = document.getElementById('btnGps');
+                btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
+                btnGps.classList.remove('gps-tracking');
+            }
+        });
+    }
+
+    map.on('click', e => {
+        if (typeof _handleMapClickForWaypoint === 'function' && (window._isAddingWaypoint || _isAddingWaypoint)) {
+            _handleMapClickForWaypoint(e);
+            return;
+        }
+        const { lat, lng } = e.latlng;
+        const editModalOverlay = document.getElementById('editModalOverlay');
+        if (editModalOverlay && editModalOverlay.classList.contains('open')) {
+            document.getElementById('modalLat').value = lat.toFixed(6);
+            document.getElementById('modalLng').value = lng.toFixed(6);
+            ['modalLat','modalLng'].forEach(id=>{const el=document.getElementById(id);el.style.borderColor='#34a853';setTimeout(()=>el.style.borderColor='',800);});
+            return;
+        }
+        if (typeof measureMode !== 'undefined' && measureMode && measureStart) {
+            const straightDist = haversine(measureStart.lat, measureStart.lng, lat, lng);
+            if (measureLine) map.removeLayer(measureLine);
+            measureLine = L.polyline([[measureStart.lat, measureStart.lng], [lat, lng]], { color: '#7b1fa2', weight: 3, dashArray: '8,6' }).addTo(map);
+            const fromName = measureStart.name || measureStart.list || 'จุดเริ่ม';
+            document.getElementById('measureResultText').textContent = `📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
+            document.getElementById('measureModalOverlay').classList.add('open');
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${measureStart.lng},${measureStart.lat};${lng},${lat}?overview=full&geometries=geojson`;
+            fetch(osrmUrl).then(r => r.json()).then(data => {
+                if (data.routes && data.routes.length) {
+                    const route = data.routes[0];
+                    const roadDist = route.distance;
+                    const mins = Math.round(route.duration / 60);
+                    const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+                    if (measureLine) map.removeLayer(measureLine);
+                    measureLine = L.polyline(coords, { color: '#7b1fa2', weight: 4, opacity: 0.85 }).addTo(map);
+                    document.getElementById('measureResultText').textContent = `🛣️ ${formatDist(roadDist)} · ~${mins} นาที (ถนน)\n📏 ${formatDist(straightDist)} (เส้นตรง)\n(${fromName} → พิกัดที่เลือก)`;
+                }
+            }).catch(() => { });
+            cancelMeasureMode(); return;
+        }
+        if (typeof addMode !== 'undefined' && !addMode) return;
+        if (typeof cancelAddMode === 'function') cancelAddMode(); 
+        if (typeof openAddAt === 'function') openAddAt(lat, lng);
+    });
+
+    const latlngHint = document.getElementById('latlngHint');
+    if (latlngHint) {
+        map.on('mousemove', throttle(e => { latlngHint.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`; latlngHint.classList.add('show'); }, 50));
+        map.on('mouseout', () => latlngHint.classList.remove('show'));
+    }
+
+    map.on('click', () => {
+        if (typeof addMode !== 'undefined' && !addMode && typeof measureMode !== 'undefined' && !measureMode) {
+            if (typeof closePlaceCard === 'function') closePlaceCard();
+        }
+        if (typeof closeListPanel === 'function') closeListPanel();
+        if (typeof clearDirections === 'function') clearDirections();
+    });
+}
 window.showPlaceCard=showPlaceCard;
 window.closeListPanel=closeListPanel;
 
