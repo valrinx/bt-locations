@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bt-locations-v6.6.3';
+const CACHE_NAME = 'bt-locations-v6.6.4';
 // Only truly static assets (libs, icons) — NOT app code
 const STATIC_ASSETS = [
   './manifest.json',
@@ -42,9 +42,9 @@ self.addEventListener('fetch', event => {
 
   // Map tiles: cache with network fallback (stale-while-revalidate)
   if (url.hostname.includes('tile.openstreetmap.org') ||
-      url.hostname.includes('server.arcgisonline.com') ||
-      url.hostname.includes('basemaps.cartocdn.com') ||
-      url.hostname.includes('mt1.google.com')) {
+    url.hostname.includes('server.arcgisonline.com') ||
+    url.hostname.includes('basemaps.cartocdn.com') ||
+    url.hostname.includes('mt1.google.com')) {
     event.respondWith(
       caches.open('bt-tiles-v1').then(cache =>
         cache.match(event.request).then(cached => {
@@ -61,7 +61,7 @@ self.addEventListener('fetch', event => {
 
   // GitHub API / raw.githubusercontent: network only
   if (url.hostname.includes('api.github.com') ||
-      url.hostname.includes('raw.githubusercontent.com')) {
+    url.hostname.includes('raw.githubusercontent.com')) {
     return;
   }
 
@@ -96,6 +96,8 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
+
+
 
   // Static assets (libs, icons): cache-first
   event.respondWith(
