@@ -56,14 +56,30 @@
         /* ══ APP CONTAINER ══ */
         .app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-        /* ══ TOPBAR ══ */
+        /* ══ TOPBAR — 3-zone aligned layout ══ */
         .topbar {
             height: 50px; flex-shrink: 0;
-            display: flex; align-items: center; gap: 10px; padding: 0 14px;
+            display: flex; align-items: stretch;
             background: var(--s1); border-bottom: 0.5px solid var(--bd);
         }
+        /* Left zone — same width as sidebar so columns align perfectly */
+        .tb-left {
+            width: 252px; flex-shrink: 0;
+            display: flex; align-items: center; gap: 8px; padding: 0 10px;
+            border-right: 0.5px solid var(--bd2);
+            transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+            overflow: hidden;
+        }
+        .tb-left.sidebar-collapsed { width: 50px; }
+        .tb-left.sidebar-collapsed .tb-brand { opacity: 0; width: 0; overflow: hidden; }
+        .tb-brand { font-size: 13px; font-weight: 700; color: var(--tx); white-space: nowrap; transition: opacity 0.15s, width 0.3s; }
+        .logo-sq { width: 24px; height: 24px; border-radius: 6px; background: var(--bl-d); border: 0.5px solid var(--bl-b); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--bl); flex-shrink: 0; }
+        /* Center zone — search */
+        .tb-center { flex: 1; display: flex; align-items: center; padding: 0 12px; }
+        /* Right zone */
+        .tb-right { display: flex; align-items: center; gap: 7px; padding: 0 12px; border-left: 0.5px solid var(--bd2); }
+        /* keep old classes for compat */
         .logo { display: flex; align-items: center; gap: 7px; cursor: pointer; }
-        .logo-sq { width: 24px; height: 24px; border-radius: 6px; background: var(--bl-d); border: 0.5px solid var(--bl-b); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--bl); }
         .logo-txt { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--bl); text-transform: uppercase; }
 
         /* ════════════════════════════════════
@@ -76,7 +92,7 @@
         .loader-t { font-size: 13px; color: var(--tx2); }
         .tb-sep { width: 0.5px; height: 18px; background: var(--bd2); margin: 0 3px; }
         .search-box {
-            flex: 1; max-width: 280px; height: 30px;
+            flex: 1; max-width: 420px; height: 32px;
             display: flex; align-items: center; gap: 7px;
             background: var(--s2); border: 0.5px solid var(--bd); border-radius: 8px; padding: 0 10px;
             transition: border-color 0.15s;
@@ -85,8 +101,7 @@
         .search-box input { background: none; border: none; outline: none; color: var(--tx); font-size: 12px; width: 100%; }
         .search-box input::placeholder { color: var(--tx3); }
         .si { font-size: 12px; color: var(--tx3); }
-        .tb-right { margin-left: auto; display: flex; align-items: center; gap: 7px; }
-        .pill-badge { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+        .pill-badge { background: var(--bl-d); border: 0.5px solid var(--bl-b); color: var(--bl); font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
         .live-p { display: flex; align-items: center; gap: 5px; background: var(--s2); border: 0.5px solid var(--bd); border-radius: 20px; padding: 3px 9px; }
         .live-p span { font-size: 11px; color: var(--tx2); }
         .avs { display: flex; }
@@ -811,6 +826,11 @@
             .sidebar { display: none; }
             .sidebar-backdrop { display: none !important; }
             .main { position: relative; flex: 1; }
+            /* Mobile topbar: collapse left zone */
+            .tb-left { width: 42px; border-right: none; padding: 0 7px; }
+            .tb-brand { display: none; }
+            .tb-center { display: none; }
+            .tb-right { border-left: none; gap: 5px; padding: 0 8px; margin-left: auto; }
             /* Mobile layout structure */
             .mob-search-row { display: flex; }
             .mob-chips-row { display: flex; }
@@ -986,20 +1006,25 @@
 <div class="app" id="app" style="display:none;">
     <!-- ══ TOPBAR ══ -->
     <div class="topbar">
-        <div class="logo">
+        <!-- LEFT: aligns with sidebar -->
+        <div class="tb-left" id="tbLeft">
+            <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
             <div class="logo-sq">BT</div>
-            <span class="logo-txt">Locations</span>
+            <span class="tb-brand">BT Locations</span>
         </div>
-        <div class="tb-sep"></div>
-        <div class="search-box">
-            <span class="si">⌕</span>
-            <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+        <!-- CENTER: search -->
+        <div class="tb-center">
+            <div class="search-box">
+                <span class="si">⌕</span>
+                <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+            </div>
         </div>
+        <!-- RIGHT: status + actions -->
         <div class="tb-right">
             <div class="pill-badge" id="totalBadge">0 จุด</div>
             <div class="live-p">
                 <div class="live-dot"></div>
-                <span>live sync</span>
+                <span>live</span>
             </div>
             <div class="avs">
                 <div class="av" id="av1" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
@@ -1007,7 +1032,6 @@
                 <div class="av" id="av3" style="background:linear-gradient(135deg,#a78bfa,#ff7f5c); margin-left:-5px;">K</div>
             </div>
             <div class="tb-sep"></div>
-            <div class="tb-icon-btn" id="btnMenu" title="เมนู">☰</div>
             <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
             <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
         </div>
@@ -1554,6 +1578,42 @@
     <div class="save-toast" id="saveToast"></div>
     <input type="file" id="fileImport" accept=".json,.csv,.kml,.gpx,.geojson" style="display:none">
 
+    <script>
+    // Patch: sync tbLeft collapse with sidebar toggle on desktop
+    (function(){
+        var _origToggle;
+        function _patchSidebar(){
+            if(typeof toggleSidebar !== 'undefined'){
+                _origToggle = toggleSidebar;
+                window.toggleSidebar = function(){
+                    _origToggle();
+                    if(window.innerWidth >= 768){
+                        const sb = document.getElementById('sidebar');
+                        const tbl = document.getElementById('tbLeft');
+                        if(tbl) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open') && sb.style.display === 'none' || sb.classList.contains('open') === false);
+                    }
+                };
+            }
+        }
+        // Override btnMenu after app.js loads
+        document.addEventListener('DOMContentLoaded', function(){
+            setTimeout(function(){
+                var btn = document.getElementById('btnMenu');
+                if(btn){
+                    var orig = btn.onclick;
+                    btn.onclick = function(){
+                        if(orig) orig.call(this);
+                        if(window.innerWidth >= 768){
+                            var sb = document.getElementById('sidebar');
+                            var tbl = document.getElementById('tbLeft');
+                            if(tbl && sb) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open'));
+                        }
+                    };
+                }
+            }, 800);
+        });
+    })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
