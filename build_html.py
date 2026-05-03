@@ -1,5 +1,6 @@
 import json
 import os
+<<<<<<< HEAD
 import shutil
 
 def build():
@@ -34,3 +35,994 @@ def build():
 
 if __name__ == "__main__":
     build()
+=======
+import time
+from datetime import datetime
+
+# Auto backup - use relative paths for cross-platform compatibility
+script_dir = os.path.dirname(os.path.abspath(__file__))
+src = os.path.join(script_dir, 'all_locations.json')
+backup_dir = os.path.join(script_dir, 'backups')
+os.makedirs(backup_dir, exist_ok=True)
+backup_name = f'all_locations_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+shutil.copy2(src, os.path.join(backup_dir, backup_name))
+
+with open(src, 'r', encoding='utf-8') as f:
+    locs = json.load(f)
+
+lists = sorted(set(l['list'] for l in locs))
+
+js_entries = []
+for l in locs:
+    entry = json.dumps({"name": l["name"] or "", "lat": l["lat"], "lng": l["lng"],
+                         "list": l["list"], "city": l.get("city", "")}, ensure_ascii=False)
+    js_entries.append(entry)
+
+js_array = ',\n            '.join(js_entries)
+
+filter_options = ''.join(f'<option value="{l}">{l}</option>' for l in lists)
+
+cities = sorted(set(l.get('city', '') for l in locs if l.get('city', '')))
+city_options = ''.join(f'<option value="{c}">{c}</option>' for c in cities)
+
+html = f'''<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BT Locations Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <style>
+        :root {{
+            --bg: #0b0c10;
+            --s1: #161b22;
+            --s2: #0d1117;
+            --bd: rgba(255,255,255,0.1);
+            --tx: #c9d1d9;
+            --bl: #58a6ff;
+            --gn: #238636;
+        }}
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--tx); overflow: hidden; height: 100vh; }}
+        #map {{ width: 100%; height: 100vh; }}
+        
+        /* Premium Topbar */
+        .topbar {{
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background: rgba(13, 17, 23, 0.8); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--bd); display: flex; align-items: center;
+            justify-content: space-between; padding: 0 16px; z-index: 2000;
+        }}
+        .tb-left {{ display: flex; align-items: center; gap: 12px; }}
+        .logo-sq {{
+            width: 32px; height: 32px; background: linear-gradient(135deg, #3b82f6, #10b981);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 800; font-size: 14px;
+        }}
+        .logo-txt {{ font-size: 16px; font-weight: 700; color: white; letter-spacing: -0.5px; }}
+        
+        .tb-right {{ display: flex; align-items: center; gap: 12px; }}
+        .live-p {{
+            display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+            background: rgba(35, 134, 54, 0.15); border: 1px solid rgba(35, 134, 54, 0.3);
+            border-radius: 20px; color: #3fb950; font-size: 12px; font-weight: 600;
+        }}
+        .live-dot {{ width: 8px; height: 8px; background: #3fb950; border-radius: 50%; animation: pulse 2s infinite; }}
+        @keyframes pulse {{ 0% {{ transform: scale(0.95); opacity: 0.8; }} 70% {{ transform: scale(1.1); opacity: 1; }} 100% {{ transform: scale(0.95); opacity: 0.8; }} }}
+        
+        .av {{ width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #30363d, #484f58); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; font-size: 12px; color: white; }}
+
+        .controls {{
+            position: absolute; top: 70px; left: 16px; right: 16px; z-index: 1000;
+            display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none;
+        }}
+        .controls > * {{ pointer-events: auto; }}
+        .controls input, .controls select {{
+            background: var(--s1); border: 1px solid var(--bd); border-radius: 8px;
+            padding: 8px 12px; color: var(--tx); font-size: 13px; outline: none;
+        }}
+        .controls input:focus {{ border-color: var(--bl); }}
+        .btn {{ border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-weight: 600; transition: 0.2s; }}
+        .btn-add {{ background: var(--gn); color: white; }}
+        .btn-github {{ background: #30363d; color: white; border: 1px solid var(--bd); }}
+        
+        .list-panel {{ position: absolute; bottom: 0; left: 0; right: 0; background: var(--s2); border-top: 1px solid var(--bd); max-height: 40vh; overflow-y: auto; display: none; z-index: 1001; }}
+        .list-panel.open {{ display: block; }}
+        .list-item {{ padding: 12px 16px; border-bottom: 1px solid var(--bd); cursor: pointer; }}
+        .list-item:hover {{ background: var(--s1); }}
+        
+        @media (max-width: 600px) {{
+            .logo-txt {{ display: none; }}
+            .controls input {{ width: 100%; }}
+        }}
+        .popup-content {{ text-align: center; min-width: 180px; }}
+        .popup-content h3 {{
+            color: #fff; margin: -12px -20px 10px; padding: 12px 20px;
+            font-size: 15px; font-weight: 600;
+            background: linear-gradient(135deg, #1a73e8, #4285f4);
+            border-radius: 8px 8px 0 0;
+        }}
+        .popup-content .popup-info {{ color: #555; margin: 4px 0; font-size: 12px; line-height: 1.5; }}
+        .popup-content .popup-info strong {{ color: #333; }}
+        .popup-content .popup-actions {{ margin-top: 10px; display: flex; gap: 6px; justify-content: center; }}
+        .popup-content .popup-actions a, .popup-content .popup-actions button {{
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 6px 12px; border-radius: 6px; text-decoration: none;
+            font-size: 12px; cursor: pointer; border: none; font-weight: 500;
+            transition: all 0.2s ease;
+        }}
+        .popup-content .link-gmaps {{ background: #1a73e8; color: white; }}
+        .popup-content .link-gmaps:hover {{ background: #1557b0; transform: translateY(-1px); }}
+        .popup-content .btn-popup-edit {{ background: #fbbc04; color: #333; }}
+        .popup-content .btn-popup-edit:hover {{ background: #f0b400; transform: translateY(-1px); }}
+        .popup-content .btn-popup-delete {{ background: #ea4335; color: white; }}
+        .popup-content .btn-popup-delete:hover {{ background: #d33426; transform: translateY(-1px); }}
+        .list-panel {{
+            position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
+            background: white; max-height: 35vh; overflow-y: auto;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.2); display: none;
+        }}
+        .list-panel.open {{ display: block; }}
+        .list-toggle {{
+            position: absolute; bottom: 10px; right: 10px; z-index: 1001;
+            background: #4285f4; color: white; border: none; border-radius: 50%;
+            width: 48px; height: 48px; font-size: 20px; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }}
+        .list-item {{
+            padding: 8px 16px; border-bottom: 1px solid #eee; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+        }}
+        .list-item:hover {{ background: #f5f5f5; }}
+        .list-item .name {{ font-weight: 500; font-size: 14px; }}
+        .list-item .detail {{ color: #888; font-size: 12px; }}
+        /* Modal */
+        .modal-overlay {{
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+            z-index: 2000; justify-content: center; align-items: center;
+        }}
+        .modal-overlay.open {{ display: flex; }}
+        .modal {{
+            background: white; border-radius: 16px; width: 90vw; max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+            animation: modalIn 0.25s ease;
+        }}
+        @keyframes modalIn {{
+            from {{ opacity: 0; transform: scale(0.95) translateY(10px); }}
+            to {{ opacity: 1; transform: scale(1) translateY(0); }}
+        }}
+        .modal-header {{
+            background: linear-gradient(135deg, #1a73e8, #4285f4);
+            color: white; padding: 18px 24px; font-size: 18px; font-weight: 600;
+        }}
+        .modal-body {{ padding: 20px 24px; }}
+        .modal h2 {{ margin-bottom: 16px; font-size: 18px; color: #333; }}
+        .modal label {{
+            display: block; margin-bottom: 6px; font-size: 13px;
+            color: #444; font-weight: 600; letter-spacing: 0.3px;
+        }}
+        .modal input {{
+            width: 100%; border: 2px solid #e8e8e8; border-radius: 8px; padding: 10px 12px;
+            font-size: 14px; margin-bottom: 14px; outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }}
+        .modal input:focus {{ border-color: #4285f4; box-shadow: 0 0 0 3px rgba(66,133,244,0.15); }}
+        .modal-btns {{ display: flex; gap: 10px; justify-content: flex-end; padding: 16px 24px; background: #f8f9fa; }}
+        .modal-btns .btn {{
+            padding: 10px 20px; font-size: 14px; border-radius: 8px;
+            font-weight: 600; transition: all 0.2s ease;
+        }}
+        .btn-cancel {{ background: #e8e8e8; color: #555; }}
+        .btn-cancel:hover {{ background: #ddd; }}
+        .btn-save {{ background: linear-gradient(135deg, #1a73e8, #4285f4); color: white; }}
+        .btn-save:hover {{ background: linear-gradient(135deg, #1557b0, #3275e4); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(66,133,244,0.4); }}
+        .add-mode-banner {{
+            display: none; position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+            z-index: 1500; background: #34a853; color: white; padding: 10px 20px;
+            border-radius: 8px; font-size: 14px; font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        .add-mode-banner.show {{ display: block; }}
+        .add-mode-banner .btn-cancel-add {{
+            background: white; color: #34a853; border: none; border-radius: 4px;
+            padding: 4px 12px; margin-left: 12px; cursor: pointer; font-size: 12px;
+        }}
+        .legend-panel {{
+            position: absolute; bottom: 30px; left: 10px; z-index: 1000;
+            background: white; border-radius: 8px; padding: 10px 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); max-height: 300px;
+            overflow-y: auto; font-size: 12px; display: none;
+        }}
+        .legend-panel.show {{ display: block; }}
+        .legend-item {{ display: flex; align-items: center; gap: 6px; padding: 2px 0; }}
+        .legend-dot {{ width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 2px rgba(0,0,0,0.3); flex-shrink: 0; }}
+
+        body.dark {{ background: #1a1a2e; }}
+        body.dark .controls {{ background: rgba(30,30,50,0.95); color: #e0e0e0; }}
+        body.dark .controls input,
+        body.dark .controls select {{ background: #2a2a4a; color: #e0e0e0; border-color: #444; }}
+        body.dark .list-panel {{ background: rgba(30,30,50,0.95); color: #e0e0e0; }}
+        body.dark .legend-panel {{ background: rgba(30,30,50,0.95); color: #e0e0e0; }}
+        body.dark .modal {{ background: #1e1e3e; color: #e0e0e0; }}
+        body.dark .modal-header {{ background: linear-gradient(135deg, #1a1a4a, #2a2a6a); }}
+        body.dark .modal-body {{ background: #1e1e3e; }}
+        body.dark .modal-body label {{ color: #ccc; }}
+        body.dark .modal input {{ background: #2a2a4a; color: #e0e0e0; border-color: #444; }}
+        body.dark .modal-btns {{ background: #252550; }}
+        body.dark .count-badge {{ background: #2a2a6a; color: #8ab4f8; }}
+        body.dark .ctrl-sep {{ background: #444; }}
+        body.dark .more-menu {{ background: #1e1e3e; }}
+        body.dark .mm-item {{ color: #e0e0e0; }}
+        body.dark .mm-item:hover {{ background: #2a2a5a; }}
+        body.dark .mm-sep {{ border-color: #333; }}
+
+        @media (max-width: 600px) {{
+            .controls {{
+                left: 5px; right: 5px; top: 5px; padding: 6px 8px; gap: 4px;
+                max-width: calc(100vw - 10px); flex-wrap: wrap;
+            }}
+            .controls input {{ width: calc(50% - 4px); font-size: 12px; }}
+            .controls select {{ width: calc(50% - 4px); max-width: none; font-size: 12px; }}
+            .btn {{ font-size: 11px; padding: 5px 8px; }}
+            .modal {{ width: 95vw; }}
+            .modal-header {{ padding: 14px 16px; font-size: 16px; }}
+            .modal-body {{ padding: 14px 16px; }}
+            .modal-btns {{ padding: 12px 16px; }}
+            .list-panel {{ max-height: 40vh; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="tb-left">
+            <div class="logo-sq">BT</div>
+            <span class="logo-txt">Locations</span>
+        </div>
+        <div class="tb-right">
+            <div class="live-p">
+                <div class="live-dot"></div>
+                Auto Sync
+            </div>
+            <div class="av">V</div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+    
+    <div class="controls">
+        <input type="text" id="search" placeholder="ค้นหาจุด...">
+        <select id="listFilter">
+            <option value="">ทุกรายการ</option>
+            {filter_options}
+        </select>
+        <button class="btn btn-add" id="btnAdd">+ เพิ่มจุด</button>
+        <button class="btn btn-github" id="btnGithub">💾 Sync GitHub</button>
+    </div>
+    </div>
+    <div class="legend-panel" id="legendPanel"></div>
+    <div class="add-mode-banner" id="addBanner">
+        คลิกบนแผนที่เพื่อเพิ่มจุดใหม่
+        <button class="btn-cancel-add" id="btnCancelAdd">ยกเลิก</button>
+    </div>
+    <button class="list-toggle" id="listToggle">☰</button>
+    <div class="list-panel" id="listPanel">
+        <div id="listBody"></div>
+    </div>
+    <input type="file" id="fileImport" accept=".json" style="display:none">
+
+    <!-- Token Modal -->
+    <div class="modal-overlay" id="tokenModalOverlay">
+        <div class="modal">
+            <div class="modal-header">GitHub Token</div>
+            <div class="modal-body">
+                <p style="font-size:13px;color:#666;margin-bottom:16px;line-height:1.6;">ใส่ Personal Access Token เพื่อบันทึกข้อมูลขึ้น GitHub<br><small style="color:#999;">Token จะเก็บใน browser นี้เท่านั้น</small></p>
+                <label>Token</label>
+                <input type="password" id="tokenInput" placeholder="github_pat_...">
+            </div>
+            <div class="modal-btns">
+                <button class="btn btn-cancel" id="tokenCancel">ยกเลิก</button>
+                <button class="btn btn-save" id="tokenSave">บันทึก Token</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Add Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header" id="modalTitle">แก้ไขจุด</div>
+            <div class="modal-body">
+                <label>ชื่อ</label>
+                <input type="text" id="modalName" placeholder="ชื่อจุด">
+                <label>รายการ (List)</label>
+                <input type="text" id="modalList" placeholder="เช่น BT-Topup, ดินแดง">
+                <label>เขต (City)</label>
+                <input type="text" id="modalCity" placeholder="เขต/อำเภอ">
+                <label>Latitude</label>
+                <input type="number" id="modalLat" step="any" placeholder="13.xxxx">
+                <label>Longitude</label>
+                <input type="number" id="modalLng" step="any" placeholder="100.xxxx">
+            </div>
+            <div class="modal-btns">
+                <button class="btn btn-cancel" id="modalCancel">ยกเลิก</button>
+                <button class="btn btn-save" id="modalSave">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div class="modal-overlay" id="statsModalOverlay">
+        <div class="modal" style="max-width:500px;">
+            <div class="modal-header">สถิติข้อมูล</div>
+            <div class="modal-body" id="statsBody" style="max-height:60vh;overflow-y:auto;"></div>
+            <div class="modal-btns">
+                <button class="btn btn-cancel" id="statsClose">ปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="locations.js?v={int(time.time())}"></script>
+    <script src="app.js?v={int(time.time())}"></script>
+    <script>
+
+        const STORAGE_KEY = 'bt_locations_data';
+        const undoStack = [];
+        const MAX_UNDO = 20;
+
+        function loadLocations() {{
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {{
+                try {{ return JSON.parse(saved); }} catch(e) {{}}
+            }}
+            return JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+        }}
+
+        function pushUndo() {{
+            undoStack.push(JSON.stringify(locations));
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+            document.getElementById('btnUndo').disabled = false;
+        }}
+
+        function saveLocations() {{
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
+        }}
+
+        let locations = loadLocations();
+        let addMode = false;
+        let editingIndex = -1;
+
+        const map = L.map('map').setView([13.75, 100.5], 11);
+        const tileLayers = {{
+            'Street': L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                attribution: '&copy; OSM', maxZoom: 19
+            }}),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{{z}}/{{y}}/{{x}}', {{
+                attribution: '&copy; Esri', maxZoom: 19
+            }}),
+            'Terrain': L.tileLayer('https://{{s}}.tile.opentopomap.org/{{z}}/{{x}}/{{y}}.png', {{
+                attribution: '&copy; OpenTopoMap', maxZoom: 17
+            }})
+        }};
+        const darkTile = L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+            attribution: '&copy; CartoDB', maxZoom: 19
+        }});
+        const tileNames = Object.keys(tileLayers);
+        let currentTileIdx = 0;
+        let savedTileIdx = 0;
+        tileLayers[tileNames[0]].addTo(map);
+
+        let markerCluster = L.markerClusterGroup();
+        let currentMarkers = [];
+
+        function _initMapEvents() {{
+            const _safetyMax = 20; let _safetyIdx = 0;
+            const _check = setInterval(() => {{
+                _safetyIdx++;
+                if (typeof map !== 'undefined' && map !== null) {{
+                    clearInterval(_check);
+                    map.on('click', (e) => {{
+                        if (!addMode) return;
+                        addMode = false;
+                        addBanner.classList.remove('show');
+                        map.getContainer().style.cursor = '';
+                        editingIndex = -1;
+                        document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
+                        document.getElementById('modalName').value = '';
+                        document.getElementById('modalList').value = '';
+                        document.getElementById('modalCity').value = '';
+                        document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
+                        document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
+                        document.getElementById('modalOverlay').classList.add('open');
+                    }});
+                }}
+                if (_safetyIdx >= _safetyMax) clearInterval(_check);
+            }}, 500);
+        }}
+        _initMapEvents();
+
+        function getPopupHTML(loc, idx) {{
+            return `<div class="popup-content">
+                <h3>${{loc.name || 'ไม่มีชื่อ'}}</h3>
+                <div class="popup-info">
+                    ${{loc.city ? `<strong>เขต:</strong> ${{loc.city}}<br>` : ''}}
+                    <strong>รายการ:</strong> ${{loc.list}}<br>
+                    <strong>พิกัด:</strong> ${{loc.lat.toFixed(6)}}, ${{loc.lng.toFixed(6)}}
+                </div>
+                <div class="popup-actions">
+                    <a class="link-gmaps" href="https://www.google.com/maps?q=${{loc.lat}},${{loc.lng}}" target="_blank">Google Maps</a>
+                    <button class="btn-popup-edit" onclick="openEdit(${{idx}})">✏️ แก้ไข</button>
+                    <button class="btn-popup-edit" onclick="measureFrom(${{idx}})" style="background:#059669;">📏 วัดระยะ</button>
+                </div>
+                <div class="popup-actions" style="margin-top:4px;">
+                    <button class="btn-popup-delete" onclick="confirmDelete(${{idx}})" style="font-size:11px;opacity:0.7;">� ลบจุดนี้</button>
+                </div>
+            </div>`;
+        }}
+
+        let measureStart = null;
+        let measureLine = null;
+        function haversine(lat1,lng1,lat2,lng2) {{
+            const R = 6371000;
+            const p1 = lat1*Math.PI/180, p2 = lat2*Math.PI/180;
+            const dp = (lat2-lat1)*Math.PI/180, dl = (lng2-lng1)*Math.PI/180;
+            const a = Math.sin(dp/2)**2 + Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }}
+        window.measureFrom = function(idx) {{
+            const loc = locations[idx];
+            if (!measureStart) {{
+                measureStart = loc;
+                map.closePopup();
+                alert(`เลือกจุดเริ่ม: ${{loc.name || loc.list}}\\nคลิกหมุดอีกจุด แล้วกด "📏 วัดระยะ" เพื่อวัด`);
+            }} else {{
+                const d = haversine(measureStart.lat, measureStart.lng, loc.lat, loc.lng);
+                const km = (d/1000).toFixed(2);
+                if (measureLine) map.removeLayer(measureLine);
+                measureLine = L.polyline([[measureStart.lat,measureStart.lng],[loc.lat,loc.lng]], {{color:'red',weight:3,dashArray:'8,8'}}).addTo(map);
+                alert(`📏 ระยะทาง:\\n${{measureStart.name || measureStart.list}} → ${{loc.name || loc.list}}\\n${{km}} km (${{Math.round(d)}} m)`);
+                measureStart = null;
+            }}
+        }};
+
+        const listColors = {{}};
+        const colorPalette = ['#e53e3e','#dd6b20','#d69e2e','#38a169','#319795','#3182ce','#5a67d8','#805ad5','#d53f8c','#718096'];
+        function getListColor(list) {{
+            if (!listColors[list]) {{
+                let h = 0;
+                for (let i = 0; i < list.length; i++) h = list.charCodeAt(i) + ((h << 5) - h);
+                listColors[list] = colorPalette[Math.abs(h) % colorPalette.length];
+            }}
+            return listColors[list];
+        }}
+
+        function renderMarkers(filtered) {{
+            map.removeLayer(markerCluster);
+            markerCluster = L.markerClusterGroup();
+            currentMarkers = [];
+            filtered.forEach(loc => {{
+                const idx = locations.indexOf(loc);
+                const color = getListColor(loc.list);
+                const marker = L.circleMarker([loc.lat, loc.lng], {{
+                    radius: 10, fillColor: color, color: '#fff',
+                    weight: 3, opacity: 1, fillOpacity: 0.9,
+                    className: 'bt-marker'
+                }});
+                const label = loc.name || loc.list;
+                marker.bindTooltip(label, {{
+                    permanent: true, direction: 'top', offset: [0, -10],
+                    className: 'bt-label'
+                }});
+                marker.bindPopup(getPopupHTML(loc, idx), {{className: 'custom-popup'}});
+                markerCluster.addLayer(marker);
+                currentMarkers.push({{loc, marker, idx}});
+            }});
+            if (!heatmapMode) {{
+                map.addLayer(markerCluster);
+            }}
+
+            // Heatmap layer
+            if (heatLayer) map.removeLayer(heatLayer);
+            if (heatmapMode) {{
+                const heatData = filtered.map(l => [l.lat, l.lng, 1]);
+                heatLayer = L.heatLayer(heatData, {{radius: 25, blur: 15, maxZoom: 17}}).addTo(map);
+            }}
+            document.getElementById('count').textContent = filtered.length + ' จุด';
+        }}
+
+        function getFiltered() {{
+            const q = document.getElementById('search').value.toLowerCase();
+            const list = document.getElementById('listFilter').value;
+            const city = document.getElementById('cityFilter').value;
+            return locations.filter(l => {{
+                const matchList = !list || l.list === list;
+                const matchCity = !city || l.city === city;
+                const matchSearch = !q || (l.name && l.name.toLowerCase().includes(q)) || l.list.toLowerCase().includes(q) || (l.city && l.city.toLowerCase().includes(q));
+                return matchList && matchCity && matchSearch;
+            }});
+        }}
+
+        let zoomToFiltered = false;
+        function update() {{
+            const filtered = getFiltered();
+            renderMarkers(filtered);
+            renderList(filtered);
+            updateFilterOptions();
+            updateLegend();
+            if (zoomToFiltered && filtered.length > 0 && filtered.length < locations.length) {{
+                const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
+                map.fitBounds(bounds, {{padding: [30, 30]}});
+            }}
+        }}
+
+        function updateFilterOptions() {{
+            const sel = document.getElementById('listFilter');
+            const current = sel.value;
+            const lists = [...new Set(locations.map(l => l.list))].sort();
+            sel.innerHTML = '<option value="">ทุกรายการ</option>' + lists.map(l => `<option value="${{l}}">${{l}}</option>`).join('');
+            sel.value = current;
+
+            const citySel = document.getElementById('cityFilter');
+            const currentCity = citySel.value;
+            const cities = [...new Set(locations.map(l => l.city).filter(c => c))].sort();
+            citySel.innerHTML = '<option value="">ทุกเขต</option>' + cities.map(c => `<option value="${{c}}">${{c}}</option>`).join('');
+            citySel.value = currentCity;
+        }}
+
+        document.getElementById('search').addEventListener('input', update);
+        document.getElementById('listFilter').addEventListener('change', update);
+        document.getElementById('cityFilter').addEventListener('change', update);
+
+        // List panel
+        const listBody = document.getElementById('listBody');
+        const listToggle = document.getElementById('listToggle');
+        const listPanel = document.getElementById('listPanel');
+
+        function renderList(filtered) {{
+            listBody.innerHTML = '';
+            filtered.forEach(loc => {{
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `<div><span class="name">${{loc.name || 'ไม่มีชื่อ'}}</span>${{loc.city ? ` <span class="detail">(${{loc.city}})</span>` : ''}}<br><span class="detail">${{loc.list}} | ${{loc.lat}}, ${{loc.lng}}</span></div>`;
+                item.onclick = () => {{
+                    map.setView([loc.lat, loc.lng], 17);
+                    listPanel.classList.remove('open');
+                    const found = currentMarkers.find(m => m.loc === loc);
+                    if (found) {{
+                        markerCluster.zoomToShowLayer(found.marker, () => found.marker.openPopup());
+                    }}
+                }};
+                listBody.appendChild(item);
+            }});
+        }}
+
+        listToggle.onclick = () => listPanel.classList.toggle('open');
+
+        // === ADD MODE ===
+        const addBanner = document.getElementById('addBanner');
+        document.getElementById('btnAdd').onclick = () => {{
+            addMode = true;
+            addBanner.classList.add('show');
+            map.getContainer().style.cursor = 'crosshair';
+        }};
+        document.getElementById('btnCancelAdd').onclick = () => {{
+            addMode = false;
+            addBanner.classList.remove('show');
+            map.getContainer().style.cursor = '';
+        }};
+
+        map.on('click', (e) => {{
+            if (!addMode) return;
+            addMode = false;
+            addBanner.classList.remove('show');
+            map.getContainer().style.cursor = '';
+            editingIndex = -1;
+            document.getElementById('modalTitle').textContent = 'เพิ่มจุดใหม่';
+            document.getElementById('modalName').value = '';
+            document.getElementById('modalList').value = '';
+            document.getElementById('modalCity').value = '';
+            document.getElementById('modalLat').value = e.latlng.lat.toFixed(6);
+            document.getElementById('modalLng').value = e.latlng.lng.toFixed(6);
+            document.getElementById('modalOverlay').classList.add('open');
+        }});
+
+        // === EDIT ===
+        window.openEdit = function(idx) {{
+            const loc = locations[idx];
+            if (!loc) return;
+            editingIndex = idx;
+            document.getElementById('modalTitle').textContent = 'แก้ไขจุด';
+            document.getElementById('modalName').value = loc.name || '';
+            document.getElementById('modalList').value = loc.list || '';
+            document.getElementById('modalCity').value = loc.city || '';
+            document.getElementById('modalLat').value = loc.lat;
+            document.getElementById('modalLng').value = loc.lng;
+            map.closePopup();
+            document.getElementById('modalOverlay').classList.add('open');
+        }};
+
+        // === DELETE ===
+        window.confirmDelete = function(idx) {{
+            const loc = locations[idx];
+            if (!loc) return;
+            const name = loc.name || loc.list || 'ไม่มีชื่อ';
+            if (!confirm(`⚠️ ยืนยันลบจุดนี้?\n\n"${{name}}"\nรายการ: ${{loc.list}}\nพิกัด: ${{loc.lat.toFixed(6)}}, ${{loc.lng.toFixed(6)}}\n\n(กด Undo ได้ถ้าลบผิด)`)) return;
+            pushUndo();
+            locations.splice(idx, 1);
+            saveLocations();
+            map.closePopup();
+            update();
+        }};
+        window.deleteLoc = window.confirmDelete;
+
+        // === MODAL ===
+        document.getElementById('modalCancel').onclick = () => {{
+            document.getElementById('modalOverlay').classList.remove('open');
+        }};
+        document.getElementById('modalOverlay').onclick = (e) => {{
+            if (e.target === document.getElementById('modalOverlay'))
+                document.getElementById('modalOverlay').classList.remove('open');
+        }};
+
+        document.getElementById('modalSave').onclick = () => {{
+            const name = document.getElementById('modalName').value.trim();
+            const list = document.getElementById('modalList').value.trim() || 'ไม่มีรายการ';
+            const city = document.getElementById('modalCity').value.trim();
+            const lat = parseFloat(document.getElementById('modalLat').value);
+            const lng = parseFloat(document.getElementById('modalLng').value);
+            if (isNaN(lat) || isNaN(lng)) {{ alert('กรุณากรอก Lat/Lng ให้ถูกต้อง'); return; }}
+
+            pushUndo();
+            if (editingIndex >= 0) {{
+                locations[editingIndex] = {{ name, lat, lng, list, city }};
+            }} else {{
+                locations.push({{ name, lat, lng, list, city }});
+            }}
+            saveLocations();
+            document.getElementById('modalOverlay').classList.remove('open');
+            update();
+            if (editingIndex < 0) {{
+                map.setView([lat, lng], 15);
+            }}
+        }};
+
+        // === EXPORT ===
+        document.getElementById('btnExport').onclick = () => {{
+            const blob = new Blob([JSON.stringify(locations, null, 2)], {{type: 'application/json'}});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'bt_locations_export.json';
+            a.click();
+        }};
+
+        // === IMPORT ===
+        document.getElementById('btnImport').onclick = () => {{
+            document.getElementById('fileImport').click();
+        }};
+        document.getElementById('fileImport').onchange = (e) => {{
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {{
+                try {{
+                    const imported = JSON.parse(ev.target.result);
+                    if (!Array.isArray(imported)) {{ alert('ไฟล์ไม่ถูกต้อง'); return; }}
+                    if (confirm(`Import ${{imported.length}} จุด? (จะแทนที่ข้อมูลปัจจุบัน)`)) {{
+                        pushUndo();
+                        locations = imported;
+                        saveLocations();
+                        update();
+                        alert('Import สำเร็จ!');
+                    }}
+                }} catch(err) {{ alert('ไฟล์ JSON ไม่ถูกต้อง'); }}
+            }};
+            reader.readAsText(file);
+            e.target.value = '';
+        }};
+
+        // === MORE MENU ===
+        document.getElementById('btnMore').onclick = (e) => {{
+            e.stopPropagation();
+            document.getElementById('moreMenu').classList.toggle('show');
+        }};
+        document.addEventListener('click', () => {{
+            document.getElementById('moreMenu').classList.remove('show');
+        }});
+        document.getElementById('moreMenu').onclick = (e) => {{
+            if (e.target.classList.contains('mm-item')) {{
+                document.getElementById('moreMenu').classList.remove('show');
+            }}
+        }};
+
+        // === LEGEND ===
+        function updateLegend() {{
+            const panel = document.getElementById('legendPanel');
+            if (!panel.classList.contains('show')) return;
+            const lists = [...new Set(getFiltered().map(l => l.list))].sort();
+            panel.innerHTML = '<div style="font-weight:600;margin-bottom:6px;">Legend</div>' +
+                lists.map(l => `<div class="legend-item"><span class="legend-dot" style="background:${{getListColor(l)}}"></span>${{l}}</div>`).join('');
+        }}
+        document.getElementById('btnLegend').onclick = () => {{
+            const panel = document.getElementById('legendPanel');
+            panel.classList.toggle('show');
+            updateLegend();
+        }};
+
+        // === DARK MODE ===
+        document.getElementById('btnDark').onclick = () => {{
+            const isDark = !document.body.classList.contains('dark');
+            document.body.classList.toggle('dark', isDark);
+            document.getElementById('btnDark').textContent = isDark ? '☀️ Light mode' : '🌙 Dark mode';
+            if (isDark) {{
+                savedTileIdx = currentTileIdx;
+                map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
+                darkTile.addTo(map);
+            }} else {{
+                map.removeLayer(darkTile);
+                tileLayers[tileNames[savedTileIdx]].addTo(map);
+                currentTileIdx = savedTileIdx;
+            }}
+        }};
+
+        // === MAP TILE ===
+        document.getElementById('btnTile').onclick = () => {{
+            if (document.body.classList.contains('dark')) {{
+                map.removeLayer(darkTile);
+                document.body.classList.remove('dark');
+                document.getElementById('btnDark').textContent = '🌙 Dark mode';
+            }} else {{
+                map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
+            }}
+            currentTileIdx = (currentTileIdx + 1) % tileNames.length;
+            tileLayers[tileNames[currentTileIdx]].addTo(map);
+            document.getElementById('btnTile').textContent = '🗺️ ' + tileNames[currentTileIdx];
+        }};
+
+        // === ZOOM TO FILTERED ===
+        document.getElementById('listFilter').addEventListener('change', () => {{
+            zoomToFiltered = true;
+            update();
+            zoomToFiltered = false;
+        }});
+        document.getElementById('cityFilter').addEventListener('change', () => {{
+            zoomToFiltered = true;
+            update();
+            zoomToFiltered = false;
+        }});
+
+        // === HEATMAP ===
+        document.getElementById('btnHeatmap').onclick = () => {{
+            heatmapMode = !heatmapMode;
+            const btn = document.getElementById('btnHeatmap');
+            btn.textContent = heatmapMode ? 'Markers' : 'Heatmap';
+            btn.style.background = heatmapMode ? '#3182ce' : '#f97316';
+            update();
+        }};
+
+        // === BULK DELETE ===
+        document.getElementById('btnBulkDel').onclick = () => {{
+            const filtered = getFiltered();
+            if (filtered.length === locations.length) {{
+                alert('กรุณาใช้ filter เลือกจุดที่ต้องการลบก่อน');
+                return;
+            }}
+            if (!filtered.length) {{ alert('ไม่มีจุดที่แสดงอยู่'); return; }}
+            if (!confirm(`ลบ ${{filtered.length}} จุดที่แสดงอยู่?`)) return;
+            pushUndo();
+            const toRemove = new Set(filtered);
+            locations = locations.filter(l => !toRemove.has(l));
+            saveLocations();
+            update();
+            alert(`ลบ ${{filtered.length}} จุดแล้ว`);
+        }};
+
+        // === UNDO ===
+        document.getElementById('btnUndo').onclick = () => {{
+            if (!undoStack.length) return;
+            locations = JSON.parse(undoStack.pop());
+            saveLocations();
+            update();
+            document.getElementById('btnUndo').disabled = undoStack.length === 0;
+        }};
+
+        // === STATS ===
+        document.getElementById('btnStats').onclick = () => {{
+            const listCount = {{}};
+            const cityCount = {{}};
+            locations.forEach(l => {{
+                listCount[l.list] = (listCount[l.list] || 0) + 1;
+                if (l.city) cityCount[l.city] = (cityCount[l.city] || 0) + 1;
+            }});
+            const sortedLists = Object.entries(listCount).sort((a,b) => b[1] - a[1]);
+            const sortedCities = Object.entries(cityCount).sort((a,b) => b[1] - a[1]);
+            let html = `<div style="margin-bottom:16px;"><strong>รวมทั้งหมด:</strong> ${{locations.length}} จุด</div>`;
+            html += `<div style="margin-bottom:12px;"><strong>ตามรายการ (${{sortedLists.length}}):</strong></div>`;
+            html += '<table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px;">';
+            sortedLists.forEach(([name, count]) => {{
+                const pct = (count / locations.length * 100).toFixed(1);
+                html += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:4px 8px;">${{name}}</td>
+                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${{count}}</td>
+                    <td style="padding:4px 8px;text-align:right;color:#888;">${{pct}}%</td>
+                </tr>`;
+            }});
+            html += '</table>';
+            html += `<div style="margin-bottom:12px;"><strong>ตามเขต (${{sortedCities.length}}):</strong></div>`;
+            html += '<table style="width:100%;font-size:13px;border-collapse:collapse;">';
+            sortedCities.forEach(([name, count]) => {{
+                html += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:4px 8px;">${{name}}</td>
+                    <td style="padding:4px 8px;text-align:right;font-weight:600;">${{count}}</td>
+                </tr>`;
+            }});
+            html += '</table>';
+            document.getElementById('statsBody').innerHTML = html;
+            document.getElementById('statsModalOverlay').classList.add('open');
+        }};
+        document.getElementById('statsClose').onclick = () => {{
+            document.getElementById('statsModalOverlay').classList.remove('open');
+        }};
+
+        // === RESET ===
+        document.getElementById('btnReset').onclick = async () => {{
+            const msg = '⚠️ ยืนยันการรีเซ็ต?\\n\\n'
+                + '• ข้อมูลที่แก้ไขจะหายทั้งหมด\\n'
+                + '• ระบบจะดึงข้อมูลล่าสุดจาก GitHub\\n\\n'
+                + 'แนะนำ: กด Export สำรองข้อมูลก่อน';
+            if (!confirm(msg)) return;
+            pushUndo();
+            localStorage.removeItem(STORAGE_KEY);
+            try {{
+                const res = await fetch(`https://raw.githubusercontent.com/${{REPO_OWNER}}/${{REPO_NAME}}/main/all_locations.json?t=${{Date.now()}}`);
+                if (res.ok) {{
+                    locations = await res.json();
+                    saveLocations();
+                    update();
+                    alert(`รีเซ็ตสำเร็จ! โหลด ${{locations.length}} จุดจาก GitHub`);
+                    return;
+                }}
+            }} catch(e) {{ console.warn('Fetch from GitHub failed', e); }}
+            locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS));
+            saveLocations();
+            update();
+            alert('รีเซ็ตสำเร็จ (ใช้ข้อมูลเริ่มต้น)');
+        }};
+
+        // === SAVE TO GITHUB ===
+        const GITHUB_TOKEN_KEY = 'bt_github_token';
+        const REPO_OWNER = 'valrinx';
+        const REPO_NAME = 'bt-locations';
+
+        function getToken() {{ return localStorage.getItem(GITHUB_TOKEN_KEY) || ''; }}
+        function setToken(t) {{ localStorage.setItem(GITHUB_TOKEN_KEY, t); }}
+
+        function showSaveStatus(msg, isError) {{
+            const el = document.getElementById('saveStatus');
+            el.textContent = msg;
+            el.className = 'save-status show' + (isError ? ' error' : '');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }}
+
+        async function githubGetFile(path, token) {{
+            const res = await fetch(`https://api.github.com/repos/${{REPO_OWNER}}/${{REPO_NAME}}/contents/${{path}}`, {{
+                headers: {{ 'Authorization': `token ${{token}}`, 'Accept': 'application/vnd.github.v3+json' }}
+            }});
+            if (res.status === 404) return {{ sha: null, content: null }};
+            if (!res.ok) throw new Error(`GitHub API error: ${{res.status}}`);
+            const data = await res.json();
+            return {{ sha: data.sha, content: data.content }};
+        }}
+
+        async function githubPutFile(path, content, sha, token, msg) {{
+            const body = {{ message: msg, content: btoa(unescape(encodeURIComponent(content))) }};
+            if (sha) body.sha = sha;
+            const res = await fetch(`https://api.github.com/repos/${{REPO_OWNER}}/${{REPO_NAME}}/contents/${{path}}`, {{
+                method: 'PUT',
+                headers: {{ 'Authorization': `token ${{token}}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }},
+                body: JSON.stringify(body)
+            }});
+            if (!res.ok) {{
+                const err = await res.json();
+                throw new Error(err.message || `GitHub error: ${{res.status}}`);
+            }}
+            return await res.json();
+        }}
+
+        document.getElementById('btnGithub').onclick = async () => {{
+            let token = getToken();
+            if (!token) {{
+                document.getElementById('tokenInput').value = '';
+                document.getElementById('tokenModalOverlay').classList.add('open');
+                return;
+            }}
+            await doGithubSave(token);
+        }};
+
+        document.getElementById('tokenCancel').onclick = () => {{
+            document.getElementById('tokenModalOverlay').classList.remove('open');
+        }};
+        document.getElementById('tokenModalOverlay').onclick = (e) => {{
+            if (e.target === document.getElementById('tokenModalOverlay'))
+                document.getElementById('tokenModalOverlay').classList.remove('open');
+        }};
+        document.getElementById('tokenSave').onclick = async () => {{
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token) {{ alert('กรุณากรอก Token'); return; }}
+            setToken(token);
+            document.getElementById('tokenModalOverlay').classList.remove('open');
+            await doGithubSave(token);
+        }};
+
+        async function doGithubSave(token) {{
+            const btn = document.getElementById('btnGithub');
+            btn.classList.add('saving');
+            btn.textContent = 'กำลังบันทึก...';
+            try {{
+                const jsonContent = JSON.stringify(locations, null, 2);
+                // 1) Save all_locations.json
+                const fileInfo = await githubGetFile('all_locations.json', token);
+                await githubPutFile('all_locations.json', jsonContent, fileInfo.sha, token, 'Update locations from web app');
+                // 2) Also update docs/all_locations.json for GitHub Pages
+                const docsInfo = await githubGetFile('docs/all_locations.json', token);
+                await githubPutFile('docs/all_locations.json', jsonContent, docsInfo.sha, token, 'Sync docs/all_locations.json');
+                // 3) Update docs/locations.js
+                const jsContent = 'const DEFAULT_LOCATIONS = ' + JSON.stringify(locations) + ';\\n';
+                const jsInfo = await githubGetFile('docs/locations.js', token);
+                await githubPutFile('docs/locations.js', jsContent, jsInfo.sha, token, 'Sync docs/locations.js');
+                showSaveStatus('บันทึกสำเร็จ! (3 ไฟล์)', false);
+            }} catch(err) {{
+                console.error(err);
+                if (err.message.includes('401') || err.message.includes('Bad credentials')) {{
+                    localStorage.removeItem(GITHUB_TOKEN_KEY);
+                    showSaveStatus('Token ไม่ถูกต้อง กรุณาใส่ใหม่', true);
+                }} else {{
+                    showSaveStatus('ผิดพลาด: ' + err.message, true);
+                }}
+            }} finally {{
+                btn.classList.remove('saving');
+                btn.textContent = '💾 GitHub';
+            }}
+        }}
+
+        // Init
+        update();
+
+        // Background sync: fetch latest data from GitHub
+        (async () => {{
+            try {{
+                const res = await fetch(`https://raw.githubusercontent.com/${{REPO_OWNER}}/${{REPO_NAME}}/main/all_locations.json?t=${{Date.now()}}`);
+                if (!res.ok) return;
+                const text = await res.text();
+                if (!text.startsWith('[')) return;
+                const fresh = JSON.parse(text);
+                if (fresh.length > 0 && fresh.length >= locations.length && JSON.stringify(fresh) !== JSON.stringify(locations)) {{
+                    locations = fresh;
+                    saveLocations();
+                    update();
+                    console.log('Synced', fresh.length, 'locations from GitHub');
+                }}
+            }} catch(e) {{}}
+        }})();
+    </script>
+</body>
+</html>'''
+
+docs_dir = os.path.join(script_dir, 'docs')
+os.makedirs(docs_dir, exist_ok=True)
+with open(os.path.join(docs_dir, 'index.html'), 'w', encoding='utf-8') as f:
+    f.write(html)
+
+# Generate locations.js
+js_content = 'const DEFAULT_LOCATIONS = [\n            ' + js_array + '\n        ];\n'
+with open(os.path.join(docs_dir, 'locations.js'), 'w', encoding='utf-8') as f:
+    f.write(js_content)
+
+# Copy all_locations.json to docs/
+shutil.copy2(src, os.path.join(docs_dir, 'all_locations.json'))
+
+print(f'Done! Generated HTML + locations.js with {len(locs)} locations from {len(lists)} lists')
+>>>>>>> ca7c5a9e59cd36a6500b9fc6b2f8a4a0c1384389
