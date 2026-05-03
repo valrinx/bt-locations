@@ -1,8 +1,14 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.11.5';
+const APP_VERSION = 'v5.11.6';
 const STORAGE_KEY = 'bt_locations_data';
+
+// Helper: safely attach onclick handler (avoids null errors)
+function onClick(id, handler) {
+    const el = document.getElementById(id);
+    if (el) el.onclick = handler;
+}
 
 // ════════════════════════════════════════════
 // DATA FORMAT UTILS (used early by import)
@@ -105,10 +111,10 @@ document.querySelectorAll('.vt').forEach(v=>{
 });
 
 // Bottom toolbar handlers
-document.getElementById('btMap')?.onclick = () => switchView('map');
-document.getElementById('btRoute')?.onclick = () => { routeMode ? clearRoute() : doRoute(); };
-document.getElementById('btHeat')?.onclick = () => switchView(heatmapMode ? 'map' : 'heat');
-document.getElementById('btAdd')?.onclick = () => openAddMode();
+onClick('btMap', () => switchView('map'));
+onClick('btRoute', () => { routeMode ? clearRoute() : doRoute(); });
+onClick('btHeat', () => switchView(heatmapMode ? 'map' : 'heat'));
+onClick('btAdd', () => openAddMode());
 
 // ════════════════════════════════════════════
 // MOBILE UI FUNCTIONS
@@ -341,11 +347,11 @@ document.getElementById('search')?.addEventListener('input', debounce(()=>{
 }, 150));
 
 // Add button
-document.getElementById('btnAddLocation')?.onclick = () => openAddMode();
+onClick('btnAddLocation', () => openAddMode());
 
 // Export/Import buttons
-document.getElementById('btnUpload')?.onclick = () => doExport();
-document.getElementById('btnImportData')?.onclick = () => openImportModal();
+onClick('btnUpload', () => doExport());
+onClick('btnImportData', () => openImportModal());
 
 // Import modal functions
 window.openImportModal = function(){
@@ -413,7 +419,7 @@ window.closeSidebar = function(){
     sb.classList.remove('open');
     if(bd) bd.classList.remove('show');
 };
-document.getElementById('btnMenu')?.onclick = toggleSidebar;
+onClick('btnMenu', toggleSidebar);
 
 function favKey(loc) { return `${loc.lat.toFixed(6)},${loc.lng.toFixed(6)}`; }
 function toggleFavorite(loc) { const k = favKey(loc); if (favorites.has(k)) favorites.delete(k); else favorites.add(k); saveFavorites(); }
@@ -1226,7 +1232,7 @@ function fallbackCopy(text) {
 
 function closePlaceCard() { document.getElementById('placeCard').classList.remove('open'); }
 window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'⭐ เพิ่มในรายการโปรดแล้ว':'☆ นำออกจากรายการโปรดแล้ว');};
-document.getElementById('placeCardClose')?.onclick = closePlaceCard;
+onClick('placeCardClose', closePlaceCard);
 
 // ════════════════════════════════════════════
 // LIST PANEL
@@ -1251,7 +1257,7 @@ function renderListPanel(filtered) {
     }).join('');
 }
 window.closeListPanel = ()=>document.getElementById('listPanel').classList.remove('open');
-document.getElementById('listPanelClose')?.onclick = closeListPanel;
+onClick('listPanelClose', closeListPanel);
 
 document.getElementById('listSortBar')?.addEventListener('click',e=>{
     const btn=e.target.closest('.sort-btn'); if(!btn) return;
@@ -1280,7 +1286,7 @@ searchInput.addEventListener('input',()=>{
     renderSearchResults();
     _debouncedUpdate(); // debounce 120ms — ไม่ re-render map ทุก keystroke
 });
-btnClearSearch?.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
+if(btnClearSearch) btnClearSearch.onclick=()=>{searchInput.value='';btnClearSearch.classList.remove('show');searchResults.innerHTML='';_clearSearchMarker();_lastFilteredKey=null;update();};
 
 // Normalize ALL Unicode degree/quote variants → ASCII
 function _normDMS(s){
@@ -1401,11 +1407,11 @@ document.querySelectorAll('.chip-dropdown-item').forEach(item=>{
     });
 });
 
-document.getElementById('chipAll')?.onclick=()=>{filterList='';filterCity='';nearbyMode=false;update();};
+onClick('chipAll', ()=>{filterList='';filterCity='';nearbyMode=false;update();});
 
-document.getElementById('chipFav')?.onclick=()=>{filterFavorites=!filterFavorites;document.getElementById('chipFav')?.classList.toggle('active',filterFavorites);update();};
+onClick('chipFav', ()=>{filterFavorites=!filterFavorites;const el=document.getElementById('chipFav');if(el)el.classList.toggle('active',filterFavorites);update();});
 
-document.getElementById('chipNearby')?.onclick=()=>{
+onClick('chipNearby', ()=>{
     if(!myLatLng){showToast('กรุณาเปิด GPS ก่อน',true);return;}
     nearbyMode=!nearbyMode; update();
     if(nearbyMode){
@@ -1413,9 +1419,9 @@ document.getElementById('chipNearby')?.onclick=()=>{
         if(f.length>0)map.flyToBounds(L.latLngBounds(f.map(l=>[l.lat,l.lng])),{padding:[60,60],animate:true,duration:0.8});
         showToast(`📍 ${getFiltered().length} จุดใกล้ฉัน (${nearbyRadius/1000} กม.)`);
     }
-};
+});
 
-document.getElementById('chipList')?.onclick=()=>{
+onClick('chipList', ()=>{
     const counts={}; locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
     const lists=Object.keys(counts).filter(n=>n!==filterList).sort();
     if(!lists.length){showToast('ไม่มีรายการอื่นให้รวม',true);return;}
@@ -1446,9 +1452,9 @@ document.getElementById('chipList')?.onclick=()=>{
         document.getElementById('listFilterModalOverlay').classList.remove('open');
         update();
     };
-};
+});
 
-document.getElementById('chipCity')?.onclick=()=>{
+onClick('chipCity', ()=>{
     const counts={}; locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
     const cities=Object.keys(counts).filter(n=>n!==filterCity).sort();
     if(!cities.length){showToast('ไม่มีเขตอื่นให้รวม',true);return;}
@@ -1464,8 +1470,8 @@ document.getElementById('chipCity')?.onclick=()=>{
                 <button id="_mergeCityCancel" style="flex:1;padding:10px;border:1px solid var(--gn);background:var(--surface);border-radius:8px;font-size:13px;cursor:pointer;">ยกเลิก</button>
             </div>
         </div>`;
-    document.getElementById('_mergeCityCancel')?.onclick=()=>{document.getElementById('chipCity')?.click();};
-    document.getElementById('_mergeCityConfirm')?.onclick=()=>{
+    onClick('_mergeCityCancel', ()=>{const el=document.getElementById('chipCity');if(el)el.click();});
+    onClick('_mergeCityConfirm', ()=>{
         const toCity=document.getElementById('_mergeCityTarget').value;
         pushUndo();
         let count=0;
@@ -1477,30 +1483,33 @@ document.getElementById('chipCity')?.onclick=()=>{
         if(_sbLoaded)sbBulkUpdate(changedMergeCity);
         document.getElementById('cityFilterModalOverlay').classList.remove('open');
         update();
-    };
-};
+    });
+});
 
-document.getElementById('chipHeatmap')?.onclick=()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();};
-document.getElementById('chipShowList')?.onclick=()=>{
+onClick('chipHeatmap', ()=>{heatmapMode=!heatmapMode;_lastFilteredKey=null;update();});
+onClick('chipShowList', ()=>{
     const lp=document.getElementById('listPanel');
     if(lp.classList.contains('open')){closeListPanel();}else{
         lp.classList.add('open'); closePlaceCard();
         renderListPanel(getFiltered());
     }
-};
-document.getElementById('chipAll')?.classList.add('active');
+    update();
+});
+
+const _chipAll = document.getElementById('chipAll');
+if(_chipAll) _chipAll.classList.add('active');
 
 // ════════════════════════════════════════════
 // MAP CONTROLS
 // ════════════════════════════════════════════
-document.getElementById('btnZoomIn')?.onclick=()=>map.zoomIn();
-document.getElementById('btnZoomOut')?.onclick=()=>map.zoomOut();
-document.getElementById('btnTile')?.onclick=()=>{
+onClick('btnZoomIn', ()=>map.zoomIn());
+onClick('btnZoomOut', ()=>map.zoomOut());
+onClick('btnTile', ()=>{
     map.removeLayer(tileLayers[tileNames[currentTileIdx]]);
     currentTileIdx=(currentTileIdx+1)%tileNames.length;
     tileLayers[tileNames[currentTileIdx]].addTo(map);
     showToast('แผนที่: '+tileNames[currentTileIdx]);
-};
+});
 
 // ════════════════════════════════════════════
 // GPS
@@ -3013,9 +3022,9 @@ window.shareLocation=function(lat,lng,name){
     const url=location.origin+location.pathname+'#'+lat.toFixed(6)+','+lng.toFixed(6)+',17';
     if(navigator.share){
         navigator.share({title:name||'BT Location',text:name+' ('+lat.toFixed(5)+', '+lng.toFixed(5)+')',url:url}).catch(()=>{});
-    } else {
-        navigator.clipboard.writeText(url).then(()=>showToast('📋 คัดลอกลิงก์แล้ว')).catch(()=>{
-            prompt('คัดลอกลิงก์:',url);
+    }else{
+        navigator.clipboard.writeText(url).then(() => showToast('📋 คัดลอกลิงก์แล้ว')).catch(() => {
+            prompt('คัดลอกลิงก์:', url);
         });
     }
 };
@@ -3026,7 +3035,14 @@ window.shareLocation=function(lat,lng,name){
 rebuildIndexMap();
 
 // Handle permalink hash: #lat,lng,zoom
-(function(){
+(function () {
+    const h = location.hash.replace('#', '');
+    if (!h) return;
+    const parts = h.split(',').map(Number);
+    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        const lat = parts[0], lng = parts[1], zoom = parts[2] || 17;
+        setTimeout(() => {
+            map.setView([lat, lng], zoom);
     const h=location.hash.replace('#','');
     if(!h)return;
     const parts=h.split(',').map(Number);
