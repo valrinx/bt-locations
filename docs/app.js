@@ -887,6 +887,8 @@ function renderMarkers(filtered) {
         map.off('zoomend',_heatZoom).on('zoomend',_heatZoom);
         const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = filtered.length + ' สถานที่';
         const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
+        const _mst2=document.getElementById('mapStatTotal');if(_mst2)_mst2.textContent=filtered.length;
+        const _msc2=document.getElementById('mapStatClusters');if(_msc2)_msc2.textContent=0;
         return;
     }
 
@@ -914,6 +916,11 @@ function renderMarkers(filtered) {
         map.addLayer(markerCluster);
         const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = filtered.length + ' สถานที่';
         const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
+
+        // Update map stat counters
+        const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=filtered.length;
+        const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=markerCluster.getLayers().length;
+        const _lvc=document.getElementById('lvCount');if(_lvc)_lvc.textContent='แสดง '+filtered.length+' จาก '+locations.length+' จุด';
 
         // Cluster click → show list of locations (bottom sheet on mobile, list panel on desktop)
         markerCluster.on('clusterclick', function(e) {
@@ -3345,5 +3352,3 @@ if ('serviceWorker' in navigator) {
         }
     });
 }
-
-
