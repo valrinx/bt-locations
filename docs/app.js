@@ -1,8 +1,56 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.10.0';
+const APP_VERSION = 'v5.10.1';
 const STORAGE_KEY = 'bt_locations_data';
+
+// ════════════════════════════════════════════
+// DATA FORMAT UTILS (used early by import)
+// ════════════════════════════════════════════
+function tryParseDataFormat(json){
+    if(Array.isArray(json) && json.length > 0 && (json[0].lat !== undefined || json[0].latitude !== undefined)){
+        return json.map((p, i) => ({
+            id: p.id || i,
+            name: p.name || p.title || 'จุดที่ ' + (i+1),
+            lat: parseFloat(p.lat || p.latitude || p.y || 0),
+            lng: parseFloat(p.lng || p.lon || p.longitude || p.x || 0),
+            list: p.list || p.group || p.category || 'ทั้งหมด',
+            district: p.district || p.area || p.zone || '',
+            city: p.city || p.province || p.district || '',
+            note: p.note || p.desc || '',
+            tags: p.tags || [],
+            photo: p.photo || '',
+            added_by: p.added_by || p.addedBy || '',
+            date: p.date || p.created_at || new Date().toLocaleDateString('th-TH'),
+            updated_at: p.updated_at || ''
+        })).filter(p => p.lat && p.lng);
+    }
+    if(json.lists && Array.isArray(json.lists)){
+        const data = [];
+        json.lists.forEach(l => {
+            (l.points || l.locations || l.items || []).forEach((p, i) => {
+                data.push({
+                    id: p.id || data.length,
+                    name: p.name || 'จุดที่ ' + (i+1),
+                    lat: parseFloat(p.lat || p.latitude || 0),
+                    lng: parseFloat(p.lng || p.longitude || 0),
+                    list: l.name || l.id || 'รายการ',
+                    district: p.district || '',
+                    city: p.city || '',
+                    note: p.note || '',
+                    tags: p.tags || [],
+                    photo: p.photo || '',
+                    date: p.date || ''
+                });
+            });
+        });
+        return data.filter(p => p.lat && p.lng);
+    }
+    if(json.points || json.locations || json.data){
+        return tryParseDataFormat(json.points || json.locations || json.data);
+    }
+    return null;
+}
 const CHANGELOG_KEY = 'bt_changelog';
 const GITHUB_TOKEN_KEY = 'bt_github_token';
 const WORKER_URL_KEY = 'bt_worker_url';
@@ -525,7 +573,60 @@ document.getElementById('btnAddLocation').onclick = () => openAddMode();
 
 // Export/Import buttons
 document.getElementById('btnUpload').onclick = () => doExport();
-document.getElementById('btnDownload').onclick = () => document.getElementById('fileImport').click();
+document.getElementById('btnImportData').onclick = () => openImportModal();
+
+// Import modal functions
+window.openImportModal = function(){
+    document.getElementById('importModalOverlay').classList.add('open');
+    document.getElementById('importJsonText').value = '';
+    document.getElementById('importUrl').value = '';
+};
+window.closeImportModal = function(){
+    document.getElementById('importModalOverlay').classList.remove('open');
+};
+window.doImportData = async function(){
+    const jsonText = document.getElementById('importJsonText').value.trim();
+    const url = document.getElementById('importUrl').value.trim();
+    
+    let data = null;
+    
+    if(jsonText){
+        // Parse pasted JSON
+        try {
+            const json = JSON.parse(jsonText);
+            data = tryParseDataFormat(json);
+        } catch(e) {
+            showToast('❌ JSON ไม่ถูกต้อง: ' + e.message, true);
+            return;
+        }
+    } else if(url){
+        // Fetch from URL
+        showToast('⏳ กำลังโหลดจาก URL...', false, true);
+        try {
+            const res = await fetchWithTimeout(url, 10000);
+            if(!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            data = tryParseDataFormat(json);
+        } catch(e) {
+            showToast('❌ โหลดไม่สำเร็จ: ' + e.message, true);
+            return;
+        }
+    } else {
+        showToast('⚠️ กรุณาวาง JSON หรือใส่ URL', true);
+        return;
+    }
+    
+    if(data && data.length > 0){
+        locations = data;
+        invalidateMarkerCache();
+        update();
+        saveToStorage(); // Save to localStorage
+        closeImportModal();
+        showToast(`✅ นำเข้า ${data.length} จุดสำเร็จ`, false, true);
+    } else {
+        showToast('❌ ไม่พบข้อมูลที่ถูกต้อง', true);
+    }
+};
 
 // Sidebar toggle with backdrop
 function toggleSidebar(){
@@ -1023,44 +1124,70 @@ function update() {
 }
 
 // ════════════════════════════════════════════
-// DATA LOADING (like prototype)
+// DATA LOADING - Fast init, background fetch
 // ════════════════════════════════════════════
 const REPO = 'valrinx/bt-locations';
+const FETCH_TIMEOUT = 4000; // 4 seconds timeout per URL
 
 function setLoader(txt){
     const el = document.getElementById('loaderTxt');
     if(el) el.textContent = txt;
 }
 
-async function initApp(){
-    setLoader('กำลังเชื่อมต่อ GitHub...');
+// Fetch with timeout to avoid hanging
+async function fetchWithTimeout(url, timeout = FETCH_TIMEOUT){
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
     try {
-        // Try to fetch data files from the repo
-        await fetchRepoData();
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
+        return res;
     } catch(e) {
-        console.warn('GitHub fetch failed, using local data:', e);
-        setLoader('โหลดข้อมูล local...');
-        // Keep existing locations data (from localStorage or sample)
-        if(locations.length === 0) loadSampleData();
+        clearTimeout(timer);
+        throw e;
     }
+}
+
+async function initApp(){
+    // 1. Load sample data IMMEDIATELY for fast startup
+    setLoader('กำลังเริ่มต้น...');
+    if(locations.length === 0) loadSampleData();
     
-    setLoader('กำลังเริ่มต้นแผนที่...');
-    initMap(); // This will call update() which renders everything
+    // 2. Init map right away
+    initMap();
     
+    // 3. Show app immediately
     setLoader('พร้อมใช้งาน');
     setTimeout(() => {
         document.getElementById('loader').classList.add('done');
         document.getElementById('app').style.display = '';
-    }, 300);
+    }, 200);
     
-    // Set avatar
+    // 4. Set avatar
     const un = localStorage.getItem('bt_username') || '';
     const a1 = document.getElementById('av1');
     if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
+    
+    // 5. Fetch GitHub data in BACKGROUND with timeout
+    // Don't block the UI - if it succeeds, we'll refresh
+    fetchGitHubDataInBackground();
 }
 
-async function fetchRepoData(){
-    // Try common data file names (like prototype)
+async function fetchGitHubDataInBackground(){
+    try {
+        const data = await fetchRepoDataWithTimeout();
+        if(data && data.length > 0 && data.length !== locations.length){
+            locations = data;
+            invalidateMarkerCache();
+            update();
+            showToast(`โหลดข้อมูล ${data.length} จุดจาก GitHub`, false, true);
+        }
+    } catch(e) {
+        console.log('Background fetch failed (expected):', e.message);
+    }
+}
+
+async function fetchRepoDataWithTimeout(){
     const attempts = [
         `https://raw.githubusercontent.com/${REPO}/main/data.json`,
         `https://raw.githubusercontent.com/${REPO}/main/locations.json`,
@@ -1070,31 +1197,33 @@ async function fetchRepoData(){
     
     for(const url of attempts){
         try {
-            const res = await fetch(url);
+            const res = await fetchWithTimeout(url, FETCH_TIMEOUT);
             if(!res.ok) continue;
             const json = await res.json();
-            if(parseDataFormat(json)) return;
+            const parsed = tryParseDataFormat(json);
+            if(parsed && parsed.length > 0) return parsed;
         } catch(e){ continue; }
     }
     
-    // Try GitHub API to list contents
+    // Try GitHub API as last resort
     try {
-        const apiRes = await fetch(`https://api.github.com/repos/${REPO}/git/trees/main?recursive=1`);
+        const apiRes = await fetchWithTimeout(`https://api.github.com/repos/${REPO}/git/trees/main?recursive=1`, FETCH_TIMEOUT);
         if(apiRes.ok){
             const tree = await apiRes.json();
             const jsonFiles = (tree.tree || []).filter(f => f.path.endsWith('.json') && f.type === 'blob');
-            for(const f of jsonFiles.slice(0, 5)){
+            for(const f of jsonFiles.slice(0, 3)){
                 try {
-                    const r = await fetch(`https://raw.githubusercontent.com/${REPO}/main/${f.path}`);
+                    const r = await fetchWithTimeout(`https://raw.githubusercontent.com/${REPO}/main/${f.path}`, FETCH_TIMEOUT);
                     if(!r.ok) continue;
                     const j = await r.json();
-                    if(parseDataFormat(j)) return;
+                    const parsed = tryParseDataFormat(j);
+                    if(parsed && parsed.length > 0) return parsed;
                 } catch(e){ continue; }
             }
         }
-    } catch(e){ console.warn('GitHub API failed:', e); }
+    } catch(e){ /* ignore */ }
     
-    throw new Error('No data found in repo');
+    return null;
 }
 
 function parseDataFormat(json){

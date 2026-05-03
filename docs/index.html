@@ -1008,8 +1008,8 @@
             </div>
             <div class="tb-sep"></div>
             <div class="tb-icon-btn" id="btnMenu" title="เมนู">☰</div>
+            <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
             <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
-            <div class="tb-icon-btn" id="btnDownload" title="Import">↓</div>
         </div>
     </div>
 
@@ -1404,6 +1404,31 @@
                 <button class="modal-btn modal-btn-save" id="shareBtnShare" style="width:100%;background:#059669;" id="shareBtnShare">📱 แชร์ผ่าน (Share API)</button>
                 <button class="modal-btn modal-btn-save" id="shareBtnCopy" style="width:100%;background:#7b1fa2;">📋 คัดลอก JSON</button>
                 <button class="modal-btn modal-btn-cancel" id="shareBtnCancel">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ IMPORT DATA MODAL ══ -->
+    <div class="modal-overlay" id="importModalOverlay">
+        <div class="modal" style="width:420px;max-width:90vw;">
+            <div class="modal-header">นำเข้าข้อมูล</div>
+            <div class="modal-body">
+                <div class="frow">
+                    <label>วาง JSON โดยตรง</label>
+                    <textarea id="importJsonText" rows="6" placeholder="[{&quot;name&quot;:&quot;...&quot;, &quot;lat&quot;:13.7, &quot;lng&quot;:100.5, &quot;list&quot;:&quot;...&quot;}]"></textarea>
+                </div>
+                <div style="text-align:center;color:var(--tx3);font-size:12px;margin:10px 0;">— หรือ —</div>
+                <div class="frow">
+                    <label>URL ข้อมูล (raw JSON)</label>
+                    <input type="text" id="importUrl" placeholder="https://.../data.json">
+                </div>
+                <div style="margin-top:12px;padding:10px;background:var(--s1);border-radius:8px;font-size:11px;color:var(--tx2);">
+                    <b>รองรับ:</b> Array ของจุด <code>[{name,lat,lng,list,city}]</code> หรือ <code>{lists:[{name,points:[]}]}</code>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeImportModal()">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save" onclick="doImportData()">นำเข้า</button>
             </div>
         </div>
     </div>
