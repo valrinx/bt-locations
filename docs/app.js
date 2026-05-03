@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.2.0';
+const APP_VERSION = 'v6.4.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2010,11 +2010,9 @@ let _routeAvoid = JSON.parse(localStorage.getItem('routeAvoid')||'{}');
 // Keys: toll, ferry, motorway  (OSRM exclude values)
 function _saveRouteAvoid(){localStorage.setItem('routeAvoid',JSON.stringify(_routeAvoid));}
 function _osrmExcludeParam(){
-    const ex=[];
-    if(_routeAvoid.toll)ex.push('toll');
-    if(_routeAvoid.ferry)ex.push('ferry');
-    if(_routeAvoid.motorway)ex.push('motorway');
-    return ex.length?`&exclude=${ex.join(',')}`:'';
+    // Note: router.project-osrm.org does NOT support &exclude parameter
+    // Sending it causes 400 Bad Request — always return empty string
+    return '';
 }
 window._showAvoidSettings=function(){
     // Anti-spam & Toggle logic: If open, close it and return
@@ -2335,14 +2333,20 @@ window.doDirectionsTo = function(idx) {
             }, err=>console.warn('Nav GPS error:',err), {enableHighAccuracy:true,maximumAge:3000,timeout:10000});
 
         }catch(e){
-            showToast('❌ หาเส้นทางไม่ได้ — เปิด Google Maps');
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`,'_blank');
+            // OSRM failed — open Google Maps for turn-by-turn navigation
+            console.warn('[BT] Navigation OSRM failed, opening Google Maps:', e.message);
             _navState.active=false;
+            const gmUrl = myLatLng
+                ? `https://www.google.com/maps/dir/${myLatLng.lat},${myLatLng.lng}/${dest.lat},${dest.lng}`
+                : `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`;
+            window.open(gmUrl, '_blank');
+            showToast('เปิด Google Maps เพื่อนำทาง', false, true);
         }
     }, err => {
         console.warn('GPS error:', err);
-        showToast('📍 ไม่สามารถหาตำแหน่ง — เปิด Google Maps');
-        window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
+        showToast('📍 ไม่สามารถหาตำแหน่ง GPS ได้ — เปิด Google Maps',true,false,()=>{
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`, '_blank');
+        });
         _navState.active=false;
     }, { enableHighAccuracy: true, timeout: 10000 });
 };
@@ -3110,10 +3114,14 @@ if(confirmModalOverlay) confirmModalOverlay.onclick=e=>{if(e.target===confirmMod
 // TOAST
 // ════════════════════════════════════════════
 let toastTimer;
-function showToast(msg,isError=false,isSuccess=false){
+function showToast(msg,isError=false,isSuccess=false,onClick=null){
     const t=document.getElementById('saveToast');
-    t.textContent=msg;t.className='save-toast show'+(isError?' error':isSuccess?' success':'');
-    clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+    t.textContent=msg;
+    t.className='save-toast show'+(isError?' error':isSuccess?' success':'')+(onClick?' clickable':'');
+    t.onclick = onClick ? (()=>{ onClick(); t.classList.remove('show'); }) : null;
+    t.style.cursor = onClick ? 'pointer' : '';
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>{ t.classList.remove('show'); t.onclick=null; }, onClick?6000:3000);
 }
 
 // ════════════════════════════════════════════
