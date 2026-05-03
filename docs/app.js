@@ -2206,14 +2206,25 @@ async function _navFetchRoute(fromLat,fromLng){
     _navState.waypoints.forEach(w=>points.push([w.lng,w.lat]));
     points.push([_navState.dest.lng,_navState.dest.lat]);
 
+    // Validate coordinates are finite and in range
+    const validPoints = points.filter(p =>
+        isFinite(p[0]) && isFinite(p[1]) &&
+        Math.abs(p[1]) <= 90 && Math.abs(p[0]) <= 180
+    );
+
     // Filter out duplicates or points that are too close (prevents OSRM 400)
     const uniquePoints = [];
-    points.forEach((p, i) => {
+    validPoints.forEach((p, i) => {
         if (i === 0) { uniquePoints.push(p); return; }
         const prev = uniquePoints[uniquePoints.length - 1];
         const dist = Math.sqrt(Math.pow(p[0] - prev[0], 2) + Math.pow(p[1] - prev[1], 2));
-        if (dist > 0.00001) { uniquePoints.push(p); } // Approx 1 meter
+        if (dist > 0.00001) { uniquePoints.push(p); } // ~1 meter
     });
+
+    // Must have at least 2 distinct points for OSRM
+    if (uniquePoints.length < 2) {
+        throw new Error('ตำแหน่งเริ่มต้นและปลายทางอยู่ใกล้กันเกินไป หรือพิกัดไม่ถูกต้อง');
+    }
 
     const coordStr = uniquePoints.map(c => c[0] + ',' + c[1]).join(';');
     const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=full&geometries=geojson&steps=true${_osrmExcludeParam()}`;
@@ -2222,13 +2233,13 @@ async function _navFetchRoute(fromLat,fromLng){
         const res = await fetch(url);
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.message || `HTTP ${res.status}`);
+            throw new Error(errData.message || `OSRM error ${res.status} — ลองเลือกจุดบนถนน`);
         }
         const data = await res.json();
-        if (!data.routes || !data.routes.length) throw new Error('No route');
+        if (!data.routes || !data.routes.length) throw new Error('OSRM: ไม่พบเส้นทาง');
         return data.routes[0];
     } catch (e) {
-        console.warn('[BT] FetchRoute failed:', e.message);
+        console.warn('[BT] _navFetchRoute failed:', e.message);
         throw e;
     }
 }
