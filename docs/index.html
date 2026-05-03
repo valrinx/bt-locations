@@ -2221,8 +2221,197 @@
 
 <style>
 /* ════════════════════════════════════════
-   FORCE MOBILE MODE STYLES
+   FORCE MOBILE MODE STYLES — v2 (fixed)
 ════════════════════════════════════════ */
+body.force-mobile .sidebar { display: none !important; }
+body.force-mobile .sidebar-backdrop { display: none !important; }
+
+/* ── Topbar ──
+   ปัญหา: ☰ บัง "BT Locations" เพราะ tb-left ไม่มี gap/min-width
+   แก้: ซ่อน search-box ในตัว topbar (ใช้ mobSearchInput แทน)
+        จัด tb-left ให้ gap ถูกต้อง */
+body.force-mobile .topbar {
+    height: var(--topbar-h) !important;
+    padding: 0 10px !important;
+    gap: 6px !important;
+}
+body.force-mobile .tb-left {
+    width: auto !important; flex-shrink: 0 !important;
+    border-right: none !important;
+    padding: 0 !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+}
+body.force-mobile .logo-sq { display: none !important; }
+body.force-mobile .logo-txt { font-size: 14px !important; font-weight: 800 !important; white-space: nowrap !important; }
+body.force-mobile .version-badge { display: none !important; }
+
+/* ซ่อน search box ในTopbar — ใช้ mobSearchInput (ใน chips row) แทน */
+body.force-mobile .tb-center { display: none !important; }
+
+body.force-mobile .tb-right {
+    flex: 1 !important;
+    border-left: none !important;
+    padding: 0 !important;
+    gap: 6px !important;
+    justify-content: flex-end !important;
+}
+/* ซ่อน element ที่ไม่จำเป็นบน mobile */
+body.force-mobile .pill-badge,
+body.force-mobile .live-p,
+body.force-mobile .tb-sep,
+body.force-mobile #btnImportData,
+body.force-mobile #btnUpload,
+body.force-mobile #av2,
+body.force-mobile #av3 { display: none !important; }
+body.force-mobile .tb-right .avs { display: flex !important; }
+body.force-mobile #av1 { width: 30px !important; height: 30px !important; border-radius: 50% !important; font-size: 12px !important; margin-left: 0 !important; }
+
+/* Sync badge — แสดงใน mobile */
+body.force-mobile #syncBadge {
+    display: inline-flex !important;
+    font-size: 13px !important; line-height: 1 !important;
+}
+body.force-mobile #btnGithubSave {
+    display: flex !important;
+    width: 28px !important; height: 28px !important;
+    border-radius: 8px !important; font-size: 13px !important;
+}
+
+/* ── Chips row ── */
+body.force-mobile .mob-chips-row {
+    display: flex !important;
+    position: fixed; top: var(--topbar-h); left: 0; right: 0;
+    z-index: 40; height: var(--chips-h);
+    background: var(--s1); border-bottom: 0.5px solid var(--bd);
+    padding: 0 10px; gap: 6px; align-items: center;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+body.force-mobile .mob-chips-row::-webkit-scrollbar { display: none; }
+
+/* ── Body layout ── */
+body.force-mobile .body { display: flex !important; flex-direction: column !important; position: relative !important; }
+body.force-mobile .main { position: relative !important; flex: 1 !important; overflow: hidden !important; width: 100% !important; }
+
+/* ── View area ── */
+body.force-mobile .view-area {
+    position: absolute !important;
+    top: var(--chips-h) !important;
+    left: 0 !important; right: 0 !important;
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* ── Map stats — ขยับขวาให้ไม่บังแผนที่ ──
+   ปัญหาเดิม: right:56px ทับกับ controls
+   แก้: วางขวาบน ไม่บัง */
+body.force-mobile .map-stats {
+    top: 8px !important;
+    right: 8px !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+}
+body.force-mobile .msc {
+    padding: 4px 8px !important;
+    text-align: right !important;
+}
+body.force-mobile .msv { font-size: 13px !important; }
+body.force-mobile .msl { font-size: 8px !important; }
+
+/* ── Bottom nav ── */
+body.force-mobile .mob-nav {
+    display: flex !important;
+    position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
+    height: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom,0px) !important;
+    z-index: 50 !important;
+}
+body.force-mobile .btbar { display: none !important; }
+body.force-mobile .vtabs { display: none !important; }
+
+/* ── Map controls ── */
+body.force-mobile .map-controls {
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+}
+
+/* ── Place card as bottom sheet ── */
+body.force-mobile .place-card {
+    position: fixed !important;
+    bottom: -100% !important;
+    left: 0 !important; right: 0 !important;
+    top: auto !important; width: 100% !important;
+    border-radius: 16px 16px 0 0 !important;
+    opacity: 1 !important; transform: none !important;
+    transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1) !important;
+    pointer-events: auto !important;
+    max-height: 62vh !important;
+    overflow-y: auto !important;
+}
+body.force-mobile .place-card.open {
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
+}
+body.force-mobile .place-card-drag { display: block !important; }
+
+/* ── List panel ── */
+body.force-mobile .list-panel { bottom: -100% !important; }
+body.force-mobile .list-panel.open { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important; }
+
+/* ── Mob sheet ── */
+body.force-mobile .mob-sheet { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important; }
+
+/* ── Info panel (add/edit form) ── */
+body.force-mobile .info-panel {
+    top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    width: 100% !important; max-height: 75vh !important;
+    border-radius: 20px 20px 0 0 !important;
+    transform: translateY(110%) !important;
+    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
+}
+body.force-mobile .info-panel.open { transform: translateY(0) !important; }
+
+/* ── FAB / banners ── */
+body.force-mobile #btnFab { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; right: 16px !important; }
+body.force-mobile .gps-btn-wrap { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; }
+body.force-mobile #addBanner,
+body.force-mobile #measureBanner,
+body.force-mobile #directionsBanner { top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important; }
+body.force-mobile #countPill { top: calc(var(--topbar-h) + var(--chips-h) + 8px) !important; }
+body.force-mobile #latlngHint { display: none !important; }
+body.force-mobile .dev-mob-toggle { display: none !important; }
+
+/* ── Toast / count pill ── */
+body.force-mobile .toast,
+body.force-mobile .save-toast { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px) !important; }
+body.force-mobile .count-pill { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px) !important; }
+
+/* ── Stats view ── */
+body.force-mobile .sv-grid { grid-template-columns: repeat(2,1fr) !important; }
+body.force-mobile .sv-row { grid-template-columns: 1fr !important; }
+body.force-mobile .sv-inner { padding: 12px !important; }
+
+/* ── Modal ── */
+body.force-mobile .modal { width: calc(100vw - 24px) !important; max-height: 85vh !important; border-radius: 14px !important; }
+
+/* ── List/Stats view must fill correctly in mobile ── */
+body.force-mobile .list-view,
+body.force-mobile .stats-view {
+    display: none;
+    position: absolute !important;
+    top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+    overflow-y: auto !important;
+    background: var(--bg) !important;
+}
+body.force-mobile .list-view.show,
+body.force-mobile .stats-view.show { display: flex !important; flex-direction: column !important; }
+
+/* ── GPS tracking banner (mobile) ── */
+body.force-mobile #btnGps {
+    display: flex !important;
+}
+</style>
+
 body.force-mobile .sidebar { display: none !important; }
 body.force-mobile .sidebar-backdrop { display: none !important; }
 
