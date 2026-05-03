@@ -2432,7 +2432,8 @@ function mobSwitchView(view) {
         if (listPanel) {
             listPanel.classList.add('open');
             if (typeof window.renderListPanel === 'function') {
-                window.renderListPanel(typeof window.getFiltered === 'function' ? window.getFiltered() : window.locations);
+                const data = window.btDebug ? window.btDebug.filtered : [];
+                window.renderListPanel(data);
             }
         }
     } else if (view === 'stats') {
@@ -2520,8 +2521,8 @@ window.addEventListener('load', function() {
 
         // 15. Fix Desktop Stats View (renderStatsView was missing)
         window.renderStatsView = function() {
-            if (!window.locations) return;
-            const locs = window.locations;
+            const locs = window.btDebug ? window.btDebug.locations : null;
+            if (!locs || !locs.length) return;
             
             const svTotal = document.getElementById('svTotal');
             if(svTotal) svTotal.textContent = locs.length;
@@ -2613,7 +2614,10 @@ window.addEventListener('load', function() {
                     const lp = document.getElementById('listPanel');
                     if(lp) {
                         lp.classList.add('open');
-                        if (typeof window.renderListPanel === 'function') window.renderListPanel(window.getFiltered ? window.getFiltered() : window.locations);
+                        if (typeof window.renderListPanel === 'function') {
+                            const data = window.btDebug ? window.btDebug.filtered : [];
+                            window.renderListPanel(data);
+                        }
                     }
                     return;
                 }
