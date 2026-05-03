@@ -3249,12 +3249,12 @@
                 top: auto;
                 left: 0;
                 right: 0;
-                bottom: 0;
+                bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
                 width: 100%;
                 max-height: 75vh;
                 border-radius: 20px 20px 0 0;
-                transform: translateY(110%);
-                padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+                transform: translateY(120%);
+                padding-bottom: 0;
             }
 
             .info-panel.open {
@@ -3450,7 +3450,7 @@
                 <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
                 <div class="logo-sq">BT</div>
                 <span class="logo-txt">Locations</span>
-                <span class="version-badge" id="versionBadge">v6.5</span>
+                <span class="version-badge" id="versionBadge">v6.6</span>
             </div>
             <div class="tb-center">
                 <div class="search-box">
@@ -4918,12 +4918,12 @@
             top: auto !important;
             left: 0 !important;
             right: 0 !important;
-            bottom: 0 !important;
+            bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)) !important;
             width: 100% !important;
             max-height: 75vh !important;
             border-radius: 20px 20px 0 0 !important;
-            transform: translateY(110%) !important;
-            padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)) !important;
+            transform: translateY(120%) !important;
+            padding-bottom: 0 !important;
         }
 
         body.force-mobile .info-panel.open {
