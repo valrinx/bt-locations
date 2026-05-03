@@ -239,14 +239,26 @@
             color: var(--tx2);
         }
 
-        .version-badge {
-            font-size: 9px;
+        .ver-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            margin-left: 4px;
+            align-self: center;
+        }
+        .v-text {
+            font-size: 10px;
+            font-weight: 700;
             color: var(--tx3);
-            background: var(--s3);
-            border: 0.5px solid var(--bd);
-            border-radius: 4px;
-            padding: 1px 5px;
-            white-space: nowrap;
+            line-height: 1;
+        }
+        .v-hash {
+            font-size: 8px;
+            font-weight: 400;
+            color: var(--tx3);
+            opacity: 0.6;
+            font-family: monospace;
+            line-height: 1;
         }
 
         /* search box */
@@ -3430,8 +3442,11 @@
                     <div class="logo-main">BT</div>
                     <div class="logo-sub">LOCATIONS</div>
                     <div class="sync-dot-mini" id="topSyncDotMini"></div>
+                    <div class="ver-info">
+                        <span class="v-text">v6.6.13</span>
+                        <span class="v-hash">ef45d05</span>
+                    </div>
                 </div>
-                <span class="version-badge" id="versionBadge">v6.6.12</span>
             </div>
             <div class="tb-center">
                 <div class="search-box">
