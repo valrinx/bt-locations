@@ -1,7 +1,7 @@
 ﻿// ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v5.11.0';
+const APP_VERSION = 'v5.11.1';
 const STORAGE_KEY = 'bt_locations_data';
 
 // ════════════════════════════════════════════
@@ -1157,8 +1157,8 @@ async function initApp(){
         saveToStorage(); // Save sample data to localStorage for next time
     }
     
-    // 2. Init map right away
-    initMap();
+    // 2. Render initial markers (map already initialized at line ~875)
+    update();
     
     // 3. Show app immediately
     setLoader('พร้อมใช้งาน');
