@@ -1422,6 +1422,15 @@
                     </div>
 
                     <!-- Right map controls -->
+                    <div class="map-float-btns">
+                        <button class="map-circle-btn" title="เปลี่ยนแผนที่">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+                        </button>
+                        <button class="map-circle-btn" title="รายการโปรด" onclick="mobSwitchView('list')">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
+                        </button>
+                    </div>
+
                     <div class="map-controls" id="mapControlsCol">
                         <div class="map-btn-group">
                             <button class="map-btn" id="btnZoomIn" title="Zoom in">
@@ -1461,7 +1470,7 @@
                 </div>
 
                 <!-- ── LIST VIEW ── -->
-                <div class="list-view" id="view-list" style="display:none;">
+                <div class="list-view" id="view-list">
                     <div class="lv-toolbar">
                         <div class="lv-tb-btn" id="lvSelectAll">☐ เลือกทั้งหมด</div>
                         <div class="lv-tb-btn" id="lvAdd">+ เพิ่มจุด</div>
@@ -1475,7 +1484,7 @@
                 </div>
 
                 <!-- ── STATS VIEW ── -->
-                <div class="stats-view" id="view-stats" style="display:none;">
+                <div class="stats-view" id="view-stats">
                     <div class="sv-inner">
                         <div class="sv-grid">
                             <div class="sv-card">
@@ -1557,7 +1566,7 @@
             <div class="mob-nb-ico">📋</div>
             <div class="mob-nb-lbl">รายการ</div>
         </div>
-        <div class="mob-nb" onclick="openAddMode()">
+        <div class="mob-nb" onclick="document.getElementById('btAdd').click()">
             <div class="mob-nb-add">+</div>
         </div>
         <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
@@ -1579,11 +1588,16 @@
                 <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
             </div>
             <div style="overflow-y:auto;flex:1;padding:8px;">
-                <div class="sec-hd">Lists</div>
-                <div id="mobDrawerLists"></div>
+                <div class="sec-hd">การตั้งค่าแอป (App Settings)</div>
                 <div class="sdiv"></div>
-                <div class="sec-hd">เมือง</div>
-                <div id="mobDrawerCities"></div>
+                <div class="flist-item" onclick="document.getElementById('btnUpload').click(); closeMobDrawer()">
+                    <div class="fli-icon">↑</div>
+                    <div class="fli-info"><div class="fli-name">Export ข้อมูล</div><div class="fli-sub">บันทึกข้อมูลออกเป็นไฟล์</div></div>
+                </div>
+                <div class="flist-item" onclick="document.getElementById('btnImportData').click(); closeMobDrawer()">
+                    <div class="fli-icon">↓</div>
+                    <div class="fli-info"><div class="fli-name">นำเข้าข้อมูล</div><div class="fli-sub">โหลดข้อมูลจากไฟล์</div></div>
+                </div>
             </div>
         </div>
     </div>
@@ -2267,16 +2281,9 @@ body.force-mobile #av3 { display: none !important; }
 body.force-mobile .tb-right .avs { display: flex !important; }
 body.force-mobile #av1 { width: 30px !important; height: 30px !important; border-radius: 50% !important; font-size: 12px !important; margin-left: 0 !important; }
 
-/* Sync badge — แสดงใน mobile */
-body.force-mobile #syncBadge {
-    display: inline-flex !important;
-    font-size: 13px !important; line-height: 1 !important;
-}
-body.force-mobile #btnGithubSave {
-    display: flex !important;
-    width: 28px !important; height: 28px !important;
-    border-radius: 8px !important; font-size: 13px !important;
-}
+/* ซ่อน Sync badge / Save button ใน mobile เพื่อไม่ให้บัง UI */
+body.force-mobile #syncBadge { display: none !important; }
+body.force-mobile #btnGithubSave { display: none !important; }
 
 /* ── Chips row ── */
 body.force-mobile .mob-chips-row {
@@ -2412,117 +2419,133 @@ body.force-mobile #btnGps {
 }
 </style>
 
-body.force-mobile .sidebar { display: none !important; }
-body.force-mobile .sidebar-backdrop { display: none !important; }
 
-/* Topbar */
-body.force-mobile .topbar { height: var(--topbar-h) !important; padding: 0 10px !important; gap: 8px !important; }
-body.force-mobile .tb-left { width: auto !important; border-right: none !important; padding: 0 !important; gap: 0 !important; }
-body.force-mobile .tb-left .logo-sq { display: none !important; }
-body.force-mobile .tb-brand { display: none !important; }
-body.force-mobile .tb-center { flex: 1 !important; padding: 0 !important; min-width: 0 !important; }
-body.force-mobile .search-box { width: 100% !important; max-width: none !important; height: 36px !important; border-radius: 20px !important; padding: 0 12px !important; }
-body.force-mobile .tb-right { border-left: none !important; padding: 0 !important; gap: 0 !important; }
-body.force-mobile .pill-badge,
-body.force-mobile .live-p,
-body.force-mobile .tb-sep,
-body.force-mobile #btnImportData,
-body.force-mobile #btnUpload,
-body.force-mobile #av2,
-body.force-mobile #av3 { display: none !important; }
-body.force-mobile .tb-right .avs { display: flex !important; }
-body.force-mobile #av1 { width: 32px !important; height: 32px !important; border-radius: 50% !important; font-size: 12px !important; margin-left: 0 !important; }
+<script>
+// 1 & 6. Mobile Nav Switch View & Add Location Button
+function mobSwitchView(view) {
+    document.querySelectorAll('.mob-nb').forEach(el => el.classList.remove('on'));
+    document.getElementById('mn-' + view)?.classList.add('on');
+    
+    const mapArea = document.getElementById('map');
+    const listArea = document.getElementById('view-list');
+    const statsArea = document.getElementById('view-stats');
+    
+    if (view === 'map') {
+        mapArea.style.opacity = '1'; mapArea.style.pointerEvents = 'auto';
+        listArea.classList.remove('show');
+        statsArea.classList.remove('show');
+        setTimeout(() => window.map && window.map.invalidateSize(), 100);
+    } else if (view === 'list') {
+        mapArea.style.opacity = '0'; mapArea.style.pointerEvents = 'none';
+        listArea.classList.add('show');
+        statsArea.classList.remove('show');
+        if (typeof window.renderListPanel === 'function') window.renderListPanel();
+    } else if (view === 'stats') {
+        mapArea.style.opacity = '0'; mapArea.style.pointerEvents = 'none';
+        listArea.classList.remove('show');
+        statsArea.classList.add('show');
+        if (typeof window.renderStatsView === 'function') window.renderStatsView();
+    }
+}
 
-/* Chips row */
-body.force-mobile .mob-chips-row {
+// 4 & 8 & 9. Long-press to Add + Marker overrides
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        if (!window.map) return;
+        
+        // Long-press detection on map for Add New Location
+        let pressTimer;
+        window.map.on('mousedown touchstart', function(e) {
+            pressTimer = window.setTimeout(function() {
+                document.getElementById('btAdd')?.click();
+            }, 800);
+        });
+        window.map.on('mouseup mousemove touchend touchmove', function() {
+            clearTimeout(pressTimer);
+        });
+        window.map.on('contextmenu', function(e) { // Right-click desktop
+            document.getElementById('btAdd')?.click();
+        });
+
+        // 3. Patch marker cluster to be more realistic
+        if (window.markers && typeof window.markers.options !== 'undefined') {
+            window.markers.options.maxClusterRadius = 40;
+            window.markers.options.disableClusteringAtZoom = 17;
+        }
+
+        // 5. Smart Google Maps Navigation in Place Card
+        if (typeof window.showLocationDetails === 'function') {
+            const _origShowLocationDetails = window.showLocationDetails;
+            window.showLocationDetails = function(loc, idx) {
+                _origShowLocationDetails(loc, idx);
+                setTimeout(() => {
+                    const btns = document.querySelectorAll('.place-action-btn');
+                    btns.forEach(btn => {
+                        if (btn.textContent.includes('เส้นทาง')) {
+                            btn.onclick = function(e) {
+                                e.stopPropagation();
+                                window.open(`https://www.google.com/maps/dir/?api=1&destination=${loc.lat},${loc.lng}`, '_blank');
+                            };
+                        }
+                    });
+                }, 50);
+            };
+        }
+        
+    }, 1500);
+});
+</script>
+
+<style>
+/* 2. Shrink Edit UI Modal */
+body.force-mobile .modal-body { padding: 12px 16px !important; gap: 10px !important; }
+body.force-mobile .modal-header { padding: 14px 16px 10px !important; font-size: 15px !important; }
+body.force-mobile .modal-footer { padding: 12px 16px !important; }
+body.force-mobile .frow label { font-size: 10.5px !important; }
+body.force-mobile .frow input, body.force-mobile .frow textarea, body.force-mobile .frow select {
+    padding: 7px 10px !important; font-size: 13px !important;
+}
+body.force-mobile .frow textarea { min-height: 60px !important; }
+
+/* 8 & 9. Modern smooth custom markers */
+.leaflet-marker-icon.custom-pin {
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+}
+.leaflet-marker-icon.custom-pin:hover {
+    transform: scale(1.15) translateY(-4px) !important;
+    z-index: 1000 !important;
+}
+.marker-cluster {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.marker-cluster:hover { transform: scale(1.1); }
+
+/* 11. Custom Map Layers / Bookmark Buttons (from Image 2) */
+body.force-mobile .map-float-btns {
+    display: none !important; /* Hide on mobile if they are for desktop, but wait... user wants them! */
+}
+.map-float-btns {
+    position: absolute; top: calc(var(--topbar-h) + var(--chips-h) + 16px); right: 12px;
+    display: flex; flex-direction: column; gap: 8px; z-index: var(--z-controls);
+}
+.map-circle-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: #ffffff; color: #4b5563;
+    border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+}
+.map-circle-btn:hover { background: #f3f4f6; transform: scale(1.05); }
+.map-circle-btn:active { transform: scale(0.95); }
+.map-circle-btn svg { width: 22px; height: 22px; }
+
+/* Fix Topbar layout for map float buttons */
+body.force-mobile .map-float-btns {
     display: flex !important;
-    position: fixed; top: var(--topbar-h); left: 0; right: 0;
-    z-index: 40; height: var(--chips-h);
-    background: var(--s1); border-bottom: 0.5px solid var(--bd);
-    padding: 0 10px; gap: 6px; align-items: center;
-    overflow-x: auto; scrollbar-width: none;
+    top: calc(var(--chips-h) + 110px) !important; /* ขยับลงมาไม่ให้บัง map-stats */
 }
-
-/* Body layout */
-body.force-mobile .body { display: flex !important; flex-direction: column !important; position: relative !important; }
-body.force-mobile .main { position: relative !important; flex: 1 !important; overflow: hidden !important; width: 100% !important; }
-
-/* View area offsets */
-body.force-mobile .view-area {
-    position: absolute !important;
-    top: var(--chips-h) !important;
-    left: 0 !important; right: 0 !important;
-    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)) !important;
-}
-
-/* Bottom nav */
-body.force-mobile .mob-nav {
-    display: flex !important;
-    position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important;
-    height: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
-    padding-bottom: env(safe-area-inset-bottom,0px) !important;
-    z-index: 50 !important;
-}
-body.force-mobile .btbar { display: none !important; }
-body.force-mobile .vtabs { display: none !important; }
-
-/* Map controls */
-body.force-mobile .map-controls { position: absolute; right: 8px; top: 50%; }
-body.force-mobile .zoom-c { position: absolute; right: 8px; bottom: 14px; }
-
-/* Place card */
-body.force-mobile .place-card {
-    position: fixed !important;
-    bottom: -100% !important;
-    left: 0 !important; right: 0 !important;
-    top: auto !important; width: 100% !important;
-    border-radius: 16px 16px 0 0 !important;
-    opacity: 1 !important; transform: none !important;
-    transition: bottom 0.35s cubic-bezier(0.4,0,0.2,1) !important;
-    pointer-events: auto !important;
-    max-height: 60vh !important;
-}
-body.force-mobile .place-card.open {
-    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
-}
-body.force-mobile .place-card-drag { display: block !important; }
-
-/* List panel */
-body.force-mobile .list-panel { bottom: -100% !important; }
-body.force-mobile .list-panel.open { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important; }
-
-/* Mob sheet */
-body.force-mobile .mob-sheet { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important; }
-
-/* Info panel */
-body.force-mobile .info-panel {
-    top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-    width: 100% !important; max-height: 75vh !important;
-    border-radius: 20px 20px 0 0 !important;
-    transform: translateY(110%) !important;
-    padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px)) !important;
-}
-body.force-mobile .info-panel.open { transform: translateY(0) !important; }
-
-/* FAB / banners */
-body.force-mobile #btnFab { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; right: 16px !important; }
-body.force-mobile .gps-btn-wrap { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 16px) !important; }
-body.force-mobile #addBanner,
-body.force-mobile #measureBanner,
-body.force-mobile #directionsBanner { top: calc(var(--topbar-h) + var(--chips-h) + 12px) !important; }
-body.force-mobile #countPill { top: calc(var(--topbar-h) + var(--chips-h) + 8px) !important; }
-body.force-mobile #latlngHint { display: none !important; }
-
-/* Toast / count pill */
-body.force-mobile .toast,
-body.force-mobile .save-toast { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px) !important; }
-body.force-mobile .count-pill { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 12px) !important; }
-
-/* Stats / modals */
-body.force-mobile .sv-grid { grid-template-columns: repeat(2,1fr) !important; }
-body.force-mobile .sv-row { grid-template-columns: 1fr !important; }
-body.force-mobile .sv-inner { padding: 12px !important; }
-body.force-mobile .modal { width: calc(100vw - 24px) !important; max-height: 85vh !important; border-radius: 14px !important; }
 </style>
 
 </body>
