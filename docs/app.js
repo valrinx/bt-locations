@@ -1,10 +1,11 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.18';
+const APP_VERSION = 'v6.6.19';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
+let multiRouteLayer = null, multiRouteMode = false;
 const STORAGE_KEY = 'bt_locations_data';
 
 // Helper: safely attach onclick handler (avoids null errors)
@@ -1497,9 +1498,26 @@ if(_chipMoreEl && _chipDropdown) {
     });
 }
 
-onClick('chipAll', ()=>{filterList='';filterCity='';nearbyMode=false;update();});
+onClick('chipAll', ()=>{
+    filterList=''; filterCity=''; nearbyMode=false; filterFavorites=false;
+    clearRoute(); clearMultiRoutes();
+    update();
+});
 
-onClick('chipFav', ()=>{filterFavorites=!filterFavorites;const el=document.getElementById('chipFav');if(el)el.classList.toggle('active',filterFavorites);update();});
+onClick('chipFav', ()=>{
+    filterFavorites=!filterFavorites;
+    if(filterFavorites){ filterList=''; filterCity=''; nearbyMode=false; }
+    update();
+});
+
+onClick('btnPlanMultipleRoutes', () => {
+    if (multiRouteMode) {
+        clearMultiRoutes();
+        showToast('🏁 ปิดการวางแผนหลายเส้นทาง');
+    } else {
+        doMultiRoute();
+    }
+});
 
 onClick('chipNearby', ()=>{
     if(!myLatLng){showToast('กรุณาเปิด GPS ก่อน',true);return;}
@@ -2780,6 +2798,48 @@ if(chipRoute) chipRoute.onclick=(e)=>{
         doRoute();
     }
 };
+async function doMultiRoute(){
+    const uniqueLists = [...new Set(locations.map(l => l.list))].filter(l => l);
+    if(uniqueLists.length < 1){showToast('ไม่พบรายการข้อมูล',true);return;}
+    
+    showToast('🗺️ กำลังวางแผนหลายเส้นทาง...');
+    clearRoute();
+    if(multiRouteLayer) map.removeLayer(multiRouteLayer);
+    multiRouteLayer = L.layerGroup().addTo(map);
+    multiRouteMode = true;
+    document.getElementById('btnPlanMultipleRoutes')?.classList.add('active');
+
+    const colors = ['#4285f4', '#34a853', '#fbbc05', '#ea4335', '#a78bfa', '#ff7f5c', '#2ecc90', '#f5a623'];
+    
+    for (let i = 0; i < uniqueLists.length; i++) {
+        const listName = uniqueLists[i];
+        const listPoints = locations.filter(l => l.list === listName);
+        if (listPoints.length < 2) continue;
+
+        const color = colors[i % colors.length];
+        const stops = _tspSolve(listPoints, listPoints[0].lat, listPoints[0].lng);
+        
+        const pts = stops.map(l => [l.lat, l.lng]);
+        L.polyline(pts, {
+            color: color,
+            weight: 3,
+            opacity: 0.7,
+            dashArray: '5, 5'
+        }).addTo(multiRouteLayer).bindTooltip(`รายการ: ${listName}`, {sticky: true});
+    }
+    
+    // Hide clusters to show routes clearly
+    if(map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+    renderMarkers(); 
+}
+
+function clearMultiRoutes(){
+    if(multiRouteLayer){ map.removeLayer(multiRouteLayer); multiRouteLayer = null; }
+    multiRouteMode = false;
+    document.getElementById('btnPlanMultipleRoutes')?.classList.remove('active');
+    if(!map.hasLayer(markerCluster)) map.addLayer(markerCluster);
+    update();
+}
 
 // ════════════════════════════════════════════
 // INFO PANEL (kept for compatibility)
