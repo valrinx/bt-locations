@@ -3081,77 +3081,47 @@
 
             /* Restore topbar elements for mobile */
             .tb-center {
-                display: flex !important;
-                flex: 1;
-                margin: 0 4px;
-                max-width: none;
-                gap: 4px;
-                justify-content: flex-end; /* Push live/avatars to the right */
+                display: none !important; /* Hide empty center */
             }
-            .tb-center .search-box {
-                display: none !important;
-            }
-            
             .tb-right {
                 display: flex !important;
-                gap: 4px;
+                gap: 8px;
                 align-items: center;
-                flex-shrink: 0;
+                flex: 1;
+                justify-content: flex-end;
             }
             .live-p {
                 display: flex !important;
                 background: rgba(16, 185, 129, 0.1);
                 border: 1px solid rgba(16, 185, 129, 0.2);
                 color: #10b981;
-                padding: 4px 6px;
+                padding: 4px 8px;
                 border-radius: 8px;
-                font-size: 9px;
+                font-size: 10px;
                 font-weight: 700;
                 align-items: center;
-                gap: 3px;
+                gap: 4px;
                 white-space: nowrap;
-                transition: all 0.3s ease;
-            }
-            .live-dot {
-                width: 5px;
-                height: 5px;
-            }
-            .pill-badge {
-                display: none;
             }
             .avs {
                 display: flex !important;
-                margin-right: 0;
             }
             .av {
-                width: 22px;
-                height: 22px;
-                font-size: 9px;
+                width: 26px;
+                height: 26px;
+                font-size: 11px;
             }
             .tb-left {
-                gap: 4px;
-                min-width: 0;
-                flex: 0 1 auto;
+                flex: 0 0 auto;
+                max-width: 120px;
             }
             .tb-left h1, .logo-txt {
-                font-size: 12px !important;
-                display: block !important;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                max-width: 80px;
+                font-size: 13px !important;
             }
             .logo-sq {
-                width: 24px;
-                height: 24px;
-                font-size: 9px;
-                flex-shrink: 0;
+                width: 26px;
+                height: 26px;
             }
-            .version-badge {
-                display: none;
-            }
-            .tb-sep { display: none; }
-            #btnImportData, #btnUpload { display: none; }
 
             /* Restore mobile search bar position */
             .mob-search-row {
@@ -3488,12 +3458,12 @@
                     <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
                     <span class="kbd">⌘K</span>
                 </div>
+            </div>
+            <div class="tb-right">
                 <div class="live-p" id="topSyncBadge">
                     <div class="live-dot" id="topSyncDot"></div>
                     <span id="topSyncText">Live</span>
                 </div>
-            </div>
-            <div class="tb-right">
                 <div class="pill-badge" id="totalBadge">0 จุด</div>
                 <div class="avs">
                     <div class="av" id="av1" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
