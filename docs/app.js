@@ -1030,6 +1030,7 @@ async function initApp(){
         const a1 = document.getElementById('av1');
         if(a1) a1.textContent = (un[0] || 'V').toUpperCase();
         
+        _initMapEvents(); // Add this line
         console.log('[BT] initApp completed');
         // 5. No automatic fetch - user controls data via Import button
     } catch(e) {
@@ -3087,7 +3088,28 @@ function showToast(msg,isError=false,isSuccess=false){
 // ════════════════════════════════════════════
 // BACKDROP & KEYBOARD
 // ════════════════════════════════════════════
-map.on('click',()=>{if(!addMode&&!measureMode)closePlaceCard();closeListPanel();clearDirections();});
+function _initMapEvents() {
+    if (typeof map === 'undefined' || !map) return;
+    
+    map.on('click', e => {
+        // Waypoint Mode Hook
+        if (typeof _handleMapClickForWaypoint === 'function' && _isAddingWaypoint) {
+            _handleMapClickForWaypoint(e);
+            return;
+        }
+        const { lat, lng } = e.latlng;
+        const editModalOverlay = document.getElementById('editModalOverlay');
+        if (editModalOverlay && editModalOverlay.classList.contains('open')) {
+            return;
+        }
+    });
+
+    map.on('click', () => {
+        if (!addMode && !measureMode) closePlaceCard();
+        closeListPanel();
+        clearDirections();
+    });
+}
 window.showPlaceCard=showPlaceCard;
 window.closeListPanel=closeListPanel;
 
