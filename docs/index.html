@@ -1422,12 +1422,10 @@
                     </div>
 
                     <!-- Right map controls -->
+                    <!-- Removed old map-float-btns as it's been moved to Left Side in CSS -->
                     <div class="map-float-btns">
-                        <button class="map-circle-btn" title="เปลี่ยนแผนที่">
+                        <button class="map-circle-btn" title="เปลี่ยนแผนที่" onclick="if(typeof window.toggleBaseMap==='function') window.toggleBaseMap();">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
-                        </button>
-                        <button class="map-circle-btn" title="รายการโปรด" onclick="mobSwitchView('list')">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>
                         </button>
                     </div>
 
@@ -2421,59 +2419,47 @@ body.force-mobile #btnGps {
 
 
 <script>
-// 1 & 6. Mobile Nav Switch View & Add Location Button
+// Mobile Nav Switch View Helper
 function mobSwitchView(view) {
     document.querySelectorAll('.mob-nb').forEach(el => el.classList.remove('on'));
-    document.getElementById('mn-' + view)?.classList.add('on');
+    const btn = document.getElementById('mn-' + view) || document.querySelector(`.mob-nb[onclick*="${view}"]`);
+    if(btn) btn.classList.add('on');
     
-    const mapArea = document.getElementById('map');
-    const listArea = document.getElementById('view-list');
-    const statsArea = document.getElementById('view-stats');
-    
-    if (view === 'map') {
-        mapArea.style.opacity = '1'; mapArea.style.pointerEvents = 'auto';
-        listArea.classList.remove('show');
-        statsArea.classList.remove('show');
-        setTimeout(() => window.map && window.map.invalidateSize(), 100);
-    } else if (view === 'list') {
-        mapArea.style.opacity = '0'; mapArea.style.pointerEvents = 'none';
-        listArea.classList.add('show');
-        statsArea.classList.remove('show');
-        if (typeof window.renderListPanel === 'function') window.renderListPanel();
-    } else if (view === 'stats') {
-        mapArea.style.opacity = '0'; mapArea.style.pointerEvents = 'none';
-        listArea.classList.remove('show');
-        statsArea.classList.add('show');
-        if (typeof window.renderStatsView === 'function') window.renderStatsView();
+    if (typeof window.switchView === 'function') {
+        window.switchView(view);
+    } else if (typeof window.openInfoPanel === 'function' && view === 'stats') {
+        window.openInfoPanel('stats');
     }
 }
 
-// 4 & 8 & 9. Long-press to Add + Marker overrides
+// Map interactions, Google Maps nav, and custom markers patch
 window.addEventListener('load', function() {
     setTimeout(function() {
         if (!window.map) return;
         
-        // Long-press detection on map for Add New Location
+        // 11. Long-press to Add New Location
         let pressTimer;
         window.map.on('mousedown touchstart', function(e) {
             pressTimer = window.setTimeout(function() {
-                document.getElementById('btAdd')?.click();
+                const addBtn = document.getElementById('btAdd');
+                if (addBtn) addBtn.click();
             }, 800);
         });
         window.map.on('mouseup mousemove touchend touchmove', function() {
             clearTimeout(pressTimer);
         });
-        window.map.on('contextmenu', function(e) { // Right-click desktop
-            document.getElementById('btAdd')?.click();
+        window.map.on('contextmenu', function(e) {
+            const addBtn = document.getElementById('btAdd');
+            if (addBtn) addBtn.click();
         });
 
-        // 3. Patch marker cluster to be more realistic
+        // 10. Realistic marker clustering
         if (window.markers && typeof window.markers.options !== 'undefined') {
             window.markers.options.maxClusterRadius = 40;
             window.markers.options.disableClusteringAtZoom = 17;
         }
 
-        // 5. Smart Google Maps Navigation in Place Card
+        // 12. Smart Google Maps Navigation
         if (typeof window.showLocationDetails === 'function') {
             const _origShowLocationDetails = window.showLocationDetails;
             window.showLocationDetails = function(loc, idx) {
@@ -2491,25 +2477,53 @@ window.addEventListener('load', function() {
                 }, 50);
             };
         }
-        
     }, 1500);
 });
 </script>
 
 <style>
-/* 2. Shrink Edit UI Modal */
+/* ════════════════════════════════════════
+   FINAL MOBILE FIXES (Applied to both force-mobile and real devices)
+════════════════════════════════════════ */
+@media (max-width: 768px) {
+    /* 1. Fix overlapping stats by moving them below the chips */
+    .map-stats { top: calc(var(--chips-h) + 12px) !important; right: 12px !important; flex-direction: column !important; gap: 4px !important; z-index: var(--z-controls) !important; }
+    
+    /* 2 & 3. Fix Search Box and Topbar spacing */
+    .tb-center { display: none !important; } /* ซ่อนช่องค้นหาที่ซ้ำซ้อน */
+    .tb-left { width: auto !important; padding: 0 !important; gap: 8px !important; border-right: none !important; }
+    .logo-sq { display: none !important; }
+    .logo-txt { font-size: 15px !important; margin-left: 4px !important; }
+    
+    /* ซ่อน Save / Sync ที่ทำให้ UI รก */
+    #btnGithubSave, #syncBadge { display: none !important; }
+    
+    /* 9. Shrink Edit UI Modal */
+    .modal-body { padding: 12px 16px !important; gap: 10px !important; }
+    .modal-header { padding: 14px 16px 10px !important; font-size: 15px !important; }
+    .modal-footer { padding: 12px 16px !important; }
+    .frow input, .frow textarea, .frow select { padding: 8px 10px !important; font-size: 13px !important; }
+    
+    /* Drawer Fixes */
+    .mob-drawer { z-index: 1000 !important; }
+}
+
+/* Force mobile classes (for Preview Mode) */
+body.force-mobile .map-stats { top: calc(var(--chips-h) + 12px) !important; right: 12px !important; flex-direction: column !important; gap: 4px !important; z-index: var(--z-controls) !important; }
+body.force-mobile .tb-center { display: none !important; }
+body.force-mobile .tb-left { width: auto !important; padding: 0 !important; gap: 8px !important; border-right: none !important; }
+body.force-mobile .logo-sq { display: none !important; }
+body.force-mobile .logo-txt { font-size: 15px !important; margin-left: 4px !important; }
+body.force-mobile #btnGithubSave, body.force-mobile #syncBadge { display: none !important; }
 body.force-mobile .modal-body { padding: 12px 16px !important; gap: 10px !important; }
 body.force-mobile .modal-header { padding: 14px 16px 10px !important; font-size: 15px !important; }
 body.force-mobile .modal-footer { padding: 12px 16px !important; }
-body.force-mobile .frow label { font-size: 10.5px !important; }
-body.force-mobile .frow input, body.force-mobile .frow textarea, body.force-mobile .frow select {
-    padding: 7px 10px !important; font-size: 13px !important;
-}
-body.force-mobile .frow textarea { min-height: 60px !important; }
+body.force-mobile .frow input, body.force-mobile .frow textarea, body.force-mobile .frow select { padding: 8px 10px !important; font-size: 13px !important; }
+body.force-mobile .mob-drawer { z-index: 1000 !important; }
 
-/* 8 & 9. Modern smooth custom markers */
+/* 15 & 16. Modern smooth custom markers */
 .leaflet-marker-icon.custom-pin {
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s !important;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
 }
 .leaflet-marker-icon.custom-pin:hover {
@@ -2517,19 +2531,19 @@ body.force-mobile .frow textarea { min-height: 60px !important; }
     z-index: 1000 !important;
 }
 .marker-cluster {
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
-.marker-cluster:hover { transform: scale(1.1); }
+.marker-cluster:hover { transform: scale(1.1) !important; }
 
-/* 11. Custom Map Layers / Bookmark Buttons (from Image 2) */
-body.force-mobile .map-float-btns {
-    display: none !important; /* Hide on mobile if they are for desktop, but wait... user wants them! */
-}
+/* 18 & 19. Custom Map Layers Button (removed bookmark button) */
 .map-float-btns {
-    position: absolute; top: calc(var(--topbar-h) + var(--chips-h) + 16px); right: 12px;
+    position: absolute; top: calc(var(--chips-h) + 12px); left: 12px; /* Moved to left side to avoid all overlaps */
     display: flex; flex-direction: column; gap: 8px; z-index: var(--z-controls);
 }
+@media (min-width: 769px) { .map-float-btns { display: none !important; } }
+body.force-mobile .map-float-btns { display: flex !important; }
+
 .map-circle-btn {
     width: 44px; height: 44px; border-radius: 50%;
     background: #ffffff; color: #4b5563;
@@ -2540,12 +2554,6 @@ body.force-mobile .map-float-btns {
 .map-circle-btn:hover { background: #f3f4f6; transform: scale(1.05); }
 .map-circle-btn:active { transform: scale(0.95); }
 .map-circle-btn svg { width: 22px; height: 22px; }
-
-/* Fix Topbar layout for map float buttons */
-body.force-mobile .map-float-btns {
-    display: flex !important;
-    top: calc(var(--chips-h) + 110px) !important; /* ขยับลงมาไม่ให้บัง map-stats */
-}
 </style>
 
 </body>
