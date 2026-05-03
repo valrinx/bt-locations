@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bt-locations-v5';
+const CACHE_NAME = 'bt-locations-v6';
 // Only truly static assets (libs, icons) — NOT app code
 const STATIC_ASSETS = [
   './manifest.json',
@@ -112,6 +112,7 @@ self.addEventListener('fetch', event => {
       if (event.request.mode === 'navigate') {
         return caches.match('./index.html');
       }
+      return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
     })
   );
 });
