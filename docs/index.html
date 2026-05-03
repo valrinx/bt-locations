@@ -1533,9 +1533,18 @@
         </div><!-- /main -->
     </div><!-- /body -->
 
-    <!-- ── MOBILE CHIPS ROW ── -->
+    <!-- ── MOBILE SEARCH + CHIPS ROW ── -->
     <div class="mob-chips-row" id="mobChipsRow">
-        <!-- populated by app.js renderMobChips() -->
+        <!-- Mobile search bar -->
+        <div class="mob-search-wrap">
+            <span class="mob-search-icon">⌕</span>
+            <input type="text" id="mobSearchInput" class="mob-search-input" placeholder="ค้นหาสถานที่..." autocomplete="off">
+        </div>
+        <!-- Filter chips (app.js reads dataset.filter) -->
+        <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
+        <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
+        <button class="chip" id="chipList" data-filter="list">&#9660; List</button>
+        <button class="chip" id="chipCity" data-filter="city">&#9660; เมือง</button>
     </div>
 
     <!-- ── MOBILE NAV ── -->
@@ -1710,78 +1719,90 @@
 </div>
 
 <!-- ════════════════════════════════════════
-     LIST PANEL (mobile locations list)
+     LIST PANEL (cluster locations list)
 ════════════════════════════════════════ -->
 <div class="list-panel" id="listPanel">
-    <div class="list-panel-handle" onclick="closeMobSheet()"></div>
+    <div class="list-panel-handle" onclick="closeListPanel()"></div>
     <div class="list-panel-header">
         <span class="list-panel-title" id="listPanelTitle">สถานที่</span>
-        <div class="list-panel-close" onclick="closeMobSheet()">✕</div>
+        <div class="list-panel-close" id="listPanelClose" onclick="closeListPanel()">✕</div>
     </div>
-    <div class="list-panel-list" id="listPanelList"></div>
+    <!-- Sort bar (app.js shows/hides this) -->
+    <div class="list-sort-bar" id="listSortBar" style="display:none;">
+        <button class="sort-btn active" data-sort="default">📍 เริ่มต้น</button>
+        <button class="sort-btn" data-sort="name">A-Z ชื่อ</button>
+        <button class="sort-btn" data-sort="near">📍 ใกล้ที่สุด</button>
+        <button class="sort-btn" data-sort="list">List</button>
+    </div>
+    <div class="list-panel-body" id="listBody"></div>
 </div>
 
 <!-- ════════════════════════════════════════
      MODALS
 ════════════════════════════════════════ -->
 
-<!-- Add/Edit Location Modal -->
-<div class="modal-overlay" id="addModalOverlay">
-    <div class="modal" id="addModal">
-        <div class="modal-header" id="addModalTitle">เพิ่มสถานที่</div>
+<!-- Add/Edit Location Modal (app.js uses: editModalOverlay, editModalTitle, modalName, modalList, modalCity, modalNote, modalTags, modalLat, modalLng, modalPhotoInput, modalPhotoPreview, modalPhotoRemove, editModalCancel, editModalSave) -->
+<div class="modal-overlay" id="editModalOverlay">
+    <div class="modal" style="width:460px;max-width:95vw;">
+        <div class="modal-header" id="editModalTitle">เพิ่มสถานที่</div>
         <div class="modal-body">
             <div class="frow">
-                <label>ชื่อ</label>
-                <input type="text" id="locName" placeholder="ชื่อสถานที่">
+                <label>ชื่อสถานที่</label>
+                <input type="text" id="modalName" placeholder="ชื่อสถานที่" autocomplete="off">
             </div>
             <div class="frow frow-inline">
                 <div style="flex:1;">
                     <label>Lat</label>
-                    <input type="number" id="locLat" placeholder="13.7563" step="any">
+                    <input type="number" id="modalLat" placeholder="13.7563" step="any">
                 </div>
                 <div style="flex:1;">
                     <label>Lng</label>
-                    <input type="number" id="locLng" placeholder="100.5018" step="any">
+                    <input type="number" id="modalLng" placeholder="100.5018" step="any">
                 </div>
             </div>
             <div class="frow">
                 <label>รายการ (List)</label>
-                <input type="text" id="locList" placeholder="ชื่อรายการ">
+                <input type="text" id="modalList" placeholder="ชื่อรายการ" list="listSuggestions" autocomplete="off">
+                <datalist id="listSuggestions"></datalist>
             </div>
-            <div class="frow frow-inline">
-                <div style="flex:1;">
-                    <label>เขต</label>
-                    <input type="text" id="locDistrict" placeholder="เขต/แขวง">
-                </div>
-                <div style="flex:1;">
-                    <label>เมือง</label>
-                    <input type="text" id="locCity" placeholder="กรุงเทพ">
-                </div>
+            <div class="frow">
+                <label>เมือง / เขต</label>
+                <input type="text" id="modalCity" placeholder="กรุงเทพ, เขต..." list="citySuggestions" autocomplete="off">
+                <datalist id="citySuggestions"></datalist>
             </div>
             <div class="frow">
                 <label>หมายเหตุ</label>
-                <textarea id="locNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+                <textarea id="modalNote" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
             </div>
             <div class="frow">
                 <label>Tags (คั่นด้วยลูกน้ำ)</label>
-                <input type="text" id="locTags" placeholder="อาหาร, ท่องเที่ยว, ...">
+                <input type="text" id="modalTags" placeholder="อาหาร, ท่องเที่ยว, ...">
             </div>
             <div class="frow">
-                <label>URL รูปภาพ</label>
-                <input type="text" id="locPhoto" placeholder="https://...">
+                <label>รูปภาพ</label>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <img id="modalPhotoPreview" src="" style="display:none;width:100%;max-height:140px;object-fit:cover;border-radius:8px;border:0.5px solid var(--bd2);">
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <label class="modal-btn modal-btn-cancel" style="cursor:pointer;font-size:12px;padding:7px 14px;">
+                            📷 เลือกรูป
+                            <input type="file" id="modalPhotoInput" accept="image/*" style="display:none;">
+                        </label>
+                        <button class="modal-btn modal-btn-cancel" id="modalPhotoRemove" style="display:none;font-size:12px;เcolor:var(--rd);">&#10005; ลบรูป</button>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="modal-btn modal-btn-cancel" id="addModalCancel">ยกเลิก</button>
-            <button class="modal-btn modal-btn-save" id="addModalSave">บันทึก</button>
+            <button class="modal-btn modal-btn-cancel" id="editModalCancel">ยกเลิก</button>
+            <button class="modal-btn modal-btn-save" id="editModalSave">บันทึก</button>
         </div>
     </div>
 </div>
 
-<!-- Confirm Delete Modal -->
-<div class="modal-overlay" id="confirmOverlay">
+<!-- Confirm Delete Modal (app.js uses: confirmModalOverlay, confirmIcon, confirmTitle, confirmText, confirmOk, confirmCancel) -->
+<div class="modal-overlay" id="confirmModalOverlay">
     <div class="modal confirm-modal">
-        <div class="confirm-icon">🗑</div>
+        <div class="confirm-icon" id="confirmIcon">🗑</div>
         <div class="confirm-title" id="confirmTitle">ยืนยันการลบ</div>
         <div class="confirm-text" id="confirmText"></div>
         <div class="confirm-footer">
@@ -1844,6 +1865,53 @@
     </div>
 </div>
 
+<!-- Token/Settings Modal (app.js uses: tokenModalOverlay, tokenSave, tokenCancel) -->
+<div class="modal-overlay" id="tokenModalOverlay">
+    <div class="modal" style="max-width:420px;">
+        <div class="modal-header">⚙️ ตั้งค่า GitHub</div>
+        <div class="modal-body">
+            <div class="frow">
+                <label>GitHub Token</label>
+                <input type="password" id="tokenInput" placeholder="ghp_..." autocomplete="off">
+            </div>
+            <div class="frow">
+                <label>Worker URL (ถ้ามี)</label>
+                <input type="text" id="workerUrl" placeholder="https://..." autocomplete="off">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" id="tokenCancel">ยกเลิก</button>
+            <button class="modal-btn modal-btn-save" id="tokenSave">บันทึก</button>
+        </div>
+    </div>
+</div>
+
+<!-- List Filter Modal (app.js uses: listFilterModalOverlay, listChoiceList) -->
+<div class="modal-overlay" id="listFilterModalOverlay">
+    <div class="modal" style="max-width:380px;">
+        <div class="modal-header">เลือก List</div>
+        <div class="modal-body" style="padding:8px;">
+            <div id="listChoiceList" style="max-height:50vh;overflow-y:auto;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" onclick="document.getElementById('listFilterModalOverlay').classList.remove('open')">ปิด</button>
+        </div>
+    </div>
+</div>
+
+<!-- City Filter Modal (app.js uses: cityFilterModalOverlay, cityChoiceList) -->
+<div class="modal-overlay" id="cityFilterModalOverlay">
+    <div class="modal" style="max-width:380px;">
+        <div class="modal-header">เลือกเมือง</div>
+        <div class="modal-body" style="padding:8px;">
+            <div id="cityChoiceList" style="max-height:50vh;overflow-y:auto;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-btn modal-btn-cancel" onclick="document.getElementById('cityFilterModalOverlay').classList.remove('open')">ปิด</button>
+        </div>
+    </div>
+</div>
+
 <!-- ════════════════════════════════════════
      INLINE SCRIPTS — wire IDs / patches
 ════════════════════════════════════════ -->
@@ -1890,10 +1958,152 @@
             /* Measure */
             var ms = document.getElementById('btnMeasure');
             if(ms && typeof startMeasureMode==='function') ms.onclick = startMeasureMode;
+
+            /* ── showConfirm: app.js calls this to show confirm dialog ── */
+            window.showConfirm = function(icon, title, text, onOk) {
+                var el = document.getElementById('confirmModalOverlay');
+                var iconEl = document.getElementById('confirmIcon');
+                var titleEl = document.getElementById('confirmTitle');
+                var textEl = document.getElementById('confirmText');
+                var okBtn = document.getElementById('confirmOk');
+                var cancelBtn = document.getElementById('confirmCancel');
+                if (!el) return;
+                if (iconEl) iconEl.textContent = icon || '⚠️';
+                if (titleEl) titleEl.textContent = title || 'ยืนยัน';
+                if (textEl) textEl.textContent = text || '';
+                el.classList.add('open');
+                if (okBtn) okBtn.onclick = function() { el.classList.remove('open'); if(onOk) onOk(); };
+                if (cancelBtn) cancelBtn.onclick = function() { el.classList.remove('open'); };
+                el.onclick = function(e) { if(e.target === el) el.classList.remove('open'); };
+            };
+            el.onclick = null; // will be set per-call
+
         }, 800);
     });
 })();
 </script>
+
+<style>
+/* ────────────────────────────────────────
+   MODAL — DARK THEME REDESIGN
+──────────────────────────────────────── */
+.modal-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(5,6,10,0.75); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+    background: var(--s1); border: 0.5px solid var(--bd2);
+    border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    width: 420px; max-width: calc(100vw - 24px);
+    max-height: 90vh; overflow: hidden;
+    display: flex; flex-direction: column;
+    animation: modalIn 0.22s cubic-bezier(0.34,1.2,0.64,1);
+}
+@keyframes modalIn { from { transform: scale(0.94) translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+.modal-header {
+    padding: 18px 20px 14px;
+    font-size: 16px; font-weight: 800; color: var(--tx);
+    border-bottom: 0.5px solid var(--bd2); flex-shrink: 0;
+    letter-spacing: -0.01em;
+}
+.modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer {
+    padding: 14px 20px; display: flex; gap: 8px; justify-content: flex-end;
+    border-top: 0.5px solid var(--bd2); flex-shrink: 0;
+}
+.frow { display: flex; flex-direction: column; gap: 6px; }
+.frow-inline { flex-direction: row; gap: 12px; }
+.frow label { font-size: 11.5px; font-weight: 600; color: var(--tx2); text-transform: uppercase; letter-spacing: 0.05em; }
+.frow input, .frow textarea, .frow select {
+    background: var(--s2); border: 0.5px solid var(--bd2);
+    border-radius: 9px; padding: 9px 12px;
+    color: var(--tx); font-size: 13.5px; font-family: inherit;
+    outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%; box-sizing: border-box;
+}
+.frow input:focus, .frow textarea:focus {
+    border-color: var(--bl-b); box-shadow: 0 0 0 2px rgba(91,143,255,0.12);
+}
+.frow textarea { min-height: 80px; resize: vertical; }
+.modal-btn {
+    padding: 9px 18px; border-radius: 9px; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.modal-btn-cancel {
+    background: var(--s2); border: 0.5px solid var(--bd2); color: var(--tx2);
+}
+.modal-btn-cancel:hover { background: var(--s3); color: var(--tx); }
+.modal-btn-save {
+    background: var(--bl); border: none; color: white;
+    box-shadow: 0 4px 14px rgba(91,143,255,0.35);
+}
+.modal-btn-save:hover { background: #7aaaff; }
+.btn-danger { background: var(--rd) !important; box-shadow: 0 4px 14px rgba(255,92,92,0.3) !important; }
+.btn-danger:hover { background: #ff7e7e !important; }
+
+/* Confirm modal */
+.confirm-modal { text-align: center; padding: 28px 24px; gap: 12px; display: flex; flex-direction: column; align-items: center; }
+.confirm-icon { font-size: 44px; line-height: 1; }
+.confirm-title { font-size: 18px; font-weight: 800; color: var(--tx); }
+.confirm-text { font-size: 13px; color: var(--tx2); line-height: 1.6; max-width: 280px; }
+.confirm-footer { display: flex; gap: 10px; width: 100%; justify-content: center; }
+
+/* List sort bar */
+.list-sort-bar {
+    display: flex; gap: 4px; padding: 8px 14px;
+    border-bottom: 0.5px solid var(--bd2);
+    overflow-x: auto; flex-shrink: 0;
+}
+.list-sort-bar::-webkit-scrollbar { display: none; }
+.sort-btn {
+    padding: 5px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+    border: 0.5px solid var(--bd2); background: var(--s2); color: var(--tx2);
+    cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.13s;
+}
+.sort-btn:hover { background: var(--s3); color: var(--tx); }
+.sort-btn.active { background: var(--bl-d); border-color: var(--bl-b); color: var(--bl); }
+
+/* list-panel-body */
+.list-panel-body { flex: 1; overflow-y: auto; }
+.list-panel-body::-webkit-scrollbar { width: 3px; }
+.list-panel-body::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
+
+/* list-item (rendered by app.js) */
+.list-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 0.5px solid var(--bd);
+    cursor: pointer; transition: background 0.12s;
+}
+.list-item:hover { background: var(--s2); }
+.list-item-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.list-item-text { flex: 1; min-width: 0; }
+.list-item-name { font-size: 13.5px; font-weight: 600; color: var(--tx); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-item-sub { font-size: 11.5px; color: var(--tx3); }
+.list-item-chevron { color: var(--tx3); font-size: 20px; flex-shrink: 0; }
+
+/* Mobile search in chips row */
+.mob-search-wrap {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--s2); border: 0.5px solid var(--bd2);
+    border-radius: 20px; padding: 5px 12px;
+    min-width: 140px; max-width: 200px; flex-shrink: 0;
+}
+.mob-search-icon { color: var(--tx3); font-size: 14px; flex-shrink: 0; }
+.mob-search-input {
+    background: none; border: none; outline: none;
+    color: var(--tx); font-size: 13px; font-family: inherit;
+    width: 100%; min-width: 0;
+}
+.mob-search-input::placeholder { color: var(--tx3); }
+</style>
+
 
 <!-- ════════════════════════════════════════
      SCRIPT LOADING
@@ -1967,6 +2177,44 @@
                 applyMobileMode(!isOn);
             });
         }
+    });
+
+    // ── PATCH: Override isMobile check in app.js to respect force-mobile class ──
+    // app.js uses `window.innerWidth < 768` which doesn't know about force-mobile
+    // We patch showLocationDetails & handleClusterClick after app.js loads
+    window.addEventListener('load', function(){
+        setTimeout(function(){
+            // Re-define isMobile so app.js functions can call it
+            window._isMobileOverride = function() {
+                return document.body.classList.contains('force-mobile') ||
+                    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+                    window.innerWidth < 768;
+            };
+            // Patch showLocationDetails
+            if (typeof window.showLocationDetails === 'function') {
+                var _origSLD = window.showLocationDetails;
+                window.showLocationDetails = function(loc, idx) {
+                    if (window._isMobileOverride()) {
+                        // Mobile: show place card as bottom sheet
+                        var card = document.getElementById('placeCard');
+                        if (card) {
+                            if (typeof window.showPlaceCard === 'function') {
+                                window.showPlaceCard(loc, idx);
+                            }
+                        }
+                    } else {
+                        _origSLD(loc, idx);
+                    }
+                };
+            }
+            // Patch handleClusterClick
+            if (typeof window.handleClusterClick === 'function') {
+                var _origHCC = window.handleClusterClick;
+                window.handleClusterClick = function(childMarkers) {
+                    _origHCC(childMarkers);
+                };
+            }
+        }, 2000);
     });
 })();
 </script>
