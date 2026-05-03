@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.17';
+const APP_VERSION = 'v6.6.18';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -265,8 +265,13 @@ document.querySelectorAll('.chip').forEach(chip=>{
         } else if(filter === 'fav'){
             filterFavorites = true; filterList = ''; filterCity = '';
         } else if(filter === 'list'){
-            // Open drawer to select list
-            openMobDrawer();
+            const drop = document.getElementById('listDropdown');
+            if(drop) {
+                const isOpen = drop.classList.contains('open');
+                document.querySelectorAll('.chip-dropdown').forEach(d => d.classList.remove('open'));
+                if(!isOpen) drop.classList.add('open');
+            }
+            return; // Don't call update() yet, wait for dropdown choice
         } else if(filter === 'city'){
             // Open drawer to select city
             openMobDrawer();
@@ -2765,9 +2770,15 @@ async function doRoute(){
 }
 
 const chipRoute=document.getElementById('chipRoute');
-if(chipRoute) chipRoute.onclick=()=>{
-    if(routeMode){clearRoute();closeListPanel();showToast('ปิดเส้นทาง');}
-    else doRoute();
+if(chipRoute) chipRoute.onclick=(e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.chip-dropdown').forEach(d => d.classList.remove('open'));
+    if(routeMode){
+        clearRoute();
+        showToast('🏁 ปิดการนำทาง');
+    } else {
+        doRoute();
+    }
 };
 
 // ════════════════════════════════════════════
