@@ -31,13 +31,17 @@ jobs:
             -d "{\"run_id\": \"${{ github.run_id }}\", \"commit_sha\": \"${{ github.sha }}\", \"commit_msg\": \"${{ github.event.head_commit.message }}\", \"status\": \"pending\", \"branch\": \"${{ github.ref_name }}\"}"
           echo "🔵 Build status: PENDING sent to Supabase"
 
-      - name: 💬 LINE notify - Build started
+      - name: 💬 LINE API - Build started
         run: |
-          curl -s -X POST https://notify-api.line.me/api/notify \
-            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
-            -F "message=🔄 เริ่ม build ใหม่...
-            📋 ${{ github.event.head_commit.message }}
-            🔗 ${{ github.sha }}" || true
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer ${{ secrets.LINE_CHANNEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "to": "${{ secrets.LINE_USER_ID }}",
+              "messages": [
+                {"type": "text", "text": "🔄 เริ่ม build ใหม่...\n📋 ${{ github.event.head_commit.message }}\n🔗 ${{ github.sha }}"}
+              ]
+            }' || true
 
       # ═══════════════════════════════════════════════════
       # STEP 2: Checkout & Build
@@ -91,20 +95,28 @@ jobs:
       # ═══════════════════════════════════════════════════
       # STEP 5: LINE notify result
       # ═══════════════════════════════════════════════════
-      - name: 💬 LINE notify - Build success
+      - name: 💬 LINE API - Build success
         if: success()
         run: |
-          curl -s -X POST https://notify-api.line.me/api/notify \
-            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
-            -F "message=✅ Build สำเร็จ! 🚀
-            📋 ${{ github.event.head_commit.message }}
-            🔗 ดูผลลัพธ์: https://valrinx.github.io/bt-locations/" || true
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer ${{ secrets.LINE_CHANNEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "to": "${{ secrets.LINE_USER_ID }}",
+              "messages": [
+                {"type": "text", "text": "✅ Build สำเร็จ! 🚀\n📋 ${{ github.event.head_commit.message }}\n🔗 https://valrinx.github.io/bt-locations/"}
+              ]
+            }' || true
 
-      - name: 💬 LINE notify - Build failed
+      - name: 💬 LINE API - Build failed
         if: failure()
         run: |
-          curl -s -X POST https://notify-api.line.me/api/notify \
-            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
-            -F "message=❌ Build ล้มเหลว!
-            📋 ${{ github.event.head_commit.message }}
-            🔗 ดู log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Authorization: Bearer ${{ secrets.LINE_CHANNEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "to": "${{ secrets.LINE_USER_ID }}",
+              "messages": [
+                {"type": "text", "text": "❌ Build ล้มเหลว!\n📋 ${{ github.event.head_commit.message }}\n🔗 ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}
+              ]
+            }' || true
