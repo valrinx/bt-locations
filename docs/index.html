@@ -802,15 +802,7 @@
         }
 
         /* ── Map stats (top-right inline) ── */
-        .map-stats {
-            position: absolute;
-            top: 12px;
-            right: 56px;
-            display: flex;
-            gap: 4px;
-            z-index: var(--z-controls);
-            pointer-events: none;
-        }
+
 
         .msc {
             background: rgba(17, 18, 24, 0.85);
@@ -3201,9 +3193,7 @@
             }
 
             /* map controls */
-            .map-stats {
-                top: 12px;
-            }
+
 
             .map-controls {
                 position: absolute;
@@ -3453,7 +3443,7 @@
                 <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
                 <div class="logo-sq">BT</div>
                 <span class="logo-txt">Locations</span>
-                <span class="version-badge" id="versionBadge">v6.6.2</span>
+                <span class="version-badge" id="versionBadge">v6.6.3</span>
             </div>
             <div class="tb-center">
                 <div class="search-box">
@@ -3570,15 +3560,8 @@
                             </div>
                         </div>
 
-                        <!-- Map stats overlay -->
-                        <div class="map-stats">
-                            <div class="msv-pill" title="Total Locations">
-                                📍 <span id="mapStatTotalVal">0</span>
-                            </div>
-                            <div class="msv-pill clst" title="Clusters">
-                                ◩ <span id="mapStatClustersVal">0</span>
-                            </div>
-                        </div>
+                        <!-- Map stats overlay removed -->
+
 
                         <!-- Right map controls -->
                         <div class="map-controls" id="mapControlsCol">
@@ -4829,12 +4812,7 @@
         /* ── Map stats — ขยับขวาให้ไม่บังแผนที่ ──
    ปัญหาเดิม: right:56px ทับกับ controls
    แก้: วางขวาบน ไม่บัง */
-        body.force-mobile .map-stats {
-            top: 8px !important;
-            right: 8px !important;
-            flex-direction: column !important;
-            gap: 3px !important;
-        }
+
 
         body.force-mobile .msc {
             padding: 4px 8px !important;
@@ -5061,8 +5039,7 @@
             const svTotal = document.getElementById('svTotal');
             if (svTotal) svTotal.textContent = locs ? locs.length : 0;
             
-            const mapStatTotalVal = document.getElementById('mapStatTotalVal');
-            if (mapStatTotalVal) mapStatTotalVal.textContent = locs ? locs.length : 0;
+
 
             const mapStatClustersVal = document.getElementById('mapStatClustersVal');
             if (mapStatClustersVal) {
