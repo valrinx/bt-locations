@@ -230,23 +230,24 @@ function applyDevice(d) {
   iframe.style.width  = w + 'px';
   iframe.style.height = h + 'px';
 
-  // Force the iframe app into mobile mode via localStorage
+  // Force mobile mode + invalidate map size after resize
   try {
-    iframe.onload = function() {
-      try {
-        iframe.contentWindow.localStorage.setItem('bt_force_mobile_mode', 'true');
-      } catch(e) {}
-    };
-    // If already loaded, set directly
-    if (iframe.contentDocument) {
-      iframe.contentWindow.localStorage.setItem('bt_force_mobile_mode', 'true');
-      // Trigger the toggle if available
-      const bd = iframe.contentDocument.body;
-      if (bd && !bd.classList.contains('force-mobile')) {
-        bd.classList.add('force-mobile');
-      }
+    iframe.contentWindow.localStorage.setItem('bt_force_mobile_mode', 'true');
+    const bd = iframe.contentDocument?.body;
+    if (bd && !bd.classList.contains('force-mobile')) {
+      bd.classList.add('force-mobile');
     }
   } catch(e) {}
+
+  // Invalidate Leaflet map after layout settles
+  setTimeout(function() {
+    try {
+      const imap = iframe.contentWindow?.map;
+      if (imap && typeof imap.invalidateSize === 'function') {
+        imap.invalidateSize({ animate: false });
+      }
+    } catch(e) {}
+  }, 120);
 }
 
 function toggleOrient() {
