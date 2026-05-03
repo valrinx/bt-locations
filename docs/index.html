@@ -192,28 +192,45 @@
             border-left: 0.5px solid var(--bd);
         }
 
-        /* logo */
-        .logo-sq {
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
-            flex-shrink: 0;
-            background: var(--bl-d);
-            border: 0.5px solid var(--bl-b);
+        .logo-wrapper {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 9px;
-            font-weight: 800;
-            color: var(--bl);
+            align-items: baseline;
+            gap: 8px;
+            cursor: pointer;
+            position: relative;
         }
-
-        .logo-txt {
+        .logo-main {
+            font-size: 22px;
+            font-weight: 900;
+            color: #fff;
+            background: linear-gradient(135deg, #fff 30%, var(--bl) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1.5px;
+            line-height: 1;
+        }
+        .logo-sub {
             font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            color: var(--bl);
+            font-weight: 500;
+            color: var(--tx2);
+            letter-spacing: 1.5px;
             text-transform: uppercase;
+            opacity: 0.8;
+        }
+        .sync-dot-mini {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            margin-left: 2px;
+            transition: all 0.3s ease;
+        }
+        .sync-dot-mini.syncing {
+            animation: pulse-sync 1s infinite alternate;
+        }
+        @keyframes pulse-sync {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0.4; transform: scale(1.3); }
         }
 
         .tb-brand {
@@ -2975,8 +2992,8 @@
 
             /* topbar */
             .topbar {
-                height: var(--topbar-h);
-                padding: 0 10px;
+                height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+                padding: env(safe-area-inset-top, 0px) 10px 0 10px;
                 gap: 8px;
                 position: relative;
                 z-index: 50;
@@ -2984,18 +3001,22 @@
 
             .tb-left {
                 width: auto !important;
-                flex-shrink: 0;
+                flex: 1;
                 border-right: none !important;
                 padding: 0 !important;
-                gap: 0 !important;
+                gap: 12px !important;
+                justify-content: flex-start;
             }
 
-            .tb-left .logo-sq {
-                display: none;
+            .logo-wrapper {
+                gap: 6px;
             }
-
-            .tb-brand {
-                display: none;
+            .logo-main {
+                font-size: 24px;
+            }
+            .logo-sub {
+                font-size: 10px;
+                letter-spacing: 1px;
             }
 
             .tb-center {
@@ -3080,11 +3101,7 @@
                 max-width: 120px;
             }
             .tb-left h1, .logo-txt {
-                font-size: 13px !important;
-            }
-            .logo-sq {
-                width: 26px;
-                height: 26px;
+                display: none;
             }
 
             /* Restore mobile search bar position */
@@ -3117,7 +3134,7 @@
             .mob-chips-row {
                 display: flex !important;
                 position: fixed;
-                top: var(--topbar-h);
+                top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
                 left: 0;
                 right: 0;
                 z-index: 40;
@@ -3409,10 +3426,12 @@
         <!-- ── TOPBAR ── -->
         <div class="topbar">
             <div class="tb-left" id="tbLeft">
-                <div class="tb-icon-btn" id="btnMenu" title="เมนู / Sidebar" style="flex-shrink:0;">☰</div>
-                <div class="logo-sq">BT</div>
-                <span class="logo-txt">Locations</span>
-                <span class="version-badge" id="versionBadge">v6.6.10</span>
+                <div class="logo-wrapper" onclick="location.reload()">
+                    <div class="logo-main">BT</div>
+                    <div class="logo-sub">LOCATIONS</div>
+                    <div class="sync-dot-mini" id="topSyncDotMini"></div>
+                </div>
+                <span class="version-badge" id="versionBadge">v6.6.12</span>
             </div>
             <div class="tb-center">
                 <div class="search-box">
@@ -4611,22 +4630,30 @@
    แก้: ซ่อน search-box ในตัว topbar (ใช้ mobSearchInput แทน)
         จัด tb-left ให้ gap ถูกต้อง */
         body.force-mobile .topbar {
-            height: var(--topbar-h) !important;
-            padding: 0 10px !important;
-            gap: 6px !important;
+            height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)) !important;
+            padding: env(safe-area-inset-top, 0px) 10px 0 10px !important;
+            gap: 12px !important;
         }
 
         body.force-mobile .tb-left {
             width: auto !important;
-            flex-shrink: 0 !important;
+            flex: 1 !important;
             border-right: none !important;
             padding: 0 !important;
-            gap: 6px !important;
+            gap: 12px !important;
             min-width: 0 !important;
+            justify-content: flex-start !important;
         }
 
-        body.force-mobile .logo-sq {
-            display: none !important;
+        body.force-mobile .logo-wrapper {
+            gap: 6px !important;
+        }
+        body.force-mobile .logo-main {
+            font-size: 24px !important;
+        }
+        body.force-mobile .logo-sub {
+            font-size: 10px !important;
+            letter-spacing: 1px !important;
         }
 
         body.force-mobile .logo-txt {
@@ -4688,7 +4715,7 @@
         body.force-mobile .mob-chips-row {
             display: flex !important;
             position: fixed;
-            top: var(--topbar-h);
+            top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
             left: 0;
             right: 0;
             z-index: 40;
