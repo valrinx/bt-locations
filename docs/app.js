@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.9';
+const APP_VERSION = 'v6.6.10';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -98,11 +98,19 @@ function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([.
 // ════════════════════════════════════════════
 let currentView = 'map';
 function switchView(view){
+    if(currentView === view && view !== 'map') {
+        // Toggle back to map
+        view = 'map';
+    }
     currentView = view;
     document.querySelectorAll('.vt').forEach(v=>v.classList.remove('on'));
-    document.getElementById('vt-'+view).classList.add('on');
+    const vtEl = document.getElementById('vt-'+view);
+    if(vtEl) vtEl.classList.add('on');
+    
     document.querySelectorAll('.map-view, .list-view, .stats-view').forEach(el=>el.classList.remove('show'));
-    document.getElementById('view-'+view).classList.add('show');
+    const viewEl = document.getElementById('view-'+view);
+    if(viewEl) viewEl.classList.add('show');
+    
     if(view==='stats') renderStatsView();
     if(view==='list') renderListView();
     if(view==='heat') { heatmapMode=true; update(); } else if(view!=='map') { heatmapMode=false; update(); }
@@ -125,12 +133,24 @@ onClick('btAdd', () => openAddMode());
 
 // Mobile view switcher (for bottom nav)
 function mobSwitchView(view){
+    const wasView = currentView;
     switchView(view);
     // Update mobile nav active state
     document.querySelectorAll('.mob-nb').forEach(nb => nb.classList.remove('on'));
-    document.getElementById('mn-'+view)?.classList.add('on');
+    document.getElementById('mn-'+currentView)?.classList.add('on');
     // Close bottom sheet if open
     closeMobSheet();
+}
+
+// Mobile drawer toggle
+function toggleMobDrawer(){
+    const drawer = document.getElementById('mobDrawer');
+    if(!drawer) return;
+    if(drawer.classList.contains('show')){
+        closeMobDrawer();
+    } else {
+        openMobDrawer();
+    }
 }
 
 // Mobile drawer
@@ -1741,7 +1761,7 @@ if(btnUseGpsModal) btnUseGpsModal.onclick=()=>{
 // ════════════════════════════════════════════
 const crosshair=document.getElementById('crosshair'), addBanner=document.getElementById('addBanner'), fab=document.getElementById('btnFab');
 
-fab.onclick=()=>{
+window.openAddMode = function(){
     if(addMode){cancelAddMode();return;}
     addMode=true; fab.classList.add('add-mode');
     fab.innerHTML=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>ยกเลิก`;
@@ -1749,6 +1769,7 @@ fab.onclick=()=>{
     document.getElementById('map').classList.add('add-cursor');
     closePlaceCard(); cancelMeasureMode();
 };
+fab.onclick = openAddMode;
 
 const btnCancelAdd=document.getElementById('btnCancelAdd');
 if(btnCancelAdd) btnCancelAdd.onclick=cancelAddMode;
