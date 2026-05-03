@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 
 # Auto backup - use relative paths for cross-platform compatibility
-import os
 script_dir = os.path.dirname(os.path.abspath(__file__))
 src = os.path.join(script_dir, 'all_locations.json')
 backup_dir = os.path.join(script_dir, 'backups')
