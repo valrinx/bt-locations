@@ -5165,13 +5165,9 @@
         };
 
         window.renderListView = function () {
-            const lp = document.getElementById('listPanel');
-            if (lp) {
-                lp.classList.add('open');
-                if (typeof window.renderListPanel === 'function') {
-                    const data = window.btDebug ? window.btDebug.filtered : [];
-                    window.renderListPanel(data);
-                }
+            const view = document.getElementById('view-list');
+            if (view && typeof window.renderListDirectory === 'function') {
+                window.renderListDirectory();
             }
         };
 
