@@ -1605,6 +1605,59 @@
             border: 1px solid var(--bd);
         }
 
+        .place-card-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 2px;
+            padding-top: 12px;
+            border-top: 1px solid var(--bd);
+        }
+
+        .place-card-info-item {
+            min-width: 0;
+            padding: 9px 10px;
+            border-radius: 8px;
+            background: oklch(17% 0.03 260);
+            border: 1px solid oklch(32% 0.045 260 / 0.72);
+        }
+
+        .place-card-info-item.wide {
+            grid-column: 1 / -1;
+        }
+
+        .place-card-info-k {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--tx3);
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .place-card-info-v {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            padding: 0;
+            background: transparent;
+            color: var(--tx);
+            font: inherit;
+            font-size: 12px;
+            font-weight: 750;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .place-card-info-v.mono {
+            color: oklch(82% 0.11 230);
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            cursor: pointer;
+        }
+
         .place-card-tags {
             display: flex;
             flex-wrap: wrap;
@@ -2637,14 +2690,15 @@
         .mob-drawer-body {
             overflow-y: auto;
             flex: 1;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
         }
 
         .mob-menu-section {
-            margin: 8px 6px 2px;
+            grid-column: 1 / -1;
+            margin: 8px 2px 0;
             color: var(--tx3);
             font-size: 10px;
             font-weight: 800;
@@ -2653,15 +2707,16 @@
 
         .mob-menu-item {
             width: 100%;
-            min-height: 56px;
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
+            min-height: 92px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 9px;
+            padding: 12px;
             border: 1px solid var(--bd);
             border-radius: 8px;
-            background: var(--s2);
+            background: linear-gradient(180deg, oklch(19% 0.036 260), oklch(16% 0.03 260));
             color: var(--tx);
             text-align: left;
             font: inherit;
@@ -2673,39 +2728,34 @@
         }
 
         .mob-menu-ico {
-            width: auto;
-            min-width: 34px;
-            height: 24px;
-            padding: 0 7px;
-            border-radius: 999px;
-            display: grid;
+            width: 34px;
+            height: 28px;
+            border-radius: 8px;
+            display: inline-grid;
             place-items: center;
-            background: var(--bl-d);
-            color: var(--bl);
-            font-size: 9px;
+            background: oklch(29% 0.08 258 / 0.72);
+            color: oklch(82% 0.14 248);
+            font-size: 10px;
             font-weight: 800;
-            grid-column: 2;
-            grid-row: 1;
+            letter-spacing: 0;
         }
 
-        .mob-menu-item span:last-child {
+        .mob-menu-item span:first-child {
             min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: 2px;
-            grid-column: 1;
-            grid-row: 1;
+            gap: 4px;
         }
 
         .mob-menu-item b {
-            font-size: 12px;
+            font-size: 13px;
             line-height: 1.2;
         }
 
         .mob-menu-item small {
             color: var(--tx3);
-            font-size: 10px;
-            line-height: 1.25;
+            font-size: 10.5px;
+            line-height: 1.35;
         }
 
         /* ════════════════════════════════════════
@@ -3177,16 +3227,40 @@
         }
 
         html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label {
-            display: block !important;
-            top: 21px;
-            max-width: 132px;
-            padding: 2px 4px;
-            background: rgba(8, 12, 18, 0.68);
-            font-size: 8px;
-            opacity: 0.9;
+            display: grid !important;
+            top: 20px;
+            min-width: 72px;
+            max-width: 128px;
+            padding: 4px 6px 5px;
+            gap: 1px;
+            background: oklch(13% 0.026 260 / 0.9);
+            border: 1px solid oklch(86% 0.07 230 / 0.28);
+            font-size: 9px;
+            opacity: 0.94;
             transform: translateX(-50%) translateY(0);
-            box-shadow: none;
+            box-shadow: 0 5px 14px rgba(0, 0, 0, 0.28);
             transition: none;
+        }
+
+        .bt-marker-name,
+        .bt-marker-area {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bt-marker-name {
+            color: oklch(98% 0.006 250);
+            font-weight: 850;
+            line-height: 1.1;
+        }
+
+        .bt-marker-area {
+            color: oklch(73% 0.11 220);
+            font-size: 8px;
+            font-weight: 750;
+            line-height: 1.05;
         }
 
         .bt-field-marker.is-favorite .bt-field-marker-core {
