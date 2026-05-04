@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.8.0';
+const APP_VERSION = 'v6.8.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1062,6 +1062,31 @@ function renderMarkers(filtered) {
         const _lvc=document.getElementById('lvCount');if(_lvc)_lvc.textContent=`${filtered.length} ตู้ใน ${districtCount} เขต`;
         
         return;
+    }
+    
+    // ── District selected mode: show individual markers for selected district ──
+    if (_selectedDistrict) {
+        // Keep showing individual markers for the selected district
+        // Don't switch to standard cluster mode
+        const districtFiltered = filtered.filter(l => (l.district || l.city || 'ไม่ระบุเขต') === _selectedDistrict);
+        if (districtFiltered.length > 0) {
+            // Remove other layers
+            map.removeLayer(markerCluster);
+            if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+            
+            // Update individual markers layer
+            if (!_individualMarkersLayer || !map.hasLayer(_individualMarkersLayer)) {
+                _showIndividualMarkers(districtFiltered);
+            }
+            
+            // Update stats
+            const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${districtFiltered.length} ตู้ใน ${_selectedDistrict}`;
+            const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
+            const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=districtFiltered.length;
+            const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=1;
+            
+            return;
+        }
     }
     
     // ── Standard cluster mode: เอาแค่ filtered markers เข้า cluster ──
