@@ -3142,6 +3142,11 @@
             will-change: transform;
         }
 
+        html.is-mobile-map .bt-field-marker {
+            transition: none;
+            will-change: auto;
+        }
+
         .bt-field-marker-core {
             width: 13px;
             height: 13px;
@@ -3159,6 +3164,16 @@
             border: 1px solid color-mix(in oklch, var(--marker-color), transparent 36%);
             background: radial-gradient(circle, color-mix(in oklch, var(--marker-color), transparent 68%) 0%, transparent 62%);
             opacity: 0.75;
+        }
+
+        html.is-mobile-map .bt-field-marker-core {
+            box-shadow: 0 0 0 1px oklch(12% 0.025 265 / 0.62);
+        }
+
+        html.is-mobile-map .bt-field-marker-ring,
+        html.is-mobile-map .bt-field-marker-label,
+        html.is-mobile-map #map.is-gesture-zooming .leaflet-tooltip {
+            display: none !important;
         }
 
         .bt-field-marker.is-favorite .bt-field-marker-core {
