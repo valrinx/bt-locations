@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.37';
+const APP_VERSION = 'v6.9.38';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5064,16 +5064,16 @@ function showConfirm(icon,title,text,cb,mergeCallback){
     const mergeBtn=document.getElementById('confirmMerge');
     const replaceBtn=document.getElementById('confirmOkReplace');
     if(importCards && normalFooter){
+        const cancelImport=document.getElementById('confirmCancelImport');
         if(mergeCallback){
             importCards.removeAttribute('hidden');
-            importCards.style.cssText='display:grid!important;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 8px;';
-            normalFooter.style.display='none';
+            normalFooter.setAttribute('hidden','');
             if(mergeBtn) mergeBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
             if(replaceBtn) replaceBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
+            if(cancelImport) cancelImport.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); };
         } else {
             importCards.setAttribute('hidden','');
-            importCards.style.cssText='';
-            normalFooter.style.display='';
+            normalFooter.removeAttribute('hidden');
             if(mergeBtn) mergeBtn.onclick=null;
             if(replaceBtn) replaceBtn.onclick=null;
         }
