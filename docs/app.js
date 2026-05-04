@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.45';
+const APP_VERSION = 'v6.6.46';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3526,22 +3526,32 @@ function openInfoPanel(mode){
         const _syncAgo=getToken()?` · ${Math.round((Date.now()-_lastSyncTime)/1000)}s ago`:'';
         const _darkLabel=document.body.classList.contains('light')?'🌙 Dark mode':'☀️ Light mode';
         const _menuGrid=(title,items)=>`
-            <div style="margin-bottom:16px;padding:0 16px;">
+            <div style="margin-bottom:16px;padding:0 16px;animation:menuSlideIn 0.3s ease-out;">
+                <style>
+                    @keyframes menuSlideIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+                    @keyframes btnPop{0%{transform:scale(1);}50%{transform:scale(0.96);}100%{transform:scale(1);}}
+                    .menu-btn{transition:all 0.2s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden;}
+                    .menu-btn:before{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(255,255,255,0.1) 0%,transparent 70%);opacity:0;transition:opacity 0.3s;}
+                    .menu-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15);background:var(--s3);}
+                    .menu-btn:hover:before{opacity:1;}
+                    .menu-btn:active{transform:scale(0.96) translateY(0);animation:btnPop 0.2s ease-out;}
+                </style>
                 <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px;padding-left:4px;">${title}</div>
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
                     ${items.filter(i=>i[0]!=='—').map(([icon,label,id,cls])=>`
-                        <button id="${id}" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--s2);border-radius:12px;border:none;cursor:pointer;color:var(--text);font-size:13px;text-align:left;transition:all 0.15s;${cls==='red'?'color:#ff6b6b;':''}">
-                            <span style="font-size:18px;flex-shrink:0;">${icon}</span>
+                        <button id="${id}" class="menu-btn" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--s2);border-radius:12px;border:none;cursor:pointer;color:var(--text);font-size:13px;text-align:left;${cls==='red'?'color:#ff6b6b;':''}">
+                            <span style="font-size:18px;flex-shrink:0;transition:transform 0.2s;">${icon}</span>
                             <span style="font-weight:500;flex:1;">${label}</span>
-                            <span style="font-size:12px;color:var(--text3);opacity:0.5;">›</span>
+                            <span style="font-size:12px;color:var(--text3);opacity:0.5;transition:transform 0.2s,opacity 0.2s;">›</span>
                         </button>
                     `).join('')}
                 </div>
             </div>`;
         body.innerHTML=`
             <div style="padding:20px 0;">
-                <div style="padding:0 20px 20px;display:flex;align-items:center;gap:14px;">
-                    <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--bl),#6366f1);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(91,143,255,0.3);">
+                <div style="padding:0 20px 20px;display:flex;align-items:center;gap:14px;animation:menuSlideIn 0.3s ease-out 0.1s both;">
+                    <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--bl),#6366f1);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(91,143,255,0.3);animation:iconPulse 2s ease-in-out infinite;">
+                        <style>@keyframes iconPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.02);}}</style>
                         <span style="font-size:26px;">📍</span>
                     </div>
                     <div>
