@@ -5149,13 +5149,14 @@
                                 </div>
                             `).join('')}
                             ${others.length > 0 ? `
-                                <div style="display:flex;align-items:center;gap:8px;padding-top:4px;border-top:0.5px solid var(--bd2);">
-                                    <div style="width:28px;height:28px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:11px;font-weight:600;">+</div>
+                                <div class="show-all-lists" style="display:flex;align-items:center;gap:8px;padding-top:4px;border-top:0.5px solid var(--bd2);cursor:pointer;background:var(--s2);border-radius:8px;padding:8px;margin-top:4px;" data-all-lists='${JSON.stringify(others.map(([n,c])=>({name:n,count:c,color:getColor(n)})))}'>
+                                    <div style="width:28px;height:28px;border-radius:8px;background:#8b5cf6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">+</div>
                                     <div style="flex:1;">
-                                        <div style="font-size:12px;color:var(--tx2);">อื่นๆ ${others.length} รายการ</div>
+                                        <div style="font-size:12px;color:var(--tx);font-weight:500;">อื่นๆ ${others.length} รายการ</div>
                                         <div style="font-size:10px;color:var(--tx3);">${othersCount} จุด · ${Math.round(othersCount/locs.length*100)}%</div>
                                     </div>
-                                    <div style="font-size:13px;font-weight:600;color:var(--tx2);">${othersCount}</div>
+                                    <div style="font-size:13px;font-weight:600;color:var(--bl);">${othersCount}</div>
+                                    <div style="font-size:12px;color:var(--tx3);">›</div>
                                 </div>
                             ` : ''}
                         </div>
@@ -5172,7 +5173,7 @@
                                         const dashOffset = -accumulated * 75;
                                         accumulated += percentage;
                                         return `<circle cx="50" cy="50" r="25" fill="none" stroke="${getColor(n)}" stroke-width="50" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}" />`;
-                                    }).join('') + (othersCount > 0 ? `<circle cx="50" cy="50" r="25" fill="none" stroke="var(--s3)" stroke-width="50" stroke-dasharray="${othersCount/total * 75} ${100 - othersCount/total * 75}" stroke-dashoffset="${-accumulated * 75}" />` : '');
+                                    }).join('') + (othersCount > 0 ? `<circle cx="50" cy="50" r="25" fill="none" stroke="#8b5cf6" stroke-width="50" stroke-dasharray="${othersCount/total * 75} ${100 - othersCount/total * 75}" stroke-dashoffset="${-accumulated * 75}" />` : '');
                                 })()}
                             </svg>
                             <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
@@ -5201,12 +5202,41 @@
                                 </div>
                             `).join('')}
                         </div>
-                        ${sortedCities.length > 10 ? `<div style="text-align:center;margin-top:8px;font-size:10px;color:var(--tx3);">+${sortedCities.length - 10} เขตอื่นๆ</div>` : ''}
+                        ${sortedCities.length > 10 ? `<div class="show-all-cities" style="text-align:center;margin-top:8px;font-size:10px;color:var(--tx3);cursor:pointer;padding:8px;background:var(--s2);border-radius:8px;" data-all-cities='${JSON.stringify(sortedCities.slice(10).map(([n,c])=>({name:n,count:c})))}'>+${sortedCities.length - 10} เขตอื่นๆ ›</div>` : ''}
                     </div>
                 ` : ''}
+                
+                <!-- Recent Items -->
+                <div style="background:var(--s1);border-radius:16px;padding:16px;margin-top:16px;border:0.5px solid var(--bd2);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--tx);">เพิ่มล่าสุด</div>
+                        <div style="font-size:10px;color:var(--tx3);">5 รายการล่าสุด</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        ${[...locs].reverse().slice(0, 5).map(l => `
+                            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--s2);border-radius:10px;">
+                                <div style="width:32px;height:32px;border-radius:8px;background:${getColor(l.list)};display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.name || l.list}</div>
+                                    <div style="font-size:10px;color:var(--tx3);">${l.list}${l.city ? ' · ' + l.city : ''}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
             `;
 
             svInner.innerHTML = html;
+            
+            // Add click handlers for show-all buttons
+            svInner.querySelector('.show-all-lists')?.addEventListener('click', function() {
+                const allLists = JSON.parse(this.dataset.allLists);
+                showAllListsModal(allLists);
+            });
+            svInner.querySelector('.show-all-cities')?.addEventListener('click', function() {
+                const allCities = JSON.parse(this.dataset.allCities);
+                showAllCitiesModal(allCities);
+            });
         };
 
         window.renderListView = function () {
@@ -5224,6 +5254,57 @@
             if (typeof window.closeInfo === 'function') window.closeInfo();
             if (view === 'list') window.renderListView();
             else if (view === 'stats') window.openInfoPanel?.('stats');
+        }
+
+        // Modal functions for showing all lists/cities
+        function showAllListsModal(allLists) {
+            const container = document.getElementById('mobSheetList');
+            const title = document.getElementById('mobSheetTitle');
+            if(!container || !title) return;
+            
+            title.innerText = `รายการทั้งหมด (${allLists.length})`;
+            container.innerHTML = `
+                <div style="max-height:60vh;overflow-y:auto;">
+                    ${allLists.map((item, i) => `
+                        <div style="display:flex;align-items:center;gap:10px;padding:12px;border-bottom:0.5px solid var(--bd2);">
+                            <div style="width:28px;height:28px;border-radius:8px;background:${item.color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">${i + 6}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:14px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+                                <div style="font-size:10px;color:var(--tx3);">${item.count} จุด</div>
+                            </div>
+                            <div style="font-size:13px;font-weight:600;color:var(--bl);">${item.count}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Add close button
+            const sheet = document.getElementById('mobSheet');
+            if(sheet) sheet.classList.add('open');
+        }
+
+        function showAllCitiesModal(allCities) {
+            const container = document.getElementById('mobSheetList');
+            const title = document.getElementById('mobSheetTitle');
+            if(!container || !title) return;
+            
+            title.innerText = `เขตทั้งหมด (${allCities.length})`;
+            container.innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;max-height:60vh;overflow-y:auto;padding:8px;">
+                    ${allCities.map((item) => `
+                        <div style="display:flex;align-items:center;gap:6px;padding:8px;background:var(--s2);border-radius:8px;">
+                            <div style="width:6px;height:6px;border-radius:50%;background:var(--bl);"></div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:11px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name}</div>
+                            </div>
+                            <div style="font-size:11px;font-weight:600;color:var(--bl);">${item.count}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            const sheet = document.getElementById('mobSheet');
+            if(sheet) sheet.classList.add('open');
         }
 
         // 3. Map Interactions and Patches
