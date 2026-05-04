@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.1';
+const APP_VERSION = 'v6.9.2';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4620,7 +4620,7 @@ function doDeleteAllLocations() {
 // ════════════════════════════════════════════
 // MULTI-FORMAT IMPORT (JSON/CSV/KML/GPX/GeoJSON)
 // ════════════════════════════════════════════
-function parseCSV(text) {
+function parseCSV(text, fallbackList = 'Imported') {
     const parseRow = (line) => {
         const out = [];
         let cur = '', quoted = false;
@@ -4655,11 +4655,11 @@ function parseCSV(text) {
             if(m){lat=parseFloat(m[1]);lng=parseFloat(m[2]);}
         }
         if(!lat||!lng||isNaN(lat)||isNaN(lng))continue;
-        result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||'Imported',city:cols[iCity]||'',note:cols[iNote]||''});
+        result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||fallbackList,city:cols[iCity]||'',note:cols[iNote]||''});
     }
     return result;
 }
-function parseKML(text) {
+function parseKML(text, fallbackList = 'KML Import') {
     const parser=new DOMParser();
     const doc=parser.parseFromString(text,'text/xml');
     const placemarks=doc.querySelectorAll('Placemark');
@@ -4672,11 +4672,11 @@ function parseKML(text) {
         if(parts.length<2)return;
         const lng=parseFloat(parts[0]),lat=parseFloat(parts[1]);
         if(isNaN(lat)||isNaN(lng))return;
-        result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:'KML Import',city:''});
+        result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:fallbackList,city:''});
     });
     return result;
 }
-function parseGPX(text) {
+function parseGPX(text, fallbackList = 'GPX Import') {
     const parser=new DOMParser();
     const doc=parser.parseFromString(text,'text/xml');
     const wpts=doc.querySelectorAll('wpt');
@@ -4686,17 +4686,17 @@ function parseGPX(text) {
         const lng=parseFloat(wpt.getAttribute('lon'));
         if(isNaN(lat)||isNaN(lng))return;
         const nameEl=wpt.querySelector('name');
-        result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:'GPX Import',city:''});
+        result.push({name:nameEl?nameEl.textContent.trim():'',lat,lng,list:fallbackList,city:''});
     });
     // Also parse trk > trkseg > trkpt
     doc.querySelectorAll('trkpt').forEach(pt=>{
         const lat=parseFloat(pt.getAttribute('lat'));
         const lng=parseFloat(pt.getAttribute('lon'));
-        if(!isNaN(lat)&&!isNaN(lng))result.push({name:'',lat,lng,list:'GPX Track',city:''});
+        if(!isNaN(lat)&&!isNaN(lng))result.push({name:'',lat,lng,list:fallbackList,city:''});
     });
     return result;
 }
-function parseGeoJSON(obj) {
+function parseGeoJSON(obj, fallbackList = 'GeoJSON Import') {
     const result=[];
     const features=obj.features||[obj];
     features.forEach(f=>{
@@ -4704,18 +4704,18 @@ function parseGeoJSON(obj) {
         const [lng,lat]=f.geometry.coordinates;
         if(isNaN(lat)||isNaN(lng))return;
         const props=f.properties||{};
-        result.push({name:props.name||props.title||'',lat,lng,list:props.list||'GeoJSON Import',city:props.city||''});
+        result.push({name:props.name||props.title||'',lat,lng,list:props.list||fallbackList,city:props.city||''});
     });
     return result;
 }
 
-function normalizeImportedLocations(items) {
+function normalizeImportedLocations(items, fallbackList = 'Imported') {
     return items.map((l, i) => normalizeLocation({
         id: l.id || Date.now() + i,
         name: l.name || l.title || l.label || '',
         lat: parseFloat(l.lat ?? l.latitude ?? l.y),
         lng: parseFloat(l.lng ?? l.lon ?? l.longitude ?? l.x),
-        list: l.list || l.category || l.group || 'Imported',
+        list: l.list || l.category || l.group || fallbackList,
         city: l.city || l.district || l.area || '',
         note: l.note || l.notes || l.desc || l.description || '',
         tags: Array.isArray(l.tags) ? l.tags : [],
@@ -4743,29 +4743,30 @@ function dedupeExactLocations(items) {
 document.getElementById('fileImport').onchange=e=>{
     const file=e.target.files[0]; if(!file)return;
     const ext=file.name.split('.').pop().toLowerCase();
+    const fallbackListName = (file.name.replace(/\.[^.]+$/, '') || 'Imported').trim();
     const reader=new FileReader();
     reader.onload=ev=>{
         const text=ev.target.result;
         let imp=[];
         try {
             if(ext==='csv'){
-                imp=parseCSV(text);
+                imp=parseCSV(text, fallbackListName);
             } else if(ext==='kml'){
-                imp=parseKML(text);
+                imp=parseKML(text, fallbackListName);
             } else if(ext==='gpx'){
-                imp=parseGPX(text);
+                imp=parseGPX(text, fallbackListName);
             } else if(ext==='geojson'){
                 const obj=JSON.parse(text);
-                imp=parseGeoJSON(obj);
+                imp=parseGeoJSON(obj, fallbackListName);
             } else {
                 const obj=JSON.parse(text);
-                if(Array.isArray(obj))imp=normalizeImportedLocations(obj);
-                else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj);
-                else if(obj.locations||obj.points||obj.data)imp=normalizeImportedLocations(obj.locations||obj.points||obj.data);
+                if(Array.isArray(obj))imp=obj;
+                else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj, fallbackListName);
+                else if(obj.locations||obj.points||obj.data)imp=obj.locations||obj.points||obj.data;
                 else {showToast('รูปแบบ JSON ไม่ถูกต้อง',true);return;}
             }
         }catch(err){showToast('ไฟล์ไม่ถูกต้อง: '+err.message,true);return;}
-        imp=normalizeImportedLocations(imp);
+        imp=normalizeImportedLocations(imp, fallbackListName);
         const deduped=dedupeExactLocations(imp);
         imp=deduped.unique;
         if(!imp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
