@@ -2398,7 +2398,7 @@ function _updateTooltipVisibility() {
         if (!tt) return;
         if (showPermanent && !tt.options.permanent) {
             marker.unbindTooltip();
-            marker.bindTooltip(tt._content || tt.getContent(), { permanent: true, direction: 'top', offset: [0, -10], className: 'bt-tooltip bt-tooltip-locked', opacity: 0.92 });
+            marker.bindTooltip(tt._content || tt.getContent(), { permanent: true, direction: 'top', offset: [0, -9], className: 'bt-tooltip bt-tooltip-locked', opacity: 0.88 });
             if (marker._map) marker.openTooltip();
         } else if (!showPermanent && tt.options.permanent) {
             marker.unbindTooltip();
@@ -4596,8 +4596,8 @@ rebuildIndexMap();
 update();
 
 const style=document.createElement('style');
-style.textContent=`.bt-tooltip{background:oklch(18% 0.028 258 / 0.78)!important;color:var(--tx)!important;border:1px solid oklch(72% 0.08 230 / 0.34)!important;border-radius:6px!important;padding:2px 7px!important;font-size:10px!important;font-weight:650!important;box-shadow:0 3px 10px oklch(5% 0.02 260 / 0.32)!important;white-space:nowrap!important;font-family:inherit!important;}
-.bt-tooltip.bt-tooltip-locked{background:oklch(20% 0.032 258 / 0.66)!important;border-color:oklch(74% 0.11 220 / 0.42)!important;box-shadow:0 0 0 1px oklch(10% 0.025 260 / 0.35),0 4px 12px oklch(5% 0.02 260 / 0.24)!important;color:oklch(94% 0.012 250)!important;}
+style.textContent=`.bt-tooltip{background:rgba(9,13,20,0.54)!important;color:oklch(96% 0.008 250)!important;border:0!important;border-radius:4px!important;padding:2px 5px!important;font-size:9px!important;font-weight:700!important;line-height:1.1!important;box-shadow:0 1px 4px rgba(0,0,0,0.22)!important;text-shadow:0 1px 1px rgba(0,0,0,0.75)!important;white-space:nowrap!important;font-family:inherit!important;}
+.bt-tooltip.bt-tooltip-locked{background:rgba(7,12,18,0.48)!important;box-shadow:0 1px 3px rgba(0,0,0,0.2)!important;color:oklch(97% 0.008 250)!important;}
 .bt-field-marker { transition: transform 180ms cubic-bezier(0.22,1,0.36,1), filter 180ms ease !important; }
 .bt-field-marker:hover { transform: scale(1.18) !important; }
 .marker-cluster { transition: transform 180ms cubic-bezier(0.22,1,0.36,1), opacity 160ms ease !important; }
