@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.47';
+const APP_VERSION = 'v6.9.48';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5066,28 +5066,27 @@ function showConfirm(icon,title,text,cb,mergeCallback){
     if(zone){
         if(mergeCallback){
             zone.innerHTML=`
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 8px;">
-                    <button id="_cfMerge" class="action-card" style="border-color:rgba(46,204,144,0.25);">
-                        <div class="ac-title">Merge</div>
-                        <div class="ac-desc">เพิ่มเฉพาะจุดใหม่</div>
-                        <span class="ac-chip" style="background:var(--gn-d);color:var(--gn);">MERGE</span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 16px 6px;">
+                    <button id="_cfMerge" class="modal-btn" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(46,204,144,0.12);border:1px solid rgba(46,204,144,0.35);color:var(--gn);font-weight:600;padding:11px 0;border-radius:10px;">
+                        <i class="fa-solid fa-code-merge" style="font-size:12px;"></i> Merge
                     </button>
-                    <button id="_cfReplace" class="action-card" style="border-color:rgba(91,143,255,0.25);">
-                        <div class="ac-title">Replace</div>
-                        <div class="ac-desc">แทนที่ข้อมูลทั้งหมด</div>
-                        <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">REPLACE</span>
+                    <button id="_cfReplace" class="modal-btn modal-btn-save" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:11px 0;border-radius:10px;font-weight:600;">
+                        <i class="fa-solid fa-right-left" style="font-size:12px;"></i> Replace
                     </button>
                 </div>
-                <div style="display:flex;gap:8px;padding:10px 14px 14px;"><button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;">ยกเลิก</button></div>`;
+                <div style="display:flex;padding:8px 16px 16px;">
+                    <button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;border-radius:10px;">ยกเลิก</button>
+                </div>`;
             document.getElementById('_cfMerge').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
             document.getElementById('_cfReplace').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
             document.getElementById('_cfCancel').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); };
         } else {
-            const okLabel=icon==='delete'?'ยืนยันลบ':'ยืนยัน';
-            const okClass=icon==='delete'?'modal-btn modal-btn-save btn-danger':'modal-btn modal-btn-save';
-            zone.innerHTML=`<div style="display:flex;gap:8px;padding:10px 14px 14px;">
-                <button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;">ยกเลิก</button>
-                <button id="_cfOk" class="${okClass}" style="flex:1;">${okLabel}</button>
+            const isDelete=icon==='delete'||icon==='🗑️'||icon==='🗑';
+            const okLabel=isDelete?'<i class="fa-solid fa-trash" style="font-size:11px;"></i> ลบ':'<i class="fa-solid fa-check" style="font-size:11px;"></i> ยืนยัน';
+            const okClass=isDelete?'modal-btn modal-btn-save btn-danger':'modal-btn modal-btn-save';
+            zone.innerHTML=`<div style="display:flex;gap:8px;padding:8px 16px 16px;">
+                <button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;border-radius:10px;">ยกเลิก</button>
+                <button id="_cfOk" class="${okClass}" style="flex:1;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:7px;font-weight:600;">${okLabel}</button>
             </div>`;
             document.getElementById('_cfCancel').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); };
             document.getElementById('_cfOk').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
