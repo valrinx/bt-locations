@@ -3036,18 +3036,30 @@
                 overflow: hidden;
             }
 
-            /* topbar */
-            .topbar {
+            .header-group {
                 position: fixed !important;
                 top: 0;
                 left: 0;
                 right: 0;
-                height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
-                padding: env(safe-area-inset-top, 0px) 10px 0 10px;
-                gap: 8px;
-                z-index: 2010; /* Above chips */
+                z-index: 2000;
+                display: flex;
+                flex-direction: column;
                 background: var(--s1);
+                padding-top: env(safe-area-inset-top, 0px);
                 box-shadow: 0 1px 10px rgba(0,0,0,0.3);
+                backface-visibility: hidden;
+                transform: translate3d(0,0,0);
+            }
+
+            /* topbar */
+            .topbar {
+                position: relative !important;
+                height: var(--topbar-h);
+                padding: 0 10px;
+                gap: 8px;
+                z-index: 10;
+                background: none;
+                box-shadow: none;
             }
 
             .tb-left {
@@ -3184,14 +3196,14 @@
             /* chips row */
             .mob-chips-scroll-container {
                 display: flex !important;
-                position: fixed;
-                top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+                position: relative !important;
+                top: 0 !important;
                 left: 0;
                 right: 0;
-                z-index: 2000; /* Higher than map markers */
+                z-index: 5;
                 height: var(--chips-h);
-                background: var(--s1);
-                border-bottom: 0.5px solid var(--bd);
+                background: none;
+                border-bottom: none;
                 overflow-x: auto;
                 overflow-y: visible;
                 scrollbar-width: none;
@@ -3482,43 +3494,60 @@
 ════════════════════════════════════════ -->
     <div class="app" id="app" style="display:none;">
 
-        <!-- ── TOPBAR ── -->
-        <div class="topbar">
-            <div class="tb-left" id="tbLeft">
-                <div class="logo-wrapper" onclick="location.reload()">
-                    <div class="logo-main">BT</div>
-                    <div class="logo-right">
-                        <div class="logo-sub-row">
-                            <span class="logo-sub">LOCATIONS</span>
-                            <div class="sync-dot-mini" id="topSyncDotMini"></div>
+        <!-- ── HEADER GROUP ── -->
+        <div class="header-group" id="headerGroup">
+            <!-- ── TOPBAR ── -->
+            <div class="topbar">
+                <div class="tb-left" id="tbLeft">
+                    <div class="logo-wrapper" onclick="location.reload()">
+                        <div class="logo-main">BT</div>
+                        <div class="logo-right">
+                            <div class="logo-sub-row">
+                                <span class="logo-sub">LOCATIONS</span>
+                                <div class="sync-dot-mini" id="topSyncDotMini"></div>
+                            </div>
+                            <div class="ver-info" id="dynamicVerInfo"></div>
                         </div>
-                        <div class="ver-info" id="dynamicVerInfo"></div>
                     </div>
                 </div>
-            </div>
-            <div class="tb-center">
-                <div class="search-box">
-                    <span class="si">⌕</span>
-                    <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
-                    <span class="kbd">⌘K</span>
+                <div class="tb-center">
+                    <div class="search-box">
+                        <span class="si">⌕</span>
+                        <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+                        <span class="kbd">⌘K</span>
+                    </div>
+                </div>
+                <div class="tb-right">
+                    <div class="live-p" id="topSyncBadge">
+                        <div class="live-dot" id="topSyncDot"></div>
+                        <span id="topSyncText">Live</span>
+                    </div>
+                    <div class="pill-badge" id="totalBadge">0 จุด</div>
+                    <div class="avs">
+                        <div class="av" id="av1" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
+                        <div class="av" id="av2"
+                            style="background:linear-gradient(135deg,#f5a623,#ff5c5c);margin-left:-5px;">A</div>
+                        <div class="av" id="av3"
+                            style="background:linear-gradient(135deg,#a78bfa,#ff7f5c);margin-left:-5px;">K</div>
+                    </div>
+                    <div class="tb-sep"></div>
+                    <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
+                    <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
                 </div>
             </div>
-            <div class="tb-right">
-                <div class="live-p" id="topSyncBadge">
-                    <div class="live-dot" id="topSyncDot"></div>
-                    <span id="topSyncText">Live</span>
+
+            <!-- ── MOBILE SEARCH + CHIPS ROW ── -->
+            <div class="mob-chips-scroll-container">
+                <div class="mob-chips-row" id="mobChipsRow">
+                    <div class="mob-search-wrap" id="mobSearchRow">
+                        <span class="mob-search-icon">⌕</span>
+                        <input type="text" id="mobSearchInput" class="mob-search-input" placeholder="ค้นหาสถานที่..."
+                            autocomplete="off">
+                    </div>
+                    <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
+                    <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
+                    <button class="chip" id="chipList">&#9660; จัดการรายการ</button>
                 </div>
-                <div class="pill-badge" id="totalBadge">0 จุด</div>
-                <div class="avs">
-                    <div class="av" id="av1" style="background:linear-gradient(135deg,#5b8fff,#2ecc90);">V</div>
-                    <div class="av" id="av2"
-                        style="background:linear-gradient(135deg,#f5a623,#ff5c5c);margin-left:-5px;">A</div>
-                    <div class="av" id="av3"
-                        style="background:linear-gradient(135deg,#a78bfa,#ff7f5c);margin-left:-5px;">K</div>
-                </div>
-                <div class="tb-sep"></div>
-                <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
-                <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
             </div>
         </div>
 
@@ -3745,20 +3774,6 @@
             </div><!-- /main -->
         </div><!-- /body -->
 
-        <!-- ── MOBILE SEARCH + CHIPS ROW ── -->
-        <div class="mob-chips-scroll-container">
-            <div class="mob-chips-row" id="mobChipsRow">
-                <!-- Mobile search bar -->
-                <div class="mob-search-wrap" id="mobSearchRow">
-                    <span class="mob-search-icon">⌕</span>
-                    <input type="text" id="mobSearchInput" class="mob-search-input" placeholder="ค้นหาสถานที่..."
-                        autocomplete="off">
-                </div>
-                <!-- Filter chips -->
-                <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
-                <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
-                <button class="chip" id="chipList" onclick="openListOptionsSheet()">&#9660; จัดการรายการ</button>
-            </div>
         </div>
 
         <!-- ── MOBILE NAV ── -->
