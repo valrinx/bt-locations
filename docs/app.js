@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.7.5';
+const APP_VERSION = 'v6.8.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -10,6 +10,14 @@ let manualRouteMode = false;
 let manualRoutePoints = []; // Array of selected points {lat, lng, name}
 let manualRouteMarkers = [];
 const STORAGE_KEY = 'bt_locations_data';
+
+// ════════════════════════════════════════════
+// HIERARCHICAL CLUSTERING (District → List → Markers)
+// ════════════════════════════════════════════
+let _districtClusterMode = true; // Enable district-based clustering
+let _selectedDistrict = null; // Currently selected district for zoom
+let _districtClusterGroup = null; // Custom cluster layer
+let _individualMarkersLayer = null; // Layer for individual markers when zoomed in
 
 // Helper: safely attach onclick handler (avoids null errors)
 function onClick(id, handler) {
@@ -995,12 +1003,17 @@ function _heatZoom(){ if(heatmapMode){_lastFilteredKey=null;update();} }
 
 function renderMarkers(filtered) {
     // Hide normal markers in route mode to avoid overlap with route stops
-    if (routeMode) { if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster); return; }
+    if (routeMode) { 
+        if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+        if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+        return; 
+    }
     // build cache ถ้าตัวแรกหรือ locations เปลี่ยน
     if (_markerCache.size === 0 || _clusterDirty) _buildMarkerCache();
 
     const filteredIdxSet = new Set(filtered.map(l => getLocIndex(l)));
-    const key = [...filteredIdxSet].sort().join(',') + '|' + heatmapMode;
+    const zoom = map.getZoom();
+    const key = [...filteredIdxSet].sort().join(',') + '|' + heatmapMode + '|' + zoom + '|' + _selectedDistrict;
     if (key === _lastFilteredKey) return;
     _lastFilteredKey = key;
 
@@ -1008,6 +1021,8 @@ function renderMarkers(filtered) {
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
     if (heatmapMode) {
         if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+        if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+        if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         const z=map.getZoom();
         const hr=Math.max(8,Math.min(40, z<=10?10:z<=12?18:z<=14?28:40));
         const hb=Math.round(hr*0.6);
@@ -1020,12 +1035,43 @@ function renderMarkers(filtered) {
         return;
     }
 
-    // ── cluster mode: เอาแค่ filtered markers เข้า cluster ──
+    // ── Hierarchical District Clustering (when zoomed out and no district selected) ──
+    if (_districtClusterMode && zoom <= 13 && !_selectedDistrict) {
+        // Remove old layers
+        map.removeLayer(markerCluster);
+        if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
+        if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+        
+        // Create district clusters
+        const districtGroups = _createDistrictClusters(filtered);
+        _districtClusterGroup = L.layerGroup();
+        
+        Object.entries(districtGroups).forEach(([district, data]) => {
+            const marker = _createDistrictClusterMarker(district, data);
+            _districtClusterGroup.addLayer(marker);
+        });
+        
+        map.addLayer(_districtClusterGroup);
+        
+        // Update stats
+        const districtCount = Object.keys(districtGroups).length;
+        const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${filtered.length} ตู้ · ${districtCount} เขต`;
+        const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
+        const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=filtered.length;
+        const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=districtCount;
+        const _lvc=document.getElementById('lvCount');if(_lvc)_lvc.textContent=`${filtered.length} ตู้ใน ${districtCount} เขต`;
+        
+        return;
+    }
+    
+    // ── Standard cluster mode: เอาแค่ filtered markers เข้า cluster ──
+    // Remove district clusters if present
+    if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+    
     // ถ้า filtered = ทั้งหมด ไม่ต้อง diff — addLayers ใหม่เลย
     map.removeLayer(markerCluster);
     markerCluster = createClusterGroup();
 
-    const zoom = map.getZoom();
     const MAX_MARKERS = _mobile
         ? (zoom >= 15 ? 600 : zoom >= 13 ? 400 : 250)
         : (zoom >= 15 ? 2000 : zoom >= 13 ? 1200 : 600);
@@ -1084,6 +1130,219 @@ function update() {
     _renderSidebar();
     _updateMobChips(); // Sync mobile chip state
 }
+
+// ════════════════════════════════════════════
+// HIERARCHICAL CLUSTERING FUNCTIONS
+// ════════════════════════════════════════════
+
+// Group locations by district and create custom cluster markers
+function _createDistrictClusters(filtered) {
+    const groups = {};
+    filtered.forEach(loc => {
+        const district = loc.district || loc.city || 'ไม่ระบุเขต';
+        if (!groups[district]) {
+            groups[district] = { locations: [], lists: new Set(), bounds: L.latLngBounds() };
+        }
+        groups[district].locations.push(loc);
+        groups[district].lists.add(loc.list || 'ไม่ระบุ');
+        groups[district].bounds.extend([loc.lat, loc.lng]);
+    });
+    return groups;
+}
+
+// Create district cluster marker
+function _createDistrictClusterMarker(district, data) {
+    const count = data.locations.length;
+    const center = data.bounds.getCenter();
+    const lists = Array.from(data.lists);
+    
+    // Create marker with count display
+    const size = Math.min(70, Math.max(40, 40 + Math.sqrt(count) * 4));
+    const icon = L.divIcon({
+        html: `
+            <div style="width:${size}px;height:${size}px;background:linear-gradient(135deg, #5b8fff, #4a7de4);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 20px rgba(91,143,255,0.4);border:3px solid rgba(255,255,255,0.3);cursor:pointer;transition:transform 0.2s;">
+                <span style="font-size:14px;font-weight:700;">${count}</span>
+                <span style="font-size:9px;opacity:0.9;">ตู้</span>
+            </div>
+        `,
+        className: 'district-cluster-marker',
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2]
+    });
+    
+    const marker = L.marker(center, { icon: icon });
+    marker._district = district;
+    marker._districtData = data;
+    
+    // Click to show popup with lists
+    marker.on('click', () => _showDistrictPopup(district, data, marker));
+    
+    // Hover tooltip showing lists
+    marker.bindTooltip(`<b>${district}</b><br>${lists.slice(0, 3).join(', ')}${lists.length > 3 ? ` +${lists.length - 3}` : ''}`, {
+        direction: 'top',
+        offset: [0, -size/2],
+        className: 'district-tooltip'
+    });
+    
+    return marker;
+}
+
+// Show popup with district info
+function _showDistrictPopup(district, data, marker) {
+    const lists = Array.from(data.lists);
+    const listCounts = {};
+    data.locations.forEach(l => {
+        const list = l.list || 'ไม่ระบุ';
+        listCounts[list] = (listCounts[list] || 0) + 1;
+    });
+    
+    // Sort lists by count
+    const sortedLists = Object.entries(listCounts).sort((a, b) => b[1] - a[1]);
+    
+    const popupContent = `
+        <div style="min-width:220px;max-width:280px;">
+            <div style="font-size:16px;font-weight:700;color:#5b8fff;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--gn);">
+                📍 ${district}
+            </div>
+            <div style="font-size:12px;color:var(--tx3);margin-bottom:10px;">
+                ทั้งหมด ${data.locations.length} ตู้ · ${lists.length} รายการ
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto;">
+                ${sortedLists.map(([list, count]) => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--s2);border-radius:8px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background='var(--s2)'" onclick="_zoomToDistrictList('${district}', '${list.replace(/'/g, "\\'")}')">
+                        <span style="font-size:13px;color:var(--tx);font-weight:500;">${list}</span>
+                        <span style="font-size:12px;color:var(--bl);background:var(--bl-d);padding:2px 8px;border-radius:10px;font-weight:600;">${count}</span>
+                    </div>
+                `).join('')}
+            </div>
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--gn);display:flex;gap:8px;">
+                <button onclick="_zoomToDistrict('${district.replace(/'/g, "\\'")}')" style="flex:1;padding:8px 12px;background:var(--bl);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;">
+                    🔍 ซูมเข้า
+                </button>
+                <button onclick="_showNearbyBoxes('${district.replace(/'/g, "\\'")}')" style="flex:1;padding:8px 12px;background:var(--s3);color:var(--tx);border:none;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;">
+                    📦 ดูตู้ใกล้
+                </button>
+            </div>
+        </div>
+    `;
+    
+    marker.bindPopup(popupContent, {
+        className: 'district-popup',
+        closeButton: true,
+        minWidth: 240
+    }).openPopup();
+}
+
+// Zoom to district and show individual markers
+function _zoomToDistrict(district) {
+    const filtered = getFiltered().filter(l => (l.district || l.city || 'ไม่ระบุเขต') === district);
+    if (filtered.length === 0) return;
+    
+    _selectedDistrict = district;
+    
+    // Calculate bounds
+    const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+    
+    // Switch to individual marker view
+    _showIndividualMarkers(filtered);
+    
+    showToast(`🔍 ${district}: ${filtered.length} ตู้`);
+}
+
+// Zoom to specific list within district
+function _zoomToDistrictList(district, list) {
+    const filtered = getFiltered().filter(l => 
+        (l.district || l.city || 'ไม่ระบุเขต') === district && 
+        (l.list || 'ไม่ระบุ') === list
+    );
+    if (filtered.length === 0) return;
+    
+    const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+    
+    _showIndividualMarkers(filtered);
+    showToast(`🔍 ${list}: ${filtered.length} ตู้`);
+}
+
+// Show individual markers for filtered data
+function _showIndividualMarkers(filtered) {
+    // Remove district clusters
+    if (_districtClusterGroup) {
+        map.removeLayer(_districtClusterGroup);
+    }
+    
+    // Clear individual layer
+    if (_individualMarkersLayer) {
+        _individualMarkersLayer.clearLayers();
+    } else {
+        _individualMarkersLayer = L.layerGroup();
+    }
+    
+    // Create individual markers
+    filtered.forEach(loc => {
+        const color = getColor(loc.list);
+        const marker = L.circleMarker([loc.lat, loc.lng], {
+            radius: 8,
+            fillColor: color,
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+        });
+        
+        marker.bindTooltip(loc.name || loc.list, {
+            permanent: false,
+            direction: 'top',
+            className: 'bt-tooltip'
+        });
+        
+        marker.on('click', () => {
+            const idx = getLocIndex(loc);
+            showLocationDetails(loc, idx);
+        });
+        
+        _individualMarkersLayer.addLayer(marker);
+    });
+    
+    _individualMarkersLayer.addTo(map);
+}
+
+// Show nearby boxes within radius
+function _showNearbyBoxes(district) {
+    const filtered = getFiltered().filter(l => (l.district || l.city || 'ไม่ระบุเขต') === district);
+    if (filtered.length === 0) return;
+    
+    // Get center of district
+    const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
+    const center = bounds.getCenter();
+    
+    // Find boxes within 2km
+    const nearby = filtered.filter(l => {
+        const dist = haversine(center.lat, center.lng, l.lat, l.lng);
+        return dist <= 2; // 2km radius
+    });
+    
+    _showIndividualMarkers(nearby);
+    map.fitBounds(L.latLngBounds(nearby.map(l => [l.lat, l.lng])), { padding: [50, 50] });
+    
+    showToast(`📦 ${nearby.length} ตู้ ในรัศมี 2 กม.`);
+}
+
+// Reset to district cluster view
+function _resetToDistrictView() {
+    _selectedDistrict = null;
+    if (_individualMarkersLayer) {
+        map.removeLayer(_individualMarkersLayer);
+        _individualMarkersLayer = null;
+    }
+    update(); // Re-render clusters
+}
+
+// Expose functions for onclick handlers
+window._zoomToDistrict = _zoomToDistrict;
+window._zoomToDistrictList = _zoomToDistrictList;
+window._showNearbyBoxes = _showNearbyBoxes;
 
 // ════════════════════════════════════════════
 // DATA LOADING - Fast init, background fetch
@@ -2180,6 +2439,17 @@ function _updateTooltipVisibility() {
 map.on('zoomend', () => {
     _updateTooltipVisibility();
     _lastFilteredKey = null; // force re-render with new marker limit
+    
+    // Reset district view when zooming out
+    const zoom = map.getZoom();
+    if (_selectedDistrict && zoom <= 13) {
+        _selectedDistrict = null;
+        if (_individualMarkersLayer) {
+            map.removeLayer(_individualMarkersLayer);
+            _individualMarkersLayer = null;
+        }
+    }
+    
     update();
 });
 
@@ -4235,6 +4505,7 @@ function _initMapEvents() {
 }
 window.showPlaceCard=showPlaceCard;
 window.closeListPanel=closeListPanel;
+window._resetToDistrictView=_resetToDistrictView;
 
 // Keyboard shortcuts: Undo/Redo + ESC
 document.addEventListener('keydown',(e)=>{
