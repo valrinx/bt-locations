@@ -415,8 +415,8 @@ document.getElementById('search')?.addEventListener('input', debounce(()=>{
 onClick('btnAddLocation', () => openAddMode());
 
 // Export/Import buttons
-onClick('btnUpload', () => doExport());
-onClick('btnImportData', () => openImportModal());
+onClick('btnUpload', () => protectedDataAction('export'));
+onClick('btnImportData', () => protectedDataAction('importModal'));
 
 // Import modal functions
 window.openImportModal = function(){
@@ -464,12 +464,15 @@ window.doImportData = async function(){
     }
     
     if(data && data.length > 0){
-        locations = data;
-        invalidateMarkerCache();
+        data = normalizeImportedLocations(data);
+        const deduped = dedupeExactLocations(data);
+        pushUndo();
+        locations = deduped.unique;
+        saveLocations();
+        invalidateCache();
         update();
-        saveToStorage(); // Save to localStorage
         closeImportModal();
-        showToast(`✅ นำเข้า ${data.length} จุดสำเร็จ`, false, true);
+        showToast(`✅ นำเข้า ${locations.length} จุด${deduped.removed ? ` · ตัดซ้ำ ${deduped.removed}` : ''}`, false, true);
     } else {
         showToast('❌ ไม่พบข้อมูลที่ถูกต้อง', true);
     }
@@ -4488,31 +4491,88 @@ function fallbackExport(jsonStr, filename) {
     });
 }
 
+const DATA_ACTION_CODE = '125355';
+function confirmDataAction(label, callback) {
+    const code = prompt(`กรอกรหัสยืนยันสำหรับ ${label}`);
+    if (code === null) return false;
+    if (code !== DATA_ACTION_CODE) {
+        showToast('รหัสยืนยันไม่ถูกต้อง', true);
+        return false;
+    }
+    callback();
+    return true;
+}
+
+function protectedDataAction(action) {
+    if (action === 'export') {
+        return confirmDataAction('Export', doExport);
+    }
+    if (action === 'import') {
+        return confirmDataAction('Import', () => document.getElementById('fileImport').click());
+    }
+    if (action === 'importModal') {
+        return confirmDataAction('Import', openImportModal);
+    }
+    if (action === 'deleteAll') {
+        return confirmDataAction('ลบข้อมูลทั้งหมด', () => doDeleteAllLocations());
+    }
+}
+
+function doDeleteAllLocations() {
+    if (!locations.length) { showToast('ไม่มีข้อมูลให้ลบ'); return; }
+    showConfirm('🗑️', `ลบทั้งหมด ${locations.length} จุด?`, 'การลบนี้จะบันทึกไว้ใน Undo เพื่อกู้คืนได้ทันที', () => {
+        pushUndo();
+        const toDelete = [...locations];
+        locations = [];
+        saveLocations();
+        invalidateCache();
+        closePlaceCard();
+        update();
+        addChangelogEntry('delete', { name: 'ข้อมูลทั้งหมด', lat: 0, lng: 0, list: '', city: '' }, { count: { old: toDelete.length, new: 0 } });
+        showToast(`ลบทั้งหมด ${toDelete.length} จุดแล้ว กด Undo เพื่อกู้คืน`, true);
+        if (_sbLoaded) toDelete.forEach(l => sbDelete(l));
+    });
+}
+
 // ════════════════════════════════════════════
 // MULTI-FORMAT IMPORT (JSON/CSV/KML/GPX/GeoJSON)
 // ════════════════════════════════════════════
 function parseCSV(text) {
-    const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
+    const parseRow = (line) => {
+        const out = [];
+        let cur = '', quoted = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; continue; }
+            if (ch === '"') { quoted = !quoted; continue; }
+            if (ch === ',' && !quoted) { out.push(cur.trim()); cur = ''; continue; }
+            cur += ch;
+        }
+        out.push(cur.trim());
+        return out;
+    };
+    const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
     if(lines.length<2)return[];
-    const header=lines[0].split(',').map(h=>h.trim().toLowerCase());
-    const iLat=header.findIndex(h=>h==='lat'||h==='latitude');
-    const iLng=header.findIndex(h=>h==='lng'||h==='lon'||h==='longitude');
-    const iName=header.findIndex(h=>h==='name'||h==='title');
-    const iList=header.findIndex(h=>h==='list'||h==='category'||h==='group');
-    const iCity=header.findIndex(h=>h==='city'||h==='district');
-    const iUrl=header.findIndex(h=>h==='url');
+    const header=parseRow(lines[0]).map(h=>h.trim().toLowerCase());
+    const iLat=header.findIndex(h=>['lat','latitude','ละติจูด'].includes(h));
+    const iLng=header.findIndex(h=>['lng','lon','longitude','long','ลองจิจูด'].includes(h));
+    const iName=header.findIndex(h=>['name','title','ชื่อ','ชื่อสถานที่','placename'].includes(h));
+    const iList=header.findIndex(h=>['list','category','group','รายการ','หมวดหมู่'].includes(h));
+    const iCity=header.findIndex(h=>['city','district','area','เขต','อำเภอ'].includes(h));
+    const iNote=header.findIndex(h=>['note','notes','desc','description','หมายเหตุ'].includes(h));
+    const iUrl=header.findIndex(h=>['url','link','google maps url','maps url'].includes(h));
     if(iLat<0&&iLng<0&&iUrl<0)return[];
     const result=[];
     for(let i=1;i<lines.length;i++){
-        const cols=lines[i].split(',').map(c=>c.trim());
+        const cols=parseRow(lines[i]);
         let lat,lng;
         if(iLat>=0&&iLng>=0){lat=parseFloat(cols[iLat]);lng=parseFloat(cols[iLng]);}
         else if(iUrl>=0){
-            const m=cols[iUrl].match(/[/@]([-\d.]+),([-\d.]+)/);
+            const m=(cols[iUrl]||'').match(/[/@?=]([-\d.]+),([-\d.]+)/);
             if(m){lat=parseFloat(m[1]);lng=parseFloat(m[2]);}
         }
         if(!lat||!lng||isNaN(lat)||isNaN(lng))continue;
-        result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||'Imported',city:cols[iCity]||''});
+        result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||'Imported',city:cols[iCity]||'',note:cols[iNote]||''});
     }
     return result;
 }
@@ -4566,6 +4626,37 @@ function parseGeoJSON(obj) {
     return result;
 }
 
+function normalizeImportedLocations(items) {
+    return items.map((l, i) => normalizeLocation({
+        id: l.id || Date.now() + i,
+        name: l.name || l.title || l.label || '',
+        lat: parseFloat(l.lat ?? l.latitude ?? l.y),
+        lng: parseFloat(l.lng ?? l.lon ?? l.longitude ?? l.x),
+        list: l.list || l.category || l.group || 'Imported',
+        city: l.city || l.district || l.area || '',
+        note: l.note || l.notes || l.desc || l.description || '',
+        tags: Array.isArray(l.tags) ? l.tags : [],
+        photo: l.photo || ''
+    })).filter(l => Number.isFinite(l.lat) && Number.isFinite(l.lng));
+}
+
+function exactCoordKey(loc) {
+    return `${String(loc.lat).trim()},${String(loc.lng).trim()}`;
+}
+
+function dedupeExactLocations(items) {
+    const seen = new Set();
+    const unique = [];
+    let removed = 0;
+    items.forEach(loc => {
+        const key = exactCoordKey(loc);
+        if (seen.has(key)) { removed++; return; }
+        seen.add(key);
+        unique.push(loc);
+    });
+    return { unique, removed };
+}
+
 document.getElementById('fileImport').onchange=e=>{
     const file=e.target.files[0]; if(!file)return;
     const ext=file.name.split('.').pop().toLowerCase();
@@ -4585,13 +4676,18 @@ document.getElementById('fileImport').onchange=e=>{
                 imp=parseGeoJSON(obj);
             } else {
                 const obj=JSON.parse(text);
-                if(Array.isArray(obj))imp=obj.filter(l=>l&&typeof l.lat==='number'&&typeof l.lng==='number'&&!isNaN(l.lat)&&!isNaN(l.lng)).map(l=>({name:l.name||'',lat:l.lat,lng:l.lng,list:l.list||l.category||l.group||'Imported',city:l.city||l.district||'',note:l.note||'',...(l.tags?{tags:l.tags}:{})}));
+                if(Array.isArray(obj))imp=normalizeImportedLocations(obj);
                 else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj);
+                else if(obj.locations||obj.points||obj.data)imp=normalizeImportedLocations(obj.locations||obj.points||obj.data);
                 else {showToast('รูปแบบ JSON ไม่ถูกต้อง',true);return;}
             }
         }catch(err){showToast('ไฟล์ไม่ถูกต้อง: '+err.message,true);return;}
+        imp=normalizeImportedLocations(imp);
+        const deduped=dedupeExactLocations(imp);
+        imp=deduped.unique;
         if(!imp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
-        showConfirm('📥',`Import ${imp.length} จุด?`,`จากไฟล์ ${file.name} (.${ext})\nเลือก Merge หรือ Replace`,()=>{
+        const duplicateText=deduped.removed?`\nคัดจุดซ้ำพิกัดเป๊ะๆ ออก ${deduped.removed} จุด`:'';
+        showConfirm('📥',`Import ${imp.length} จุด?`,`จากไฟล์ ${file.name} (.${ext})${duplicateText}\nเลือก Merge หรือ Replace`,()=>{
             pushUndo();locations=imp;saveLocations();invalidateCache();update();showToast(`Replace: ${imp.length} จุด`,false,true);
         });
         // Add merge button to confirm dialog
@@ -4605,10 +4701,10 @@ document.getElementById('fileImport').onchange=e=>{
             mergeBtn.textContent='🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
             mergeBtn.onclick=()=>{
                 pushUndo();
-                const existing=new Set(locations.map(l=>l.lat.toFixed(5)+','+l.lng.toFixed(5)));
+                const existing=new Set(locations.map(exactCoordKey));
                 let added=0;
                 imp.forEach(loc=>{
-                    const key=loc.lat.toFixed(5)+','+loc.lng.toFixed(5);
+                    const key=exactCoordKey(loc);
                     if(!existing.has(key)){locations.push(loc);existing.add(key);added++;}
                 });
                 saveLocations();invalidateCache();update();
@@ -4863,11 +4959,11 @@ html.is-mobile-map .bt-field-marker-core { box-shadow: 0 0 0 1px oklch(12% 0.025
 html.is-mobile-map .bt-field-marker-ring,
 html.is-mobile-map .bt-field-marker-label,
 html.is-mobile-map #map.is-gesture-zooming .leaflet-tooltip { display: none !important; }
-html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label { display: grid !important; top: 20px !important; min-width: 72px !important; max-width: 128px !important; padding: 4px 6px 5px !important; gap: 1px !important; background: oklch(13% 0.026 260 / 0.9) !important; border: 1px solid oklch(86% 0.07 230 / 0.28) !important; font-size: 9px !important; opacity: 0.94 !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 5px 14px rgba(0,0,0,0.28) !important; transition: none !important; }
+html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label { display: grid !important; top: 20px !important; min-width: 72px !important; max-width: 128px !important; padding: 4px 6px 5px !important; gap: 2px !important; background: oklch(13% 0.026 260 / 0.72) !important; border: 1px solid oklch(86% 0.07 230 / 0.18) !important; font-size: 9px !important; opacity: 0.88 !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important; transition: none !important; }
 html.is-mobile-map .bt-marker-name,
 html.is-mobile-map .bt-marker-area { display: block !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
-html.is-mobile-map .bt-marker-name { color: oklch(98% 0.006 250) !important; font-weight: 850 !important; line-height: 1.1 !important; }
-html.is-mobile-map .bt-marker-area { color: oklch(73% 0.11 220) !important; font-size: 8px !important; font-weight: 750 !important; line-height: 1.05 !important; }
+html.is-mobile-map .bt-marker-name { color: oklch(98% 0.006 250) !important; font-weight: 850 !important; line-height: 1.1 !important; min-height: 10px !important; }
+html.is-mobile-map .bt-marker-area { color: oklch(73% 0.11 220) !important; font-size: 8px !important; font-weight: 750 !important; line-height: 1.05 !important; min-height: 8px !important; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
