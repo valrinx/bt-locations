@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.32';
+const APP_VERSION = 'v6.9.33';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2065,9 +2065,6 @@ function renderListDirectory() {
     const table = document.getElementById('listTable');
     const countEl = document.getElementById('lvCount');
     if(!table)return;
-    const toolbar = document.querySelector('#view-list .lv-toolbar');
-    if(toolbar)toolbar.style.display = 'none';
-
     const listCounts = {};
     const cityCounts = {};
     locations.forEach(loc => {
