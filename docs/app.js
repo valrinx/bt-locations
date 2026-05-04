@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.12';
+const APP_VERSION = 'v6.9.13';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2989,8 +2989,8 @@ window.openAddAt=function(lat,lng){
     _reverseGeocodeCity(lat,lng).then(city=>{
         if(city&&!filterCity){
             document.getElementById('modalCity').value=city;
-            // Auto-fill list with city name if no list is set yet
-            if(!filterList&&!document.getElementById('modalList').value){
+            // Auto-fill list with city name (overrides nearest-location guess, unless filter active)
+            if(!filterList){
                 document.getElementById('modalList').value=city;
             }
         }
