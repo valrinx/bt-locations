@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.19';
+const APP_VERSION = 'v6.9.20';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -231,6 +231,7 @@ function _renderSidebar(){
             <span class="fl-dot" style="background:${getColor(name)}"></span>
             <span class="fl-name">${name}</span>
             <span class="fl-count">${locations.filter(l=>l.list===name).length}</span>
+            <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('list','${name.replace(/'/g,"\\'")}')">✏️</button>
         </div>`
     ).join('');
     
@@ -238,6 +239,7 @@ function _renderSidebar(){
         `<div class="clist-item${filterCity===name?' active':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}')">
             <span class="fl-name">${name}</span>
             <span class="fl-count">${locations.filter(l=>l.city===name).length}</span>
+            <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('city','${name.replace(/'/g,"\\'")}')">✏️</button>
         </div>`
     ).join('');
     
@@ -276,6 +278,62 @@ function setFilterCity(name){
         map.fitBounds(group.getBounds().pad(0.15), {animate:false, maxZoom:16});
     }
 }
+
+// ── Edit group (list or city): rename / delete ──
+let _editGroupType = '', _editGroupOldName = '';
+function openEditGroup(type, name){
+    _editGroupType = type;
+    _editGroupOldName = name;
+    const label = type === 'list' ? 'รายการ' : 'เมือง/เขต';
+    const count = locations.filter(l => type==='list' ? l.list===name : l.city===name).length;
+    document.getElementById('editGroupTitle').textContent = `แก้ไข${label}: ${name} (${count} จุด)`;
+    document.getElementById('editGroupInput').value = name;
+    document.getElementById('editGroupModalOverlay').classList.add('open');
+    setTimeout(()=>document.getElementById('editGroupInput').select(), 100);
+}
+document.getElementById('editGroupCancel').onclick = () =>
+    document.getElementById('editGroupModalOverlay').classList.remove('open');
+document.getElementById('editGroupModalOverlay').onclick = e => {
+    if(e.target === document.getElementById('editGroupModalOverlay'))
+        document.getElementById('editGroupModalOverlay').classList.remove('open');
+};
+document.getElementById('editGroupSave').onclick = () => {
+    const newName = document.getElementById('editGroupInput').value.trim();
+    if(!newName){ showToast('กรุณากรอกชื่อ', true); return; }
+    if(newName === _editGroupOldName){ document.getElementById('editGroupModalOverlay').classList.remove('open'); return; }
+    pushUndo();
+    locations.forEach(l => {
+        if(_editGroupType==='list' && l.list===_editGroupOldName){ l.list=newName; if(_sbLoaded)sbUpdate(l); }
+        else if(_editGroupType==='city' && l.city===_editGroupOldName){ l.city=newName; if(_sbLoaded)sbUpdate(l); }
+    });
+    if(filterList===_editGroupOldName && _editGroupType==='list') filterList=newName;
+    if(filterCity===_editGroupOldName && _editGroupType==='city') filterCity=newName;
+    saveLocations(); invalidateCache(); update(); _renderSidebar();
+    document.getElementById('editGroupModalOverlay').classList.remove('open');
+    showToast(`เปลี่ยนชื่อเป็น "${newName}" แล้ว`, false, true);
+};
+document.getElementById('editGroupDelete').onclick = () => {
+    const label = _editGroupType==='list' ? 'รายการ' : 'เมือง/เขต';
+    const count = locations.filter(l => _editGroupType==='list' ? l.list===_editGroupOldName : l.city===_editGroupOldName).length;
+    document.getElementById('editGroupModalOverlay').classList.remove('open');
+    showConfirm('🗑️', `ลบ${label} "${_editGroupOldName}"?`,
+        `จุด ${count} จุดจะถูกย้ายไปใส่ "${_editGroupType==='list'?'ยังไม่บันทึก':''}"`,
+        () => {
+            pushUndo();
+            locations.forEach(l => {
+                if(_editGroupType==='list' && l.list===_editGroupOldName){
+                    l.list='ยังไม่บันทึก'; if(_sbLoaded)sbUpdate(l);
+                } else if(_editGroupType==='city' && l.city===_editGroupOldName){
+                    l.city=''; if(_sbLoaded)sbUpdate(l);
+                }
+            });
+            if(filterList===_editGroupOldName && _editGroupType==='list') filterList='';
+            if(filterCity===_editGroupOldName && _editGroupType==='city') filterCity='';
+            saveLocations(); invalidateCache(); update(); _renderSidebar();
+            showToast(`ลบ${label} "${_editGroupOldName}" แล้ว`, false, true);
+        }
+    );
+};
 
 // Mobile chips update
 function _updateMobChips(){

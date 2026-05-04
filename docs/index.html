@@ -661,6 +661,22 @@
             color: var(--bl);
         }
 
+        .fl-edit {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: var(--tx3);
+            font-size: 12px;
+            padding: 2px 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.15s, color 0.15s;
+            flex-shrink: 0;
+        }
+        .flist-item:hover .fl-edit,
+        .clist-item:hover .fl-edit { opacity: 1; }
+        .fl-edit:hover { color: var(--bl); background: var(--bl-bg); }
+
         .clist::-webkit-scrollbar {
             width: 3px;
         }
@@ -4859,6 +4875,22 @@
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-cancel" id="editModalCancel">ยกเลิก</button>
                 <button class="modal-btn modal-btn-save" id="editModalSave">บันทึก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit List/City Modal -->
+    <div class="modal-overlay" id="editGroupModalOverlay">
+        <div class="modal" style="width:360px;max-width:95vw;">
+            <div class="modal-header" id="editGroupTitle">แก้ไขรายการ</div>
+            <div class="frow" style="margin-top:8px">
+                <label>ชื่อใหม่</label>
+                <input type="text" id="editGroupInput" placeholder="ชื่อใหม่" autocomplete="off">
+            </div>
+            <div style="display:flex;gap:8px;padding:10px 14px;border-top:0.5px solid var(--bd2)">
+                <button class="modal-btn modal-btn-cancel" id="editGroupCancel">ยกเลิก</button>
+                <button class="modal-btn" id="editGroupDelete" style="background:#ef4444;color:#fff;flex:1">🗑 ลบ</button>
+                <button class="modal-btn modal-btn-save" id="editGroupSave">บันทึก</button>
             </div>
         </div>
     </div>
