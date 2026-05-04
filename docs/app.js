@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.59';
+const APP_VERSION = 'v6.9.60';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1573,19 +1573,21 @@ function _showDistrictPopup(district, data, marker) {
         </div>
     `;
     
-    marker.bindPopup(popupContent, {
+    const popup = L.popup({
         className: 'district-popup',
         closeButton: true,
         minWidth: 260,
         maxWidth: 300
-    }).openPopup();
+    })
+        .setLatLng(marker.getLatLng())
+        .setContent(popupContent)
+        .openOn(map);
 
-    const bindPopupActions = () => {
-        const popupEl = marker.getPopup()?.getElement();
+    setTimeout(() => {
+        const popupEl = popup.getElement();
         if (!popupEl) return;
         const zoomBtn = popupEl.querySelector('.district-popup-zoom');
-        if (zoomBtn && !zoomBtn.dataset.bound) {
-            zoomBtn.dataset.bound = '1';
+        if (zoomBtn) {
             zoomBtn.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1593,17 +1595,13 @@ function _showDistrictPopup(district, data, marker) {
             });
         }
         popupEl.querySelectorAll('.district-popup-row').forEach(row => {
-            if (row.dataset.bound) return;
-            row.dataset.bound = '1';
             row.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
                 _zoomToDistrictList(row.dataset.district || district, row.dataset.list || '');
             });
         });
-    };
-    marker.on('popupopen', bindPopupActions);
-    setTimeout(bindPopupActions, 0);
+    }, 0);
 }
 
 // Zoom to district and show individual markers
