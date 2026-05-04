@@ -964,6 +964,15 @@ function _filterToViewport(items) {
     return items.filter(l => b.contains([l.lat, l.lng]));
 }
 
+function _getScopedFiltered() {
+    const filtered = getFiltered();
+    if (!_selectedDistrict) return filtered;
+    return filtered.filter(l =>
+        _getDistrictName(l) === _selectedDistrict &&
+        (!_selectedDistrictList || (l.list || 'ไม่ระบุ') === _selectedDistrictList)
+    );
+}
+
 function _createLocationIcon(loc, idx) {
     const color = _getMarkerColor(loc);
     const fav = isFavorite(loc);
@@ -1005,8 +1014,11 @@ function _updateDistrictScopeControl(count) {
             <span class="district-scope-name">${_escapeHtml(label)}</span>
             <span class="district-scope-count">${count} ตู้</span>
         </div>
+        <button type="button" class="district-scope-route">เส้นทาง</button>
         <button type="button" class="district-scope-close" aria-label="ออกจากโซน">×</button>
     `;
+    const routeBtn = el.querySelector('.district-scope-route');
+    if (routeBtn) routeBtn.onclick = () => openRouteOptionsSheet();
     const btn = el.querySelector('.district-scope-close');
     if (btn) btn.onclick = _resetToDistrictView;
 }
@@ -1900,32 +1912,52 @@ function _listCounts() {
     return Object.entries(counts).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], 'th'));
 }
 
-function openListPickerSheet() {
-    const container = document.getElementById('mobSheetList');
-    const title = document.getElementById('mobSheetTitle');
-    if(!container || !title)return;
-    title.innerText = 'เลือกรายการ';
-    const lists = _listCounts();
-    container.innerHTML = `
-        <div class="ms-item" data-list-name="" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">◎</div>
-            <div style="flex:1;font-size:14px;font-weight:500;">ทั้งหมด</div>
-            <div style="font-size:12px;color:var(--tx2);">${locations.length}</div>
-        </div>
-        ${lists.map(([name,count], i) => `
-            <div class="ms-item" data-list-name="${_escapeHtml(name)}" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:${filterList===name?'var(--bl-d)':'transparent'};">
-                <div style="width:12px;height:12px;border-radius:999px;background:${getColor(name)};"></div>
-                <div style="flex:1;min-width:0;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escapeHtml(name)}</div>
-                <div style="font-size:12px;color:var(--tx2);">${count}</div>
-            </div>
-        `).join('')}`;
-    container.querySelectorAll('[data-list-name]').forEach(el => {
+function _renderListPickerRows(query='') {
+    const rows = document.getElementById('_listPickerRows');
+    if (!rows) return;
+    const q = query.trim().toLowerCase();
+    const lists = _listCounts().filter(([name]) => !q || name.toLowerCase().includes(q));
+    rows.innerHTML = lists.map(([name,count]) => `
+        <button type="button" class="sheet-list-row${filterList===name?' selected':''}" data-list-name="${_escapeHtml(name)}">
+            <span class="sheet-list-dot" style="background:${getColor(name)};"></span>
+            <span class="sheet-list-main"><b>${_escapeHtml(name)}</b><small>${count} จุด</small></span>
+            <span class="sheet-list-count">${count}</span>
+        </button>
+    `).join('') || '<div class="sheet-note">ไม่พบรายการที่ค้นหา</div>';
+    rows.querySelectorAll('[data-list-name]').forEach(el => {
         el.onclick = () => {
             setFilterList(el.dataset.listName || '');
             closeMobSheet();
             switchView('map');
         };
     });
+}
+
+function openListPickerSheet() {
+    const container = document.getElementById('mobSheetList');
+    const title = document.getElementById('mobSheetTitle');
+    if(!container || !title)return;
+    title.innerText = 'เลือกรายการ';
+    container.innerHTML = `
+        <div class="sheet-search">
+            <input id="_listPickerSearch" type="text" placeholder="ค้นหารายการ..." autocomplete="off">
+        </div>
+        <button type="button" class="sheet-action primary" id="_listPickerAll">
+            <span class="sheet-token">ALL</span>
+            <span class="sheet-main"><b>ทั้งหมด</b><small>ล้างตัวกรองรายการและกลับไปดูทุกจุด</small></span>
+            <span class="sheet-count">${locations.length}</span>
+        </button>
+        <div class="sheet-note">รายการที่มีจุดมากที่สุด</div>
+        <div id="_listPickerRows" class="sheet-list-rows"></div>
+    `;
+    document.getElementById('_listPickerAll')?.addEventListener('click', () => {
+        setFilterList('');
+        closeMobSheet();
+        switchView('map');
+    });
+    const search = document.getElementById('_listPickerSearch');
+    if (search) search.oninput = () => _renderListPickerRows(search.value);
+    _renderListPickerRows();
     openMobSheet();
 }
 
@@ -2012,7 +2044,7 @@ function openListOptionsSheet(){
 window.openListOptionsSheet = openListOptionsSheet;
 
 function openRouteStartOptionsSheet(){
-    const filtered = getFiltered();
+    const filtered = _getScopedFiltered();
     if(filtered.length < 2){
         showToast('ต้องมีอย่างน้อย 2 จุดในรายการที่เลือก', true);
         return;
@@ -2088,7 +2120,7 @@ function openRouteStartOptionsSheet(){
 
 async function doRouteWithStart(startLat, startLng){
     try {
-        const filtered = getFiltered();
+        const filtered = _getScopedFiltered();
         if(filtered.length < 2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
         if(filtered.length > 500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
 
