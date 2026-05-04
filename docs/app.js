@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.56';
+const APP_VERSION = 'v6.9.57';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1564,7 +1564,7 @@ function _showDistrictPopup(district, data, marker) {
                 `).join('')}
             </div>
             <div style="padding:8px 0 0;">
-                <button type="button" class="district-popup-action primary action-card" data-district="${districtAttr}" style="width:100%;box-sizing:border-box;border-color:rgba(91,143,255,0.3);">
+                <button type="button" class="action-card district-popup-zoom" data-district="${districtAttr}" style="width:100%;box-sizing:border-box;border-color:rgba(91,143,255,0.3);">
                     <div class="ac-title">ซูมเข้า</div>
                     <div class="ac-desc">ดูจุดทั้งหมดในพื้นที่นี้</div>
                     <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">ZOOM</span>
@@ -1584,7 +1584,7 @@ function _showDistrictPopup(district, data, marker) {
         const popupEl = marker.getPopup()?.getElement();
         if (!popupEl || popupEl.dataset.bound === '1') return;
         popupEl.dataset.bound = '1';
-        const zoomBtn = popupEl.querySelector('.district-popup-action.primary');
+        const zoomBtn = popupEl.querySelector('.district-popup-zoom');
         if (zoomBtn) {
             zoomBtn.addEventListener('click', (event) => {
                 event.preventDefault();
