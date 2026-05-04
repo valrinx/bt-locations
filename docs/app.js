@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.8';
+const APP_VERSION = 'v6.9.9';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4785,8 +4785,9 @@ document.getElementById('fileImport').onchange=e=>{
         imp=deduped.unique;
         if(!imp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
         const duplicateText=deduped.removed?`\nคัดจุดซ้ำพิกัดเป๊ะๆ ออก ${deduped.removed} จุด`:'';
-        showConfirm('📥',`Import ${imp.length} จุด?`,`จากไฟล์ ${file.name} (.${ext})${duplicateText}\nเลือก Merge หรือ Replace`,()=>{
+        showConfirm('📥',`Import ${imp.length} จุด?`,`จากไฟล์ ${file.name} (.${ext})${duplicateText}\nเลือก Merge หรือ Replace`,async()=>{
             pushUndo();locations=imp;saveLocations();invalidateCache();update();showToast(`Replace: ${imp.length} จุด`,false,true);
+            if(_sbLoaded){for(const loc of imp){await sbInsert(loc);}}
         });
         // Add merge button to confirm dialog
         setTimeout(()=>{
@@ -4797,17 +4798,18 @@ document.getElementById('fileImport').onchange=e=>{
             mergeBtn.className='modal-btn modal-btn-save';
             mergeBtn.style.cssText='background:#059669;';
             mergeBtn.textContent='🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
-            mergeBtn.onclick=()=>{
+            mergeBtn.onclick=async()=>{
                 pushUndo();
                 const existing=new Set(locations.map(exactCoordKey));
-                let added=0;
+                const toAdd=[];
                 imp.forEach(loc=>{
                     const key=exactCoordKey(loc);
-                    if(!existing.has(key)){locations.push(loc);existing.add(key);added++;}
+                    if(!existing.has(key)){locations.push(loc);existing.add(key);toAdd.push(loc);}
                 });
                 saveLocations();invalidateCache();update();
-                showToast(`Merge: เพิ่ม ${added} จุดใหม่ (ข้าม ${imp.length-added} ซ้ำ)`,false,true);
+                showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${imp.length-toAdd.length} ซ้ำ)`,false,true);
                 document.getElementById('confirmModalOverlay').classList.remove('open');
+                if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
             };
             footer.insertBefore(mergeBtn,footer.firstChild);
         },100);
