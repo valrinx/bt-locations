@@ -808,6 +808,7 @@ function pushUndo() { undoStack.push(JSON.stringify(locations)); if (undoStack.l
 // MAP
 // ════════════════════════════════════════════
 const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 600;
+if (_mobile) document.documentElement.classList.add('is-mobile-map');
 const map = L.map('map', {
     zoomControl: false,
     zoomAnimation: !_mobile,   // ปิดบน mobile เพื่อ performance
@@ -928,6 +929,7 @@ const DISTRICT_CLUSTER_MAX_ZOOM = 13;
 const MARKER_VIEWPORT_PAD = _mobile ? 0 : 0.08;
 let _lastMarkerRenderMode = null;
 let _tooltipPermanentState = null;
+let _visibleMarkerIdxs = new Set();
 
 function _getDistrictName(loc) {
     return loc.district || loc.city || 'ไม่ระบุเขต';
@@ -1167,7 +1169,10 @@ function renderMarkers(filtered) {
 }
 
 // เรียกเมื่อ locations เปลี่ยน (add/edit/delete/import/reset)
-function invalidateMarkerCache() { _clusterDirty = true; }
+function invalidateMarkerCache() {
+    _clusterDirty = true;
+    _visibleMarkerIdxs.clear();
+}
 
 function invalidateCache() {
     _lastFilteredKey = null;
@@ -1332,19 +1337,34 @@ function _showIndividualMarkers(filtered) {
         map.removeLayer(_districtClusterGroup);
     }
 
-    if (_markerCache.size === 0 || _clusterDirty) _buildMarkerCache();
-
-    if (_individualMarkersLayer) {
-        _individualMarkersLayer.clearLayers();
-    } else {
+    if (!_individualMarkersLayer) {
         _individualMarkersLayer = L.layerGroup();
     }
+    if (_markerCache.size === 0 || _clusterDirty) {
+        _individualMarkersLayer.clearLayers();
+        _visibleMarkerIdxs.clear();
+        _buildMarkerCache();
+    }
 
+    const nextVisibleIdxs = new Set();
     filtered.forEach(loc => {
-        const marker = _markerCache.get(getLocIndex(loc));
+        const idx = getLocIndex(loc);
+        if (idx < 0) return;
+        nextVisibleIdxs.add(idx);
+        if (_visibleMarkerIdxs.has(idx)) return;
+        const marker = _markerCache.get(idx);
         if (marker) _individualMarkersLayer.addLayer(marker);
     });
 
+    _visibleMarkerIdxs.forEach(idx => {
+        if (nextVisibleIdxs.has(idx)) return;
+        const marker = _markerCache.get(idx);
+        if (marker && _individualMarkersLayer.hasLayer(marker)) {
+            _individualMarkersLayer.removeLayer(marker);
+        }
+    });
+
+    _visibleMarkerIdxs = nextVisibleIdxs;
     _individualMarkersLayer.addTo(map);
     if (typeof _updateTooltipVisibility === 'function') _updateTooltipVisibility();
 }
@@ -1358,6 +1378,7 @@ function _resetToDistrictView() {
         map.removeLayer(_individualMarkersLayer);
         _individualMarkersLayer = null;
     }
+    _visibleMarkerIdxs.clear();
     update(); // Re-render clusters
     if (typeof _updateTooltipVisibility === 'function') _updateTooltipVisibility();
 }
@@ -2458,10 +2479,12 @@ function updateGpsMarker(lat, lng, accuracy) {
 // แสดง tooltip ถาวรเฉพาะตอน zoom >= 16
 const TOOLTIP_ZOOM = 16;
 function _updateTooltipVisibility() {
+    if (_mobile) return;
     const showPermanent = map.getZoom() >= TOOLTIP_ZOOM;
     if (showPermanent === _tooltipPermanentState) return;
     _tooltipPermanentState = showPermanent;
-    _markerCache.forEach(marker => {
+    const markers = _individualMarkersLayer ? _individualMarkersLayer.getLayers() : [];
+    markers.forEach(marker => {
         const tt = marker.getTooltip();
         if (!tt) return;
         if (showPermanent && !tt.options.permanent) {
@@ -2488,6 +2511,12 @@ map.on('moveend', () => {
         _lastFilteredKey = null;
         update();
     }
+});
+map.on('zoomstart', () => {
+    if (_mobile) map.getContainer().classList.add('is-gesture-zooming');
+});
+map.on('zoomend', () => {
+    if (_mobile) map.getContainer().classList.remove('is-gesture-zooming');
 });
 
 if(btnGps){
@@ -4677,6 +4706,11 @@ const style=document.createElement('style');
 style.textContent=`.bt-tooltip{background:rgba(9,13,20,0.54)!important;color:oklch(96% 0.008 250)!important;border:0!important;border-radius:4px!important;padding:2px 5px!important;font-size:9px!important;font-weight:700!important;line-height:1.1!important;box-shadow:0 1px 4px rgba(0,0,0,0.22)!important;text-shadow:0 1px 1px rgba(0,0,0,0.75)!important;white-space:nowrap!important;font-family:inherit!important;}
 .bt-field-marker { transition: transform 180ms cubic-bezier(0.22,1,0.36,1), filter 180ms ease !important; }
 .bt-field-marker:hover { transform: scale(1.18) !important; }
+html.is-mobile-map .bt-field-marker { transition: none !important; will-change: auto !important; }
+html.is-mobile-map .bt-field-marker-core { box-shadow: 0 0 0 1px oklch(12% 0.025 265 / 0.62) !important; }
+html.is-mobile-map .bt-field-marker-ring,
+html.is-mobile-map .bt-field-marker-label,
+html.is-mobile-map #map.is-gesture-zooming .leaflet-tooltip { display: none !important; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
