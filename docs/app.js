@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.40';
+const APP_VERSION = 'v6.6.41';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1674,21 +1674,32 @@ function openMergeListSheet() {
     container.querySelectorAll('[data-merge-target]').forEach(el => {
         el.onclick = () => {
             const toList = el.dataset.mergeTarget;
-            pushUndo();
-            const changed = [];
-            locations.forEach(l => {
-                if((l.list || 'ไม่มีรายการ') === filterList){
-                    l.list = toList;
-                    l.updatedAt = Date.now();
-                    changed.push(l);
+            const count = locations.filter(l => (l.list || 'ไม่มีรายการ') === filterList).length;
+            
+            // Show confirmation before merge
+            showConfirm('🔗 รวมรายการ?', 
+                `รวม "${filterList}" → "${toList}"`,
+                `จะมี ${count} จุดถูกย้าย\nสามารถ ↩️ Undo ได้หากผิดพลาด`,
+                () => {
+                    pushUndo();
+                    const changed = [];
+                    locations.forEach(l => {
+                        if((l.list || 'ไม่มีรายการ') === filterList){
+                            l.list = toList;
+                            l.updatedAt = Date.now();
+                            changed.push(l);
+                        }
+                    });
+                    filterList = toList;
+                    saveLocations();invalidateCache();update();
+                    if(_sbLoaded)sbBulkUpdate(changed);
+                    closeMobSheet();
+                    showToast(`✅ รวม ${changed.length} จุด → "${toList}"`, false, true);
+                    // Show undo hint
+                    setTimeout(() => showToast('↩️ กด Ctrl+Z หรือ ≡ Menu → ↩️ เลิกทำ หากต้องการยกเลิก'), 1500);
+                    switchView('map');
                 }
-            });
-            filterList = toList;
-            saveLocations();invalidateCache();update();
-            if(_sbLoaded)sbBulkUpdate(changed);
-            closeMobSheet();
-            showToast(`รวม ${changed.length} จุด → "${toList}"`, false, true);
-            switchView('map');
+            );
         };
     });
     if(!targets.length)container.innerHTML='<div style="padding:18px;color:var(--tx2);font-size:13px;">ไม่มีรายการอื่นให้รวม</div>';
