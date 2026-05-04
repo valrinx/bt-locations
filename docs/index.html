@@ -3038,13 +3038,16 @@
 
             /* topbar */
             .topbar {
-                height: var(--topbar-h);
-                margin-top: env(safe-area-inset-top, 0px);
-                padding: 0 10px;
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+                padding: env(safe-area-inset-top, 0px) 10px 0 10px;
                 gap: 8px;
-                position: relative;
-                z-index: 100;
+                z-index: 2010; /* Above chips */
                 background: var(--s1);
+                box-shadow: 0 1px 10px rgba(0,0,0,0.3);
             }
 
             .tb-left {
@@ -3185,7 +3188,7 @@
                 top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
                 left: 0;
                 right: 0;
-                z-index: 90;
+                z-index: 2000; /* Higher than map markers */
                 height: var(--chips-h);
                 background: var(--s1);
                 border-bottom: 0.5px solid var(--bd);
