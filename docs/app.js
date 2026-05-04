@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.16';
+const APP_VERSION = 'v6.9.17';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4679,11 +4679,12 @@ function parseCSV(text, fallbackList = 'Imported') {
     const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
     if(lines.length<2)return[];
     const header=parseRow(lines[0]).map(h=>h.trim().toLowerCase());
-    const iLat=header.findIndex(h=>['lat','latitude','ละติจูด'].includes(h));
-    const iLng=header.findIndex(h=>['lng','lon','longitude','long','ลองจิจูด'].includes(h));
-    const iName=header.findIndex(h=>['name','title','ชื่อ','ชื่อสถานที่','placename'].includes(h));
+    const iLat=header.findIndex(h=>['lat','latitude','gps latitude','gps_latitude','ละติจูด'].includes(h));
+    const iLng=header.findIndex(h=>['lng','lon','longitude','long','gps longitude','gps_longitude','ลองจิจูด'].includes(h));
+    const iName=header.findIndex(h=>['name','title','topup name','ชื่อ','ชื่อสถานที่','placename'].includes(h));
     const iList=header.findIndex(h=>['list','category','group','รายการ','หมวดหมู่'].includes(h));
     const iCity=header.findIndex(h=>['city','district','area','เขต','อำเภอ'].includes(h));
+    const iProvince=header.findIndex(h=>['province','จังหวัด','changwat'].includes(h));
     const iNote=header.findIndex(h=>['note','notes','desc','description','หมายเหตุ'].includes(h));
     const iUrl=header.findIndex(h=>['url','link','google maps url','maps url'].includes(h));
     if(iLat<0&&iLng<0&&iUrl<0)return[];
@@ -4697,7 +4698,10 @@ function parseCSV(text, fallbackList = 'Imported') {
             if(m){lat=parseFloat(m[1]);lng=parseFloat(m[2]);}
         }
         if(!lat||!lng||isNaN(lat)||isNaN(lng))continue;
-        result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||fallbackList,city:cols[iCity]||'',note:cols[iNote]||''});
+        const cityVal=cols[iCity]||'';
+        const provVal=iProvince>=0?cols[iProvince]||'':'';
+        const cityFinal=cityVal||(provVal!==cityVal?provVal:'');
+        result.push({name:cols[iName]||'',lat,lng,list:cols[iList]||fallbackList,city:cityFinal,note:cols[iNote]||''});
     }
     return result;
 }
