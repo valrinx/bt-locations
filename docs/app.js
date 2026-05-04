@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.7.0';
+const APP_VERSION = 'v6.7.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1910,6 +1910,13 @@ function openRouteOptionsSheet(){
                 <div style="font-size:11px;color:var(--tx3);">แยกตามรายการ</div>
             </div>
         </div>
+        <div class="ms-item" data-action="manual" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--bl-d);">
+            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">📍</div>
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:500;">เลือกจุดเอง</div>
+                <div style="font-size:11px;color:var(--tx3);">คลิกเลือกจุดบนแผนที่ได้หลายจุด</div>
+            </div>
+        </div>
     `;
     
     container.innerHTML = html;
@@ -1934,6 +1941,9 @@ function openRouteOptionsSheet(){
                 closeMobSheet();
                 clearRoute();
                 showToast('🗑️ ล้างเส้นทางแล้ว');
+            } else if(action === 'manual'){
+                closeMobSheet();
+                startManualRouteMode();
             }
         };
     });
