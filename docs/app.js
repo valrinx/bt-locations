@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.58';
+const APP_VERSION = 'v6.9.59';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1582,10 +1582,10 @@ function _showDistrictPopup(district, data, marker) {
 
     const bindPopupActions = () => {
         const popupEl = marker.getPopup()?.getElement();
-        if (!popupEl || popupEl.dataset.bound === '1') return;
-        popupEl.dataset.bound = '1';
+        if (!popupEl) return;
         const zoomBtn = popupEl.querySelector('.district-popup-zoom');
-        if (zoomBtn) {
+        if (zoomBtn && !zoomBtn.dataset.bound) {
+            zoomBtn.dataset.bound = '1';
             zoomBtn.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1593,6 +1593,8 @@ function _showDistrictPopup(district, data, marker) {
             });
         }
         popupEl.querySelectorAll('.district-popup-row').forEach(row => {
+            if (row.dataset.bound) return;
+            row.dataset.bound = '1';
             row.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1600,7 +1602,7 @@ function _showDistrictPopup(district, data, marker) {
             });
         });
     };
-    bindPopupActions();
+    marker.on('popupopen', bindPopupActions);
     setTimeout(bindPopupActions, 0);
 }
 
