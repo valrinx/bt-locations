@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.32';
+const APP_VERSION = 'v6.6.33';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3313,12 +3313,105 @@ function openInfoPanel(mode){
         const maxL=Math.max(...Object.values(lc),1);
         const sl=Object.entries(lc).sort((a,b)=>b[1]-a[1]);
         const sc=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+        
+        // Calculate top 5 and group others
+        const top5 = sl.slice(0, 5);
+        const others = sl.slice(5);
+        const othersCount = others.reduce((sum, [_, c]) => sum + c, 0);
+        
         body.innerHTML=`<div class="stats-section">
-            <div style="font-size:28px;font-weight:700;color:var(--bl);margin-bottom:4px;">${locations.length}</div>
-            <div style="font-size:13px;color:var(--text3);margin-bottom:20px;">สถานที่ทั้งหมด</div>
-            <div class="stats-header">ตามรายการ</div>
-            ${sl.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:${getColor(n)}"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/maxL*100}%;background:${getColor(n)}"></div></div><span class="stats-count">${c}</span></div>`).join('')}
-            ${sc.length?`<div class="stats-header" style="margin-top:20px;">ตามเขต</div>${sc.map(([n,c])=>`<div class="stats-row"><span class="stats-dot" style="background:var(--bl)"></span><span class="stats-name">${n}</span><div class="stats-bar-wrap"><div class="stats-bar" style="width:${c/Math.max(...sc.map(x=>x[1]))*100}%"></div></div><span class="stats-count">${c}</span></div>`).join('')}`:''}
+            <!-- Summary Cards -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+                <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                    <div style="font-size:24px;font-weight:700;color:var(--bl);">${locations.length}</div>
+                    <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">จุดทั้งหมด</div>
+                </div>
+                <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                    <div style="font-size:24px;font-weight:700;color:var(--bl);">${Object.keys(lc).length}</div>
+                    <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">รายการ</div>
+                </div>
+                <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                    <div style="font-size:24px;font-weight:700;color:var(--bl);">${Object.keys(cc).length}</div>
+                    <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">เขต</div>
+                </div>
+            </div>
+            
+            <!-- Top Lists with Pie Chart -->
+            <div style="background:var(--s1);border-radius:16px;padding:16px;margin-bottom:16px;border:0.5px solid var(--bd2);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="font-size:12px;font-weight:600;color:var(--tx);">สัดส่วนรายการ (Top ${Math.min(5, sl.length)})</div>
+                    <div style="font-size:10px;color:var(--tx3);">${sl.length} รายการทั้งหมด</div>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1fr 100px;gap:16px;align-items:center;">
+                    <!-- List on left -->
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        ${top5.map(([n,c],i)=>`
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="width:28px;height:28px;border-radius:8px;background:${getColor(n)};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">${i+1}</div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+                                    <div style="font-size:10px;color:var(--tx3);">${c} จุด · ${Math.round(c/locations.length*100)}%</div>
+                                </div>
+                                <div style="font-size:13px;font-weight:600;color:var(--bl);">${c}</div>
+                            </div>
+                        `).join('')}
+                        ${others.length > 0 ? `
+                            <div style="display:flex;align-items:center;gap:8px;padding-top:4px;border-top:0.5px solid var(--bd2);">
+                                <div style="width:28px;height:28px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:11px;font-weight:600;">+</div>
+                                <div style="flex:1;">
+                                    <div style="font-size:12px;color:var(--tx2);">อื่นๆ ${others.length} รายการ</div>
+                                    <div style="font-size:10px;color:var(--tx3);">${othersCount} จุด · ${Math.round(othersCount/locations.length*100)}%</div>
+                                </div>
+                                <div style="font-size:13px;font-weight:600;color:var(--tx2);">${othersCount}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Simple Pie Chart on right -->
+                    <div style="position:relative;width:100px;height:100px;">
+                        <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg);">
+                            ${(()=>{
+                                let accumulated = 0;
+                                const total = locations.length;
+                                return top5.map(([n,c],i)=>{
+                                    const percentage = c/total;
+                                    const dashArray = `${percentage * 75} ${100 - percentage * 75}`;
+                                    const dashOffset = -accumulated * 75;
+                                    accumulated += percentage;
+                                    return `<circle cx="50" cy="50" r="25" fill="none" stroke="${getColor(n)}" stroke-width="50" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}" />`;
+                                }).join('') + (othersCount > 0 ? `<circle cx="50" cy="50" r="25" fill="none" stroke="var(--s3)" stroke-width="50" stroke-dasharray="${othersCount/total * 75} ${100 - othersCount/total * 75}" stroke-dashoffset="${-accumulated * 75}" />` : '');
+                            })()}
+                        </svg>
+                        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                            <div style="font-size:16px;font-weight:700;color:var(--bl);">${sl.length}</div>
+                            <div style="font-size:8px;color:var(--tx3);">รายการ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cities Grid -->
+            ${sc.length > 0 ? `
+                <div style="background:var(--s1);border-radius:16px;padding:16px;border:0.5px solid var(--bd2);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--tx);">จุดต่อเขต</div>
+                        <div style="font-size:10px;color:var(--tx3);">${sc.length} เขต</div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+                        ${sc.slice(0, 10).map(([n,c],i)=>`
+                            <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;">
+                                <div style="width:6px;height:6px;border-radius:50%;background:var(--bl);"></div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:11px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+                                </div>
+                                <div style="font-size:11px;font-weight:600;color:var(--bl);">${c}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${sc.length > 10 ? `<div style="text-align:center;margin-top:8px;font-size:10px;color:var(--tx3);">+${sc.length - 10} เขตอื่นๆ</div>` : ''}
+                </div>
+            ` : ''}
         </div>`;
     } else {
         document.getElementById('infoPanelTitle').textContent='BT Locations';
