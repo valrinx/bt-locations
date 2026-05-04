@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.23';
+const APP_VERSION = 'v6.6.24';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1510,6 +1510,7 @@ function openListOptionsSheet(){
     
     openMobSheet();
 }
+window.openListOptionsSheet = openListOptionsSheet;
 
 // Search bar listeners
 const mobSearchInput = document.getElementById('mobSearchInput');
@@ -2040,11 +2041,19 @@ if(editModalSave) editModalSave.onclick=()=>{
     addChangelogEntry(editingIndex>=0?'edit':'add',entry);
     document.getElementById('editModalOverlay').classList.remove('open');
     showToast(editingIndex>=0?'บันทึกสำเร็จ':'เพิ่มสถานที่แล้ว',false,true);
+    // Optimistic local update
+    if(editingIndex>=0){
+        // Keep sb_id for update
+        const existing=locations[editingIndex];
+        entry.sb_id = existing.sb_id;
+        locations[editingIndex] = entry;
+    } else {
+        locations.push(entry);
+    }
+    
     if(_sbLoaded){
-        // Realtime will update locations[] and render for everyone including self
+        // Realtime will broadcast, but we updated local already for instant feedback
         if(editingIndex>=0){
-            const existing=locations[editingIndex];
-            entry.sb_id=existing.sb_id;
             sbUpdate(entry);
         } else {
             if(editingIndex<0)map.flyTo([lat,lng],15,{animate:true,duration:0.7});
@@ -2052,9 +2061,10 @@ if(editModalSave) editModalSave.onclick=()=>{
         }
     } else {
         // Offline fallback
-        if(editingIndex>=0){locations[editingIndex]=entry;}else{locations.push(entry);}
         saveLocations();invalidateCache();update();
     }
+    // Update UI immediately
+    update();
 };
 
 // ════════════════════════════════════════════
