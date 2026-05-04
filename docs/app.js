@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.38';
+const APP_VERSION = 'v6.9.39';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5067,6 +5067,7 @@ function showConfirm(icon,title,text,cb,mergeCallback){
         const cancelImport=document.getElementById('confirmCancelImport');
         if(mergeCallback){
             importCards.removeAttribute('hidden');
+            importCards.style.display='block';
             normalFooter.setAttribute('hidden','');
             if(mergeBtn) mergeBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
             if(replaceBtn) replaceBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
