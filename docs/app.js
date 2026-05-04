@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.23';
+const APP_VERSION = 'v6.9.24';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -286,11 +286,12 @@ function openEditGroup(type, name){
     _editGroupOldName = name;
     const label = type === 'list' ? 'รายการ' : 'เมือง/เขต';
     const count = locations.filter(l => type==='list' ? l.list===name : l.city===name).length;
-    document.getElementById('editGroupTitle').textContent = `แก้ไข${label}: ${name} (${count} จุด)`;
+    const titleEl = document.getElementById('editGroupTitle');
+    if(titleEl){ const span = titleEl.querySelector('span'); if(span) span.textContent = `แก้ไข${label}: ${name} (${count} จุด)`; }
     document.getElementById('editGroupInput').value = name;
-    // Show delete-all only for list type
-    const delAllBtn = document.getElementById('editGroupDeleteAll');
-    if(delAllBtn) delAllBtn.style.display = type==='list' ? '' : 'none';
+    // Show danger zone only for list type
+    const wrap = document.getElementById('editGroupDeleteAllWrap');
+    if(wrap) wrap.style.display = type==='list' ? '' : 'none';
     document.getElementById('editGroupModalOverlay').classList.add('open');
     setTimeout(()=>document.getElementById('editGroupInput').select(), 100);
 }
