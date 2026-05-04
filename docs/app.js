@@ -1649,9 +1649,35 @@ function openMergeListSheet() {
 
 function openListOptionsSheet(){
     const list = [
-        { icon: '🗺️', name: 'วางแผนเส้นทาง', action: () => { closeMobSheet(); doRoute(); } },
         { icon: '📂', name: 'เลือกรายการ', action: openListPickerSheet },
         { icon: '🔗', name: 'รวมรายการ', action: openMergeListSheet }
+    ];
+    
+    const container = document.getElementById('mobSheetList');
+    const title = document.getElementById('mobSheetTitle');
+    if(!container || !title) return;
+    
+    title.innerText = 'จัดการรายการ';
+    container.innerHTML = list.map(item => `
+        <div class="ms-item" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">${item.icon}</div>
+            <div style="font-size:14px;font-weight:500;">${item.name}</div>
+        </div>
+    `).join('');
+    
+    const items = container.querySelectorAll('.ms-item');
+    items.forEach((el, i) => {
+        el.onclick = () => { list[i].action(); };
+    });
+    
+    openMobSheet();
+}
+window.openListOptionsSheet = openListOptionsSheet;
+
+function openRouteOptionsSheet(){
+    const list = [
+        { icon: '🗺️', name: 'วางแผนเส้นทาง', action: () => { closeMobSheet(); doRoute(); } },
+        { icon: '🛣️', name: 'วางแผนหลายเส้นทาง', action: () => { closeMobSheet(); doMultiRoute(); } }
     ];
     
     const container = document.getElementById('mobSheetList');
@@ -1673,7 +1699,7 @@ function openListOptionsSheet(){
     
     openMobSheet();
 }
-window.openListOptionsSheet = openListOptionsSheet;
+window.openRouteOptionsSheet = openRouteOptionsSheet;
 
 // Initial wire-up for chipList
 document.addEventListener('DOMContentLoaded', () => {
@@ -1683,6 +1709,15 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
             if(typeof openListOptionsSheet === 'function') openListOptionsSheet();
+        });
+    }
+    
+    const chipRouteMenu = document.getElementById('chipRouteMenu');
+    if(chipRouteMenu) {
+        chipRouteMenu.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if(typeof openRouteOptionsSheet === 'function') openRouteOptionsSheet();
         });
     }
 });
