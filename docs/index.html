@@ -662,20 +662,21 @@
         }
 
         .fl-edit {
-            opacity: 0;
+            opacity: 0.35;
             background: none;
             border: none;
             color: var(--tx3);
             font-size: 12px;
-            padding: 2px 5px;
+            padding: 2px 6px;
             border-radius: 4px;
             cursor: pointer;
-            transition: opacity 0.15s, color 0.15s;
+            transition: opacity 0.15s, color 0.15s, background 0.15s;
             flex-shrink: 0;
         }
         .flist-item:hover .fl-edit,
-        .clist-item:hover .fl-edit { opacity: 1; }
-        .fl-edit:hover { color: var(--bl); background: var(--bl-bg); }
+        .clist-item:hover .fl-edit,
+        .fl-edit:focus { opacity: 1; }
+        .fl-edit:hover, .fl-edit:active { color: var(--bl); background: var(--bl-bg); opacity: 1; }
 
         .clist::-webkit-scrollbar {
             width: 3px;
