@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.2';
+const APP_VERSION = 'v6.9.3';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -708,6 +708,10 @@ function _writeBackup() { localStorage.setItem(BACKUP_KEY, JSON.stringify(locati
 function _writeCache() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(locations));
     _writeBackup(); // crash-safe
+}
+
+function saveToStorage() {
+    _writeCache();
 }
 
 // Sync status UI
