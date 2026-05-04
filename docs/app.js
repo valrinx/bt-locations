@@ -1344,7 +1344,7 @@ function _showDistrictPopup(district, data, marker) {
     const sortedLists = Object.entries(listCounts).sort((a, b) => b[1] - a[1]);
     
     const safeDistrict = _escapeHtml(district);
-    const districtArg = encodeURIComponent(district);
+    const districtAttr = _escapeHtml(district);
     const popupContent = `
         <div class="district-popup-card">
             <div class="district-popup-head">
@@ -1353,14 +1353,14 @@ function _showDistrictPopup(district, data, marker) {
             </div>
             <div class="district-popup-list">
                 ${sortedLists.map(([list, count]) => `
-                    <button type="button" class="district-popup-row" onclick="_zoomToDistrictList(decodeURIComponent('${districtArg}'), decodeURIComponent('${encodeURIComponent(list)}'))">
+                    <button type="button" class="district-popup-row" data-district="${districtAttr}" data-list="${_escapeHtml(list)}">
                         <span class="district-popup-name">${_escapeHtml(list)}</span>
                         <span class="district-popup-count">${count}</span>
                     </button>
                 `).join('')}
             </div>
             <div class="district-popup-actions single">
-                <button type="button" class="district-popup-action primary" onclick="_zoomToDistrict(decodeURIComponent('${districtArg}'))">
+                <button type="button" class="district-popup-action primary" data-district="${districtAttr}">
                     ซูมเข้า
                 </button>
             </div>
@@ -1372,12 +1372,36 @@ function _showDistrictPopup(district, data, marker) {
         closeButton: true,
         minWidth: 240
     }).openPopup();
+
+    const bindPopupActions = () => {
+        const popupEl = marker.getPopup()?.getElement();
+        if (!popupEl || popupEl.dataset.bound === '1') return;
+        popupEl.dataset.bound = '1';
+        const zoomBtn = popupEl.querySelector('.district-popup-action.primary');
+        if (zoomBtn) {
+            zoomBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                _zoomToDistrict(zoomBtn.dataset.district || district);
+            });
+        }
+        popupEl.querySelectorAll('.district-popup-row').forEach(row => {
+            row.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                _zoomToDistrictList(row.dataset.district || district, row.dataset.list || '');
+            });
+        });
+    };
+    bindPopupActions();
+    setTimeout(bindPopupActions, 0);
 }
 
 // Zoom to district and show individual markers
 function _zoomToDistrict(district) {
     const filtered = getFiltered().filter(l => _getDistrictName(l) === district);
     if (filtered.length === 0) return;
+    map.closePopup();
     
     _selectedDistrict = district;
     _selectedDistrictList = null;
@@ -1399,6 +1423,7 @@ function _zoomToDistrictList(district, list) {
         (l.list || 'ไม่ระบุ') === list
     );
     if (filtered.length === 0) return;
+    map.closePopup();
 
     _selectedDistrict = district;
     _selectedDistrictList = list;
