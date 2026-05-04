@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.7.1';
+const APP_VERSION = 'v6.7.2';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1903,13 +1903,6 @@ function openRouteOptionsSheet(){
                 <div style="font-size:11px;color:var(--tx3);">เลือกจุดเริ่มต้น → วางแผน</div>
             </div>
         </div>
-        <div class="ms-item" data-action="multi" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">🛣️</div>
-            <div style="flex:1;">
-                <div style="font-size:14px;font-weight:500;">วางแผนหลายเส้นทาง</div>
-                <div style="font-size:11px;color:var(--tx3);">แยกตามรายการ</div>
-            </div>
-        </div>
         <div class="ms-item" data-action="manual" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--bl-d);">
             <div style="font-size:18px;width:30px;display:flex;justify-content:center;">📍</div>
             <div style="flex:1;">
@@ -1926,9 +1919,6 @@ function openRouteOptionsSheet(){
             const action = el.dataset.action;
             if(action === 'route'){
                 openRouteStartOptionsSheet();
-            } else if(action === 'multi'){
-                closeMobSheet();
-                doMultiRoute();
             } else if(action === 'hide'){
                 closeMobSheet();
                 hideRoute();
@@ -3463,21 +3453,116 @@ function updateManualRoutePanel(){
     if(!panel){
         panel = document.createElement('div');
         panel.id = 'manualRoutePanel';
-        panel.style.cssText = 'position:fixed;bottom:80px;left:16px;right:16px;background:var(--surface);border-radius:16px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:100;max-height:200px;overflow-y:auto;';
+        panel.style.cssText = 'position:fixed;bottom:80px;left:16px;right:16px;background:var(--surface);border-radius:20px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.4);z-index:100;max-height:280px;overflow-y:auto;backdrop-filter:blur(10px);';
         document.body.appendChild(panel);
     }
     panel.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <div style="font-weight:600;font-size:14px;">📍 เลือกจุด (${manualRoutePoints.length})</div>
-            <div style="display:flex;gap:8px;">
-                <button onclick="clearManualRoute()" style="padding:6px 12px;background:var(--s3);border:none;border-radius:8px;font-size:12px;cursor:pointer;">❌ ยกเลิก</button>
-                <button onclick="calculateManualRoute()" style="padding:6px 12px;background:#5b8fff;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;${manualRoutePoints.length < 2 ? 'opacity:0.5;' : ''}">${manualRoutePoints.length < 2 ? 'ต้องการ 2+ จุด' : '✅ คำนวณเส้นทาง'}</button>
+        <style>
+            .mrp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+            .mrp-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:var(--text);}
+            .mrp-count{background:var(--bl);color:#fff;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+            .mrp-btns{display:flex;gap:8px;}
+            .mrp-btn{padding:8px 14px;border:none;border-radius:12px;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;}
+            .mrp-btn-cancel{background:var(--s3);color:var(--text);}
+            .mrp-btn-cancel:hover{background:var(--s4);}
+            .mrp-btn-done{background:var(--bl);color:#fff;${manualRoutePoints.length < 2 ? 'opacity:0.4;pointer-events:none;' : ''}}
+            .mrp-btn-done:hover{background:#4a7de4;}
+            .mrp-search-wrap{position:relative;margin-bottom:12px;}
+            .mrp-search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text3);}
+            .mrp-search{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--gn);border-radius:12px;background:var(--s1);color:var(--text);font-size:14px;box-sizing:border-box;}
+            .mrp-search:focus{outline:none;border-color:var(--bl);background:var(--surface);}
+            .mrp-list{display:flex;flex-direction:column;gap:6px;}
+            .mrp-item{display:flex;align-items:center;gap:10px;padding:8px;background:var(--s2);border-radius:10px;transition:all 0.15s;}
+            .mrp-item:hover{background:var(--s3);}
+            .mrp-num{width:26px;height:26px;border-radius:50%;background:var(--bl);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+            .mrp-name{flex:1;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+            .mrp-del{width:24px;height:24px;border-radius:50%;border:none;background:var(--s4);color:var(--text3);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+            .mrp-del:hover{background:#ff6b6b;color:#fff;}
+            .mrp-empty{text-align:center;padding:20px;color:var(--text3);font-size:13px;}
+            .mrp-hint{font-size:11px;color:var(--text3);margin-top:10px;text-align:center;padding:8px;background:var(--s2);border-radius:8px;}
+            .mrp-results{position:absolute;top:100%;left:0;right:0;margin-top:4px;background:var(--surface);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.2);max-height:150px;overflow-y:auto;z-index:101;display:none;}
+            .mrp-result{padding:10px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--gn);}
+            .mrp-result:hover{background:var(--s2);}
+            .mrp-result:last-child{border-bottom:none;}
+        </style>
+        <div class="mrp-header">
+            <div class="mrp-title">
+                <span>📍</span>
+                เลือกจุด
+                <span class="mrp-count">${manualRoutePoints.length}</span>
+            </div>
+            <div class="mrp-btns">
+                <button class="mrp-btn mrp-btn-cancel" onclick="clearManualRoute()">ยกเลิก</button>
+                <button class="mrp-btn mrp-btn-done" onclick="calculateManualRoute()">คำนวณ</button>
             </div>
         </div>
-        <div style="font-size:12px;color:var(--text3);">
-            ${manualRoutePoints.length === 0 ? 'คลิกบนแผนที่เพื่อเพิ่มจุด' : manualRoutePoints.map((p, i) => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;"><span style="background:#5b8fff;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;">${i+1}</span> ${p.name}</div>`).join('')}
+        <div class="mrp-search-wrap">
+            <span class="mrp-search-icon">⌕</span>
+            <input type="text" class="mrp-search" id="mrpSearchInput" placeholder="ค้นหาชื่อสถานที่..." autocomplete="off">
+            <div class="mrp-results" id="mrpSearchResults"></div>
         </div>
+        ${manualRoutePoints.length === 0 
+            ? '<div class="mrp-empty">คลิกบนแผนที่ หรือ ค้นหาชื่อสถานที่</div>'
+            : `<div class="mrp-list">${manualRoutePoints.map((p, i) => `
+                <div class="mrp-item">
+                    <span class="mrp-num">${i+1}</span>
+                    <span class="mrp-name">${p.name}</span>
+                    <button class="mrp-del" onclick="removeManualPoint(${i})">×</button>
+                </div>
+            `).join('')}</div>`
+        }
+        <div class="mrp-hint">💡 คลิกที่ marker หรือค้นหาเพื่อเพิ่มจุด</div>
     `;
+    
+    // Wire up search
+    setTimeout(() => {
+        const input = document.getElementById('mrpSearchInput');
+        const results = document.getElementById('mrpSearchResults');
+        if (input) {
+            input.addEventListener('input', (e) => {
+                const query = e.target.value.trim().toLowerCase();
+                if (!query || !results) {
+                    if (results) results.style.display = 'none';
+                    return;
+                }
+                // Search in locations
+                const matches = locations.filter(l => 
+                    (l.name && l.name.toLowerCase().includes(query)) ||
+                    (l.list && l.list.toLowerCase().includes(query)) ||
+                    (l.city && l.city.toLowerCase().includes(query))
+                ).slice(0, 5);
+                
+                if (matches.length && results) {
+                    results.innerHTML = matches.map(l => `
+                        <div class="mrp-result" data-lat="${l.lat}" data-lng="${l.lng}" data-name="${l.name || l.list || 'จุด'}">
+                            <div style="font-weight:600;color:var(--text);">${l.name || 'ไม่มีชื่อ'}</div>
+                            <div style="font-size:11px;color:var(--text3);">${l.list}${l.city ? ' · ' + l.city : ''}</div>
+                        </div>
+                    `).join('');
+                    results.style.display = 'block';
+                    
+                    // Click to add
+                    results.querySelectorAll('.mrp-result').forEach(el => {
+                        el.addEventListener('click', () => {
+                            const lat = parseFloat(el.dataset.lat);
+                            const lng = parseFloat(el.dataset.lng);
+                            const name = el.dataset.name;
+                            addManualRoutePoint(lat, lng, name);
+                            input.value = '';
+                            results.style.display = 'none';
+                        });
+                    });
+                } else {
+                    results.style.display = 'none';
+                }
+            });
+            
+            // Close results on outside click
+            input.addEventListener('blur', () => {
+                setTimeout(() => { if (results) results.style.display = 'none'; }, 200);
+            });
+        }
+    }, 50);
 }
 
 // Expose for onclick handlers
