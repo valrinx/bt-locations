@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.27';
+const APP_VERSION = 'v6.9.28';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -320,7 +320,7 @@ document.getElementById('editGroupDelete').onclick = () => {
     const label = _editGroupType==='list' ? 'รายการ' : 'เมือง/เขต';
     const count = locations.filter(l => _editGroupType==='list' ? l.list===_editGroupOldName : l.city===_editGroupOldName).length;
     document.getElementById('editGroupModalOverlay').classList.remove('open');
-    showConfirm('🗑️', `ลบ${label} "${_editGroupOldName}"?`,
+    showConfirm('delete', `ลบ${label} "${_editGroupOldName}"?`,
         `จุด ${count} จุดจะถูกย้ายไปใส่ "ยังไม่บันทึก"`,
         () => {
             pushUndo();
@@ -341,7 +341,7 @@ document.getElementById('editGroupDelete').onclick = () => {
 document.getElementById('editGroupDeleteAll').onclick = () => {
     const count = locations.filter(l => l.list===_editGroupOldName).length;
     document.getElementById('editGroupModalOverlay').classList.remove('open');
-    showConfirm('🗑️', `ลบหมุด ${count} จุดใน "${_editGroupOldName}"?`,
+    showConfirm('delete', `ลบหมุด ${count} จุดใน "${_editGroupOldName}"?`,
         'หมุดทั้งหมดใน List นี้จะถูกลบออกจากระบบถาวร',
         async () => {
             pushUndo();
@@ -2343,7 +2343,7 @@ function openMergeListSheet() {
             const count = locations.filter(l => (l.list || 'ไม่มีรายการ') === filterList).length;
             
             // Show confirmation before merge
-            showConfirm('🔗 รวมรายการ?', 
+            showConfirm('merge', 
                 `รวม "${filterList}" → "${toList}"`,
                 `จะมี ${count} จุดถูกย้าย\nสามารถ ↩️ Undo ได้หากผิดพลาด`,
                 () => {
@@ -3240,7 +3240,7 @@ if(editModalSave) editModalSave.onclick=()=>{
 // ════════════════════════════════════════════
 window.doConfirmDelete=function(idx){
     const loc=locations[idx]; if(!loc)return;
-    showConfirm('🗑️','ลบสถานที่?',`"${loc.name||loc.list}" จะถูกลบ (Undo ได้)`,()=>{
+    showConfirm('delete','ลบสถานที่?',`"${loc.name||loc.list}" จะถูกลบ (Undo ได้)`,()=>{
         addChangelogEntry('delete',loc);
         pushUndo();locations.splice(idx,1);saveLocations();invalidateCache();closePlaceCard();update();showToast('ลบแล้ว');
         if(_sbLoaded)sbDelete(loc);
@@ -4725,7 +4725,7 @@ function protectedDataAction(action) {
 
 function doDeleteAllLocations() {
     if (!locations.length) { showToast('ไม่มีข้อมูลให้ลบ'); return; }
-    showConfirm('🗑️', `ลบทั้งหมด ${locations.length} จุด?`, 'การลบนี้จะบันทึกไว้ใน Undo เพื่อกู้คืนได้ทันที', async () => {
+    showConfirm('delete', `ลบทั้งหมด ${locations.length} จุด?`, 'การลบนี้จะบันทึกไว้ใน Undo เพื่อกู้คืนได้ทันที', async () => {
         pushUndo();
         const toDelete = [...locations];
         locations = [];
@@ -4929,7 +4929,7 @@ document.getElementById('fileImport').onchange=async e=>{
     const fileNames=files.map(f=>f.name).join(', ');
     const dupText=deduped.removed?`\nคัดจุดซ้ำพิกัดเป๊ะๆ ออก ${deduped.removed} จุด`:'';
     const multiText=files.length>1?` (${files.length} ไฟล์)`:'';
-    showConfirm('📥',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,async()=>{
+    showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,async()=>{
         pushUndo();locations=allImp;saveLocations();invalidateCache();update();
         showToast(`Replace: ${allImp.length} จุด`,false,true);
         if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}
@@ -4967,7 +4967,7 @@ function doBulkDel(){
     const f=getFiltered();
     if(!filterList&&!filterCity&&!document.getElementById('search').value&&!nearbyMode){showToast('กรุณา filter ก่อน',true);return;}
     if(!f.length){showToast('ไม่มีจุดในตัวกรอง',true);return;}
-    showConfirm('🗑️',`ลบ ${f.length} จุด?`,'จุดที่อยู่ในตัวกรองปัจจุบันจะถูกลบทั้งหมด',()=>{
+    showConfirm('delete',`ลบ ${f.length} จุด?`,'จุดที่อยู่ในตัวกรองปัจจุบันจะถูกลบทั้งหมด',()=>{
         pushUndo();const rm=new Set(f);const toDelSb=[...rm];locations=locations.filter(l=>!rm.has(l));saveLocations();invalidateCache();update();showToast(`ลบ ${f.length} จุดแล้ว`);
         if(_sbLoaded)toDelSb.forEach(l=>sbDelete(l));
     });
@@ -4975,7 +4975,7 @@ function doBulkDel(){
 }
 
 async function doReset(){
-    showConfirm('🔄','รีเซ็ตข้อมูล?','ข้อมูลที่แก้ไขจะหาย ระบบจะดึงข้อมูลใหม่จาก Supabase',async()=>{
+    showConfirm('reset','รีเซ็ตข้อมูล?','ข้อมูลที่แก้ไขจะหาย ระบบจะดึงข้อมูลใหม่จาก Supabase',async()=>{
         pushUndo();localStorage.removeItem(STORAGE_KEY);
         await doSync(false);
     });
@@ -5008,7 +5008,26 @@ async function githubPut(path,content,sha,token,msg){}
 // ════════════════════════════════════════════
 let confirmCallback=null;
 function showConfirm(icon,title,text,cb){
-    document.getElementById('confirmIcon').textContent=icon;
+    const el=document.getElementById('confirmIcon');
+    if(el){
+        el.className='confirm-icon';
+        if(icon==='delete'||icon==='🗑️'||icon==='🗑'){
+            el.classList.add('danger');
+            el.innerHTML='<i class="fa-solid fa-trash"></i>';
+        } else if(icon==='import'||icon==='📥'){
+            el.classList.add('info');
+            el.innerHTML='<i class="fa-solid fa-file-import"></i>';
+        } else if(icon==='reset'||icon==='🔄'){
+            el.classList.add('info');
+            el.innerHTML='<i class="fa-solid fa-rotate"></i>';
+        } else if(icon==='merge'||icon==='🔗 รวมรายการ?'){
+            el.classList.add('success');
+            el.innerHTML='<i class="fa-solid fa-code-merge"></i>';
+        } else {
+            el.classList.add('danger');
+            el.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i>';
+        }
+    }
     document.getElementById('confirmTitle').textContent=title;
     document.getElementById('confirmText').textContent=text;
     confirmCallback=cb;
