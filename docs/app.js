@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.10';
+const APP_VERSION = 'v6.9.11';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2989,6 +2989,13 @@ window.openAddAt=function(lat,lng){
     _reverseGeocodeCity(lat,lng).then(city=>{
         if(city&&!filterCity){
             document.getElementById('modalCity').value=city;
+            // Auto-fill list based on most-used list in this city (if no filter active)
+            if(!filterList&&!autoList){
+                const cnt={};
+                locations.filter(l=>l.city===city).forEach(l=>{if(l.list)cnt[l.list]=(cnt[l.list]||0)+1;});
+                const bestList=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+                if(bestList) document.getElementById('modalList').value=bestList;
+            }
         }
     });
 
