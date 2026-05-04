@@ -182,11 +182,13 @@ function toggleMobDrawer(){
 function openMobDrawer(){
     const drawer = document.getElementById('mobDrawer');
     if(drawer) drawer.classList.add('show');
+    document.getElementById('mn-menu')?.classList.add('on');
     _renderMobDrawer();
 }
 function closeMobDrawer(){
     const drawer = document.getElementById('mobDrawer');
     if(drawer) drawer.classList.remove('show');
+    document.getElementById('mn-menu')?.classList.remove('on');
 }
 
 // Render mobile drawer content
@@ -923,6 +925,9 @@ let _markerCache = new Map(); // idx → marker
 let _lastFilteredKey = null;
 let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 const DISTRICT_CLUSTER_MAX_ZOOM = 13;
+const MARKER_VIEWPORT_PAD = 0.22;
+let _lastMarkerRenderMode = null;
+let _tooltipPermanentState = null;
 
 function _getDistrictName(loc) {
     return loc.district || loc.city || 'ไม่ระบุเขต';
@@ -930,6 +935,33 @@ function _getDistrictName(loc) {
 
 function _getMarkerColor(loc) {
     return getLocTagColor(loc) || getColor(loc.list || 'ไม่ระบุ');
+}
+
+function _getMarkerRenderMode() {
+    if (routeMode) return 'route';
+    if (heatmapMode) return `heat:${map.getZoom()}`;
+    if (manualRouteMode) return 'manual';
+    if (_selectedDistrict) return 'district-detail';
+    return map.getZoom() <= DISTRICT_CLUSTER_MAX_ZOOM ? 'district-clusters' : 'points';
+}
+
+function _getViewportKey() {
+    if (!map || !map.getBounds) return 'no-map';
+    const b = map.getBounds().pad(MARKER_VIEWPORT_PAD);
+    const z = map.getZoom();
+    return [
+        z,
+        b.getSouth().toFixed(3),
+        b.getWest().toFixed(3),
+        b.getNorth().toFixed(3),
+        b.getEast().toFixed(3)
+    ].join(':');
+}
+
+function _filterToViewport(items) {
+    if (!map || !map.getBounds || map.getZoom() <= DISTRICT_CLUSTER_MAX_ZOOM) return items;
+    const b = map.getBounds().pad(MARKER_VIEWPORT_PAD);
+    return items.filter(l => b.contains([l.lat, l.lng]));
 }
 
 function _createLocationIcon(loc, idx) {
@@ -952,10 +984,13 @@ function _createLocationIcon(loc, idx) {
 
 function _updateDistrictScopeControl(count) {
     let el = document.getElementById('districtScopeControl');
+    const mapEl = document.getElementById('map');
     if (!_selectedDistrict) {
         if (el) el.remove();
+        if (mapEl) mapEl.classList.remove('map-district-scoped');
         return;
     }
+    if (mapEl) mapEl.classList.add('map-district-scoped');
     if (!el) {
         el = document.createElement('div');
         el.id = 'districtScopeControl';
@@ -1023,9 +1058,12 @@ function renderMarkers(filtered) {
 
     const filteredIdxSet = new Set(filtered.map(l => getLocIndex(l)));
     const zoom = map.getZoom();
-    const key = [...filteredIdxSet].sort().join(',') + '|' + heatmapMode + '|' + zoom + '|' + _selectedDistrict + '|' + _selectedDistrictList;
+    const renderMode = _getMarkerRenderMode();
+    const viewportKey = ['points', 'district-detail', 'manual'].includes(renderMode) ? _getViewportKey() : '';
+    const key = [...filteredIdxSet].sort().join(',') + '|' + renderMode + '|' + viewportKey + '|' + _selectedDistrict + '|' + _selectedDistrictList;
     if (key === _lastFilteredKey) return;
     _lastFilteredKey = key;
+    _lastMarkerRenderMode = renderMode;
 
     // ── heatmap mode ──
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
@@ -1047,7 +1085,8 @@ function renderMarkers(filtered) {
 
     if (manualRouteMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
-        _showIndividualMarkers(filtered);
+        const visibleManual = _filterToViewport(filtered);
+        _showIndividualMarkers(visibleManual);
         _updateDistrictScopeControl(filtered.length);
         const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${filtered.length} ตู้`;
         const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
@@ -1098,7 +1137,8 @@ function renderMarkers(filtered) {
         : filtered;
     
     // Show individual markers
-    _showIndividualMarkers(markersToShow);
+    const visibleMarkers = _filterToViewport(markersToShow);
+    _showIndividualMarkers(visibleMarkers);
     _updateDistrictScopeControl(markersToShow.length);
     
     // Update stats
@@ -1946,27 +1986,26 @@ function openMergeListSheet() {
 }
 
 function openListOptionsSheet(){
-    const list = [
-        { icon: '📂', name: 'เลือกรายการ', action: openListPickerSheet },
-        { icon: '🔗', name: 'รวมรายการ', action: openMergeListSheet }
-    ];
-    
     const container = document.getElementById('mobSheetList');
     const title = document.getElementById('mobSheetTitle');
     if(!container || !title) return;
     
     title.innerText = 'จัดการรายการ';
-    container.innerHTML = list.map(item => `
-        <div class="ms-item" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">${item.icon}</div>
-            <div style="font-size:14px;font-weight:500;">${item.name}</div>
-        </div>
-    `).join('');
-    
-    const items = container.querySelectorAll('.ms-item');
-    items.forEach((el, i) => {
-        el.onclick = () => { list[i].action(); };
-    });
+    container.innerHTML = `
+        <button type="button" class="sheet-action primary" data-action="pick">
+            <span class="sheet-token">LIST</span>
+            <span class="sheet-main"><b>เลือกรายการ</b><small>กรองจุดตามรายการและดูจำนวนในแต่ละกลุ่ม</small></span>
+            <span class="sheet-count">${_listCounts().length}</span>
+        </button>
+        <button type="button" class="sheet-action" data-action="merge">
+            <span class="sheet-token">JOIN</span>
+            <span class="sheet-main"><b>รวมรายการ</b><small>ย้ายจุดจากรายการที่เลือกไปรวมกับอีกรายการ</small></span>
+        </button>
+        <div class="sheet-note">เลือกจากแท็บรายการด้านล่างได้เช่นกัน เมนูนี้เหลือเฉพาะคำสั่งจัดการที่จำเป็น</div>
+    `;
+
+    container.querySelector('[data-action="pick"]')?.addEventListener('click', openListPickerSheet);
+    container.querySelector('[data-action="merge"]')?.addEventListener('click', openMergeListSheet);
     
     openMobSheet();
 }
@@ -1986,54 +2025,43 @@ function openRouteStartOptionsSheet(){
     title.innerText = 'เลือกจุดเริ่มต้น';
     
     let html = `
-        <div style="padding:12px 16px;border-bottom:0.5px solid var(--bd2);">
-            <div style="font-size:12px;color:var(--tx3);margin-bottom:8px;">พบ ${filtered.length} จุดในรายการ</div>
-        </div>
+        <div class="sheet-note">พบ ${filtered.length} จุดในรายการ เลือกจุดเริ่มต้นสำหรับคำนวณเส้นทาง</div>
     `;
     
     // Option 1: From current GPS position
     if(myLatLng){
         html += `
-            <div class="ms-item" data-start="gps" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--bl-d);">
-                <div style="font-size:18px;width:30px;display:flex;justify-content:center;">📍</div>
-                <div style="flex:1;">
-                    <div style="font-size:14px;font-weight:500;">ตำแหน่งปัจจุบัน</div>
-                    <div style="font-size:11px;color:var(--tx3);">${myLatLng.lat.toFixed(5)}, ${myLatLng.lng.toFixed(5)}</div>
-                </div>
-            </div>
+            <button type="button" class="sheet-action primary" data-start="gps">
+                <span class="sheet-token">GPS</span>
+                <span class="sheet-main"><b>ตำแหน่งปัจจุบัน</b><small>${myLatLng.lat.toFixed(5)}, ${myLatLng.lng.toFixed(5)}</small></span>
+            </button>
         `;
     }
     
     // Option 2: From first location in list
     const firstLoc = filtered[0];
     html += `
-        <div class="ms-item" data-start="first" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">📍</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${firstLoc.name || firstLoc.list}</div>
-                <div style="font-size:11px;color:var(--tx3);">จุดแรกในรายการ</div>
-            </div>
-        </div>
+        <button type="button" class="sheet-action" data-start="first">
+            <span class="sheet-token">01</span>
+            <span class="sheet-main"><b>${_escapeHtml(firstLoc.name || firstLoc.list)}</b><small>จุดแรกในรายการ</small></span>
+        </button>
     `;
     
     // Option 3: From specific location
-    html += `<div style="padding:8px 16px;background:var(--s2);font-size:12px;color:var(--tx3);border-bottom:0.5px solid var(--bd2);">เลือกจุดเริ่มต้น:</div>`;
+    html += `<div class="sheet-note">หรือเลือกจาก 10 จุดแรก</div>`;
     
     filtered.slice(0, 10).forEach((loc, idx) => {
         html += `
-            <div class="ms-item" data-start="loc" data-idx="${idx}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-                <div style="width:24px;height:24px;border-radius:50%;background:${getColor(loc.list)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;">${idx + 1}</div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${loc.name || loc.list}</div>
-                    <div style="font-size:10px;color:var(--tx3);">${loc.list}${loc.city ? ' · ' + loc.city : ''}</div>
-                </div>
-            </div>
+            <button type="button" class="sheet-action" data-start="loc" data-idx="${idx}">
+                <span class="sheet-token" style="color:${getColor(loc.list)};">${idx + 1}</span>
+                <span class="sheet-main"><b>${_escapeHtml(loc.name || loc.list)}</b><small>${_escapeHtml(loc.list)}${loc.city ? ' · ' + _escapeHtml(loc.city) : ''}</small></span>
+            </button>
         `;
     });
     
     container.innerHTML = html;
     
-    container.querySelectorAll('.ms-item').forEach(el => {
+    container.querySelectorAll('[data-start]').forEach(el => {
         el.onclick = () => {
             const startType = el.dataset.start;
             let startLat, startLng;
@@ -2092,58 +2120,45 @@ function openRouteOptionsSheet(){
         if(routeMode && routeLine){
             // Route is visible - show hide option
             html += `
-                <div class="ms-item" data-action="hide" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--bl-d);">
-                    <div style="font-size:18px;width:30px;display:flex;justify-content:center;">👁️</div>
-                    <div style="flex:1;">
-                        <div style="font-size:14px;font-weight:500;">ซ่อนเส้นทาง (${_routeStops.length} จุด)</div>
-                        <div style="font-size:11px;color:var(--tx3);">ซ่อนเส้นทางชั่วคราว</div>
-                    </div>
-                </div>
+                <button type="button" class="sheet-action primary" data-action="hide">
+                    <span class="sheet-token">VIEW</span>
+                    <span class="sheet-main"><b>ซ่อนเส้นทาง</b><small>เก็บแผนเดิมไว้ แต่เอาเส้นออกจากแผนที่ชั่วคราว</small></span>
+                    <span class="sheet-count">${_routeStops.length}</span>
+                </button>
             `;
         } else {
             // Route exists but hidden - show resume option
             html += `
-                <div class="ms-item" data-action="resume" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--gn-d);">
-                    <div style="font-size:18px;width:30px;display:flex;justify-content:center;">👁️</div>
-                    <div style="flex:1;">
-                        <div style="font-size:14px;font-weight:500;">ดูเส้นทาง (${_routeStops.length} จุด)</div>
-                        <div style="font-size:11px;color:var(--tx3);">แสดงเส้นทางที่วางแผนไว้</div>
-                    </div>
-                </div>
+                <button type="button" class="sheet-action primary" data-action="resume">
+                    <span class="sheet-token">SHOW</span>
+                    <span class="sheet-main"><b>แสดงเส้นทางเดิม</b><small>กลับมาแสดงเส้นทางที่วางไว้ล่าสุด</small></span>
+                    <span class="sheet-count">${_routeStops.length}</span>
+                </button>
             `;
         }
         html += `
-            <div class="ms-item" data-action="clear" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-                <div style="font-size:18px;width:30px;display:flex;justify-content:center;">🗑️</div>
-                <div style="flex:1;">
-                    <div style="font-size:14px;font-weight:500;">ล้างเส้นทาง</div>
-                    <div style="font-size:11px;color:var(--tx3);">ลบเส้นทางและเริ่มใหม่</div>
-                </div>
-            </div>
-            <div style="padding:8px 16px;background:var(--s2);font-size:11px;color:var(--tx3);border-bottom:0.5px solid var(--bd2);">หรือสร้างเส้นทางใหม่:</div>
+            <button type="button" class="sheet-action" data-action="clear">
+                <span class="sheet-token">CLR</span>
+                <span class="sheet-main"><b>ล้างเส้นทาง</b><small>ลบแผนเส้นทางและเริ่มเลือกใหม่</small></span>
+            </button>
+            <div class="sheet-note">สร้างเส้นทางใหม่</div>
         `;
     }
     
     html += `
-        <div class="ms-item" data-action="route" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">🗺️</div>
-            <div style="flex:1;">
-                <div style="font-size:14px;font-weight:500;">วางแผนเส้นทางใหม่</div>
-                <div style="font-size:11px;color:var(--tx3);">เลือกจุดเริ่มต้น → วางแผน</div>
-            </div>
-        </div>
-        <div class="ms-item" data-action="manual" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--bl-d);">
-            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">📍</div>
-            <div style="flex:1;">
-                <div style="font-size:14px;font-weight:500;">เลือกจุดเอง</div>
-                <div style="font-size:11px;color:var(--tx3);">คลิกเลือกจุดบนแผนที่ได้หลายจุด</div>
-            </div>
-        </div>
+        <button type="button" class="sheet-action primary" data-action="route">
+            <span class="sheet-token">AUTO</span>
+            <span class="sheet-main"><b>วางแผนจากรายการ</b><small>เลือกจุดเริ่มต้น แล้วจัดลำดับเส้นทางให้ทันที</small></span>
+        </button>
+        <button type="button" class="sheet-action" data-action="manual">
+            <span class="sheet-token">PICK</span>
+            <span class="sheet-main"><b>เลือกจุดเอง</b><small>แตะ marker หรือแตะแผนที่เพื่อเพิ่มจุดหลายตำแหน่ง</small></span>
+        </button>
     `;
     
     container.innerHTML = html;
     
-    container.querySelectorAll('.ms-item').forEach(el => {
+    container.querySelectorAll('[data-action]').forEach(el => {
         el.onclick = () => {
             const action = el.dataset.action;
             if(action === 'route'){
@@ -2151,15 +2166,15 @@ function openRouteOptionsSheet(){
             } else if(action === 'hide'){
                 closeMobSheet();
                 hideRoute();
-                showToast('👁️ ซ่อนเส้นทางชั่วคราว');
+                showToast('ซ่อนเส้นทางชั่วคราว');
             } else if(action === 'resume'){
                 closeMobSheet();
                 resumeRoute();
-                showToast('👁️ แสดงเส้นทาง');
+                showToast('แสดงเส้นทาง');
             } else if(action === 'clear'){
                 closeMobSheet();
                 clearRoute();
-                showToast('🗑️ ล้างเส้นทางแล้ว');
+                showToast('ล้างเส้นทางแล้ว');
             } else if(action === 'manual'){
                 closeMobSheet();
                 startManualRouteMode();
@@ -2346,15 +2361,29 @@ onClick('btnTile', ()=>{
 // GPS
 // ════════════════════════════════════════════
 const btnGps=document.getElementById('btnGps');
+let _lastGpsPanAt = 0;
 
 // ── smooth pan ด้วย panTo แทน flyTo — ไม่กระตุกเมื่อตำแหน่งเปลี่ยนนิดเดียว ──
 function _smoothFollow(lat, lng) {
     if (!gpsTracking) return;
+    const now = Date.now();
+    if (now - _lastGpsPanAt < 2200) return;
     const cur = map.getCenter();
     const dist = haversine(cur.lat, cur.lng, lat, lng);
-    if (dist < 2) return; // ไม่ขยับถ้าใกล้มาก < 2ม.
-    // panTo สมูทกว่า flyTo สำหรับการติดตาม
-    map.panTo([lat, lng], {animate: true, duration: 0.5, easeLinearity: 0.5, noMoveStart: true});
+    if (dist < 12) return;
+    _lastGpsPanAt = now;
+    map.panTo([lat, lng], {animate: true, duration: 0.35, easeLinearity: 0.35, noMoveStart: true});
+}
+
+function _setGpsUi(state, detail='') {
+    if (!btnGps) return;
+    btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking', 'gps-paused');
+    btnGps.dataset.gpsState = '';
+    if (state) btnGps.classList.add(state);
+    if (state === 'gps-searching') btnGps.dataset.gpsState = 'หา GPS';
+    if (state === 'gps-tracking') btnGps.dataset.gpsState = detail || 'ติดตาม';
+    if (state === 'gps-paused') btnGps.dataset.gpsState = 'หยุดตาม';
+    if (state === 'gps-found') btnGps.dataset.gpsState = detail || 'พร้อม';
 }
 
 function updateGpsMarker(lat, lng, accuracy) {
@@ -2392,13 +2421,15 @@ function updateGpsMarker(lat, lng, accuracy) {
 // แสดง tooltip ถาวรเฉพาะตอน zoom >= 16
 const TOOLTIP_ZOOM = 16;
 function _updateTooltipVisibility() {
-    const showPermanent = !!_selectedDistrict || map.getZoom() >= TOOLTIP_ZOOM;
+    const showPermanent = map.getZoom() >= TOOLTIP_ZOOM;
+    if (showPermanent === _tooltipPermanentState) return;
+    _tooltipPermanentState = showPermanent;
     _markerCache.forEach(marker => {
         const tt = marker.getTooltip();
         if (!tt) return;
         if (showPermanent && !tt.options.permanent) {
             marker.unbindTooltip();
-            marker.bindTooltip(tt._content || tt.getContent(), { permanent: true, direction: 'top', offset: [0, -9], className: 'bt-tooltip bt-tooltip-locked', opacity: 0.88 });
+            marker.bindTooltip(tt._content || tt.getContent(), { permanent: true, direction: 'top', offset: [0, -9], className: 'bt-tooltip', opacity: 0.88 });
             if (marker._map) marker.openTooltip();
         } else if (!showPermanent && tt.options.permanent) {
             marker.unbindTooltip();
@@ -2408,9 +2439,18 @@ function _updateTooltipVisibility() {
 }
 map.on('zoomend', () => {
     _updateTooltipVisibility();
-    _lastFilteredKey = null; // force re-render with new marker limit
-    
-    update();
+    const mode = _getMarkerRenderMode();
+    if (mode !== _lastMarkerRenderMode) {
+        _lastFilteredKey = null;
+        update();
+    }
+});
+map.on('moveend', () => {
+    const mode = _getMarkerRenderMode();
+    if (['points', 'district-detail', 'manual'].includes(mode)) {
+        _lastFilteredKey = null;
+        update();
+    }
 });
 
 if(btnGps){
@@ -2418,7 +2458,7 @@ map.on('dragstart', () => {
     if (gpsTracking) {
         gpsTracking = false;
         btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
-        btnGps.classList.remove('gps-tracking');
+        _setGpsUi('gps-paused');
     }
 });
 }
@@ -2427,7 +2467,7 @@ function stopGps() {
     if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
     gpsActive = false; gpsTracking = false; gpsCoarseShown = false; gpsFlyDone = false;
     gpsToastShown = false; gpsFineToastShown = false;
-    if(btnGps) btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking');
+    if(btnGps) _setGpsUi('');
     _lastGpsLat = null; _lastGpsLng = null;
 }
 
@@ -2437,16 +2477,16 @@ if(btnGps) btnGps.onclick = () => {
     if (gpsActive && myLocationMarker) {
         // toggle tracking: ถ้า tracking อยู่ → บินไปตำแหน่ง, ถ้าไม่ → เปิด tracking
         gpsTracking = true;
-        btnGps.classList.add('gps-tracking');
+        _setGpsUi('gps-tracking');
         const ll = myLocationMarker.getLatLng();
         map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17), {animate:true, duration:0.8});
-        showToast('📍 ติดตามตำแหน่ง');
+        showToast('GPS tracking เปิดอยู่');
         return;
     }
     stopGps();
     gpsActive = true; gpsTracking = true;
-    btnGps.classList.add('gps-searching', 'gps-tracking');
-    showToast('⏳ กำลังหาตำแหน่ง...');
+    _setGpsUi('gps-searching');
+    showToast('กำลังหาตำแหน่ง...');
     navigator.geolocation.getCurrentPosition(
         pos => {
             if (!gpsActive) return;
@@ -2458,8 +2498,7 @@ if(btnGps) btnGps.onclick = () => {
                 const z = accuracy > 1000 ? 13 : accuracy > 200 ? 15 : 17;
                 map.flyTo([lat, lng], z, {animate:true, duration:1.0});
             }
-            btnGps.classList.remove('gps-searching');
-            btnGps.classList.add('gps-found');
+            _setGpsUi('gps-tracking', `±${Math.round(accuracy)}ม.`);
             if (!gpsToastShown) {
                 gpsToastShown = true;
                 showToast(accuracy > 500 ? `📡 ±${Math.round(accuracy)}ม.` : `✅ พบตำแหน่ง ±${Math.round(accuracy)}ม.`, false, true);
@@ -2476,9 +2515,11 @@ if(btnGps) btnGps.onclick = () => {
                     }
                     _lastGpsLat = lat2; _lastGpsLng = lng2;
                     updateGpsMarker(lat2, lng2, acc2);
+                    if (gpsTracking) _setGpsUi('gps-tracking', `±${Math.round(acc2)}ม.`);
                     if (!gpsFineToastShown && acc2 < 50) {
                         gpsFineToastShown = true;
-                        showToast(`✅ แม่นยำ ±${Math.round(acc2)}ม.`, false, true);
+                        _setGpsUi('gps-tracking', `±${Math.round(acc2)}ม.`);
+                        showToast(`แม่นยำ ±${Math.round(acc2)}ม.`, false, true);
                     }
                 },
                 () => {},
@@ -4597,11 +4638,9 @@ update();
 
 const style=document.createElement('style');
 style.textContent=`.bt-tooltip{background:rgba(9,13,20,0.54)!important;color:oklch(96% 0.008 250)!important;border:0!important;border-radius:4px!important;padding:2px 5px!important;font-size:9px!important;font-weight:700!important;line-height:1.1!important;box-shadow:0 1px 4px rgba(0,0,0,0.22)!important;text-shadow:0 1px 1px rgba(0,0,0,0.75)!important;white-space:nowrap!important;font-family:inherit!important;}
-.bt-tooltip.bt-tooltip-locked{background:rgba(7,12,18,0.48)!important;box-shadow:0 1px 3px rgba(0,0,0,0.2)!important;color:oklch(97% 0.008 250)!important;}
 .bt-field-marker { transition: transform 180ms cubic-bezier(0.22,1,0.36,1), filter 180ms ease !important; }
 .bt-field-marker:hover { transform: scale(1.18) !important; }
-.marker-cluster { transition: transform 180ms cubic-bezier(0.22,1,0.36,1), opacity 160ms ease !important; }
-.marker-cluster:hover { transform: scale(1.08) !important; }
+.marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
 `;
