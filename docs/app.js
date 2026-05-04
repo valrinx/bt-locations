@@ -713,20 +713,26 @@ function _locRow(l){
 // Supabase write-only helpers — do NOT touch local array or render.
 // Realtime subscription is the ONLY place that updates locations[] and calls update().
 async function sbInsert(loc){
-    const {error}=await _sb.from('locations').insert(_locRow(loc));
-    if(error){console.warn('sbInsert failed:',error.message);_setSyncStatus('error');}
+    const {data,error}=await _sb.from('locations').insert(_locRow(loc)).select('id').single();
+    if(error){console.warn('sbInsert failed:',error.message);_setSyncStatus('error');return false;}
+    if(data && data.id)loc.sb_id=data.id;
+    _writeCache();
+    return true;
     // Realtime INSERT event will add to locations[] and render
 }
 async function sbUpdate(loc){
-    if(!loc.sb_id){await sbInsert(loc);return;}
+    if(!loc.sb_id)return await sbInsert(loc);
     const {error}=await _sb.from('locations').update(_locRow(loc)).eq('id',loc.sb_id);
-    if(error){console.warn('sbUpdate failed:',error.message);_setSyncStatus('error');}
+    if(error){console.warn('sbUpdate failed:',error.message);_setSyncStatus('error');return false;}
+    _writeCache();
+    return true;
     // Realtime UPDATE event will update locations[] and render
 }
 async function sbDelete(loc){
     if(!loc.sb_id)return;
     const {error}=await _sb.from('locations').delete().eq('id',loc.sb_id);
-    if(error){console.warn('sbDelete failed:',error.message);_setSyncStatus('error');}
+    if(error){console.warn('sbDelete failed:',error.message);_setSyncStatus('error');return false;}
+    return true;
     // Realtime DELETE event will remove from locations[] and render
 }
 async function sbBulkUpdate(locs){
@@ -2073,6 +2079,7 @@ if(editModalSave) editModalSave.onclick=()=>{
     } else {
         locations.push(entry);
     }
+    saveLocations();invalidateCache();update();
     
     if(_sbLoaded){
         // Realtime will broadcast, but we updated local already for instant feedback
@@ -2082,12 +2089,7 @@ if(editModalSave) editModalSave.onclick=()=>{
             if(editingIndex<0)map.flyTo([lat,lng],15,{animate:true,duration:0.7});
             sbInsert(entry);
         }
-    } else {
-        // Offline fallback
-        saveLocations();invalidateCache();update();
     }
-    // Update UI immediately
-    update();
 };
 
 // ════════════════════════════════════════════
@@ -3542,6 +3544,7 @@ async function doSync(silent=true){
         }));
         
         // 3-way merge or deterministic merge to preserve local changes
+        const pendingPush = [];
         if(_sbLoaded && locations.length > 0){
             // Use updatedAt merge strategy
             const merged = [];
@@ -3562,13 +3565,16 @@ async function doSync(silent=true){
                         merged.push(r);
                     } else {
                         console.log(`[SYNC] Using LOCAL version for ${local.name} (remote: ${new Date(r.updatedAt).toISOString()}, local: ${new Date(local.updatedAt).toISOString()})`);
-                        merged.push({...local, sb_id: local.sb_id || r.sb_id});
+                        const localWinner = {...local, sb_id: local.sb_id || r.sb_id};
+                        merged.push(localWinner);
+                        if(localWinner.updatedAt > r.updatedAt)pendingPush.push(localWinner);
                     }
                     rMap.delete(_syncKey(r));
                     coordMap.delete(_locKey(r));
                 } else if(!local.sb_id){
                     // New local item not yet synced
                     merged.push(local);
+                    pendingPush.push(local);
                 }
             });
             // Add remaining remote items
@@ -3576,6 +3582,11 @@ async function doSync(silent=true){
             locations = merged;
         } else {
             locations = remote;
+        }
+
+        for(const loc of pendingPush){
+            const ok = await sbUpdate(loc);
+            if(!ok)throw new Error('local changes could not be pushed');
         }
 
         _clearDirty(); // clear BEFORE writeCache so saveLocations won't re-push
