@@ -3624,22 +3624,32 @@
         }
 
         .district-popup-action {
-            height: 34px;
-            border: 1px solid var(--bd2);
-            border-radius: 7px;
-            background: var(--s3);
-            color: var(--tx);
+            height: 36px;
+            border: 0.5px solid var(--bd2);
+            border-radius: 9px;
+            background: var(--s2);
+            color: var(--tx2);
             cursor: pointer;
             font: inherit;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: background 0.15s, opacity 0.15s;
         }
 
         .district-popup-action.primary {
-            border-color: var(--bl-b);
             background: var(--bl);
+            border-color: transparent;
             color: oklch(98% 0.006 265);
+            font-weight: 700;
+            font-size: 13px;
+            box-shadow: 0 4px 14px rgba(91,143,255,0.35);
         }
+
+        .district-popup-action.primary:hover { opacity: 0.88; }
 
         .district-scope-control {
             position: fixed;
