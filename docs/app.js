@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.25';
+const APP_VERSION = 'v6.6.26';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1702,24 +1702,15 @@ function openRouteOptionsSheet(){
 window.openRouteOptionsSheet = openRouteOptionsSheet;
 
 // Initial wire-up for chipList
-document.addEventListener('DOMContentLoaded', () => {
-    const chipList = document.getElementById('chipList');
-    if(chipList) {
-        chipList.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if(typeof openListOptionsSheet === 'function') openListOptionsSheet();
-        });
-    }
-    
-    const chipRouteMenu = document.getElementById('chipRouteMenu');
-    if(chipRouteMenu) {
-        chipRouteMenu.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if(typeof openRouteOptionsSheet === 'function') openRouteOptionsSheet();
-        });
-    }
+// Wire up chip buttons
+onClick('chipList', (e) => {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    if(typeof openListOptionsSheet === 'function') openListOptionsSheet();
+});
+
+onClick('chipRouteMenu', (e) => {
+    if(e) { e.preventDefault(); e.stopPropagation(); }
+    if(typeof openRouteOptionsSheet === 'function') openRouteOptionsSheet();
 });
 
 // Search bar listeners
@@ -1732,15 +1723,20 @@ if(mobSearchInput) {
 }
 
 onClick('chipAll', ()=>{
+    console.log('[BT] chipAll clicked');
     filterList=''; filterCity=''; nearbyMode=false; filterFavorites=false;
     clearRoute(); clearMultiRoutes();
     update();
+    showToast('แสดงทั้งหมด');
 });
 
 onClick('chipFav', ()=>{
+    console.log('[BT] chipFav clicked, current:', filterFavorites);
     filterFavorites=!filterFavorites;
     if(filterFavorites){ filterList=''; filterCity=''; nearbyMode=false; }
+    console.log('[BT] chipFav new value:', filterFavorites);
     update();
+    showToast(filterFavorites ? '★ แสดงรายการโปรด' : '☆ แสดงทั้งหมด');
 });
 
 onClick('btnPlanMultipleRoutes', () => {
