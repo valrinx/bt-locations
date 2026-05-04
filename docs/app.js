@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.41';
+const APP_VERSION = 'v6.6.42';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3550,7 +3550,10 @@ function openInfoPanel(mode){
                         <div style="font-size:12px;color:var(--text3);">${locations.length} สถานที่${_syncAgo}</div>
                     </div>
                 </div>
-                ${_menuSection('ข้อมูล',[
+                ${_menuSection('ดำเนินการ',[
+                    ['↩️','เลิกทำ','omUndoM',''],
+                    ['↪️','ทำซ้ำ','omRedoM',''],
+                    ['—','','',''], // separator
                     ['🔄','Sync','omSyncM',''],
                     ['📤','Export','omExportM',''],
                     ['📥','Import','omImportM',''],
@@ -3564,9 +3567,7 @@ function openInfoPanel(mode){
                     ['📤','Export เส้นทาง','omExportPathsM',''],
                     ['🖼️','Export รูปแผนที่','omExportImgM',''],
                 ])}
-                ${_menuSection('แก้ไข',[
-                    ['↩️','เลิกทำ','omUndoM',''],
-                    ['↪️','ทำซ้ำ','omRedoM',''],
+                ${_menuSection('แก้ไข (ระวัง!)',[
                     ['🗑️','ลบที่กรอง','omBulkDelM','red'],
                     ['⚠️','รีเซ็ตข้อมูล','omResetM','red'],
                 ])}
