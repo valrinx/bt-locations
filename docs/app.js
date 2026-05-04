@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.33';
+const APP_VERSION = 'v6.9.34';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4774,31 +4774,51 @@ function parseCSV(text, fallbackList = 'Imported') {
     };
     const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
     if(lines.length<2)return[];
+    // DMS parser: "13°42'57.7"N 100°30'56.1"E" → {lat, lng}
+    function parseDMS(s){
+        const m=s.match(/([\d]+)[°º]([\d]+)'([\d.]+)"?\s*([NS])\s+([\d]+)[°º]([\d]+)'([\d.]+)"?\s*([EW])/);
+        if(!m)return null;
+        const lat=(+m[1]+(+m[2])/60+(+m[3])/3600)*(m[4]==='S'?-1:1);
+        const lng=(+m[5]+(+m[6])/60+(+m[7])/3600)*(m[8]==='W'?-1:1);
+        return {lat,lng};
+    }
     const header=parseRow(lines[0]).map(h=>h.trim().toLowerCase());
     const iLat=header.findIndex(h=>['lat','latitude','gps latitude','gps_latitude','ละติจูด'].includes(h));
     const iLng=header.findIndex(h=>['lng','lon','longitude','long','gps longitude','gps_longitude','ลองจิจูด'].includes(h));
     const iName=header.findIndex(h=>['name','title','topup name','ชื่อ','ชื่อสถานที่','placename'].includes(h));
-    const iList=header.findIndex(h=>['list','category','group','รายการ','หมวดหมู่'].includes(h));
+    const iList=header.findIndex(h=>['list','category','group','รายการ','หมวดหมู่','ป้าย'].includes(h));
     const iCity=header.findIndex(h=>['city','district','area','เขต','อำเภอ'].includes(h));
     const iProvince=header.findIndex(h=>['province','จังหวัด','changwat'].includes(h));
-    const iNote=header.findIndex(h=>['note','notes','desc','description','หมายเหตุ'].includes(h));
+    const iNote=header.findIndex(h=>['note','notes','desc','description','หมายเหตุ','บันทึก','ความคิดเห็น'].includes(h));
     const iUrl=header.findIndex(h=>['url','link','google maps url','maps url'].includes(h));
-    if(iLat<0&&iLng<0&&iUrl<0)return[];
+    // Google Takeout Thai: พิกัด DMS อยู่ใน column ชื่อ (iName) เมื่อไม่มี lat/lng
+    const isGoogleTakeout = iLat<0 && iLng<0 && iName>=0;
+    if(iLat<0&&iLng<0&&iUrl<0&&!isGoogleTakeout)return[];
     const result=[];
     for(let i=1;i<lines.length;i++){
         const cols=parseRow(lines[i]);
-        let lat,lng;
+        let lat,lng,nameVal=cols[iName]||'';
         if(iLat>=0&&iLng>=0){lat=parseFloat(cols[iLat]);lng=parseFloat(cols[iLng]);}
         else if(iUrl>=0){
             const m=(cols[iUrl]||'').match(/[/@?=]([-\d.]+),([-\d.]+)/);
             if(m){lat=parseFloat(m[1]);lng=parseFloat(m[2]);}
         }
+        // Google Takeout: try DMS from name col, then URL col
+        if((!lat||isNaN(lat)) && isGoogleTakeout){
+            const dms=parseDMS(nameVal);
+            if(dms){lat=dms.lat;lng=dms.lng;nameVal='';}
+            if((!lat||isNaN(lat)) && iUrl>=0){
+                const mu=(cols[iUrl]||'').match(/search\/([-\d.]+),([-\d.]+)/);
+                if(mu){lat=parseFloat(mu[1]);lng=parseFloat(mu[2]);}
+            }
+        }
         if(!lat||!lng||isNaN(lat)||isNaN(lng))continue;
         const cityVal=cols[iCity]||'';
         const provVal=iProvince>=0?cols[iProvince]||'':'';
         const cityFinal=cityVal||(provVal!==cityVal?provVal:'');
-        const listVal=iList>=0?(cols[iList]||fallbackList):(cityVal||fallbackList);
-        result.push({name:cols[iName]||'',lat,lng,list:listVal,city:cityFinal,note:cols[iNote]||''});
+        const listRaw=iList>=0?(cols[iList]||''):'';
+        const listVal=listRaw||cityVal||fallbackList;
+        result.push({name:nameVal,lat,lng,list:listVal,city:cityFinal,note:cols[iNote]||''});
     }
     return result;
 }
