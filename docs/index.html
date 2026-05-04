@@ -5058,6 +5058,7 @@
                 .then(res => res.json())
                 .then(data => {
                     const ip = data.ip;
+                    _currentIP = ip; // Store globally for changelog
                     const onlineCount = document.getElementById('onlineCount');
                     const svOnline = document.getElementById('svOnline');
                     if (onlineCount) onlineCount.textContent = 'IP: ' + ip;
@@ -5068,6 +5069,7 @@
                         .then(res => res.json())
                         .then(data => {
                             const ip = data.ip;
+                            _currentIP = ip; // Store globally for changelog
                             const onlineCount = document.getElementById('onlineCount');
                             const svOnline = document.getElementById('svOnline');
                             if (onlineCount) onlineCount.textContent = 'IP: ' + ip;

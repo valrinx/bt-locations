@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.38';
+const APP_VERSION = 'v6.6.39';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -527,10 +527,45 @@ function exportPaths() {
     showToast('📤 Export เส้นทางแล้ว');
 }
 
+// Global IP storage
+let _currentIP = 'unknown';
+let _currentDevice = navigator.userAgent.slice(0, 50);
+
 function getChangelog(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
-function addChangelogEntry(action,loc){
+function addChangelogEntry(action, loc, changes = null){
     const log=getChangelog();
-    log.unshift({t:Date.now(),a:action,n:loc.name||'',lat:loc.lat,lng:loc.lng,list:loc.list||''});
+    const username = localStorage.getItem('bt_username') || 'anonymous';
+    const device = _currentDevice;
+    const ip = _currentIP;
+    
+    // Build detailed description based on action
+    let details = '';
+    if (action === 'add') {
+        details = `เพิ่มจุดใหม่: ${loc.name} (${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)})`;
+    } else if (action === 'edit') {
+        if (changes) {
+            const changeList = Object.entries(changes).map(([k, v]) => `${k}: ${v.old} → ${v.new}`).join(', ');
+            details = `แก้ไข ${loc.name}: ${changeList}`;
+        } else {
+            details = `แก้ไขข้อมูล ${loc.name}`;
+        }
+    } else if (action === 'delete') {
+        details = `ลบจุด: ${loc.name} (${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)})`;
+    }
+    
+    log.unshift({
+        t: Date.now(),
+        a: action,
+        n: loc.name || '',
+        lat: loc.lat,
+        lng: loc.lng,
+        list: loc.list || '',
+        user: username,
+        device: device,
+        ip: ip,
+        details: details,
+        changes: changes
+    });
     if(log.length>MAX_CHANGELOG)log.length=MAX_CHANGELOG;
     localStorage.setItem(CHANGELOG_KEY,JSON.stringify(log));
 }
@@ -3304,6 +3339,14 @@ const infoPanelBackdrop=document.getElementById('infoPanelBackdrop');
 if(infoPanelClose) infoPanelClose.onclick = closeInfo;
 if(infoPanelBackdrop) infoPanelBackdrop.onclick = closeInfo;
 
+window.showChangelogDetail = function(timestamp) {
+    const log = getChangelog().find(e => e.t === timestamp);
+    if(!log) return;
+    const body = document.getElementById('infoPanelBody');
+    body.dataset.auditName = log.n;
+    openInfoPanel('audit');
+};
+
 function openInfoPanel(mode){
     const body=document.getElementById('infoPanelBody');
     if(mode==='changelog'){
@@ -3317,13 +3360,22 @@ function openInfoPanel(mode){
             ${log.map(e=>{
                 const d=new Date(e.t);
                 const ts=d.toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
-                return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--gn);">
+                const user = e.user || 'unknown';
+                const ip = e.ip || 'unknown';
+                const details = e.details || `${actionLabel[e.a]} ${e.n}`;
+                return `<div style="display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--gn);cursor:pointer;" onclick="showChangelogDetail(${e.t})">
                     <span style="font-size:16px;margin-top:2px;">${actionIcon[e.a]||'❓'}</span>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-size:13px;font-weight:600;color:${actionColor[e.a]||'var(--text)'};">${actionLabel[e.a]||e.a}</div>
-                        <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.n||'(\u0e44\u0e21\u0e48\u0e21\u0e35\u0e0a\u0e37\u0e48\u0e2d)'}</div>
-                        <div style="font-size:11px;color:var(--text3);">${e.list} · ${ts}</div>
+                        <div style="font-size:13px;font-weight:600;color:${actionColor[e.a]||'var(--text)'};">${actionLabel[e.a]||e.a} · ${e.n||'(ไม่มีชื่อ)'}</div>
+                        <div style="font-size:12px;color:var(--text);margin-top:2px;">${details}</div>
+                        <div style="font-size:10px;color:var(--text3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">
+                            <span>👤 ${user}</span>
+                            <span>🌐 ${ip}</span>
+                            <span>📱 ${(e.device || '').slice(0, 20)}</span>
+                            <span>🕐 ${ts}</span>
+                        </div>
                     </div>
+                    <span style="font-size:12px;color:var(--bl);">›</span>
                 </div>`;}).join('')}
         </div>`;}
     } else if(mode==='stats'){
@@ -3433,6 +3485,31 @@ function openInfoPanel(mode){
                 </div>
             ` : ''}
         </div>`;
+    } else if(mode==='audit'){
+        // Show detailed audit for a specific location
+        const locName = body.dataset.auditName;
+        const locLog = getChangelog().filter(e => e.n === locName).slice(0, 10);
+        document.getElementById('infoPanelTitle').textContent = `ประวัติ: ${locName}`;
+        if(!locLog.length){
+            body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);">ไม่มีประวัติการแก้ไข</div>';
+        } else {
+            body.innerHTML = `<div style="padding:8px 16px;">${locLog.map(e=>{
+                const d=new Date(e.t);
+                const ts=d.toLocaleString('th-TH');
+                const actionColor={add:'#34a853',edit:'#4285f4',delete:'#ea4335'}[e.a]||'var(--text)';
+                return `<div style="padding:12px;background:var(--s2);border-radius:12px;margin-bottom:8px;border-left:3px solid ${actionColor};">
+                    <div style="font-size:12px;font-weight:600;color:${actionColor};margin-bottom:4px;">${{add:'➕ เพิ่ม',edit:'✏️ แก้ไข',delete:'🗑️ ลบ'}[e.a]}</div>
+                    <div style="font-size:13px;color:var(--text);margin-bottom:8px;">${e.details || e.n}</div>
+                    <div style="font-size:10px;color:var(--text3);display:grid;gap:4px;">
+                        <div>👤 ผู้ใช้: ${e.user || 'unknown'}</div>
+                        <div>🌐 IP: ${e.ip || 'unknown'}</div>
+                        <div>📱 อุปกรณ์: ${e.device || 'unknown'}</div>
+                        <div>🕐 เวลา: ${ts}</div>
+                        ${e.changes ? `<div style="margin-top:4px;padding:4px;background:var(--s3);border-radius:4px;">📝 เปลี่ยนแปลง: ${Object.entries(e.changes).map(([k,v])=>`${k}: ${v.old}→${v.new}`).join(', ')}</div>` : ''}
+                    </div>
+                </div>`;
+            }).join('')}</div>`;
+        }
     } else {
         document.getElementById('infoPanelTitle').textContent='BT Locations';
         const _syncAgo=getToken()?` · ${Math.round((Date.now()-_lastSyncTime)/1000)}s ago`:'';
