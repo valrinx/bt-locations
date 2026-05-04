@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.26';
+const APP_VERSION = 'v6.9.27';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -203,7 +203,7 @@ function _renderMobDrawer(){
     let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:#5b8fff"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
     lists.forEach(([name,count],i)=>{
         const col=colorPalette[i % colorPalette.length];
-        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('list','${name.replace(/'/g,"\\'")}')">✏️</button></div>`;
+        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}')";closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('list','${name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button></div>`;
     });
     listContainer.innerHTML = listHtml;
     
@@ -213,7 +213,7 @@ function _renderMobDrawer(){
     let cityHtml = '';
     cities.forEach(([name,count],i)=>{
         const col=colorPalette[i % colorPalette.length];
-        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('city','${name.replace(/'/g,"\\'")}')">✏️</button></div>`;
+        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}')";closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('city','${name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button></div>`;
     });
     cityContainer.innerHTML = cityHtml;
 }
@@ -231,7 +231,7 @@ function _renderSidebar(){
             <span class="fl-dot" style="background:${getColor(name)}"></span>
             <span class="fl-name">${name}</span>
             <span class="fl-count">${locations.filter(l=>l.list===name).length}</span>
-            <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('list','${name.replace(/'/g,"\\'")}')">✏️</button>
+            <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('list','${name.replace(/'/g,"\\'")}')"><i class='fa-solid fa-pen'></i></button>
         </div>`
     ).join('');
     
@@ -239,7 +239,7 @@ function _renderSidebar(){
         `<div class="clist-item${filterCity===name?' active':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}')">
             <span class="fl-name">${name}</span>
             <span class="fl-count">${locations.filter(l=>l.city===name).length}</span>
-            <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('city','${name.replace(/'/g,"\\'")}')">✏️</button>
+            <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('city','${name.replace(/'/g,"\\'")}')"><i class='fa-solid fa-pen'></i></button>
         </div>`
     ).join('');
     
@@ -2088,7 +2088,7 @@ function renderListDirectory() {
                 <span style="width:10px;height:10px;border-radius:999px;background:${color};box-shadow:0 0 8px ${color}66;flex-shrink:0;"></span>
                 <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;">${_escapeHtml(name)}</span>
                 <span style="min-width:34px;text-align:right;color:var(--tx2);font-size:12px;">${count}</span>
-                <button class="fl-edit" style="opacity:0.5;font-size:13px;padding:4px 7px;" onclick="event.stopPropagation();openEditGroup('${kind}','${name.replace(/'/g,"\\'")}')">✏️</button>
+                <button class="fl-edit" style="opacity:0.5;font-size:12px;padding:4px 7px;" onclick="event.stopPropagation();openEditGroup('${kind}','${name.replace(/'/g,"\\'")}')"><i class='fa-solid fa-pen'></i></button>
             </div>`;
         }).join('')}`;
 
