@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.14';
+const APP_VERSION = 'v6.9.15';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5211,8 +5211,16 @@ function startRealtimeSync(){
     _sb.channel('locations-rt')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'locations'},payload=>{
             const r=payload.new;
-            const exists=locations.find(l=>l.sb_id===r.id);
-            if(!exists){
+            // Check both by sb_id and by coord to prevent duplicates from own sbInsert
+            const existsById=locations.find(l=>l.sb_id===r.id);
+            const existsByCoord=locations.find(l=>l.lat===r.lat&&l.lng===r.lng);
+            if(existsByCoord&&!existsByCoord.sb_id){
+                // Our own item — just update sb_id back onto the existing object
+                existsByCoord.sb_id=r.id;
+                _writeCache();
+                return;
+            }
+            if(!existsById&&!existsByCoord){
                 const loc=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
                 locations.push(loc);
                 _writeCache();invalidateCache();update();
