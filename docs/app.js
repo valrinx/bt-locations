@@ -5067,6 +5067,7 @@ async function doSync(silent=true){
     _syncing=true;
     _setSyncStatus('syncing');
     try{
+        const dirtyAtStart = _isDirty();
         // Paginate: Supabase default limit = 1000 rows per request
         let allData=[], from=0, pageSize=1000;
         while(true){
@@ -5087,7 +5088,9 @@ async function doSync(silent=true){
         
         // 3-way merge or deterministic merge to preserve local changes
         const pendingPush = [];
-        const shouldMerge = (_sbLoaded || _isDirty()) && locations.length > 0;
+        const dirtyNow = _isDirty();
+        const effectiveDirty = dirtyAtStart || dirtyNow;
+        const shouldMerge = (_sbLoaded || effectiveDirty) && locations.length > 0;
         if(shouldMerge){
             // Use updatedAt merge strategy
             const merged = [];
@@ -5132,7 +5135,7 @@ async function doSync(silent=true){
             if(!ok)throw new Error('local changes could not be pushed');
         }
 
-        if(_isDirty()){
+        if(_isDirty() && pendingPush.length === 0){
             _clearDirty();
         }
         localStorage.setItem(STORAGE_KEY,JSON.stringify(locations)); // bypass saveLocations
