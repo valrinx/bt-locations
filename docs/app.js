@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.3';
+const APP_VERSION = 'v6.9.4';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -805,10 +805,11 @@ async function sbBulkUpdate(locs){
 }
 
 let _sbLoaded = false;
-const saveLocations = debounce(() => {
+function saveLocations() {
     if (!_validateBeforeSave()) return;
+    _markDirty();
     _writeCache(); // localStorage only — Supabase push done via sbInsert/sbUpdate/sbDelete
-}, 300);
+}
 
 // ── index map: O(1) lookup แทน locations.indexOf() O(n) ──
 let _locIndexMap = new Map();
@@ -5086,7 +5087,8 @@ async function doSync(silent=true){
         
         // 3-way merge or deterministic merge to preserve local changes
         const pendingPush = [];
-        if(_sbLoaded && locations.length > 0){
+        const shouldMerge = (_sbLoaded || _isDirty()) && locations.length > 0;
+        if(shouldMerge){
             // Use updatedAt merge strategy
             const merged = [];
             const rMap = new Map();
@@ -5130,7 +5132,9 @@ async function doSync(silent=true){
             if(!ok)throw new Error('local changes could not be pushed');
         }
 
-        _clearDirty(); // clear BEFORE writeCache so saveLocations won't re-push
+        if(_isDirty()){
+            _clearDirty();
+        }
         localStorage.setItem(STORAGE_KEY,JSON.stringify(locations)); // bypass saveLocations
         invalidateCache();update();
         _setSyncStatus('ok');_lastSyncTime=Date.now();
