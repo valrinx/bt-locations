@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.30';
+const APP_VERSION = 'v6.6.31';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1667,27 +1667,145 @@ function openListOptionsSheet(){
 }
 window.openListOptionsSheet = openListOptionsSheet;
 
-function openRouteOptionsSheet(){
-    const list = [
-        { icon: '🗺️', name: 'วางแผนเส้นทาง', action: () => { closeMobSheet(); doRoute(); } },
-        { icon: '🛣️', name: 'วางแผนหลายเส้นทาง', action: () => { closeMobSheet(); doMultiRoute(); } }
-    ];
+function openRouteStartOptionsSheet(){
+    const filtered = getFiltered();
+    if(filtered.length < 2){
+        showToast('ต้องมีอย่างน้อย 2 จุดในรายการที่เลือก', true);
+        return;
+    }
     
     const container = document.getElementById('mobSheetList');
     const title = document.getElementById('mobSheetTitle');
     if(!container || !title) return;
     
-    title.innerText = 'วางแผนเส้นทาง';
-    container.innerHTML = list.map(item => `
-        <div class="ms-item" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
-            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">${item.icon}</div>
-            <div style="font-size:14px;font-weight:500;">${item.name}</div>
-        </div>
-    `).join('');
+    title.innerText = 'เลือกจุดเริ่มต้น';
     
-    const items = container.querySelectorAll('.ms-item');
-    items.forEach((el, i) => {
-        el.onclick = () => { list[i].action(); };
+    let html = `
+        <div style="padding:12px 16px;border-bottom:0.5px solid var(--bd2);">
+            <div style="font-size:12px;color:var(--tx3);margin-bottom:8px;">พบ ${filtered.length} จุดในรายการ</div>
+        </div>
+    `;
+    
+    // Option 1: From current GPS position
+    if(myLatLng){
+        html += `
+            <div class="ms-item" data-start="gps" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--bl-d);">
+                <div style="font-size:18px;width:30px;display:flex;justify-content:center;">📍</div>
+                <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:500;">ตำแหน่งปัจจุบัน</div>
+                    <div style="font-size:11px;color:var(--tx3);">${myLatLng.lat.toFixed(5)}, ${myLatLng.lng.toFixed(5)}</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Option 2: From first location in list
+    const firstLoc = filtered[0];
+    html += `
+        <div class="ms-item" data-start="first" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">📍</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${firstLoc.name || firstLoc.list}</div>
+                <div style="font-size:11px;color:var(--tx3);">จุดแรกในรายการ</div>
+            </div>
+        </div>
+    `;
+    
+    // Option 3: From specific location
+    html += `<div style="padding:8px 16px;background:var(--s2);font-size:12px;color:var(--tx3);border-bottom:0.5px solid var(--bd2);">เลือกจุดเริ่มต้น:</div>`;
+    
+    filtered.slice(0, 10).forEach((loc, idx) => {
+        html += `
+            <div class="ms-item" data-start="loc" data-idx="${idx}" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+                <div style="width:24px;height:24px;border-radius:50%;background:${getColor(loc.list)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;">${idx + 1}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${loc.name || loc.list}</div>
+                    <div style="font-size:10px;color:var(--tx3);">${loc.list}${loc.city ? ' · ' + loc.city : ''}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    container.querySelectorAll('.ms-item').forEach(el => {
+        el.onclick = () => {
+            const startType = el.dataset.start;
+            let startLat, startLng;
+            
+            if(startType === 'gps' && myLatLng){
+                startLat = myLatLng.lat;
+                startLng = myLatLng.lng;
+            } else if(startType === 'first'){
+                startLat = filtered[0].lat;
+                startLng = filtered[0].lng;
+            } else if(startType === 'loc'){
+                const idx = parseInt(el.dataset.idx);
+                startLat = filtered[idx].lat;
+                startLng = filtered[idx].lng;
+            }
+            
+            closeMobSheet();
+            doRouteWithStart(startLat, startLng);
+        };
+    });
+    
+    openMobSheet();
+}
+
+async function doRouteWithStart(startLat, startLng){
+    try {
+        const filtered = getFiltered();
+        if(filtered.length < 2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
+        if(filtered.length > 500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
+
+        showToast('🛤️ กำลังวางแผนเส้นทาง...');
+
+        _routeStops = _tspSolve(filtered, startLat, startLng);
+        routeMode = true;
+        const chipRoute = document.getElementById('chipRoute');
+        if(chipRoute) chipRoute.classList.add('active');
+        await _routeDraw();
+        showToast(`✅ วางแผนเส้นทาง ${_routeStops.length} จุดเสร็จแล้ว`, false, true);
+    } catch(e) {
+        console.error('[BT] doRouteWithStart error:', e);
+        showToast('เกิดข้อผิดพลาดในการวางแผนเส้นทาง', true);
+    }
+}
+
+function openRouteOptionsSheet(){
+    const container = document.getElementById('mobSheetList');
+    const title = document.getElementById('mobSheetTitle');
+    if(!container || !title) return;
+    
+    title.innerText = 'วางแผนเส้นทาง';
+    container.innerHTML = `
+        <div class="ms-item" data-action="route" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">🗺️</div>
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:500;">วางแผนเส้นทาง</div>
+                <div style="font-size:11px;color:var(--tx3);">เลือกจุดเริ่มต้น → วางแผน</div>
+            </div>
+        </div>
+        <div class="ms-item" data-action="multi" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">🛣️</div>
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:500;">วางแผนหลายเส้นทาง</div>
+                <div style="font-size:11px;color:var(--tx3);">แยกตามรายการ</div>
+            </div>
+        </div>
+    `;
+    
+    container.querySelectorAll('.ms-item').forEach(el => {
+        el.onclick = () => {
+            const action = el.dataset.action;
+            if(action === 'route'){
+                openRouteStartOptionsSheet();
+            } else if(action === 'multi'){
+                closeMobSheet();
+                doMultiRoute();
+            }
+        };
     });
     
     openMobSheet();
