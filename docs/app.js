@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.40';
+const APP_VERSION = 'v6.9.41';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5074,14 +5074,14 @@ function showConfirm(icon,title,text,cb,mergeCallback){
                         <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">REPLACE</span>
                     </button>
                 </div>
-                <div class="modal-footer"><button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;">ยกเลิก</button></div>`;
+                <div style="display:flex;gap:8px;padding:10px 14px 14px;"><button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;">ยกเลิก</button></div>`;
             document.getElementById('_cfMerge').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
             document.getElementById('_cfReplace').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
             document.getElementById('_cfCancel').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); };
         } else {
             const okLabel=icon==='delete'?'ยืนยันลบ':'ยืนยัน';
             const okClass=icon==='delete'?'modal-btn modal-btn-save btn-danger':'modal-btn modal-btn-save';
-            zone.innerHTML=`<div class="modal-footer">
+            zone.innerHTML=`<div style="display:flex;gap:8px;padding:10px 14px 14px;">
                 <button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;">ยกเลิก</button>
                 <button id="_cfOk" class="${okClass}" style="flex:1;">${okLabel}</button>
             </div>`;
