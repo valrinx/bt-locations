@@ -546,6 +546,7 @@ function addChangelogEntry(action,loc){
 
 function normalizeLocation(l) {
     return {
+        ...(l.sb_id || l.id ? { sb_id: l.sb_id || l.id } : {}),
         name: l.name || '',
         lat: typeof l.lat === 'number' ? l.lat : parseFloat(l.lat) || 0,
         lng: typeof l.lng === 'number' ? l.lng : parseFloat(l.lng) || 0,
@@ -3545,20 +3546,26 @@ async function doSync(silent=true){
             // Use updatedAt merge strategy
             const merged = [];
             const rMap = new Map();
-            remote.forEach(l => rMap.set(l.sb_id, l));
+            const coordMap = new Map();
+            remote.forEach(l => {
+                rMap.set(_syncKey(l), l);
+                coordMap.set(_locKey(l), l);
+            });
 
             locations.forEach(local => {
-                const r = rMap.get(local.sb_id);
+                const key = _syncKey(local);
+                const r = rMap.get(key) || (!local.sb_id ? coordMap.get(_locKey(local)) : null);
                 if(r){
-                    // Conflict: use latest - แก้ไข: ใช้ remote เมื่อมีการอัพเดทใหม่กว่า หรือเท่ากัน (เพื่อป้องกันข้อมูลเก่าซ่อน)
-                    if(r.updatedAt >= local.updatedAt){
+                    // Conflict: use latest. Keep local on exact timestamp ties so optimistic edits are not rolled back.
+                    if(r.updatedAt > local.updatedAt){
                         console.log(`[SYNC] Using REMOTE version for ${r.name} (remote: ${new Date(r.updatedAt).toISOString()}, local: ${new Date(local.updatedAt).toISOString()})`);
                         merged.push(r);
                     } else {
                         console.log(`[SYNC] Using LOCAL version for ${local.name} (remote: ${new Date(r.updatedAt).toISOString()}, local: ${new Date(local.updatedAt).toISOString()})`);
-                        merged.push(local);
+                        merged.push({...local, sb_id: local.sb_id || r.sb_id});
                     }
-                    rMap.delete(local.sb_id);
+                    rMap.delete(_syncKey(r));
+                    coordMap.delete(_locKey(r));
                 } else if(!local.sb_id){
                     // New local item not yet synced
                     merged.push(local);
@@ -3583,6 +3590,7 @@ async function doSync(silent=true){
 }
 
 function _locKey(l){return l.lat.toFixed(6)+','+l.lng.toFixed(6);}
+function _syncKey(l){return l && l.sb_id ? `id:${l.sb_id}` : `coord:${_locKey(l)}`;}
 
 // Realtime subscription — all 8 users see live changes
 function startRealtimeSync(){
