@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.24';
+const APP_VERSION = 'v6.9.25';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4790,8 +4790,7 @@ function parseCSV(text, fallbackList = 'Imported') {
         const cityVal=cols[iCity]||'';
         const provVal=iProvince>=0?cols[iProvince]||'':'';
         const cityFinal=cityVal||(provVal!==cityVal?provVal:'');
-        // If no list column, use Province as list grouping (better than filename)
-        const listVal=iList>=0?(cols[iList]||fallbackList):(provVal||fallbackList);
+        const listVal=iList>=0?(cols[iList]||fallbackList):fallbackList;
         result.push({name:cols[iName]||'',lat,lng,list:listVal,city:cityFinal,note:cols[iNote]||''});
     }
     return result;
