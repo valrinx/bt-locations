@@ -1372,6 +1372,8 @@ function renderListDirectory() {
     const table = document.getElementById('listTable');
     const countEl = document.getElementById('lvCount');
     if(!table)return;
+    const toolbar = document.querySelector('#view-list .lv-toolbar');
+    if(toolbar)toolbar.style.display = 'none';
 
     const listCounts = {};
     const cityCounts = {};
@@ -1397,9 +1399,10 @@ function renderListDirectory() {
         }).join('')}`;
 
     table.innerHTML = `
-        <div style="display:flex;gap:8px;padding:12px;border-bottom:0.5px solid var(--bd);background:var(--s1);">
+        <div style="display:flex;align-items:center;gap:8px;padding:12px;border-bottom:0.5px solid var(--bd);background:var(--s1);">
             <button class="lv-tb-btn" data-list-action="all">ทั้งหมด</button>
             <button class="lv-tb-btn" data-list-action="manage">จัดการรายการ</button>
+            <span style="margin-left:auto;color:var(--tx3);font-size:11px;white-space:nowrap;">${lists.length} รายการ · ${cities.length} เขต · ${locations.length} จุด</span>
         </div>
         ${section('List', lists, 'list')}
         ${section('เขต / เมือง', cities, 'city')}
