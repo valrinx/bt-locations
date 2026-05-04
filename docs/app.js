@@ -16,6 +16,7 @@ const STORAGE_KEY = 'bt_locations_data';
 // ════════════════════════════════════════════
 let _districtClusterMode = true; // Enable district-based clustering
 let _selectedDistrict = null; // Currently selected district for zoom
+let _selectedDistrictList = null; // Optional list scoped within selected district
 let _districtClusterGroup = null; // Custom cluster layer
 let _individualMarkersLayer = null; // Layer for individual markers when zoomed in
 
@@ -949,6 +950,32 @@ function _createLocationIcon(loc, idx) {
     });
 }
 
+function _updateDistrictScopeControl(count) {
+    let el = document.getElementById('districtScopeControl');
+    if (!_selectedDistrict) {
+        if (el) el.remove();
+        return;
+    }
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'districtScopeControl';
+        el.className = 'district-scope-control';
+        document.body.appendChild(el);
+    }
+
+    const label = _selectedDistrictList || _selectedDistrict;
+    el.innerHTML = `
+        <div class="district-scope-copy">
+            <span class="district-scope-kicker">กำลังดูโซน</span>
+            <span class="district-scope-name">${_escapeHtml(label)}</span>
+            <span class="district-scope-count">${count} ตู้</span>
+        </div>
+        <button type="button" class="district-scope-close" aria-label="ออกจากโซน">×</button>
+    `;
+    const btn = el.querySelector('.district-scope-close');
+    if (btn) btn.onclick = _resetToDistrictView;
+}
+
 function _buildMarkerCache() {
     _markerCache.clear();
     locations.forEach((loc, idx) => {
@@ -987,6 +1014,7 @@ function renderMarkers(filtered) {
     if (routeMode) { 
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
+        _updateDistrictScopeControl(0);
         return; 
     }
     
@@ -995,7 +1023,7 @@ function renderMarkers(filtered) {
 
     const filteredIdxSet = new Set(filtered.map(l => getLocIndex(l)));
     const zoom = map.getZoom();
-    const key = [...filteredIdxSet].sort().join(',') + '|' + heatmapMode + '|' + zoom + '|' + _selectedDistrict;
+    const key = [...filteredIdxSet].sort().join(',') + '|' + heatmapMode + '|' + zoom + '|' + _selectedDistrict + '|' + _selectedDistrictList;
     if (key === _lastFilteredKey) return;
     _lastFilteredKey = key;
 
@@ -1004,6 +1032,7 @@ function renderMarkers(filtered) {
     if (heatmapMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
+        _updateDistrictScopeControl(0);
         const z=map.getZoom();
         const hr=Math.max(8,Math.min(40, z<=10?10:z<=12?18:z<=14?28:40));
         const hb=Math.round(hr*0.6);
@@ -1019,6 +1048,7 @@ function renderMarkers(filtered) {
     if (manualRouteMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         _showIndividualMarkers(filtered);
+        _updateDistrictScopeControl(filtered.length);
         const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${filtered.length} ตู้`;
         const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
         const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=filtered.length;
@@ -1029,6 +1059,7 @@ function renderMarkers(filtered) {
     // ── Hierarchical District Clustering ──
     // Case 1: Zoomed out (≤13) AND no district selected → Show district clusters
     if (zoom <= DISTRICT_CLUSTER_MAX_ZOOM && !_selectedDistrict) {
+        _updateDistrictScopeControl(0);
         // Remove individual markers
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
@@ -1059,15 +1090,24 @@ function renderMarkers(filtered) {
     if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
     
     // If district is selected, filter to that district only
-    const markersToShow = _selectedDistrict 
-        ? filtered.filter(l => _getDistrictName(l) === _selectedDistrict)
+    const markersToShow = _selectedDistrict
+        ? filtered.filter(l =>
+            _getDistrictName(l) === _selectedDistrict &&
+            (!_selectedDistrictList || (l.list || 'ไม่ระบุ') === _selectedDistrictList)
+        )
         : filtered;
     
     // Show individual markers
     _showIndividualMarkers(markersToShow);
+    _updateDistrictScopeControl(markersToShow.length);
     
     // Update stats
-    const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${markersToShow.length} ตู้`;
+    const _cp=document.getElementById('countPill');if(_cp){
+        _cp.textContent = _selectedDistrict ? `${_selectedDistrictList || _selectedDistrict} · ${markersToShow.length} ตู้` : `${markersToShow.length} ตู้`;
+        _cp.title = _selectedDistrict ? 'คลิกเพื่อกลับภาพรวม' : '';
+        _cp.style.cursor = _selectedDistrict ? 'pointer' : '';
+        _cp.onclick = _selectedDistrict ? _resetToDistrictView : null;
+    }
     const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
     const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=filtered.length;
     const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=markersToShow.length;
@@ -1183,12 +1223,9 @@ function _showDistrictPopup(district, data, marker) {
                     </button>
                 `).join('')}
             </div>
-            <div class="district-popup-actions">
+            <div class="district-popup-actions single">
                 <button type="button" class="district-popup-action primary" onclick="_zoomToDistrict(decodeURIComponent('${districtArg}'))">
                     ซูมเข้า
-                </button>
-                <button type="button" class="district-popup-action" onclick="_showNearbyBoxes(decodeURIComponent('${districtArg}'))">
-                    ดูตู้ใกล้
                 </button>
             </div>
         </div>
@@ -1207,6 +1244,7 @@ function _zoomToDistrict(district) {
     if (filtered.length === 0) return;
     
     _selectedDistrict = district;
+    _selectedDistrictList = null;
     
     // Calculate bounds
     const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
@@ -1225,6 +1263,9 @@ function _zoomToDistrictList(district, list) {
         (l.list || 'ไม่ระบุ') === list
     );
     if (filtered.length === 0) return;
+
+    _selectedDistrict = district;
+    _selectedDistrictList = list;
     
     const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
@@ -1253,47 +1294,25 @@ function _showIndividualMarkers(filtered) {
     });
 
     _individualMarkersLayer.addTo(map);
-}
-
-// Show nearby boxes within radius
-function _showNearbyBoxes(district) {
-    const filtered = getFiltered().filter(l => _getDistrictName(l) === district);
-    if (filtered.length === 0) return;
-    
-    // Get center of district
-    const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
-    const center = bounds.getCenter();
-    
-    // Find boxes within 2km
-    const nearby = filtered.filter(l => {
-        const dist = haversine(center.lat, center.lng, l.lat, l.lng);
-        return dist <= 2; // 2km radius
-    });
-    if (nearby.length === 0) {
-        showToast('ไม่พบตู้ในรัศมี 2 กม.');
-        return;
-    }
-    
-    _showIndividualMarkers(nearby);
-    map.fitBounds(L.latLngBounds(nearby.map(l => [l.lat, l.lng])), { padding: [50, 50] });
-    
-    showToast(`${nearby.length} ตู้ ในรัศมี 2 กม.`);
+    if (typeof _updateTooltipVisibility === 'function') _updateTooltipVisibility();
 }
 
 // Reset to district cluster view
 function _resetToDistrictView() {
     _selectedDistrict = null;
+    _selectedDistrictList = null;
+    _updateDistrictScopeControl(0);
     if (_individualMarkersLayer) {
         map.removeLayer(_individualMarkersLayer);
         _individualMarkersLayer = null;
     }
     update(); // Re-render clusters
+    if (typeof _updateTooltipVisibility === 'function') _updateTooltipVisibility();
 }
 
 // Expose functions for onclick handlers
 window._zoomToDistrict = _zoomToDistrict;
 window._zoomToDistrictList = _zoomToDistrictList;
-window._showNearbyBoxes = _showNearbyBoxes;
 
 // ════════════════════════════════════════════
 // DATA LOADING - Fast init, background fetch
@@ -2197,6 +2216,7 @@ if(mobSearchInput) {
 onClick('chipAll', ()=>{
     console.log('[BT] chipAll clicked');
     filterList=''; filterCity=''; nearbyMode=false; filterFavorites=false;
+    _selectedDistrict = null; _selectedDistrictList = null;
     clearRoute(); clearMultiRoutes();
     update();
     showToast('แสดงทั้งหมด');
@@ -2372,13 +2392,13 @@ function updateGpsMarker(lat, lng, accuracy) {
 // แสดง tooltip ถาวรเฉพาะตอน zoom >= 16
 const TOOLTIP_ZOOM = 16;
 function _updateTooltipVisibility() {
-    const showPermanent = map.getZoom() >= TOOLTIP_ZOOM;
+    const showPermanent = !!_selectedDistrict || map.getZoom() >= TOOLTIP_ZOOM;
     _markerCache.forEach(marker => {
         const tt = marker.getTooltip();
         if (!tt) return;
         if (showPermanent && !tt.options.permanent) {
             marker.unbindTooltip();
-            marker.bindTooltip(tt._content || tt.getContent(), { permanent: true, direction: 'top', offset: [0, -2], className: 'bt-tooltip', opacity: 0.95 });
+            marker.bindTooltip(tt._content || tt.getContent(), { permanent: true, direction: 'top', offset: [0, -10], className: 'bt-tooltip bt-tooltip-locked', opacity: 0.92 });
             if (marker._map) marker.openTooltip();
         } else if (!showPermanent && tt.options.permanent) {
             marker.unbindTooltip();
@@ -2389,16 +2409,6 @@ function _updateTooltipVisibility() {
 map.on('zoomend', () => {
     _updateTooltipVisibility();
     _lastFilteredKey = null; // force re-render with new marker limit
-    
-    // Reset district view when zooming out
-    const zoom = map.getZoom();
-    if (_selectedDistrict && zoom <= 13) {
-        _selectedDistrict = null;
-        if (_individualMarkersLayer) {
-            map.removeLayer(_individualMarkersLayer);
-            _individualMarkersLayer = null;
-        }
-    }
     
     update();
 });
@@ -4586,7 +4596,8 @@ rebuildIndexMap();
 update();
 
 const style=document.createElement('style');
-style.textContent=`.bt-tooltip{background:oklch(16% 0.024 265 / 0.94)!important;color:var(--tx)!important;border:1px solid var(--bd2)!important;border-radius:6px!important;padding:3px 8px!important;font-size:11px!important;font-weight:600!important;box-shadow:var(--shadow-md)!important;white-space:nowrap!important;font-family:inherit!important;}
+style.textContent=`.bt-tooltip{background:oklch(18% 0.028 258 / 0.78)!important;color:var(--tx)!important;border:1px solid oklch(72% 0.08 230 / 0.34)!important;border-radius:6px!important;padding:2px 7px!important;font-size:10px!important;font-weight:650!important;box-shadow:0 3px 10px oklch(5% 0.02 260 / 0.32)!important;white-space:nowrap!important;font-family:inherit!important;}
+.bt-tooltip.bt-tooltip-locked{background:oklch(20% 0.032 258 / 0.66)!important;border-color:oklch(74% 0.11 220 / 0.42)!important;box-shadow:0 0 0 1px oklch(10% 0.025 260 / 0.35),0 4px 12px oklch(5% 0.02 260 / 0.24)!important;color:oklch(94% 0.012 250)!important;}
 .bt-field-marker { transition: transform 180ms cubic-bezier(0.22,1,0.36,1), filter 180ms ease !important; }
 .bt-field-marker:hover { transform: scale(1.18) !important; }
 .marker-cluster { transition: transform 180ms cubic-bezier(0.22,1,0.36,1), opacity 160ms ease !important; }

@@ -2806,13 +2806,21 @@
         }
 
         .bt-tooltip {
-            background: var(--s1) !important;
+            background: oklch(18% 0.028 258 / 0.78) !important;
             color: var(--tx) !important;
-            border: 0.5px solid var(--bd2) !important;
+            border: 1px solid oklch(72% 0.08 230 / 0.34) !important;
             border-radius: 6px !important;
-            font-size: 11px !important;
-            padding: 3px 8px !important;
-            box-shadow: var(--shadow-md) !important;
+            font-size: 10px !important;
+            font-weight: 650 !important;
+            padding: 2px 7px !important;
+            box-shadow: 0 3px 10px oklch(5% 0.02 260 / 0.32) !important;
+        }
+
+        .bt-tooltip.bt-tooltip-locked {
+            background: oklch(20% 0.032 258 / 0.66) !important;
+            border-color: oklch(74% 0.11 220 / 0.42) !important;
+            box-shadow: 0 0 0 1px oklch(10% 0.025 260 / 0.35), 0 4px 12px oklch(5% 0.02 260 / 0.24) !important;
+            color: oklch(94% 0.012 250) !important;
         }
 
         .bt-tooltip::before {
@@ -3057,6 +3065,10 @@
             border-top: 1px solid var(--bd2);
         }
 
+        .district-popup-actions.single {
+            grid-template-columns: 1fr;
+        }
+
         .district-popup-action {
             height: 34px;
             border: 1px solid var(--bd2);
@@ -3073,6 +3085,73 @@
             border-color: var(--bl-b);
             background: var(--bl);
             color: oklch(98% 0.006 265);
+        }
+
+        .district-scope-control {
+            position: fixed;
+            top: 96px;
+            left: 50%;
+            z-index: 430;
+            width: min(292px, calc(100vw - 28px));
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 8px 8px 12px;
+            border-radius: 8px;
+            border: 1px solid oklch(72% 0.09 230 / 0.34);
+            background: oklch(14% 0.028 260 / 0.92);
+            box-shadow: 0 10px 26px oklch(5% 0.02 260 / 0.48), 0 0 18px oklch(65% 0.12 225 / 0.18);
+            backdrop-filter: blur(10px);
+        }
+
+        .district-scope-copy {
+            min-width: 0;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: baseline;
+            column-gap: 7px;
+        }
+
+        .district-scope-kicker {
+            color: var(--tx3);
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .district-scope-name {
+            min-width: 0;
+            color: var(--tx);
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .district-scope-count {
+            color: var(--bl);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .district-scope-close {
+            flex: 0 0 auto;
+            width: 28px;
+            height: 28px;
+            border: 1px solid var(--bd2);
+            border-radius: 7px;
+            background: var(--s2);
+            color: var(--tx2);
+            font-size: 18px;
+            line-height: 24px;
+            cursor: pointer;
+        }
+
+        .district-scope-close:hover {
+            background: var(--s3);
+            color: var(--tx);
         }
 
         .route-number-tooltip {
