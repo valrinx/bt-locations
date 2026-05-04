@@ -1336,6 +1336,12 @@ function fallbackCopy(text) {
     document.body.removeChild(ta);
 }
 
+function _escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
 function closePlaceCard() { const pc = document.getElementById('placeCard'); if(pc) pc.classList.remove('open'); }
 window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'⭐ เพิ่มในรายการโปรดแล้ว':'☆ นำออกจากรายการโปรดแล้ว');};
 onClick('placeCardClose', closePlaceCard);
@@ -1362,6 +1368,61 @@ function renderListPanel(filtered) {
         </div>`;
     }).join('');
 }
+function renderListDirectory() {
+    const table = document.getElementById('listTable');
+    const countEl = document.getElementById('lvCount');
+    if(!table)return;
+
+    const listCounts = {};
+    const cityCounts = {};
+    locations.forEach(loc => {
+        const list = loc.list || 'ไม่มีรายการ';
+        listCounts[list] = (listCounts[list] || 0) + 1;
+        if(loc.city)cityCounts[loc.city] = (cityCounts[loc.city] || 0) + 1;
+    });
+    const lists = Object.entries(listCounts).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], 'th'));
+    const cities = Object.entries(cityCounts).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], 'th'));
+    if(countEl)countEl.textContent = `${lists.length} รายการ · ${cities.length} เขต · ${locations.length} จุด`;
+
+    const section = (title, items, kind) => `
+        <div style="padding:12px 12px 4px;color:var(--tx3);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;">${title}</div>
+        ${items.map(([name,count], i) => {
+            const color = kind === 'list' ? getColor(name) : colorPalette[i % colorPalette.length];
+            const active = kind === 'list' ? filterList === name : filterCity === name;
+            return `<button class="list-directory-item ${active ? 'active' : ''}" data-kind="${kind}" data-name="${_escapeHtml(name)}" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border:0;border-bottom:0.5px solid var(--bd);background:${active ? 'var(--bl-d)' : 'transparent'};color:var(--tx);font-family:inherit;text-align:left;cursor:pointer;">
+                <span style="width:10px;height:10px;border-radius:999px;background:${color};box-shadow:0 0 8px ${color}66;"></span>
+                <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;">${_escapeHtml(name)}</span>
+                <span style="min-width:34px;text-align:right;color:var(--tx2);font-size:12px;">${count}</span>
+            </button>`;
+        }).join('')}`;
+
+    table.innerHTML = `
+        <div style="display:flex;gap:8px;padding:12px;border-bottom:0.5px solid var(--bd);background:var(--s1);">
+            <button class="lv-tb-btn" data-list-action="all">ทั้งหมด</button>
+            <button class="lv-tb-btn" data-list-action="manage">จัดการรายการ</button>
+        </div>
+        ${section('List', lists, 'list')}
+        ${section('เขต / เมือง', cities, 'city')}
+    `;
+
+    table.onclick = e => {
+        const action = e.target.closest('[data-list-action]')?.dataset.listAction;
+        if(action === 'all'){
+            filterList=''; filterCity=''; filterFavorites=false; nearbyMode=false;
+            switchView('map'); update(); return;
+        }
+        if(action === 'manage'){
+            openListOptionsSheet(); return;
+        }
+        const item = e.target.closest('.list-directory-item');
+        if(!item)return;
+        const name = item.dataset.name;
+        if(item.dataset.kind === 'list')setFilterList(name);
+        else setFilterCity(name);
+        switchView('map');
+    };
+}
+window.renderListDirectory = renderListDirectory;
 window.closeListPanel = ()=>{const _lp=document.getElementById('listPanel');if(_lp)_lp.classList.remove('open');};
 onClick('listPanelClose', closeListPanel);
 
