@@ -3355,10 +3355,10 @@ window.showChangelogDetail = function(timestamp) {
     if(!log) return;
     const body = document.getElementById('infoPanelBody');
     body.dataset.auditName = log.n;
-    window.openInfoPanel('audit');
+    openInfoPanel('audit');
 };
 
-window.openInfoPanel = function(mode){
+function openInfoPanel(mode){
     const body=document.getElementById('infoPanelBody');
     if(mode==='changelog'){
         document.getElementById('infoPanelTitle').textContent='ประวัติการแก้ไข';
@@ -3576,8 +3576,8 @@ window.openInfoPanel = function(mode){
         b('omExportM',  doExport);
         b('omExportImgM', doExportImage);
         b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
-        b('omStatsM',   ()=>window.openInfoPanel('stats'));
-        b('omChangelogM',()=>window.openInfoPanel('changelog'));
+        b('omStatsM',   ()=>openInfoPanel('stats'));
+        b('omChangelogM',()=>openInfoPanel('changelog'));
         b('omSyncM',    ()=>{closeInfo();doSync(false);});
         b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
         b('omDarkM',    toggleDark);
