@@ -1,11 +1,14 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.46';
+const APP_VERSION = 'v6.7.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
 let multiRouteLayer = null, multiRouteMode = false;
+let manualRouteMode = false;
+let manualRoutePoints = []; // Array of selected points {lat, lng, name}
+let manualRouteMarkers = [];
 const STORAGE_KEY = 'bt_locations_data';
 
 // Helper: safely attach onclick handler (avoids null errors)
@@ -975,7 +978,14 @@ function _buildMarkerCache() {
             opacity: 0.95,
         });
         marker._locIdx = idx;
-        marker.on('click', () => showLocationDetails(loc, idx));
+        marker.on('click', () => {
+            if (manualRouteMode) {
+                // Add to manual route instead of showing details
+                addManualRoutePoint(loc.lat, loc.lng, loc.name || loc.list || 'จุด');
+            } else {
+                showLocationDetails(loc, idx);
+            }
+        });
         _markerCache.set(idx, marker);
     });
     _clusterDirty = false;
@@ -2313,6 +2323,12 @@ map.on('click',e=>{
         _handleMapClickForWaypoint(e);
         return;
     }
+    // Manual Route Mode - add point on map click
+    if (manualRouteMode) {
+        const {lat, lng} = e.latlng;
+        addManualRoutePoint(lat, lng, 'จุดบนแผนที่');
+        return;
+    }
     const{lat,lng}=e.latlng;
     const editModalOverlay = document.getElementById('editModalOverlay');
     if(editModalOverlay && editModalOverlay.classList.contains('open')){
@@ -3343,6 +3359,123 @@ function clearMultiRoutes(){
 }
 
 // ════════════════════════════════════════════
+// MANUAL ROUTE MODE (user selects points)
+// ════════════════════════════════════════════
+function startManualRouteMode(){
+    clearManualRoute();
+    manualRouteMode = true;
+    showToast('📍 โหมดเลือกจุด: คลิกบนแผนที่หรือจุดเพื่อเพิ่ม (กด ✅ คำนวณเส้นทางเมื่อเสร็จ)');
+    openManualRoutePanel();
+}
+
+function addManualRoutePoint(lat, lng, name='จุดที่เลือก'){
+    if(!manualRouteMode) return;
+    const pt = {lat, lng, name: `${name} ${manualRoutePoints.length+1}`};
+    manualRoutePoints.push(pt);
+    // Add marker
+    const marker = L.marker([lat, lng], {
+        icon: L.divIcon({
+            className: 'manual-route-marker',
+            html: `<div style="background:#5b8fff;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${manualRoutePoints.length}</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        })
+    }).addTo(map).bindPopup(`${pt.name} <button onclick="removeManualPoint(${manualRoutePoints.length-1})" style="margin-left:8px;padding:2px 6px;font-size:11px;">ลบ</button>`);
+    manualRouteMarkers.push(marker);
+    updateManualRoutePanel();
+    showToast(`📍 เพิ่ม ${pt.name} (${manualRoutePoints.length} จุด)`);
+}
+
+function removeManualPoint(idx){
+    if(idx < 0 || idx >= manualRoutePoints.length) return;
+    manualRoutePoints.splice(idx, 1);
+    // Remove marker
+    if(manualRouteMarkers[idx]){
+        map.removeLayer(manualRouteMarkers[idx]);
+        manualRouteMarkers.splice(idx, 1);
+    }
+    // Renumber remaining markers
+    manualRouteMarkers.forEach((m, i) => {
+        m.setIcon(L.divIcon({
+            className: 'manual-route-marker',
+            html: `<div style="background:#5b8fff;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${i+1}</div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        }));
+        m.setPopupContent(`${manualRoutePoints[i].name} <button onclick="removeManualPoint(${i})" style="margin-left:8px;padding:2px 6px;font-size:11px;">ลบ</button>`);
+    });
+    updateManualRoutePanel();
+}
+
+function clearManualRoute(){
+    manualRouteMode = false;
+    manualRoutePoints = [];
+    manualRouteMarkers.forEach(m => map.removeLayer(m));
+    manualRouteMarkers = [];
+    if(routeLine){ map.removeLayer(routeLine); routeLine = null; }
+    routeMode = false;
+    closeManualRoutePanel();
+}
+
+function calculateManualRoute(){
+    if(manualRoutePoints.length < 2){
+        showToast('ต้องมีอย่างน้อย 2 จุด', true);
+        return;
+    }
+    showToast('🗺️ กำลังคำนวณเส้นทาง...');
+    // Use TSP to optimize order
+    const optimized = _tspSolve(
+        manualRoutePoints.map(p => ({...p, lat: p.lat, lng: p.lng})),
+        manualRoutePoints[0].lat, manualRoutePoints[0].lng
+    );
+    // Draw route
+    const pts = optimized.map(p => [p.lat, p.lng]);
+    if(routeLine) map.removeLayer(routeLine);
+    routeLine = L.polyline(pts, {color: '#5b8fff', weight: 4, opacity: 0.8}).addTo(map);
+    routeMode = true;
+    map.fitBounds(routeLine.getBounds(), {padding: [50, 50]});
+    showToast(`✅ เส้นทาง ${optimized.length} จุด พร้อม!`);
+}
+
+let _manualRoutePanelOpen = false;
+function openManualRoutePanel(){
+    _manualRoutePanelOpen = true;
+    updateManualRoutePanel();
+}
+function closeManualRoutePanel(){
+    _manualRoutePanelOpen = false;
+    const panel = document.getElementById('manualRoutePanel');
+    if(panel) panel.remove();
+}
+function updateManualRoutePanel(){
+    if(!_manualRoutePanelOpen) return;
+    let panel = document.getElementById('manualRoutePanel');
+    if(!panel){
+        panel = document.createElement('div');
+        panel.id = 'manualRoutePanel';
+        panel.style.cssText = 'position:fixed;bottom:80px;left:16px;right:16px;background:var(--surface);border-radius:16px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:100;max-height:200px;overflow-y:auto;';
+        document.body.appendChild(panel);
+    }
+    panel.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-weight:600;font-size:14px;">📍 เลือกจุด (${manualRoutePoints.length})</div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="clearManualRoute()" style="padding:6px 12px;background:var(--s3);border:none;border-radius:8px;font-size:12px;cursor:pointer;">❌ ยกเลิก</button>
+                <button onclick="calculateManualRoute()" style="padding:6px 12px;background:#5b8fff;color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer;${manualRoutePoints.length < 2 ? 'opacity:0.5;' : ''}">${manualRoutePoints.length < 2 ? 'ต้องการ 2+ จุด' : '✅ คำนวณเส้นทาง'}</button>
+            </div>
+        </div>
+        <div style="font-size:12px;color:var(--text3);">
+            ${manualRoutePoints.length === 0 ? 'คลิกบนแผนที่เพื่อเพิ่มจุด' : manualRoutePoints.map((p, i) => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;"><span style="background:#5b8fff;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;">${i+1}</span> ${p.name}</div>`).join('')}
+        </div>
+    `;
+}
+
+// Expose for onclick handlers
+window.removeManualPoint = removeManualPoint;
+window.clearManualRoute = clearManualRoute;
+window.calculateManualRoute = calculateManualRoute;
+
+// ════════════════════════════════════════════
 // INFO PANEL (kept for compatibility)
 // ════════════════════════════════════════════
 const infoPanelClose=document.getElementById('infoPanelClose');
@@ -3570,6 +3703,9 @@ function openInfoPanel(mode){
                     ['📊','สถิติ','omStatsM',''],
                     ['📝','Changelog','omChangelogM',''],
                 ])}
+                ${_menuGrid('เส้นทาง',[
+                    ['🗺️','เลือกจุดเอง','omManualRouteM',''],
+                ])}
             </div>`;
         const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
         b('omExportM',  doExport);
@@ -3579,6 +3715,7 @@ function openInfoPanel(mode){
         b('omSyncM',    ()=>{closeInfo();doSync(false);});
         b('omUndoM',    doUndo);
         b('omRedoM',    doRedo);
+        b('omManualRouteM', ()=>{closeInfo();startManualRouteMode();});
     }
     document.getElementById('infoPanel').classList.add('open');
     document.getElementById('infoPanelBackdrop').classList.add('show');
