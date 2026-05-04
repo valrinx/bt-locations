@@ -990,6 +990,13 @@ function _limitMobileMarkers(items) {
     return ranked.slice(0, limit).map(item => item.loc);
 }
 
+function _updateMobileMarkerLabels(count) {
+    if (!_mobile) return;
+    const mapEl = map.getContainer();
+    const canShow = map.getZoom() >= 16 && count <= 120 && !mapEl.classList.contains('is-gesture-zooming');
+    mapEl.classList.toggle('show-mobile-marker-labels', canShow);
+}
+
 function _getScopedFiltered() {
     const filtered = getFiltered();
     if (!_selectedDistrict) return filtered;
@@ -1003,13 +1010,15 @@ function _createLocationIcon(loc, idx) {
     const color = _getMarkerColor(loc);
     const fav = isFavorite(loc);
     const label = _escapeHtml(loc.name || loc.list || 'ตำแหน่ง');
-    const list = _escapeHtml(loc.list || 'ไม่ระบุ');
+    const labelText = _mobile
+        ? _escapeHtml(`${loc.name || loc.list || 'ตำแหน่ง'} · ${_getDistrictName(loc)}`)
+        : _escapeHtml(loc.list || 'ไม่ระบุ');
     return L.divIcon({
         className: 'bt-field-marker-shell',
         html: `<div class="bt-field-marker${fav ? ' is-favorite' : ''}" style="--marker-color:${color};" data-idx="${idx}" role="img" aria-label="${label}">
             <span class="bt-field-marker-core"></span>
             <span class="bt-field-marker-ring"></span>
-            <span class="bt-field-marker-label">${list}</span>
+            <span class="bt-field-marker-label">${labelText}</span>
         </div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
@@ -1142,7 +1151,7 @@ function renderMarkers(filtered) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         
         // Create district clusters
-        const districtGroups = _createDistrictClusters(filtered);
+        const districtGroups = _createMobileClusterCells(_createDistrictClusters(filtered));
         _districtClusterGroup = L.layerGroup();
         
         Object.entries(districtGroups).forEach(([district, data]) => {
@@ -1243,18 +1252,54 @@ function _createDistrictClusters(filtered) {
     return groups;
 }
 
+function _getMobileClusterCellSize() {
+    const zoom = map.getZoom();
+    if (zoom <= 10) return 96;
+    if (zoom <= 12) return 82;
+    return 72;
+}
+
+function _createMobileClusterCells(districtGroups) {
+    if (!_mobile) return districtGroups;
+    const cellSize = _getMobileClusterCellSize();
+    const cells = {};
+    Object.entries(districtGroups).forEach(([district, data]) => {
+        const center = data.bounds.getCenter();
+        const p = map.latLngToLayerPoint(center);
+        const key = `${Math.floor(p.x / cellSize)}:${Math.floor(p.y / cellSize)}`;
+        if (!cells[key]) {
+            cells[key] = {
+                locations: [],
+                lists: new Set(),
+                districts: new Set(),
+                bounds: L.latLngBounds(),
+                _aggregate: true
+            };
+        }
+        data.locations.forEach(loc => cells[key].locations.push(loc));
+        data.lists.forEach(list => cells[key].lists.add(list));
+        cells[key].districts.add(district);
+        cells[key].bounds.extend(data.bounds);
+    });
+    return cells;
+}
+
 // Create district cluster marker
 function _createDistrictClusterMarker(district, data) {
     const count = data.locations.length;
     const center = data.bounds.getCenter();
     const lists = Array.from(data.lists);
-    const size = Math.min(54, Math.max(34, 30 + Math.sqrt(count) * 2.8));
+    const districtCount = data.districts ? data.districts.size : 1;
+    const size = _mobile
+        ? Math.min(50, Math.max(30, 28 + Math.sqrt(count) * 1.8))
+        : Math.min(54, Math.max(34, 30 + Math.sqrt(count) * 2.8));
     const topList = lists[0] || 'ไม่ระบุ';
     const accent = getColor(topList);
+    const label = data._aggregate && districtCount > 1 ? `${districtCount} เขต` : 'ตู้';
     const icon = L.divIcon({
         html: `<div class="bt-district-cluster" style="--cluster-size:${size}px;--cluster-color:${accent};">
                 <span class="bt-district-count">${count}</span>
-                <span class="bt-district-label">ตู้</span>
+                <span class="bt-district-label">${label}</span>
             </div>
         `,
         className: 'district-cluster-marker',
@@ -1266,14 +1311,22 @@ function _createDistrictClusterMarker(district, data) {
     marker._district = district;
     marker._districtData = data;
     
-    marker.on('click', () => _showDistrictPopup(district, data, marker));
+    marker.on('click', () => {
+        if (data._aggregate && data.districts && data.districts.size > 1) {
+            map.fitBounds(data.bounds.pad(0.18), { animate: false, maxZoom: DISTRICT_CLUSTER_MAX_ZOOM + 1 });
+            return;
+        }
+        _showDistrictPopup(district, data, marker);
+    });
 
     const listPreview = lists.slice(0, 3).map(_escapeHtml).join(', ');
-    marker.bindTooltip(`<b>${_escapeHtml(district)}</b><br>${listPreview}${lists.length > 3 ? ` +${lists.length - 3}` : ''}`, {
-        direction: 'top',
-        offset: [0, -size/2],
-        className: 'district-tooltip'
-    });
+    if (!_mobile) {
+        marker.bindTooltip(`<b>${_escapeHtml(district)}</b><br>${listPreview}${lists.length > 3 ? ` +${lists.length - 3}` : ''}`, {
+            direction: 'top',
+            offset: [0, -size/2],
+            className: 'district-tooltip'
+        });
+    }
     
     return marker;
 }
@@ -1392,6 +1445,7 @@ function _showIndividualMarkers(filtered) {
 
     _visibleMarkerIdxs = nextVisibleIdxs;
     _individualMarkersLayer.addTo(map);
+    _updateMobileMarkerLabels(nextVisibleIdxs.size);
     if (typeof _updateTooltipVisibility === 'function') _updateTooltipVisibility();
 }
 
@@ -1405,6 +1459,7 @@ function _resetToDistrictView() {
         _individualMarkersLayer = null;
     }
     _visibleMarkerIdxs.clear();
+    _updateMobileMarkerLabels(0);
     update(); // Re-render clusters
     if (typeof _updateTooltipVisibility === 'function') _updateTooltipVisibility();
 }
@@ -2547,6 +2602,7 @@ map.on('zoomstart', () => {
         _mobileZoomRestoreTimer = null;
     }
     map.getContainer().classList.add('is-gesture-zooming');
+    map.getContainer().classList.remove('show-mobile-marker-labels');
     if (_individualMarkersLayer && map.hasLayer(_individualMarkersLayer)) {
         map.removeLayer(_individualMarkersLayer);
     }
@@ -4753,6 +4809,7 @@ html.is-mobile-map .bt-field-marker-core { box-shadow: 0 0 0 1px oklch(12% 0.025
 html.is-mobile-map .bt-field-marker-ring,
 html.is-mobile-map .bt-field-marker-label,
 html.is-mobile-map #map.is-gesture-zooming .leaflet-tooltip { display: none !important; }
+html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label { display: block !important; top: 21px !important; max-width: 132px !important; padding: 2px 4px !important; background: rgba(8,12,18,0.68) !important; font-size: 8px !important; opacity: 0.9 !important; transform: translateX(-50%) translateY(0) !important; box-shadow: none !important; transition: none !important; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
