@@ -2819,30 +2819,145 @@
             display: none !important;
         }
 
-        /* District cluster markers */
-        .district-cluster-marker {
-            transition: transform 0.15s ease, opacity 0.15s ease;
+        /* Marker system */
+        .bt-field-marker-shell {
+            background: transparent !important;
+            border: 0 !important;
+        }
+
+        .bt-field-marker {
+            position: relative;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            transform: translateZ(0);
+            transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), filter 180ms ease;
             will-change: transform;
         }
-        
-        .district-cluster-marker:hover {
-            transform: scale(1.1) !important;
+
+        .bt-field-marker-core {
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: var(--marker-color);
+            border: 2px solid oklch(96% 0.008 265);
+            box-shadow: 0 0 0 1px oklch(12% 0.025 265 / 0.65), 0 0 18px color-mix(in oklch, var(--marker-color), transparent 58%);
+            z-index: 2;
         }
-        
+
+        .bt-field-marker-ring {
+            position: absolute;
+            inset: 2px;
+            border-radius: 50%;
+            border: 1px solid color-mix(in oklch, var(--marker-color), transparent 36%);
+            background: radial-gradient(circle, color-mix(in oklch, var(--marker-color), transparent 68%) 0%, transparent 62%);
+            opacity: 0.75;
+        }
+
+        .bt-field-marker.is-favorite .bt-field-marker-core {
+            width: 15px;
+            height: 15px;
+            border-color: oklch(86% 0.16 84);
+            box-shadow: 0 0 0 1px oklch(14% 0.03 265 / 0.8), 0 0 16px oklch(78% 0.16 84 / 0.65);
+        }
+
+        .bt-field-marker-label {
+            position: absolute;
+            left: 50%;
+            top: 27px;
+            transform: translateX(-50%) translateY(-2px);
+            max-width: 112px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: oklch(16% 0.024 265 / 0.92);
+            border: 1px solid var(--bd2);
+            color: var(--tx);
+            font-size: 10px;
+            font-weight: 650;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .bt-field-marker:hover,
+        .bt-field-marker-shell:focus .bt-field-marker,
+        .bt-field-marker-shell:focus-within .bt-field-marker {
+            transform: scale(1.18);
+            filter: saturate(1.15);
+        }
+
+        .bt-field-marker:hover .bt-field-marker-label,
+        .bt-field-marker-shell:focus .bt-field-marker-label,
+        .bt-field-marker-shell:focus-within .bt-field-marker-label {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .district-cluster-marker {
+            background: transparent !important;
+            border: 0 !important;
+            transition: opacity 160ms ease;
+        }
+
+        .district-cluster-marker:hover .bt-district-cluster {
+            transform: scale(1.08);
+            border-color: oklch(88% 0.09 240 / 0.78);
+        }
+
+        .bt-district-cluster {
+            width: var(--cluster-size);
+            height: var(--cluster-size);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--tx);
+            transform: translateZ(0);
+            transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1), border-color 170ms ease, box-shadow 170ms ease;
+            background:
+                linear-gradient(180deg, oklch(22% 0.055 254 / 0.94), oklch(13% 0.035 260 / 0.96)),
+                radial-gradient(circle at 50% 24%, color-mix(in oklch, var(--cluster-color), transparent 45%), transparent 45%);
+            border: 1px solid color-mix(in oklch, var(--cluster-color), oklch(90% 0.02 260) 24%);
+            box-shadow: 0 8px 18px oklch(5% 0.02 265 / 0.42), 0 0 16px color-mix(in oklch, var(--cluster-color), transparent 68%);
+        }
+
+        .bt-district-count {
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .bt-district-label {
+            margin-top: 3px;
+            font-size: 8px;
+            line-height: 1;
+            color: var(--tx2);
+            font-weight: 700;
+        }
+
         .district-tooltip {
-            background: rgba(15, 23, 42, 0.9) !important;
-            color: #fff !important;
-            border: none !important;
-            border-radius: 12px !important;
-            padding: 8px 12px !important;
-            font-size: 13px !important;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+            background: oklch(16% 0.024 265 / 0.94) !important;
+            color: var(--tx) !important;
+            border: 1px solid var(--bd2) !important;
+            border-radius: 8px !important;
+            padding: 7px 10px !important;
+            font-size: 12px !important;
+            box-shadow: var(--shadow-md) !important;
         }
-        
+
         .district-popup .leaflet-popup-content-wrapper {
-            background: var(--surface) !important;
-            border-radius: 16px !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+            background: var(--s1) !important;
+            border: 1px solid var(--bd2) !important;
+            border-radius: 8px !important;
+            box-shadow: var(--shadow-lg) !important;
         }
         
         .district-popup .leaflet-popup-content {
@@ -2851,7 +2966,113 @@
         }
         
         .district-popup .leaflet-popup-tip {
-            background: var(--surface) !important;
+            background: var(--s1) !important;
+            border: 1px solid var(--bd2) !important;
+        }
+
+        .district-popup-card {
+            min-width: 232px;
+            max-width: 292px;
+            padding: 12px;
+        }
+
+        .district-popup-head {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--bd2);
+        }
+
+        .district-popup-title {
+            color: var(--tx);
+            font-size: 15px;
+            font-weight: 750;
+            line-height: 1.3;
+        }
+
+        .district-popup-meta {
+            color: var(--tx2);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .district-popup-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 154px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+
+        .district-popup-row {
+            width: 100%;
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 7px 9px;
+            border: 1px solid var(--bd);
+            border-radius: 7px;
+            background: var(--s2);
+            color: var(--tx);
+            cursor: pointer;
+            font: inherit;
+            transition: background 150ms ease, border-color 150ms ease;
+        }
+
+        .district-popup-row:hover {
+            background: var(--s3);
+            border-color: var(--bd2);
+        }
+
+        .district-popup-name {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 650;
+        }
+
+        .district-popup-count {
+            flex: 0 0 auto;
+            min-width: 30px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: var(--bl-d);
+            color: var(--bl);
+            font-size: 11px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .district-popup-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid var(--bd2);
+        }
+
+        .district-popup-action {
+            height: 34px;
+            border: 1px solid var(--bd2);
+            border-radius: 7px;
+            background: var(--s3);
+            color: var(--tx);
+            cursor: pointer;
+            font: inherit;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .district-popup-action.primary {
+            border-color: var(--bl-b);
+            background: var(--bl);
+            color: oklch(98% 0.006 265);
         }
 
         .route-number-tooltip {
@@ -5473,17 +5694,6 @@
         }
 
         body.force-mobile .mob-drawer {
-            z-index: 1000 !important;
-        }
-
-        /* 15 & 16. Modern smooth custom markers */
-        .leaflet-marker-icon.custom-pin {
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s !important;
-            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
-        }
-
-        .leaflet-marker-icon.custom-pin:hover {
-            transform: scale(1.15) translateY(-4px) !important;
             z-index: 1000 !important;
         }
 
