@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.31';
+const APP_VERSION = 'v6.6.32';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1779,11 +1779,51 @@ function openRouteOptionsSheet(){
     if(!container || !title) return;
     
     title.innerText = 'วางแผนเส้นทาง';
-    container.innerHTML = `
+    
+    let html = '';
+    
+    // If there's already a route planned, show resume/hide options
+    if(_routeStops.length > 0){
+        if(routeMode && routeLine){
+            // Route is visible - show hide option
+            html += `
+                <div class="ms-item" data-action="hide" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--bl-d);">
+                    <div style="font-size:18px;width:30px;display:flex;justify-content:center;">👁️</div>
+                    <div style="flex:1;">
+                        <div style="font-size:14px;font-weight:500;">ซ่อนเส้นทาง (${_routeStops.length} จุด)</div>
+                        <div style="font-size:11px;color:var(--tx3);">ซ่อนเส้นทางชั่วคราว</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Route exists but hidden - show resume option
+            html += `
+                <div class="ms-item" data-action="resume" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:var(--gn-d);">
+                    <div style="font-size:18px;width:30px;display:flex;justify-content:center;">👁️</div>
+                    <div style="flex:1;">
+                        <div style="font-size:14px;font-weight:500;">ดูเส้นทาง (${_routeStops.length} จุด)</div>
+                        <div style="font-size:11px;color:var(--tx3);">แสดงเส้นทางที่วางแผนไว้</div>
+                    </div>
+                </div>
+            `;
+        }
+        html += `
+            <div class="ms-item" data-action="clear" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+                <div style="font-size:18px;width:30px;display:flex;justify-content:center;">🗑️</div>
+                <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:500;">ล้างเส้นทาง</div>
+                    <div style="font-size:11px;color:var(--tx3);">ลบเส้นทางและเริ่มใหม่</div>
+                </div>
+            </div>
+            <div style="padding:8px 16px;background:var(--s2);font-size:11px;color:var(--tx3);border-bottom:0.5px solid var(--bd2);">หรือสร้างเส้นทางใหม่:</div>
+        `;
+    }
+    
+    html += `
         <div class="ms-item" data-action="route" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
             <div style="font-size:18px;width:30px;display:flex;justify-content:center;">🗺️</div>
             <div style="flex:1;">
-                <div style="font-size:14px;font-weight:500;">วางแผนเส้นทาง</div>
+                <div style="font-size:14px;font-weight:500;">วางแผนเส้นทางใหม่</div>
                 <div style="font-size:11px;color:var(--tx3);">เลือกจุดเริ่มต้น → วางแผน</div>
             </div>
         </div>
@@ -1796,6 +1836,8 @@ function openRouteOptionsSheet(){
         </div>
     `;
     
+    container.innerHTML = html;
+    
     container.querySelectorAll('.ms-item').forEach(el => {
         el.onclick = () => {
             const action = el.dataset.action;
@@ -1804,11 +1846,45 @@ function openRouteOptionsSheet(){
             } else if(action === 'multi'){
                 closeMobSheet();
                 doMultiRoute();
+            } else if(action === 'hide'){
+                closeMobSheet();
+                hideRoute();
+                showToast('👁️ ซ่อนเส้นทางชั่วคราว');
+            } else if(action === 'resume'){
+                closeMobSheet();
+                resumeRoute();
+                showToast('👁️ แสดงเส้นทาง');
+            } else if(action === 'clear'){
+                closeMobSheet();
+                clearRoute();
+                showToast('🗑️ ล้างเส้นทางแล้ว');
             }
         };
     });
     
     openMobSheet();
+}
+
+function hideRoute(){
+    if(routeLine){
+        map.removeLayer(routeLine);
+        routeLine = null;
+    }
+    routeMode = false;
+    // Keep _routeStops data
+    const chipRoute = document.getElementById('chipRoute');
+    if(chipRoute) chipRoute.classList.remove('active');
+    // Restore markers
+    if(!map.hasLayer(markerCluster)) map.addLayer(markerCluster);
+    update();
+}
+
+async function resumeRoute(){
+    if(_routeStops.length === 0) return;
+    routeMode = true;
+    const chipRoute = document.getElementById('chipRoute');
+    if(chipRoute) chipRoute.classList.add('active');
+    await _routeDraw();
 }
 window.openRouteOptionsSheet = openRouteOptionsSheet;
 
