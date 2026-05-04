@@ -543,7 +543,25 @@ function exportPaths() {
 
 // Global IP storage
 let _currentIP = 'unknown';
-let _currentDevice = navigator.userAgent.slice(0, 50);
+function getDeviceSummary(ua = navigator.userAgent) {
+    const os = /Android/i.test(ua) ? 'Android'
+        : /iPhone|iPad|iPod/i.test(ua) ? 'iOS'
+        : /Windows/i.test(ua) ? 'Windows'
+        : /Mac OS X|Macintosh/i.test(ua) ? 'macOS'
+        : /Linux/i.test(ua) ? 'Linux'
+        : 'Unknown OS';
+    const browser = /Edg\//i.test(ua) ? 'Edge'
+        : /OPR\//i.test(ua) ? 'Opera'
+        : /CriOS|Chrome\//i.test(ua) ? 'Chrome'
+        : /FxiOS|Firefox\//i.test(ua) ? 'Firefox'
+        : /Safari\//i.test(ua) ? 'Safari'
+        : 'Browser';
+    const form = /Mobile|Android|iPhone|iPod/i.test(ua) ? 'Mobile'
+        : /iPad|Tablet/i.test(ua) ? 'Tablet'
+        : 'Desktop';
+    return `${form} · ${os} · ${browser}`;
+}
+let _currentDevice = getDeviceSummary();
 
 window.getChangelog = function(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
 function addChangelogEntry(action, loc, changes = null){
@@ -993,7 +1011,7 @@ function _limitMobileMarkers(items) {
 function _updateMobileMarkerLabels(count) {
     if (!_mobile) return;
     const mapEl = map.getContainer();
-    const canShow = map.getZoom() >= 16 && count <= 120 && !mapEl.classList.contains('is-gesture-zooming');
+    const canShow = map.getZoom() >= 14 && count <= 90 && !mapEl.classList.contains('is-gesture-zooming');
     mapEl.classList.toggle('show-mobile-marker-labels', canShow);
 }
 
@@ -1010,8 +1028,10 @@ function _createLocationIcon(loc, idx) {
     const color = _getMarkerColor(loc);
     const fav = isFavorite(loc);
     const label = _escapeHtml(loc.name || loc.list || 'ตำแหน่ง');
+    const markerName = _escapeHtml(loc.name || 'ไม่มีชื่อ');
+    const markerArea = _escapeHtml(_getDistrictName(loc));
     const labelText = _mobile
-        ? _escapeHtml(`${loc.name || loc.list || 'ตำแหน่ง'} · ${_getDistrictName(loc)}`)
+        ? `<span class="bt-marker-name">${markerName}</span><span class="bt-marker-area">${markerArea}</span>`
         : _escapeHtml(loc.list || 'ไม่ระบุ');
     return L.divIcon({
         className: 'bt-field-marker-shell',
@@ -1273,12 +1293,14 @@ function _createMobileClusterCells(districtGroups) {
                 lists: new Set(),
                 districts: new Set(),
                 bounds: L.latLngBounds(),
+                districtName: null,
                 _aggregate: true
             };
         }
         data.locations.forEach(loc => cells[key].locations.push(loc));
         data.lists.forEach(list => cells[key].lists.add(list));
         cells[key].districts.add(district);
+        cells[key].districtName = cells[key].districts.size === 1 ? district : null;
         cells[key].bounds.extend(data.bounds);
     });
     return cells;
@@ -1290,6 +1312,7 @@ function _createDistrictClusterMarker(district, data) {
     const center = data.bounds.getCenter();
     const lists = Array.from(data.lists);
     const districtCount = data.districts ? data.districts.size : 1;
+    const displayDistrict = data.districtName || (districtCount === 1 && data.districts ? Array.from(data.districts)[0] : district);
     const size = _mobile
         ? Math.min(50, Math.max(30, 28 + Math.sqrt(count) * 1.8))
         : Math.min(54, Math.max(34, 30 + Math.sqrt(count) * 2.8));
@@ -1308,7 +1331,7 @@ function _createDistrictClusterMarker(district, data) {
     });
     
     const marker = L.marker(center, { icon: icon });
-    marker._district = district;
+    marker._district = displayDistrict;
     marker._districtData = data;
     
     marker.on('click', () => {
@@ -1316,7 +1339,7 @@ function _createDistrictClusterMarker(district, data) {
             map.fitBounds(data.bounds.pad(0.18), { animate: false, maxZoom: DISTRICT_CLUSTER_MAX_ZOOM + 1 });
             return;
         }
-        _showDistrictPopup(district, data, marker);
+        _showDistrictPopup(displayDistrict, data, marker);
     });
 
     const listPreview = lists.slice(0, 3).map(_escapeHtml).join(', ');
@@ -1720,12 +1743,15 @@ function showPlaceCard(loc, idx) {
     const color=getColor(loc.list);
     const dist=myLatLng?haversine(myLatLng.lat,myLatLng.lng,loc.lat,loc.lng):null;
     const distHtml=dist!==null?`<span class="distance-badge">${formatDist(dist)}</span>`:'';
+    const area=_escapeHtml(_getDistrictName(loc));
+    const group=_escapeHtml(loc.list || 'ไม่มีรายการ');
+    const coord=`${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
     document.getElementById('placeCardContent').innerHTML=`
         <div class="place-card-name">${_escapeHtml(loc.name||'ไม่มีชื่อ')}</div>
         <div class="place-card-meta">
             <span class="place-card-color-dot" style="background:${color};"></span>
-            <span>${_escapeHtml(loc.list || 'ไม่มีรายการ')}</span>
-            ${loc.city?`<span class="dot">·</span><span>${_escapeHtml(loc.city)}</span>`:''}
+            <span>${group}</span>
+            <span class="dot">·</span><span>${area}</span>
             ${distHtml}
         </div>
         ${loc.tags&&loc.tags.length?`<div class="place-card-tags">${loc.tags.map(t=>{const tc=getTagColor(t);return`<span data-tag="${_escapeHtml(t)}" title="กดเพื่อตั้งสี tag" style="background:${tc||'var(--s2)'};color:${tc?'#fff':'var(--gn)'};border-color:${tc||'var(--gn)'};">${_escapeHtml(t)}</span>`;}).join('')}</div>`:''}
@@ -1745,17 +1771,20 @@ function showPlaceCard(loc, idx) {
                 <span class="place-action-label">ลบ</span>
             </button>
         </div>
-        <div class="place-card-divider"></div>
-        <div class="place-card-row">
-            <div class="place-card-row-icon">GPS</div>
-            <div class="place-card-row-text">
-                ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}<br>
-                <small>พิกัด GPS</small>
+        <div class="place-card-info-grid">
+            <div class="place-card-info-item wide">
+                <span class="place-card-info-k">พิกัด</span>
+                <button type="button" class="place-card-info-v mono" onclick="copyCoords(${loc.lat},${loc.lng})">${coord}</button>
             </div>
-            <button onclick="copyCoords(${loc.lat},${loc.lng})"
-                style="border:none;background:none;cursor:pointer;color:var(--bl);font-size:13px;font-weight:500;padding:4px 8px;border-radius:8px;flex-shrink:0;">คัดลอก</button>
+            <div class="place-card-info-item">
+                <span class="place-card-info-k">เขต</span>
+                <span class="place-card-info-v">${area}</span>
+            </div>
+            <div class="place-card-info-item">
+                <span class="place-card-info-k">รายการ</span>
+                <span class="place-card-info-v">${group}</span>
+            </div>
         </div>
-        ${loc.city?`<div class="place-card-row"><div class="place-card-row-icon">AREA</div><div class="place-card-row-text">${_escapeHtml(loc.city)}</div></div>`:''}
     `;
     // Tag color click handler
     document.getElementById('placeCardContent').querySelectorAll('[data-tag]').forEach(el=>{
@@ -4125,7 +4154,7 @@ function openInfoPanel(mode){
                         <div style="font-size:10px;color:var(--text3);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">
                             <span>👤 ${user}</span>
                             <span>🌐 ${ip}</span>
-                            <span>📱 ${(e.device || '').slice(0, 20)}</span>
+                            <span>📱 ${getDeviceSummary(e.device || '')}</span>
                             <span>🕐 ${ts}</span>
                         </div>
                     </div>
@@ -4257,7 +4286,7 @@ function openInfoPanel(mode){
                     <div style="font-size:10px;color:var(--text3);display:grid;gap:4px;">
                         <div>👤 ผู้ใช้: ${e.user || 'unknown'}</div>
                         <div>🌐 IP: ${e.ip || 'unknown'}</div>
-                        <div>📱 อุปกรณ์: ${e.device || 'unknown'}</div>
+                        <div>📱 อุปกรณ์: ${getDeviceSummary(e.device || '')}</div>
                         <div>🕐 เวลา: ${ts}</div>
                         ${e.changes ? `<div style="margin-top:4px;padding:4px;background:var(--s3);border-radius:4px;">📝 เปลี่ยนแปลง: ${Object.entries(e.changes).map(([k,v])=>`${k}: ${v.old}→${v.new}`).join(', ')}</div>` : ''}
                     </div>
@@ -4834,7 +4863,11 @@ html.is-mobile-map .bt-field-marker-core { box-shadow: 0 0 0 1px oklch(12% 0.025
 html.is-mobile-map .bt-field-marker-ring,
 html.is-mobile-map .bt-field-marker-label,
 html.is-mobile-map #map.is-gesture-zooming .leaflet-tooltip { display: none !important; }
-html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label { display: block !important; top: 21px !important; max-width: 132px !important; padding: 2px 4px !important; background: rgba(8,12,18,0.68) !important; font-size: 8px !important; opacity: 0.9 !important; transform: translateX(-50%) translateY(0) !important; box-shadow: none !important; transition: none !important; }
+html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label { display: grid !important; top: 20px !important; min-width: 72px !important; max-width: 128px !important; padding: 4px 6px 5px !important; gap: 1px !important; background: oklch(13% 0.026 260 / 0.9) !important; border: 1px solid oklch(86% 0.07 230 / 0.28) !important; font-size: 9px !important; opacity: 0.94 !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 5px 14px rgba(0,0,0,0.28) !important; transition: none !important; }
+html.is-mobile-map .bt-marker-name,
+html.is-mobile-map .bt-marker-area { display: block !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+html.is-mobile-map .bt-marker-name { color: oklch(98% 0.006 250) !important; font-weight: 850 !important; line-height: 1.1 !important; }
+html.is-mobile-map .bt-marker-area { color: oklch(73% 0.11 220) !important; font-size: 8px !important; font-weight: 750 !important; line-height: 1.05 !important; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
