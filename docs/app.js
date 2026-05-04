@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.35';
+const APP_VERSION = 'v6.9.36';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4817,12 +4817,14 @@ function parseCSV(text, fallbackList = 'Imported') {
             }
         }
         if(!lat||!lng||isNaN(lat)||isNaN(lng))continue;
-        const cityVal=cols[iCity]||'';
+        const cityVal=iCity>=0?(cols[iCity]||''):'';
         const provVal=iProvince>=0?cols[iProvince]||'':'';
         const cityFinal=cityVal||(provVal!==cityVal?provVal:'');
         const listRaw=iList>=0?(cols[iList]||''):'';
         const listVal=listRaw||cityVal||fallbackList;
-        result.push({name:nameVal,lat,lng,list:listVal,city:cityFinal,note:cols[iNote]||''});
+        // If no city column exists, use list value as city so it appears in เขต/เมือง
+        const cityOut = cityFinal || (iCity<0 ? listVal : '');
+        result.push({name:nameVal,lat,lng,list:listVal,city:cityOut,note:cols[iNote]||''});
     }
     return result;
 }
@@ -5062,12 +5064,14 @@ function showConfirm(icon,title,text,cb,mergeCallback){
     const replaceBtn=document.getElementById('confirmOkReplace');
     if(importCards && normalFooter){
         if(mergeCallback){
-            importCards.hidden=false;
+            importCards.removeAttribute('hidden');
+            importCards.style.cssText='display:grid!important;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 8px;';
             normalFooter.style.display='none';
             if(mergeBtn) mergeBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
             if(replaceBtn) replaceBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
         } else {
-            importCards.hidden=true;
+            importCards.setAttribute('hidden','');
+            importCards.style.cssText='';
             normalFooter.style.display='';
             if(mergeBtn) mergeBtn.onclick=null;
             if(replaceBtn) replaceBtn.onclick=null;
