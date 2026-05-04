@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.37';
+const APP_VERSION = 'v6.6.38';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -838,15 +838,27 @@ const colorPalette = ['#ea4335','#fbbc04','#34a853','#4285f4','#9334e6','#00897b
 const listColors = {};
 function getColor(list) {
     if (!listColors[list]) {
-        // Generate unique HSL color based on list name hash
+        // Generate distinct HSL color based on list name hash
         let hash = 0;
         for (let i = 0; i < list.length; i++) {
             hash = list.charCodeAt(i) + ((hash << 5) - hash);
         }
-        // Use hash to generate hue (0-360), with good saturation and lightness
-        const hue = Math.abs(hash) % 360;
-        const sat = 70 + (Math.abs(hash >> 8) % 20); // 70-90% saturation
-        const light = 45 + (Math.abs(hash >> 16) % 15); // 45-60% lightness
+        
+        // Use golden angle approximation for better color distribution
+        // This ensures colors are spread evenly around the color wheel
+        const goldenAngle = 137.508; // degrees
+        const hue = Math.floor((Math.abs(hash) * goldenAngle) % 360);
+        
+        // Alternate between light and dark variations for more contrast
+        const variant = Math.abs(hash >> 8) % 4;
+        let sat, light;
+        switch(variant) {
+            case 0: sat = 85; light = 55; break; // bright
+            case 1: sat = 75; light = 45; break; // medium-dark
+            case 2: sat = 90; light = 65; break; // light pastel
+            case 3: sat = 65; light = 40; break; // dark muted
+        }
+        
         listColors[list] = `hsl(${hue}, ${sat}%, ${light}%)`;
     }
     return listColors[list];
