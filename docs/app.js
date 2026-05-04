@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.6';
+const APP_VERSION = 'v6.9.7';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4608,7 +4608,7 @@ function protectedDataAction(action) {
 
 function doDeleteAllLocations() {
     if (!locations.length) { showToast('ไม่มีข้อมูลให้ลบ'); return; }
-    showConfirm('🗑️', `ลบทั้งหมด ${locations.length} จุด?`, 'การลบนี้จะบันทึกไว้ใน Undo เพื่อกู้คืนได้ทันที', () => {
+    showConfirm('🗑️', `ลบทั้งหมด ${locations.length} จุด?`, 'การลบนี้จะบันทึกไว้ใน Undo เพื่อกู้คืนได้ทันที', async () => {
         pushUndo();
         const toDelete = [...locations];
         locations = [];
@@ -4618,7 +4618,16 @@ function doDeleteAllLocations() {
         update();
         addChangelogEntry('delete', { name: 'ข้อมูลทั้งหมด', lat: 0, lng: 0, list: '', city: '' }, { count: { old: toDelete.length, new: 0 } });
         showToast(`ลบทั้งหมด ${toDelete.length} จุดแล้ว กด Undo เพื่อกู้คืน`, true);
-        if (_sbLoaded) toDelete.forEach(l => sbDelete(l));
+        if (_sbLoaded) {
+            const withId = toDelete.filter(l => l.sb_id);
+            const withoutId = toDelete.filter(l => !l.sb_id);
+            for (const l of withId) await sbDelete(l);
+            if (withoutId.length) {
+                const coords = withoutId.map(l => `(lat.eq.${l.lat},lng.eq.${l.lng})`);
+                const {error} = await _sb.from('locations').delete().or(coords.join(','));
+                if (error) console.warn('sbDelete by coord failed:', error.message);
+            }
+        }
     });
 }
 
@@ -5091,9 +5100,18 @@ async function doSync(silent=true){
         const dirtyNow = _isDirty();
         const effectiveDirty = dirtyAtStart || dirtyNow;
         const clearingAll = effectiveDirty && locations.length === 0;
-        const shouldMerge = (_sbLoaded || effectiveDirty) && (locations.length > 0 || clearingAll);
         const forceMerge = !_sbLoaded && locations.length > 0 && remote.length === 0;
-        if(shouldMerge || forceMerge){
+        // If dirty: always use local as source of truth, merge remote only for non-conflicting items
+        if(effectiveDirty || clearingAll){
+            if(clearingAll){
+                // User deleted everything locally — do not pull remote back
+                _clearDirty();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+                invalidateCache(); update();
+                _setSyncStatus('ok'); _lastSyncTime = Date.now();
+                if(!silent) showToast('✅ ลบทั้งหมดแล้ว', false, true);
+                return;
+            }
             // Use updatedAt merge strategy
             const merged = [];
             const rMap = new Map();
@@ -5125,10 +5143,8 @@ async function doSync(silent=true){
                     pendingPush.push(local);
                 }
             });
-            // Add remaining remote items unless we're intentionally clearing everything
-            if(!clearingAll){
-                rMap.forEach(r => merged.push(r));
-            }
+            // Add remaining remote items (not locally deleted)
+            rMap.forEach(r => merged.push(r));
             locations = merged;
         } else {
             locations = remote;
