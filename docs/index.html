@@ -3546,7 +3546,7 @@
                     </div>
                     <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
                     <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
-                    <button class="chip" id="chipList">&#9660; จัดการรายการ</button>
+                    <button class="chip" id="chipList" data-filter="list">&#9660; จัดการรายการ</button>
                 </div>
             </div>
         </div>
@@ -4154,6 +4154,43 @@
      INLINE SCRIPTS — wire IDs / patches
 ════════════════════════════════════════ -->
     <script>
+        window.btToggleFullscreen = async function () {
+            var doc = document;
+            var root = doc.documentElement;
+            var isFallback = doc.body.classList.contains('ios-fullscreen');
+            var request = root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen;
+            var exit = doc.exitFullscreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+            var active = doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement;
+
+            if (active && exit) {
+                await exit.call(doc);
+                return;
+            }
+
+            if (isFallback) {
+                doc.body.classList.remove('ios-fullscreen');
+                if (window.map && typeof window.map.invalidateSize === 'function') {
+                    setTimeout(function () { window.map.invalidateSize(); }, 80);
+                }
+                return;
+            }
+
+            if (request) {
+                try {
+                    await request.call(root);
+                    return;
+                } catch (e) {
+                    // iOS Safari often exposes partial APIs but refuses fullscreen for normal elements.
+                }
+            }
+
+            doc.body.classList.add('ios-fullscreen');
+            if (window.showToast) showToast('โหมดเต็มจอสำหรับ iOS: กดปุ่มเดิมอีกครั้งเพื่อออก');
+            if (window.map && typeof window.map.invalidateSize === 'function') {
+                setTimeout(function () { window.map.invalidateSize(); }, 80);
+            }
+        };
+
         /* ── Sidebar toggle syncs tb-left width on desktop ── */
         (function () {
             document.addEventListener('DOMContentLoaded', function () {
@@ -4190,8 +4227,7 @@
                     /* Fullscreen */
                     var fs = document.getElementById('btnFullscreen');
                     if (fs) fs.onclick = function () {
-                        if (!document.fullscreenElement) { document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
-                        else { document.exitFullscreen && document.exitFullscreen(); }
+                        window.btToggleFullscreen && window.btToggleFullscreen();
                     };
                     /* Measure */
                     var ms = document.getElementById('btnMeasure');
@@ -5205,8 +5241,7 @@
             const fs = document.getElementById('btnFullscreen');
             if (fs) {
                 fs.onclick = () => {
-                    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
-                    else document.exitFullscreen?.();
+                    window.btToggleFullscreen && window.btToggleFullscreen();
                 };
             }
         });
@@ -5433,6 +5468,26 @@
             body:has(.mob-drawer.show) .topbar,
             body:has(.mob-drawer.show) .mob-chips-scroll-container {
                 pointer-events: none !important;
+            }
+
+            body.ios-fullscreen .topbar,
+            body.ios-fullscreen .mob-chips-scroll-container,
+            body.ios-fullscreen .mob-nav,
+            body.ios-fullscreen .place-card,
+            body.ios-fullscreen .list-panel,
+            body.ios-fullscreen .info-panel {
+                display: none !important;
+            }
+
+            body.ios-fullscreen .body {
+                top: 0 !important;
+                bottom: 0 !important;
+                height: 100dvh !important;
+                z-index: 1 !important;
+            }
+
+            body.ios-fullscreen .map-controls {
+                z-index: 930 !important;
             }
         }
     </style>
