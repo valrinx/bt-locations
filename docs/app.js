@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.4';
+const APP_VERSION = 'v6.9.5';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5091,7 +5091,8 @@ async function doSync(silent=true){
         const dirtyNow = _isDirty();
         const effectiveDirty = dirtyAtStart || dirtyNow;
         const shouldMerge = (_sbLoaded || effectiveDirty) && locations.length > 0;
-        if(shouldMerge){
+        const forceMerge = !_sbLoaded && locations.length > 0 && remote.length === 0;
+        if(shouldMerge || forceMerge){
             // Use updatedAt merge strategy
             const merged = [];
             const rMap = new Map();
