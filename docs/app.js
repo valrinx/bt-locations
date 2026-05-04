@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.41';
+const APP_VERSION = 'v6.9.42';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5059,6 +5059,7 @@ function showConfirm(icon,title,text,cb,mergeCallback){
     document.getElementById('confirmText').textContent=text;
     confirmCallback=cb;
     const zone=document.getElementById('confirmFooterZone');
+    console.log('[confirm] zone=',zone,'mergeCallback=',!!mergeCallback);
     if(zone){
         if(mergeCallback){
             zone.innerHTML=`
