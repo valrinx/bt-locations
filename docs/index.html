@@ -1510,7 +1510,7 @@
         }
 
         .place-card-content {
-            padding: 8px 16px 20px;
+            padding: 12px 16px 20px;
         }
 
         .place-card-name {
@@ -1526,11 +1526,18 @@
             font-size: 12px;
             font-weight: 500;
             color: var(--tx2);
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
             gap: 6px;
             flex-wrap: wrap;
+        }
+
+        .place-card-color-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            flex: 0 0 auto;
         }
 
         .place-card-meta .dot {
@@ -1591,21 +1598,27 @@
             font-size: 12px;
             color: var(--tx2);
             line-height: 1.6;
+            margin-bottom: 12px;
+            padding: 9px 10px;
+            border-radius: 8px;
+            background: var(--s2);
+            border: 1px solid var(--bd);
         }
 
         .place-card-tags {
             display: flex;
             flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 10px;
+            gap: 6px;
+            margin-bottom: 12px;
         }
 
+        .place-card-tags span,
         .tag-pill {
             padding: 3px 9px;
-            border-radius: 20px;
+            border-radius: 999px;
             font-size: 11px;
             background: var(--s3);
-            border: 0.5px solid var(--bd2);
+            border: 1px solid var(--bd2);
             color: var(--tx2);
         }
 
@@ -1644,22 +1657,36 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
             gap: 8px;
-            margin: 14px 0;
+            margin: 12px 0 14px;
         }
 
         .place-action-btn {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            gap: 5px;
-            padding: 10px 6px;
-            border-radius: 10px;
-            border: 0.5px solid var(--bd2);
+            justify-content: center;
+            gap: 7px;
+            padding: 11px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--bd2);
             background: var(--s2);
+            color: var(--tx2);
             cursor: pointer;
             font-family: inherit;
             transition: all 0.15s;
             min-width: 0;
+        }
+
+        .place-action-btn.route {
+            background: var(--gn-d);
+            border-color: var(--gn-b);
+            color: var(--gn);
+        }
+
+        .place-action-btn.danger {
+            background: var(--rd-d);
+            border-color: rgba(255, 92, 92, 0.28);
+            color: var(--rd);
         }
 
         .place-action-btn:hover {
@@ -1668,14 +1695,21 @@
         }
 
         .place-action-icon {
-            font-size: 18px;
+            min-width: 28px;
+            height: 18px;
+            display: grid;
+            place-items: center;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 9px;
+            font-weight: 900;
             line-height: 1;
         }
 
         .place-action-label {
             font-size: 11.5px;
-            font-weight: 600;
-            color: var(--tx2);
+            font-weight: 750;
+            color: currentColor;
             white-space: nowrap;
         }
 
@@ -3171,6 +3205,11 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        #map.map-marker-gesture .leaflet-marker-pane,
+        #map.map-marker-gesture .leaflet-tooltip-pane {
+            display: none !important;
+        }
+
         .district-cluster-marker {
             background: transparent !important;
             border: 0 !important;
@@ -4354,18 +4393,6 @@
                     <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
                 </div>
                 <div class="mob-drawer-body">
-                    <button class="mob-menu-item" onclick="openRouteOptionsSheet(); closeMobDrawer()">
-                        <span class="mob-menu-ico">⌁</span>
-                        <span><b>วางแผนเส้นทาง</b><small>เลือกจุด, คำนวณ, เปิด Maps</small></span>
-                    </button>
-                    <button class="mob-menu-item" onclick="openListOptionsSheet(); closeMobDrawer()">
-                        <span class="mob-menu-ico">≡</span>
-                        <span><b>จัดการรายการ</b><small>กรอง, รวมรายการ, ดูจำนวน</small></span>
-                    </button>
-                    <button class="mob-menu-item" onclick="document.getElementById('btnGps').click(); closeMobDrawer()">
-                        <span class="mob-menu-ico">◎</span>
-                        <span><b>GPS Tracking</b><small>เปิดติดตามหรือกลับไปตำแหน่งฉัน</small></span>
-                    </button>
                     <div class="mob-menu-section">ข้อมูล</div>
                     <button class="mob-menu-item" onclick="document.getElementById('btnImportData').click(); closeMobDrawer()">
                         <span class="mob-menu-ico">↓</span>
@@ -4567,7 +4594,7 @@
                         <div style="display:flex;gap:8px;align-items:center;">
                             <label class="modal-btn modal-btn-cancel"
                                 style="cursor:pointer;font-size:12px;padding:7px 14px;">
-                                📷 เลือกรูป
+                                เลือกรูป
                                 <input type="file" id="modalPhotoInput" accept="image/*" style="display:none;">
                             </label>
                             <button class="modal-btn modal-btn-cancel" id="modalPhotoRemove"

@@ -964,6 +964,13 @@ function _filterToViewport(items) {
     return items.filter(l => b.contains([l.lat, l.lng]));
 }
 
+function _setMarkerGestureMode(active) {
+    if (!_mobile) return;
+    const mapEl = document.getElementById('map');
+    if (!mapEl) return;
+    mapEl.classList.toggle('map-marker-gesture', !!active);
+}
+
 function _getScopedFiltered() {
     const filtered = getFiltered();
     if (!_selectedDistrict) return filtered;
@@ -1592,34 +1599,35 @@ function updateChipLabels() {
 function showPlaceCard(loc, idx) {
     const color=getColor(loc.list);
     const dist=myLatLng?haversine(myLatLng.lat,myLatLng.lng,loc.lat,loc.lng):null;
-    const distHtml=dist!==null?`<span class="distance-badge">📍 ${formatDist(dist)}</span>`:'';
+    const distHtml=dist!==null?`<span class="distance-badge">${formatDist(dist)}</span>`:'';
     document.getElementById('placeCardContent').innerHTML=`
-        <div class="place-card-name">${loc.name||'ไม่มีชื่อ'}</div>
+        <div class="place-card-name">${_escapeHtml(loc.name||'ไม่มีชื่อ')}</div>
         <div class="place-card-meta">
-            <span style="color:${color};font-weight:600;">● ${loc.list}</span>
-            ${loc.city?`<span class="dot">·</span><span>${loc.city}</span>`:''}
+            <span class="place-card-color-dot" style="background:${color};"></span>
+            <span>${_escapeHtml(loc.list || 'ไม่มีรายการ')}</span>
+            ${loc.city?`<span class="dot">·</span><span>${_escapeHtml(loc.city)}</span>`:''}
             ${distHtml}
         </div>
-        ${loc.tags&&loc.tags.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">${loc.tags.map(t=>{const tc=getTagColor(t);return`<span data-tag="${t}" title="กดเพื่อตั้งสี tag" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:${tc||'var(--surface2)'};border-radius:12px;font-size:11px;color:${tc?'#fff':'var(--gn)'};font-weight:500;cursor:pointer;border:1px solid ${tc||'var(--gn)'};">🏷️ ${t}</span>`;}).join('')}</div>`:''}
+        ${loc.tags&&loc.tags.length?`<div class="place-card-tags">${loc.tags.map(t=>{const tc=getTagColor(t);return`<span data-tag="${_escapeHtml(t)}" title="กดเพื่อตั้งสี tag" style="background:${tc||'var(--s2)'};color:${tc?'#fff':'var(--gn)'};border-color:${tc||'var(--gn)'};">${_escapeHtml(t)}</span>`;}).join('')}</div>`:''}
         ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--gn);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
-        ${loc.note?`<div style="font-size:13px;color:var(--gn);margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:10px;">📝 ${loc.note}</div>`:''}
+        ${loc.note?`<div class="place-card-note">${_escapeHtml(loc.note)}</div>`:''}
         <div class="place-card-actions">
-            <button class="place-action-btn" onclick="openEdit(${idx})" style="background:rgba(91,143,255,0.15);border-color:rgba(91,143,255,0.3);">
-                <span class="place-action-icon">✏️</span>
-                <span class="place-action-label" style="color:var(--bl);">แก้ไข</span>
+            <button class="place-action-btn" onclick="openEdit(${idx})">
+                <span class="place-action-icon">EDIT</span>
+                <span class="place-action-label">แก้ไข</span>
             </button>
-            <button class="place-action-btn" onclick="doDirectionsTo(${idx})" style="background:rgba(45,255,160,0.12);border-color:rgba(45,255,160,0.3);">
-                <span class="place-action-icon">🧭</span>
-                <span class="place-action-label" style="color:var(--gn);">เส้นทาง</span>
+            <button class="place-action-btn route" onclick="openMapsTo(${idx})">
+                <span class="place-action-icon">GO</span>
+                <span class="place-action-label">Maps</span>
             </button>
-            <button class="place-action-btn" onclick="doConfirmDelete(${idx})" style="background:rgba(255,95,95,0.12);border-color:rgba(255,95,95,0.3);">
-                <span class="place-action-icon">🗑️</span>
-                <span class="place-action-label" style="color:var(--red);">ลบ</span>
+            <button class="place-action-btn danger" onclick="doConfirmDelete(${idx})">
+                <span class="place-action-icon">DEL</span>
+                <span class="place-action-label">ลบ</span>
             </button>
         </div>
         <div class="place-card-divider"></div>
         <div class="place-card-row">
-            <div class="place-card-row-icon">📌</div>
+            <div class="place-card-row-icon">GPS</div>
             <div class="place-card-row-text">
                 ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}<br>
                 <small>พิกัด GPS</small>
@@ -1627,7 +1635,7 @@ function showPlaceCard(loc, idx) {
             <button onclick="copyCoords(${loc.lat},${loc.lng})"
                 style="border:none;background:none;cursor:pointer;color:var(--bl);font-size:13px;font-weight:500;padding:4px 8px;border-radius:8px;flex-shrink:0;">คัดลอก</button>
         </div>
-        ${loc.city?`<div class="place-card-row"><div class="place-card-row-icon">🏙️</div><div class="place-card-row-text">${loc.city}</div></div>`:''}
+        ${loc.city?`<div class="place-card-row"><div class="place-card-row-icon">AREA</div><div class="place-card-row-text">${_escapeHtml(loc.city)}</div></div>`:''}
     `;
     // Tag color click handler
     document.getElementById('placeCardContent').querySelectorAll('[data-tag]').forEach(el=>{
@@ -1682,7 +1690,11 @@ function _escapeHtml(value) {
 }
 
 function closePlaceCard() { const pc = document.getElementById('placeCard'); if(pc) pc.classList.remove('open'); }
-window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'⭐ เพิ่มในรายการโปรดแล้ว':'☆ นำออกจากรายการโปรดแล้ว');};
+window.openMapsTo=function(idx){
+    const loc=locations[idx]; if(!loc)return;
+    window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank');
+};
+window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'เพิ่มในรายการโปรดแล้ว':'นำออกจากรายการโปรดแล้ว');};
 onClick('placeCardClose', closePlaceCard);
 
 // ════════════════════════════════════════════
@@ -2476,13 +2488,16 @@ map.on('zoomend', () => {
         _lastFilteredKey = null;
         update();
     }
+    requestAnimationFrame(() => _setMarkerGestureMode(false));
 });
+map.on('zoomstart movestart', () => _setMarkerGestureMode(true));
 map.on('moveend', () => {
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
         _lastFilteredKey = null;
         update();
     }
+    requestAnimationFrame(() => _setMarkerGestureMode(false));
 });
 
 if(btnGps){
