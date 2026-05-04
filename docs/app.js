@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.7.4';
+const APP_VERSION = 'v6.7.5';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3415,6 +3415,9 @@ function clearManualRoute(){
     if(routeLine){ map.removeLayer(routeLine); routeLine = null; }
     routeMode = false;
     closeManualRoutePanel();
+    // Remove banner if exists
+    const banner = document.getElementById('manualRouteBanner');
+    if(banner) banner.remove();
 }
 
 async function calculateManualRoute(){
@@ -3442,12 +3445,14 @@ async function calculateManualRoute(){
         
         // Show success with distance
         const distText = formatDist(result.distance);
-        const etaText = Math.round(result.duration / 60);
-        showToast(`✅ เส้นทาง ${manualRoutePoints.length} จุด · ${distText} · ~${etaText} นาที`);
+        const etaMins = Math.round(result.duration / 60);
         
         // Close panel after successful calculation
         closeManualRoutePanel();
         manualRouteMode = false;
+        
+        // Show route banner
+        _showManualRouteBanner(result.distance, result.duration);
         
     } catch(e) {
         console.warn('[BT] Manual route OSRM failed:', e.message);
@@ -3461,6 +3466,56 @@ async function calculateManualRoute(){
         map.fitBounds(routeLine.getBounds(), {padding: [50, 50]});
         showToast('⚠️ แสดงเส้นตรง (ไม่ใช่เส้นทางจริง)', true);
     }
+}
+
+// Show manual route banner similar to nav banner
+function _showManualRouteBanner(distance, duration){
+    // Remove old banner
+    let old = document.getElementById('manualRouteBanner');
+    if(old) old.remove();
+    
+    const banner = document.createElement('div');
+    banner.id = 'manualRouteBanner';
+    banner.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:2000;background:rgba(15,23,42,0.95);backdrop-filter:blur(12px);padding:16px 20px;border-radius:24px;box-shadow:0 12px 40px rgba(0,0,0,0.5);font-size:14px;font-family:inherit;min-width:280px;max-width:92vw;width:360px;color:#fff;border:1px solid rgba(255,255,255,0.1);';
+    
+    const distKm = (distance / 1000).toFixed(1);
+    const etaMins = Math.round(duration / 60);
+    const stopsText = manualRoutePoints.map((p, i) => `${i+1}. ${p.name}`).join(' → ');
+    
+    banner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+            <span style="font-size:20px;">🗺️</span>
+            <strong style="font-size:16px;font-weight:700;color:#5b8fff;">เส้นทางที่วางแผน</strong>
+        </div>
+        <div style="display:flex;gap:20px;font-size:14px;margin:8px 0;opacity:0.9;">
+            <span style="display:flex;align-items:center;gap:6px;">📏 ${distKm} km</span>
+            <span style="display:flex;align-items:center;gap:6px;">⏱️ ~${etaMins} นาที</span>
+        </div>
+        <div style="font-size:11px;color:#aaa;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${stopsText}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button onclick="_openManualRouteInMaps()" style="flex:1;padding:10px 4px;border:none;border-radius:12px;background:rgba(255,255,255,0.1);cursor:pointer;font-size:12px;font-weight:600;color:#fff;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px;">
+                <span>🗺️</span> Maps
+            </button>
+            <button onclick="clearManualRoute();document.getElementById('manualRouteBanner').remove();" style="width:40px;height:40px;border:none;background:#ff4d4d;color:#fff;border-radius:12px;cursor:pointer;font-size:16px;font-weight:bold;box-shadow:0 4px 10px rgba(255,77,77,0.3);transition:all .2s;display:flex;align-items:center;justify-content:center;">
+                ✕
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(banner);
+}
+
+// Open manual route in Google Maps
+function _openManualRouteInMaps(){
+    if(manualRoutePoints.length < 2) return;
+    const origin = `${manualRoutePoints[0].lat},${manualRoutePoints[0].lng}`;
+    const destination = `${manualRoutePoints[manualRoutePoints.length-1].lat},${manualRoutePoints[manualRoutePoints.length-1].lng}`;
+    const waypoints = manualRoutePoints.slice(1, -1).map(p => `${p.lat},${p.lng}`).join('|');
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    if(waypoints) url += `&waypoints=${waypoints}`;
+    window.open(url, '_blank');
 }
 
 let _manualRoutePanelOpen = false;
@@ -3566,6 +3621,7 @@ function updateManualRoutePanel(){
 window.removeManualPoint = removeManualPoint;
 window.clearManualRoute = clearManualRoute;
 window.calculateManualRoute = calculateManualRoute;
+window._openManualRouteInMaps = _openManualRouteInMaps;
 
 // ════════════════════════════════════════════
 // INFO PANEL (kept for compatibility)
