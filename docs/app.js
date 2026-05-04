@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.26';
+const APP_VERSION = 'v6.6.27';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2719,9 +2719,11 @@ function clearRoute(){
     if(routeLine){map.removeLayer(routeLine);routeLine=null;}
     routeMode=false;
     _routeStops=[];
-    document.getElementById('chipRoute').classList.remove('active');
+    const chipRoute = document.getElementById('chipRoute');
+    if(chipRoute) chipRoute.classList.remove('active');
     // Restore sort bar + markers
-    document.getElementById('listSortBar').style.display='';
+    const listSortBar = document.getElementById('listSortBar');
+    if(listSortBar) listSortBar.style.display='';
     _lastFilteredKey=null; // force marker re-render
     update();
 }
@@ -3017,7 +3019,8 @@ async function doRoute(){
 
     _routeStops=_tspSolve(filtered, startLat, startLng);
     routeMode=true;
-    document.getElementById('chipRoute').classList.add('active');
+    const chipRoute = document.getElementById('chipRoute');
+    if(chipRoute) chipRoute.classList.add('active');
     await _routeDraw();
 }
 
