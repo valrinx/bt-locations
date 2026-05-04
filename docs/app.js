@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.33';
+const APP_VERSION = 'v6.6.34';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;

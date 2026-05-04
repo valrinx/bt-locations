@@ -5090,9 +5090,12 @@
                 locs = DEFAULT_LOCATIONS;
             }
 
-            const svTotal = document.getElementById('svTotal');
-            if (svTotal) svTotal.textContent = locs ? locs.length : 0;
-            if (!locs || !locs.length) return;
+            const svInner = document.querySelector('.sv-inner');
+            if (!svInner) return;
+            if (!locs || !locs.length) {
+                svInner.innerHTML = '<div style="padding:40px;text-align:center;color:var(--tx3);">ไม่มีข้อมูล</div>';
+                return;
+            }
 
             const cities = {}, lists = {};
             locs.forEach(l => {
@@ -5100,69 +5103,110 @@
                 if (l.list) lists[l.list] = (lists[l.list] || 0) + 1;
             });
 
-            document.getElementById('svCities') && (document.getElementById('svCities').textContent = Object.keys(cities).length);
-            document.getElementById('svLists') && (document.getElementById('svLists').textContent = Object.keys(lists).length);
+            const sortedLists = Object.entries(lists).sort((a, b) => b[1] - a[1]);
+            const sortedCities = Object.entries(cities).sort((a, b) => b[1] - a[1]);
+            const top5 = sortedLists.slice(0, 5);
+            const others = sortedLists.slice(5);
+            const othersCount = others.reduce((sum, [_, c]) => sum + c, 0);
+            const getColor = window.getColor || (() => '#4285f4');
 
-            const cityBars = document.getElementById('cityBars');
-            if (cityBars) {
-                const sortedCities = Object.entries(cities).sort((a, b) => b[1] - a[1]);
-                const maxCity = sortedCities.length ? sortedCities[0][1] : 1;
-                cityBars.innerHTML = sortedCities.map(([city, count]) => `
-                    <div style="display:flex;align-items:center;margin-bottom:8px;font-size:13px;">
-                        <div style="width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx2);">${city}</div>
-                        <div style="flex:1;height:6px;background:var(--s3);border-radius:3px;margin:0 10px;position:relative;">
-                            <div style="position:absolute;left:0;top:0;bottom:0;background:var(--bl);border-radius:3px;width:${(count / maxCity) * 100}%;"></div>
-                        </div>
-                        <div style="width:30px;text-align:right;font-weight:600;color:var(--tx);">${count}</div>
+            // Build new UI
+            let html = `
+                <!-- Summary Cards -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+                    <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                        <div style="font-size:24px;font-weight:700;color:var(--bl);">${locs.length}</div>
+                        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">จุดทั้งหมด</div>
                     </div>
-                `).join('');
-            }
-
-            const donutSvg = document.getElementById('donutSvg');
-            const donutLegend = document.getElementById('donutLegend');
-            if (donutSvg && donutLegend) {
-                const sortedLists = Object.entries(lists).sort((a, b) => b[1] - a[1]);
-                let svgHtml = '', legendHtml = '', startAngle = 0;
-                sortedLists.forEach(([list, count], i) => {
-                    const color = window.getColor ? window.getColor(list) : ['#34a853', '#4285f4', '#ea4335', '#fbbc04', '#ff6d01'][i % 5];
-                    const sliceAngle = (count / (locs.length || 1)) * 360;
-                    const x1 = 40 + 40 * Math.cos(Math.PI * startAngle / 180);
-                    const y1 = 40 + 40 * Math.sin(Math.PI * startAngle / 180);
-                    const x2 = 40 + 40 * Math.cos(Math.PI * (startAngle + sliceAngle) / 180);
-                    const y2 = 40 + 40 * Math.sin(Math.PI * (startAngle + sliceAngle) / 180);
-                    const largeArc = sliceAngle > 180 ? 1 : 0;
-                    if (sliceAngle === 360) {
-                        svgHtml += `<circle cx="40" cy="40" r="40" fill="${color}" />`;
-                    } else if (sliceAngle > 0) {
-                        svgHtml += `<path d="M40,40 L${x1},${y1} A40,40 0 ${largeArc},1 ${x2},${y2} Z" fill="${color}" />`;
-                    }
-                    legendHtml += `
-                        <div style="display:flex;align-items:center;margin-bottom:4px;font-size:12px;">
-                            <span style="width:10px;height:10px;border-radius:50%;background:${color};margin-right:8px;"></span>
-                            <span style="flex:1;color:var(--tx2);">${list}</span>
-                            <span style="font-weight:600;color:var(--tx);">${count}</span>
+                    <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                        <div style="font-size:24px;font-weight:700;color:var(--bl);">${Object.keys(lists).length}</div>
+                        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">รายการ</div>
+                    </div>
+                    <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                        <div style="font-size:24px;font-weight:700;color:var(--bl);">${Object.keys(cities).length}</div>
+                        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">เขต</div>
+                    </div>
+                </div>
+                
+                <!-- Top Lists with Pie Chart -->
+                <div style="background:var(--s1);border-radius:16px;padding:16px;margin-bottom:16px;border:0.5px solid var(--bd2);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--tx);">สัดส่วนรายการ (Top ${Math.min(5, sortedLists.length)})</div>
+                        <div style="font-size:10px;color:var(--tx3);">${sortedLists.length} รายการทั้งหมด</div>
+                    </div>
+                    
+                    <div style="display:grid;grid-template-columns:1fr 100px;gap:16px;align-items:center;">
+                        <!-- List on left -->
+                        <div style="display:flex;flex-direction:column;gap:8px;">
+                            ${top5.map(([n,c],i)=>`
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:28px;height:28px;border-radius:8px;background:${getColor(n)};display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">${i+1}</div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+                                        <div style="font-size:10px;color:var(--tx3);">${c} จุด · ${Math.round(c/locs.length*100)}%</div>
+                                    </div>
+                                    <div style="font-size:13px;font-weight:600;color:var(--bl);">${c}</div>
+                                </div>
+                            `).join('')}
+                            ${others.length > 0 ? `
+                                <div style="display:flex;align-items:center;gap:8px;padding-top:4px;border-top:0.5px solid var(--bd2);">
+                                    <div style="width:28px;height:28px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:11px;font-weight:600;">+</div>
+                                    <div style="flex:1;">
+                                        <div style="font-size:12px;color:var(--tx2);">อื่นๆ ${others.length} รายการ</div>
+                                        <div style="font-size:10px;color:var(--tx3);">${othersCount} จุด · ${Math.round(othersCount/locs.length*100)}%</div>
+                                    </div>
+                                    <div style="font-size:13px;font-weight:600;color:var(--tx2);">${othersCount}</div>
+                                </div>
+                            ` : ''}
                         </div>
-                    `;
-                    startAngle += sliceAngle;
-                });
-                svgHtml += `<circle cx="40" cy="40" r="25" fill="var(--s2)" />`;
-                donutSvg.innerHTML = svgHtml;
-                donutLegend.innerHTML = legendHtml;
-            }
-
-            const recentList = document.getElementById('recentList');
-            if (recentList) {
-                const recent = [...locs].reverse().slice(0, 5);
-                recentList.innerHTML = recent.map(l => `
-                    <div style="padding:10px 0;border-bottom:1px solid var(--bd3);display:flex;align-items:center;">
-                        <div style="width:32px;height:32px;border-radius:8px;background:var(--s3);display:flex;align-items:center;justify-content:center;margin-right:12px;font-size:16px;">📍</div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.name || l.list}</div>
-                            <div style="font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.list} • ${l.city || '-'}</div>
+                        
+                        <!-- Simple Pie Chart on right -->
+                        <div style="position:relative;width:100px;height:100px;">
+                            <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg);">
+                                ${(()=>{
+                                    let accumulated = 0;
+                                    const total = locs.length;
+                                    return top5.map(([n,c],i)=>{
+                                        const percentage = c/total;
+                                        const dashArray = `${percentage * 75} ${100 - percentage * 75}`;
+                                        const dashOffset = -accumulated * 75;
+                                        accumulated += percentage;
+                                        return `<circle cx="50" cy="50" r="25" fill="none" stroke="${getColor(n)}" stroke-width="50" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}" />`;
+                                    }).join('') + (othersCount > 0 ? `<circle cx="50" cy="50" r="25" fill="none" stroke="var(--s3)" stroke-width="50" stroke-dasharray="${othersCount/total * 75} ${100 - othersCount/total * 75}" stroke-dashoffset="${-accumulated * 75}" />` : '');
+                                })()}
+                            </svg>
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+                                <div style="font-size:16px;font-weight:700;color:var(--bl);">${sortedLists.length}</div>
+                                <div style="font-size:8px;color:var(--tx3);">รายการ</div>
+                            </div>
                         </div>
                     </div>
-                `).join('');
-            }
+                </div>
+                
+                <!-- Cities Grid -->
+                ${sortedCities.length > 0 ? `
+                    <div style="background:var(--s1);border-radius:16px;padding:16px;border:0.5px solid var(--bd2);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                            <div style="font-size:12px;font-weight:600;color:var(--tx);">จุดต่อเขต</div>
+                            <div style="font-size:10px;color:var(--tx3);">${sortedCities.length} เขต</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+                            ${sortedCities.slice(0, 10).map(([n,c],i)=>`
+                                <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;">
+                                    <div style="width:6px;height:6px;border-radius:50%;background:var(--bl);"></div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:11px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+                                    </div>
+                                    <div style="font-size:11px;font-weight:600;color:var(--bl);">${c}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${sortedCities.length > 10 ? `<div style="text-align:center;margin-top:8px;font-size:10px;color:var(--tx3);">+${sortedCities.length - 10} เขตอื่นๆ</div>` : ''}
+                    </div>
+                ` : ''}
+            `;
+
+            svInner.innerHTML = html;
         };
 
         window.renderListView = function () {
