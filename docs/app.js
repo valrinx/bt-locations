@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.30';
+const APP_VERSION = 'v6.9.31';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2092,12 +2092,22 @@ function renderListDirectory() {
             </div>`;
         }).join('')}`;
 
-    table.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;padding:12px;border-bottom:0.5px solid var(--bd);background:var(--s1);">
+    // Render toolbar in sticky container outside scroll area
+    const toolbarEl = document.getElementById('listTableToolbar');
+    if(toolbarEl){
+        toolbarEl.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;">
             <button class="lv-tb-btn" data-list-action="all">ทั้งหมด</button>
             <button class="lv-tb-btn" data-list-action="manage">จัดการรายการ</button>
             <span style="margin-left:auto;color:var(--tx3);font-size:11px;white-space:nowrap;">${lists.length} รายการ · ${cities.length} เขต · ${locations.length} จุด</span>
-        </div>
+        </div>`;
+        toolbarEl.onclick = e => {
+            const action = e.target.closest('[data-list-action]')?.dataset.listAction;
+            if(action === 'all'){ filterList=''; filterCity=''; filterFavorites=false; nearbyMode=false; switchView('map'); update(); }
+            if(action === 'manage'){ openListOptionsSheet(); }
+        };
+    }
+
+    table.innerHTML = `
         ${section('List', lists, 'list')}
         ${section('เขต / เมือง', cities, 'city')}
     `;
@@ -5028,13 +5038,13 @@ function showConfirm(icon,title,text,cb,mergeCallback){
     const mergeBtn=document.getElementById('confirmMerge');
     if(mergeBtn){
         if(mergeCallback){
-            mergeBtn.style.display='flex';
+            mergeBtn.style.cssText='display:flex!important;background:#059669;color:#fff;width:100%;justify-content:center;gap:8px;';
             mergeBtn.onclick=()=>{
                 document.getElementById('confirmModalOverlay').classList.remove('open');
                 mergeCallback();
             };
         } else {
-            mergeBtn.style.display='none';
+            mergeBtn.style.cssText='display:none!important;';
             mergeBtn.onclick=null;
         }
     }
