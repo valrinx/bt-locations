@@ -4161,6 +4161,8 @@
             var request = root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen;
             var exit = doc.exitFullscreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
             var active = doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement;
+            var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
             if (active && exit) {
                 await exit.call(doc);
@@ -4175,7 +4177,7 @@
                 return;
             }
 
-            if (request) {
+            if (request && !isIOS) {
                 try {
                     await request.call(root);
                     return;
