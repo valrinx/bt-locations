@@ -930,6 +930,8 @@ const MARKER_VIEWPORT_PAD = _mobile ? 0 : 0.08;
 let _lastMarkerRenderMode = null;
 let _tooltipPermanentState = null;
 let _visibleMarkerIdxs = new Set();
+let _mobileZoomRestoreTimer = null;
+let _lastMarkerRenderMs = 0;
 
 function _getDistrictName(loc) {
     return loc.district || loc.city || 'ไม่ระบุเขต';
@@ -964,6 +966,28 @@ function _filterToViewport(items) {
     if (!map || !map.getBounds || map.getZoom() <= DISTRICT_CLUSTER_MAX_ZOOM) return items;
     const b = map.getBounds().pad(MARKER_VIEWPORT_PAD);
     return items.filter(l => b.contains([l.lat, l.lng]));
+}
+
+function _getMobileMarkerLimit() {
+    if (!_mobile) return Infinity;
+    const zoom = map.getZoom();
+    if (zoom <= 14) return 140;
+    if (zoom <= 15) return 260;
+    if (zoom <= 16) return 420;
+    return 650;
+}
+
+function _limitMobileMarkers(items) {
+    const limit = _getMobileMarkerLimit();
+    if (!_mobile || items.length <= limit) return items;
+    const center = map.getCenter();
+    const ranked = items.map(loc => {
+        const dx = loc.lat - center.lat;
+        const dy = (loc.lng - center.lng) * Math.cos(center.lat * Math.PI / 180);
+        return { loc, d: dx * dx + dy * dy };
+    });
+    ranked.sort((a, b) => a.d - b.d);
+    return ranked.slice(0, limit).map(item => item.loc);
 }
 
 function _getScopedFiltered() {
@@ -1099,7 +1123,7 @@ function renderMarkers(filtered) {
 
     if (manualRouteMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
-        const visibleManual = _filterToViewport(filtered);
+        const visibleManual = _limitMobileMarkers(_filterToViewport(filtered));
         _showIndividualMarkers(visibleManual);
         _updateDistrictScopeControl(filtered.length);
         const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${filtered.length} ตู้`;
@@ -1151,7 +1175,7 @@ function renderMarkers(filtered) {
         : filtered;
     
     // Show individual markers
-    const visibleMarkers = _filterToViewport(markersToShow);
+    const visibleMarkers = _limitMobileMarkers(_filterToViewport(markersToShow));
     _showIndividualMarkers(visibleMarkers);
     _updateDistrictScopeControl(markersToShow.length);
     
@@ -1183,7 +1207,9 @@ function invalidateCache() {
 
 function update() {
     const filtered = getFiltered();
+    const markerRenderStart = performance.now();
     renderMarkers(filtered);
+    _lastMarkerRenderMs = Math.round((performance.now() - markerRenderStart) * 10) / 10;
     // render list panel เฉพาะเมื่อเปิดอยู่ และไม่ได้อยู่ใน route mode
     const _lp=document.getElementById('listPanel');
     if (_lp && _lp.classList.contains('open') && !routeMode) {
@@ -2498,6 +2524,7 @@ function _updateTooltipVisibility() {
     });
 }
 map.on('zoomend', () => {
+    if (_mobile) return;
     _updateTooltipVisibility();
     const mode = _getMarkerRenderMode();
     if (mode !== _lastMarkerRenderMode) {
@@ -2506,6 +2533,7 @@ map.on('zoomend', () => {
     }
 });
 map.on('moveend', () => {
+    if (_mobile && map.getContainer().classList.contains('is-gesture-zooming')) return;
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
         _lastFilteredKey = null;
@@ -2513,10 +2541,24 @@ map.on('moveend', () => {
     }
 });
 map.on('zoomstart', () => {
-    if (_mobile) map.getContainer().classList.add('is-gesture-zooming');
+    if (!_mobile) return;
+    if (_mobileZoomRestoreTimer) {
+        clearTimeout(_mobileZoomRestoreTimer);
+        _mobileZoomRestoreTimer = null;
+    }
+    map.getContainer().classList.add('is-gesture-zooming');
+    if (_individualMarkersLayer && map.hasLayer(_individualMarkersLayer)) {
+        map.removeLayer(_individualMarkersLayer);
+    }
 });
 map.on('zoomend', () => {
-    if (_mobile) map.getContainer().classList.remove('is-gesture-zooming');
+    if (!_mobile) return;
+    map.getContainer().classList.remove('is-gesture-zooming');
+    _lastFilteredKey = null;
+    _mobileZoomRestoreTimer = setTimeout(() => {
+        _mobileZoomRestoreTimer = null;
+        update();
+    }, 60);
 });
 
 if(btnGps){
@@ -4953,6 +4995,17 @@ window.btDebug = {
     get stats() {
         const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
         return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,dirty:_isDirty(),lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};
+    },
+    get mapStats() {
+        return {
+            zoom: map.getZoom(),
+            mode: _getMarkerRenderMode(),
+            visibleMarkers: _visibleMarkerIdxs.size,
+            markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
+            mobileMarkerLimit: _getMobileMarkerLimit(),
+            lastMarkerRenderMs: _lastMarkerRenderMs,
+            mobileZooming: map.getContainer().classList.contains('is-gesture-zooming')
+        };
     },
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
