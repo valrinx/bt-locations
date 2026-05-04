@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.28';
+const APP_VERSION = 'v6.6.29';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -111,6 +111,19 @@ function switchView(view){
     document.querySelectorAll('.map-view, .list-view, .stats-view').forEach(el=>el.classList.remove('show'));
     const viewEl = document.getElementById('view-'+view);
     if(viewEl) viewEl.classList.add('show');
+    
+    // Hide mob-chips-row when not in map view
+    const mobChipsRow = document.getElementById('mobChipsRow');
+    const mobSearchRow = document.getElementById('mobSearchRow');
+    if(mobChipsRow) {
+        if(view === 'map') {
+            mobChipsRow.style.display = 'flex';
+            if(mobSearchRow) mobSearchRow.style.display = 'flex';
+        } else {
+            mobChipsRow.style.display = 'none';
+            if(mobSearchRow) mobSearchRow.style.display = 'none';
+        }
+    }
     
     if(view==='stats') renderStatsView();
     if(view==='list') renderListView();
