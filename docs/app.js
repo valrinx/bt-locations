@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.29';
+const APP_VERSION = 'v6.9.30';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4929,35 +4929,22 @@ document.getElementById('fileImport').onchange=async e=>{
     const fileNames=files.map(f=>f.name).join(', ');
     const dupText=deduped.removed?`\nคัดจุดซ้ำพิกัดเป๊ะๆ ออก ${deduped.removed} จุด`:'';
     const multiText=files.length>1?` (${files.length} ไฟล์)`:'';
-    showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,async()=>{
-        pushUndo();locations=allImp;saveLocations();invalidateCache();update();
-        showToast(`Replace: ${allImp.length} จุด`,false,true);
-        if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}
-    });
-    // Add merge button
-    setTimeout(()=>{
-        const footer=document.querySelector('.confirm-footer');
-        if(!footer||footer.querySelector('#btnMergeImport'))return;
-        const mergeBtn=document.createElement('button');
-        mergeBtn.id='btnMergeImport';
-        mergeBtn.className='modal-btn modal-btn-save';
-        mergeBtn.style.cssText='background:#059669;';
-        mergeBtn.textContent='🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
-        mergeBtn.onclick=async()=>{
-            pushUndo();
-            const existing=new Set(locations.map(exactCoordKey));
-            const toAdd=[];
-            allImp.forEach(loc=>{
-                const key=exactCoordKey(loc);
-                if(!existing.has(key)){locations.push(loc);existing.add(key);toAdd.push(loc);}
-            });
-            saveLocations();invalidateCache();update();
-            showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${allImp.length-toAdd.length} ซ้ำ)`,false,true);
-            document.getElementById('confirmModalOverlay').classList.remove('open');
-            if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
-        };
-        footer.insertBefore(mergeBtn,footer.firstChild);
-    },100);
+    const doMerge=async()=>{
+        pushUndo();
+        const existing=new Set(locations.map(exactCoordKey));
+        const toAdd=[];
+        allImp.forEach(loc=>{
+            const key=exactCoordKey(loc);
+            if(!existing.has(key)){locations.push(loc);existing.add(key);toAdd.push(loc);}
+        });
+        saveLocations();invalidateCache();update();
+        showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${allImp.length-toAdd.length} ซ้ำ)`,false,true);
+        if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
+    };
+    showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,
+        async()=>{pushUndo();locations=allImp;saveLocations();invalidateCache();update();showToast(`Replace: ${allImp.length} จุด`,false,true);if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}},
+        doMerge
+    );
 };
 
 function doUndo(){if(!undoStack.length){showToast('ไม่มี Undo');return;}redoStack.push(JSON.stringify(locations));locations=JSON.parse(undoStack.pop());saveLocations();invalidateCache();update();showToast('Undo แล้ว');closeInfo();}
@@ -5007,7 +4994,7 @@ async function githubPut(path,content,sha,token,msg){}
 // CONFIRM DIALOG
 // ════════════════════════════════════════════
 let confirmCallback=null;
-function showConfirm(icon,title,text,cb){
+function showConfirm(icon,title,text,cb,mergeCallback){
     const el=document.getElementById('confirmIcon');
     if(el){
         el.className='confirm-icon';
@@ -5020,7 +5007,7 @@ function showConfirm(icon,title,text,cb){
         } else if(icon==='reset'||icon==='🔄'){
             el.classList.add('info');
             el.innerHTML='<i class="fa-solid fa-rotate"></i>';
-        } else if(icon==='merge'||icon==='🔗 รวมรายการ?'){
+        } else if(icon==='merge'){
             el.classList.add('success');
             el.innerHTML='<i class="fa-solid fa-code-merge"></i>';
         } else {
@@ -5028,9 +5015,29 @@ function showConfirm(icon,title,text,cb){
             el.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i>';
         }
     }
+    // ok button style — blue for non-destructive, red for delete
+    const okBtn=document.getElementById('confirmOk');
+    if(okBtn){
+        if(icon==='delete'){ okBtn.className='modal-btn modal-btn-save btn-danger'; okBtn.style.flex='1'; }
+        else { okBtn.className='modal-btn modal-btn-save'; okBtn.style.flex='1'; }
+    }
     document.getElementById('confirmTitle').textContent=title;
     document.getElementById('confirmText').textContent=text;
     confirmCallback=cb;
+    // Merge button: show only for import
+    const mergeBtn=document.getElementById('confirmMerge');
+    if(mergeBtn){
+        if(mergeCallback){
+            mergeBtn.style.display='flex';
+            mergeBtn.onclick=()=>{
+                document.getElementById('confirmModalOverlay').classList.remove('open');
+                mergeCallback();
+            };
+        } else {
+            mergeBtn.style.display='none';
+            mergeBtn.onclick=null;
+        }
+    }
     document.getElementById('confirmModalOverlay').classList.add('open');
 }
 const confirmCancel=document.getElementById('confirmCancel');
