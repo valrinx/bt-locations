@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.13';
+const APP_VERSION = 'v6.9.14';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -816,15 +816,39 @@ let _locIndexMap = new Map();
 function rebuildIndexMap() { _locIndexMap = new Map(locations.map((l, i) => [l, i])); }
 function getLocIndex(loc) { return _locIndexMap.has(loc) ? _locIndexMap.get(loc) : locations.indexOf(loc); }
 
-// ── datalist cache: rebuild เฉพาะเมื่อ locations เปลี่ยน ──
+// ── custom autocomplete for modalList / modalCity ──
 let _datalistDirty = true;
 function markDatalistDirty() { _datalistDirty = true; }
+function _setupAC(inputId, dropId, getItems) {
+    const inp = document.getElementById(inputId);
+    const drop = document.getElementById(dropId);
+    if (!inp || !drop) return;
+    function showDrop(val) {
+        const all = getItems();
+        const q = val.toLowerCase();
+        const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
+        if (!filtered.length) { drop.classList.remove('open'); return; }
+        drop.innerHTML = filtered.slice(0, 30).map(s =>
+            `<div class="ac-option" data-val="${_escapeHtml(s)}">${_escapeHtml(s)}</div>`
+        ).join('');
+        drop.classList.add('open');
+        drop.querySelectorAll('.ac-option').forEach(el => {
+            el.addEventListener('mousedown', e => {
+                e.preventDefault();
+                inp.value = el.dataset.val;
+                drop.classList.remove('open');
+                inp.dispatchEvent(new Event('change'));
+            });
+        });
+    }
+    inp.addEventListener('focus', () => showDrop(inp.value));
+    inp.addEventListener('input', () => showDrop(inp.value));
+    inp.addEventListener('blur', () => setTimeout(() => drop.classList.remove('open'), 150));
+}
 function refreshDatalistSuggestions() {
     if (!_datalistDirty) return;
-    const listSuggestions = document.getElementById('listSuggestions');
-    const citySuggestions = document.getElementById('citySuggestions');
-    if(listSuggestions) listSuggestions.innerHTML = [...new Set(locations.map(l => l.list).filter(Boolean))].map(l => `<option value="${l}">`).join('');
-    if(citySuggestions) citySuggestions.innerHTML = [...new Set(locations.map(l => l.city).filter(Boolean))].map(c => `<option value="${c}">`).join('');
+    _setupAC('modalList', 'acListDrop', () => [...new Set(locations.map(l => l.list).filter(Boolean))].sort());
+    _setupAC('modalCity', 'acCityDrop', () => [...new Set(locations.map(l => l.city).filter(Boolean))].sort());
     _datalistDirty = false;
 }
 
