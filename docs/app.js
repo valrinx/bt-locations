@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.42';
+const APP_VERSION = 'v6.6.43';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3355,10 +3355,10 @@ window.showChangelogDetail = function(timestamp) {
     if(!log) return;
     const body = document.getElementById('infoPanelBody');
     body.dataset.auditName = log.n;
-    openInfoPanel('audit');
+    window.openInfoPanel('audit');
 };
 
-function openInfoPanel(mode){
+window.openInfoPanel = function(mode){
     const body=document.getElementById('infoPanelBody');
     if(mode==='changelog'){
         document.getElementById('infoPanelTitle').textContent='ประวัติการแก้ไข';
@@ -3576,8 +3576,8 @@ function openInfoPanel(mode){
         b('omExportM',  doExport);
         b('omExportImgM', doExportImage);
         b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
-        b('omStatsM',   ()=>openInfoPanel('stats'));
-        b('omChangelogM',()=>openInfoPanel('changelog'));
+        b('omStatsM',   ()=>window.openInfoPanel('stats'));
+        b('omChangelogM',()=>window.openInfoPanel('changelog'));
         b('omSyncM',    ()=>{closeInfo();doSync(false);});
         b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
         b('omDarkM',    toggleDark);

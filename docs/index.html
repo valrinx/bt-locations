@@ -3499,6 +3499,7 @@
             <!-- ── TOPBAR ── -->
             <div class="topbar">
                 <div class="tb-left" id="tbLeft">
+                    <button id="btnMenu" style="background:none;border:none;padding:8px;cursor:pointer;color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;" title="เมนู">☰</button>
                     <div class="logo-wrapper" onclick="location.reload()">
                         <div class="logo-main">BT</div>
                         <div class="logo-right">
@@ -4201,13 +4202,17 @@
                     /* Menu button */
                     var btn = document.getElementById('btnMenu');
                     if (btn) {
-                        var orig = btn.onclick;
                         btn.onclick = function () {
-                            if (orig) orig.call(this);
                             if (window.innerWidth >= 768) {
+                                // Desktop: toggle sidebar
                                 var sb = document.getElementById('sidebar');
                                 var tbl = document.getElementById('tbLeft');
                                 if (tbl && sb) tbl.classList.toggle('sidebar-collapsed', !sb.classList.contains('open'));
+                            } else {
+                                // Mobile: open info panel (menu)
+                                if (typeof window.openInfoPanel === 'function') {
+                                    window.openInfoPanel();
+                                }
                             }
                         };
                     }
