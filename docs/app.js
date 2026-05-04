@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.36';
+const APP_VERSION = 'v6.9.37';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4974,6 +4974,7 @@ document.getElementById('fileImport').onchange=async e=>{
         showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${allImp.length-toAdd.length} ซ้ำ)`,false,true);
         if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
     };
+    closeImportModal();
     showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,
         async()=>{pushUndo();locations=allImp;saveLocations();invalidateCache();update();showToast(`Replace: ${allImp.length} จุด`,false,true);if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}},
         doMerge
