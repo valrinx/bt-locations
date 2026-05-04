@@ -2653,11 +2653,12 @@
 
         .mob-menu-item {
             width: 100%;
-            min-height: 54px;
-            display: flex;
+            min-height: 56px;
+            display: grid;
+            grid-template-columns: 1fr auto;
             align-items: center;
             gap: 10px;
-            padding: 9px 10px;
+            padding: 10px 12px;
             border: 1px solid var(--bd);
             border-radius: 8px;
             background: var(--s2);
@@ -2672,16 +2673,19 @@
         }
 
         .mob-menu-ico {
-            width: 30px;
-            height: 30px;
-            border-radius: 8px;
+            width: auto;
+            min-width: 34px;
+            height: 24px;
+            padding: 0 7px;
+            border-radius: 999px;
             display: grid;
             place-items: center;
             background: var(--bl-d);
             color: var(--bl);
-            font-size: 15px;
+            font-size: 9px;
             font-weight: 800;
-            flex: 0 0 auto;
+            grid-column: 2;
+            grid-row: 1;
         }
 
         .mob-menu-item span:last-child {
@@ -2689,6 +2693,8 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+            grid-column: 1;
+            grid-row: 1;
         }
 
         .mob-menu-item b {
@@ -3203,11 +3209,6 @@
         #map.map-district-scoped .bt-field-marker-label {
             opacity: 0.92;
             transform: translateX(-50%) translateY(0);
-        }
-
-        #map.map-marker-gesture .leaflet-marker-pane,
-        #map.map-marker-gesture .leaflet-tooltip-pane {
-            display: none !important;
         }
 
         .district-cluster-marker {
@@ -4393,18 +4394,31 @@
                     <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
                 </div>
                 <div class="mob-drawer-body">
-                    <div class="mob-menu-section">ข้อมูล</div>
-                    <button class="mob-menu-item" onclick="document.getElementById('btnImportData').click(); closeMobDrawer()">
-                        <span class="mob-menu-ico">↓</span>
-                        <span><b>นำเข้าข้อมูล</b><small>JSON, CSV, KML, GPX</small></span>
+                    <div class="mob-menu-section">การทำงาน</div>
+                    <button class="mob-menu-item" onclick="doUndo(); closeMobDrawer()">
+                        <span><b>เลิกทำ</b><small>ย้อนการแก้ไขล่าสุด</small></span>
+                        <span class="mob-menu-ico">UNDO</span>
                     </button>
-                    <button class="mob-menu-item" onclick="document.getElementById('btnUpload').click(); closeMobDrawer()">
-                        <span class="mob-menu-ico">↑</span>
-                        <span><b>Export ข้อมูล</b><small>สำรองข้อมูลออกเป็นไฟล์</small></span>
+                    <button class="mob-menu-item" onclick="doRedo(); closeMobDrawer()">
+                        <span><b>ทำซ้ำ</b><small>เรียกคืนการแก้ไขที่ย้อนกลับ</small></span>
+                        <span class="mob-menu-ico">REDO</span>
                     </button>
-                    <button class="mob-menu-item" onclick="openInfoPanel(); closeMobDrawer()">
-                        <span class="mob-menu-ico">i</span>
-                        <span><b>รายละเอียดระบบ</b><small>สถานะ sync และเครื่องมือเพิ่มเติม</small></span>
+                    <button class="mob-menu-item" onclick="doSync(false); closeMobDrawer()">
+                        <span><b>Sync</b><small>ดึงและบันทึกข้อมูลล่าสุด</small></span>
+                        <span class="mob-menu-ico">SYNC</span>
+                    </button>
+                    <button class="mob-menu-item" onclick="startManualRouteMode(); closeMobDrawer()">
+                        <span><b>เลือกจุดเอง</b><small>สร้างเส้นทางจากจุดที่แตะบนแผนที่</small></span>
+                        <span class="mob-menu-ico">PICK</span>
+                    </button>
+                    <div class="mob-menu-section">ดูข้อมูล</div>
+                    <button class="mob-menu-item" onclick="openInfoPanel('stats'); closeMobDrawer()">
+                        <span><b>สถิติ</b><small>สรุปจำนวนตามรายการและเขต</small></span>
+                        <span class="mob-menu-ico">STAT</span>
+                    </button>
+                    <button class="mob-menu-item" onclick="openInfoPanel('changelog'); closeMobDrawer()">
+                        <span><b>Changelog</b><small>ประวัติการเพิ่ม แก้ไข และลบ</small></span>
+                        <span class="mob-menu-ico">LOG</span>
                     </button>
                 </div>
             </div>
