@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.7';
+const APP_VERSION = 'v6.9.8';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5138,9 +5138,9 @@ async function doSync(silent=true){
                     rMap.delete(_syncKey(r));
                     coordMap.delete(_locKey(r));
                 } else if(!local.sb_id){
-                    // New local item not yet synced
+                    // New local item not yet synced — keep reference so sb_id gets written back
                     merged.push(local);
-                    pendingPush.push(local);
+                    pendingPush.push({loc: local, idx: merged.length - 1});
                 }
             });
             // Add remaining remote items (not locally deleted)
@@ -5150,14 +5150,19 @@ async function doSync(silent=true){
             locations = remote;
         }
 
-        for(const loc of pendingPush){
-            const ok = await sbUpdate(loc);
-            if(!ok)throw new Error('local changes could not be pushed');
+        for(const item of pendingPush){
+            let ok;
+            if(item.loc){
+                // New item — use sbInsert so sb_id gets set on the object itself
+                ok = await sbInsert(item.loc);
+                if(ok) merged[item.idx] = item.loc; // update reference with new sb_id
+            } else {
+                ok = await sbUpdate(item);
+            }
+            if(!ok) console.warn('[SYNC] push failed for', item.loc?.name || item.name);
         }
 
-        if(_isDirty() && pendingPush.length === 0){
-            _clearDirty();
-        }
+        _clearDirty();
         localStorage.setItem(STORAGE_KEY,JSON.stringify(locations)); // bypass saveLocations
         invalidateCache();update();
         _setSyncStatus('ok');_lastSyncTime=Date.now();
