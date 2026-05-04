@@ -897,6 +897,7 @@
         }
 
         .map-btn {
+            position: relative;
             width: 36px;
             height: 36px;
             border-radius: 8px;
@@ -943,11 +944,33 @@
             color: var(--bl);
         }
 
+        .map-btn.gps-paused {
+            color: var(--am);
+            background: var(--am-d);
+            border-color: rgba(245, 166, 35, 0.28);
+        }
+
         .map-btn.gps-tracking {
             color: var(--bl);
             background: var(--bl-d);
             box-shadow: 0 0 0 2px var(--bl-b), var(--shadow-md);
             animation: gps-track-pulse 2s ease-in-out infinite;
+        }
+
+        .map-btn#btnGps[data-gps-state]:not([data-gps-state=""])::after {
+            content: attr(data-gps-state);
+            position: absolute;
+            right: 42px;
+            min-width: 54px;
+            padding: 4px 7px;
+            border-radius: 7px;
+            background: oklch(14% 0.028 260 / 0.92);
+            border: 1px solid var(--bd2);
+            color: var(--tx);
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+            box-shadow: var(--shadow-md);
         }
 
         @keyframes gps-track-pulse {
@@ -2435,7 +2458,13 @@
         }
 
         .mob-nb-ico {
-            font-size: 20px;
+            min-width: 34px;
+            height: 16px;
+            display: grid;
+            place-items: center;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: 0;
             color: var(--tx3);
             transition: color 0.13s, transform 0.15s;
         }
@@ -2505,30 +2534,35 @@
         .mob-drawer-bg {
             position: absolute;
             inset: 0;
-            background: rgba(11, 12, 16, 0.7);
+            background: rgba(9, 10, 16, 0.52);
+            backdrop-filter: blur(2px);
         }
 
         .mob-drawer-panel {
             position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 280px;
-            background: var(--s1);
-            border-right: 0.5px solid var(--bd2);
+            left: 10px;
+            right: 10px;
+            bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
+            max-height: min(70vh, 520px);
+            background: oklch(14% 0.028 260 / 0.96);
+            border: 1px solid var(--bd2);
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            animation: slideRight 0.22s ease;
+            box-shadow: var(--shadow-lg);
+            animation: menuRise 0.18s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        @keyframes slideRight {
+        @keyframes menuRise {
             from {
-                transform: translateX(-100%);
+                transform: translateY(16px);
+                opacity: 0;
             }
 
             to {
-                transform: translateX(0);
+                transform: translateY(0);
+                opacity: 1;
             }
         }
 
@@ -2545,6 +2579,13 @@
             font-weight: 700;
         }
 
+        .mob-drawer-sub {
+            margin-top: 2px;
+            font-size: 10px;
+            color: var(--tx3);
+            font-weight: 600;
+        }
+
         .mob-drawer-close {
             width: 26px;
             height: 26px;
@@ -2559,6 +2600,74 @@
             font-size: 14px;
         }
 
+        .mob-drawer-body {
+            overflow-y: auto;
+            flex: 1;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .mob-menu-section {
+            margin: 8px 6px 2px;
+            color: var(--tx3);
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .mob-menu-item {
+            width: 100%;
+            min-height: 54px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            background: var(--s2);
+            color: var(--tx);
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .mob-menu-item:active {
+            background: var(--s3);
+        }
+
+        .mob-menu-ico {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            background: var(--bl-d);
+            color: var(--bl);
+            font-size: 15px;
+            font-weight: 800;
+            flex: 0 0 auto;
+        }
+
+        .mob-menu-item span:last-child {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .mob-menu-item b {
+            font-size: 12px;
+            line-height: 1.2;
+        }
+
+        .mob-menu-item small {
+            color: var(--tx3);
+            font-size: 10px;
+            line-height: 1.25;
+        }
+
         /* ════════════════════════════════════════
            MOBILE BOTTOM SHEET
         ════════════════════════════════════════ */
@@ -2567,15 +2676,16 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: var(--s1);
-            border-radius: 14px 14px 0 0;
-            border-top: 0.5px solid var(--bd2);
+            background: oklch(14% 0.028 260 / 0.98);
+            border-radius: 10px 10px 0 0;
+            border-top: 1px solid var(--bd2);
             z-index: 30;
             transform: translateY(100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-            max-height: 55vh;
+            max-height: 58vh;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 -16px 34px rgba(0, 0, 0, 0.46);
         }
 
         .mob-sheet.open {
@@ -2620,6 +2730,7 @@
         .mob-sheet-list {
             flex: 1;
             overflow-y: auto;
+            padding: 8px;
         }
 
         .mob-sheet-list::-webkit-scrollbar {
@@ -2638,6 +2749,78 @@
 
         .ms-item:hover {
             background: var(--s2);
+        }
+
+        .sheet-action {
+            width: 100%;
+            min-height: 62px;
+            display: grid;
+            grid-template-columns: 36px 1fr auto;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            background: var(--s2);
+            color: var(--tx);
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .sheet-action + .sheet-action {
+            margin-top: 6px;
+        }
+
+        .sheet-action.primary {
+            background: color-mix(in oklch, var(--bl), var(--s2) 82%);
+            border-color: var(--bl-b);
+        }
+
+        .sheet-token {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            background: var(--s3);
+            color: var(--bl);
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .sheet-main {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .sheet-main b {
+            font-size: 13px;
+            line-height: 1.25;
+        }
+
+        .sheet-main small {
+            color: var(--tx3);
+            font-size: 10px;
+            line-height: 1.25;
+        }
+
+        .sheet-count {
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: var(--bl-d);
+            color: var(--bl);
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .sheet-note {
+            padding: 8px 2px 10px;
+            color: var(--tx3);
+            font-size: 11px;
+            line-height: 1.4;
         }
 
         .ms-dot {
@@ -2818,12 +3001,6 @@
             text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75) !important;
         }
 
-        .bt-tooltip.bt-tooltip-locked {
-            background: rgba(7, 12, 18, 0.48) !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
-            color: oklch(97% 0.008 250) !important;
-        }
-
         .bt-tooltip::before {
             display: none !important;
         }
@@ -2879,20 +3056,22 @@
             top: 27px;
             transform: translateX(-50%) translateY(-2px);
             max-width: 112px;
-            padding: 2px 7px;
-            border-radius: 6px;
-            background: oklch(16% 0.024 265 / 0.92);
-            border: 1px solid var(--bd2);
-            color: var(--tx);
-            font-size: 10px;
-            font-weight: 650;
+            padding: 2px 5px;
+            border-radius: 4px;
+            background: rgba(8, 12, 18, 0.42);
+            border: 0;
+            color: oklch(97% 0.008 250);
+            font-size: 9px;
+            font-weight: 700;
             line-height: 1.25;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.75);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+            transition: opacity 120ms ease, transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .bt-field-marker:hover,
@@ -2909,15 +3088,18 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        #map.map-district-scoped .bt-field-marker-label {
+            opacity: 0.92;
+            transform: translateX(-50%) translateY(0);
+        }
+
         .district-cluster-marker {
             background: transparent !important;
             border: 0 !important;
-            transition: opacity 160ms ease;
         }
 
         .district-cluster-marker:hover .bt-district-cluster {
-            transform: scale(1.08);
-            border-color: oklch(88% 0.09 240 / 0.78);
+            border-color: color-mix(in oklch, var(--cluster-color), oklch(96% 0.01 260) 42%);
         }
 
         .bt-district-cluster {
@@ -2930,12 +3112,9 @@
             justify-content: center;
             color: var(--tx);
             transform: translateZ(0);
-            transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1), border-color 170ms ease, box-shadow 170ms ease;
-            background:
-                linear-gradient(180deg, oklch(22% 0.055 254 / 0.94), oklch(13% 0.035 260 / 0.96)),
-                radial-gradient(circle at 50% 24%, color-mix(in oklch, var(--cluster-color), transparent 45%), transparent 45%);
-            border: 1px solid color-mix(in oklch, var(--cluster-color), oklch(90% 0.02 260) 24%);
-            box-shadow: 0 8px 18px oklch(5% 0.02 265 / 0.42), 0 0 16px color-mix(in oklch, var(--cluster-color), transparent 68%);
+            background: color-mix(in oklch, var(--cluster-color), oklch(16% 0.035 260) 56%);
+            border: 1px solid color-mix(in oklch, var(--cluster-color), oklch(92% 0.012 260) 28%);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.32);
         }
 
         .bt-district-count {
@@ -3654,7 +3833,7 @@
             }
 
             .mob-nb-ico {
-                font-size: 16px;
+                font-size: 8px;
             }
 
             .mob-nb-lbl {
@@ -3817,8 +3996,7 @@
                     </div>
                     <button class="chip on" id="chipAll" data-filter="all">ทั้งหมด</button>
                     <button class="chip" id="chipFav" data-filter="fav">★ โปรด</button>
-                    <button class="chip" id="chipRouteMenu" data-filter="route">&#9660; วางแผนเส้นทาง</button>
-                    <button class="chip" id="chipList" data-filter="list">&#9660; จัดการรายการ</button>
+                    <button class="chip" id="chipRouteMenu" data-filter="route">วางแผนเส้นทาง</button>
                 </div>
             </div>
         </div>
@@ -3970,9 +4148,9 @@
 
                         <!-- Bottom toolbar (desktop) -->
                         <div class="btbar">
-                            <button class="bt on" id="btMap"><span class="bt-i">🗺️</span> แผนที่</button>
-                            <button class="bt" id="btRoute"><span class="bt-i">🔀</span> เส้นทาง</button>
-                            <button class="bt" id="btHeat"><span class="bt-i">🔥</span> Heatmap</button>
+                            <button class="bt on" id="btMap"><span class="bt-i">MAP</span> แผนที่</button>
+                            <button class="bt" id="btRoute"><span class="bt-i">RT</span> เส้นทาง</button>
+                            <button class="bt" id="btHeat"><span class="bt-i">HM</span> Heatmap</button>
                             <button class="bt" id="btAdd"><span class="bt-i">+</span> เพิ่มสถานที่</button>
                         </div>
                     </div>
@@ -4051,22 +4229,22 @@
         <!-- ── MOBILE NAV ── -->
         <div class="mob-nav">
             <div class="mob-nb on" id="mn-map" onclick="mobSwitchView('map')">
-                <div class="mob-nb-ico">🗺</div>
+                <div class="mob-nb-ico">MAP</div>
                 <div class="mob-nb-lbl">แผนที่</div>
             </div>
             <div class="mob-nb" id="mn-list" onclick="mobSwitchView('list')">
-                <div class="mob-nb-ico">📋</div>
+                <div class="mob-nb-ico">LIST</div>
                 <div class="mob-nb-lbl">รายการ</div>
             </div>
             <div class="mob-nb" onclick="document.getElementById('btAdd').click()">
                 <div class="mob-nb-add">+</div>
             </div>
             <div class="mob-nb" id="mn-stats" onclick="mobSwitchView('stats')">
-                <div class="mob-nb-ico">📊</div>
+                <div class="mob-nb-ico">STAT</div>
                 <div class="mob-nb-lbl">สถิติ</div>
             </div>
-            <div class="mob-nb" id="mn-menu" onclick="openInfoPanel()">
-                <div class="mob-nb-ico">☰</div>
+            <div class="mob-nb" id="mn-menu" onclick="toggleMobDrawer()">
+                <div class="mob-nb-ico">MENU</div>
                 <div class="mob-nb-lbl">เมนู</div>
             </div>
         </div>
@@ -4076,27 +4254,38 @@
             <div class="mob-drawer-bg" onclick="closeMobDrawer()"></div>
             <div class="mob-drawer-panel">
                 <div class="mob-drawer-hd">
-                    <span class="mob-drawer-title">BT Locations</span>
+                    <div>
+                        <span class="mob-drawer-title">BT Locations</span>
+                        <div class="mob-drawer-sub">เครื่องมือภาคสนาม</div>
+                    </div>
                     <div class="mob-drawer-close" onclick="closeMobDrawer()">✕</div>
                 </div>
-                <div style="overflow-y:auto;flex:1;padding:8px;">
-                    <div class="sec-hd">การตั้งค่าแอป (App Settings)</div>
-                    <div class="sdiv"></div>
-                    <div class="flist-item" onclick="document.getElementById('btnUpload').click(); closeMobDrawer()">
-                        <div class="fli-icon">↑</div>
-                        <div class="fli-info">
-                            <div class="fli-name">Export ข้อมูล</div>
-                            <div class="fli-sub">บันทึกข้อมูลออกเป็นไฟล์</div>
-                        </div>
-                    </div>
-                    <div class="flist-item"
-                        onclick="document.getElementById('btnImportData').click(); closeMobDrawer()">
-                        <div class="fli-icon">↓</div>
-                        <div class="fli-info">
-                            <div class="fli-name">นำเข้าข้อมูล</div>
-                            <div class="fli-sub">โหลดข้อมูลจากไฟล์</div>
-                        </div>
-                    </div>
+                <div class="mob-drawer-body">
+                    <button class="mob-menu-item" onclick="openRouteOptionsSheet(); closeMobDrawer()">
+                        <span class="mob-menu-ico">⌁</span>
+                        <span><b>วางแผนเส้นทาง</b><small>เลือกจุด, คำนวณ, เปิด Maps</small></span>
+                    </button>
+                    <button class="mob-menu-item" onclick="openListOptionsSheet(); closeMobDrawer()">
+                        <span class="mob-menu-ico">≡</span>
+                        <span><b>จัดการรายการ</b><small>กรอง, รวมรายการ, ดูจำนวน</small></span>
+                    </button>
+                    <button class="mob-menu-item" onclick="document.getElementById('btnGps').click(); closeMobDrawer()">
+                        <span class="mob-menu-ico">◎</span>
+                        <span><b>GPS Tracking</b><small>เปิดติดตามหรือกลับไปตำแหน่งฉัน</small></span>
+                    </button>
+                    <div class="mob-menu-section">ข้อมูล</div>
+                    <button class="mob-menu-item" onclick="document.getElementById('btnImportData').click(); closeMobDrawer()">
+                        <span class="mob-menu-ico">↓</span>
+                        <span><b>นำเข้าข้อมูล</b><small>JSON, CSV, KML, GPX</small></span>
+                    </button>
+                    <button class="mob-menu-item" onclick="document.getElementById('btnUpload').click(); closeMobDrawer()">
+                        <span class="mob-menu-ico">↑</span>
+                        <span><b>Export ข้อมูล</b><small>สำรองข้อมูลออกเป็นไฟล์</small></span>
+                    </button>
+                    <button class="mob-menu-item" onclick="openInfoPanel(); closeMobDrawer()">
+                        <span class="mob-menu-ico">i</span>
+                        <span><b>รายละเอียดระบบ</b><small>สถานะ sync และเครื่องมือเพิ่มเติม</small></span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -4125,25 +4314,25 @@
 
     <!-- Crosshair for add mode -->
     <div id="crosshair"
-        style="display:none;position:fixed;pointer-events:none;z-index:200;font-size:28px;transform:translate(-50%,-100%);">
-        📍</div>
+        style="display:none;position:fixed;pointer-events:none;z-index:200;font-size:22px;font-weight:800;transform:translate(-50%,-100%);">
+        +</div>
 
     <!-- Add mode banner -->
     <div id="addBanner" class="add-banner">
-        📍 แตะแผนที่เพื่อเลือกตำแหน่ง
+        แตะแผนที่เพื่อเลือกตำแหน่ง
         <button class="add-banner-cancel" id="btnCancelAddBanner">ยกเลิก</button>
     </div>
 
     <!-- Measure mode banner -->
     <div id="measureBanner" class="measure-banner">
-        📏 เลือก 2 จุดเพื่อวัดระยะ
+        เลือก 2 จุดเพื่อวัดระยะ
         <button class="measure-banner-cancel" id="btnCancelMeasureBanner">ยกเลิก</button>
     </div>
 
     <!-- Directions banner -->
     <div id="directionsBanner"
         style="display:none;position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:500;background:#059669;color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;pointer-events:none;white-space:nowrap;">
-        🗺️ กำลังคำนวณเส้นทาง...</div>
+        กำลังคำนวณเส้นทาง...</div>
 
     <!-- FAB (mobile add) -->
     <button id="btnFab" class="fab" style="display:none;">
