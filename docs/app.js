@@ -1564,12 +1564,90 @@ function closeMobSheet(){
     if(s)s.classList.remove('open');
 }
 
+function _listCounts() {
+    const counts = {};
+    locations.forEach(l => { const name = l.list || 'ไม่มีรายการ'; counts[name] = (counts[name] || 0) + 1; });
+    return Object.entries(counts).sort((a,b) => b[1] - a[1] || a[0].localeCompare(b[0], 'th'));
+}
+
+function openListPickerSheet() {
+    const container = document.getElementById('mobSheetList');
+    const title = document.getElementById('mobSheetTitle');
+    if(!container || !title)return;
+    title.innerText = 'เลือกรายการ';
+    const lists = _listCounts();
+    container.innerHTML = `
+        <div class="ms-item" data-list-name="" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+            <div style="font-size:18px;width:30px;display:flex;justify-content:center;">◎</div>
+            <div style="flex:1;font-size:14px;font-weight:500;">ทั้งหมด</div>
+            <div style="font-size:12px;color:var(--tx2);">${locations.length}</div>
+        </div>
+        ${lists.map(([name,count], i) => `
+            <div class="ms-item" data-list-name="${_escapeHtml(name)}" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;background:${filterList===name?'var(--bl-d)':'transparent'};">
+                <div style="width:12px;height:12px;border-radius:999px;background:${getColor(name)};"></div>
+                <div style="flex:1;min-width:0;font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escapeHtml(name)}</div>
+                <div style="font-size:12px;color:var(--tx2);">${count}</div>
+            </div>
+        `).join('')}`;
+    container.querySelectorAll('[data-list-name]').forEach(el => {
+        el.onclick = () => {
+            setFilterList(el.dataset.listName || '');
+            closeMobSheet();
+            switchView('map');
+        };
+    });
+    openMobSheet();
+}
+
+function openMergeListSheet() {
+    if(!filterList){
+        showToast('เลือก List ที่ต้องการรวมก่อน', true);
+        openListPickerSheet();
+        return;
+    }
+    const container = document.getElementById('mobSheetList');
+    const title = document.getElementById('mobSheetTitle');
+    if(!container || !title)return;
+    const counts = Object.fromEntries(_listCounts());
+    const targets = _listCounts().filter(([name]) => name !== filterList);
+    title.innerText = `รวม "${filterList}"`;
+    container.innerHTML = targets.map(([name,count]) => `
+        <div class="ms-item" data-merge-target="${_escapeHtml(name)}" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
+            <div style="width:12px;height:12px;border-radius:999px;background:${getColor(name)};"></div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_escapeHtml(name)}</div>
+                <div style="font-size:11px;color:var(--tx3);">${count} จุด</div>
+            </div>
+        </div>
+    `).join('');
+    container.querySelectorAll('[data-merge-target]').forEach(el => {
+        el.onclick = () => {
+            const toList = el.dataset.mergeTarget;
+            pushUndo();
+            const changed = [];
+            locations.forEach(l => {
+                if((l.list || 'ไม่มีรายการ') === filterList){
+                    l.list = toList;
+                    l.updatedAt = Date.now();
+                    changed.push(l);
+                }
+            });
+            filterList = toList;
+            saveLocations();invalidateCache();update();
+            if(_sbLoaded)sbBulkUpdate(changed);
+            closeMobSheet();
+            showToast(`รวม ${changed.length} จุด → "${toList}"`, false, true);
+            switchView('map');
+        };
+    });
+    if(!targets.length)container.innerHTML='<div style="padding:18px;color:var(--tx2);font-size:13px;">ไม่มีรายการอื่นให้รวม</div>';
+    openMobSheet();
+}
+
 function openListOptionsSheet(){
     const list = [
-        { icon: '🗺️', name: 'วางแผนหลายเส้นทาง', action: () => { doMultiRoute(); closeMobSheet(); } },
-        { icon: '🛤️', name: 'วางแผนเส้นทาง (ปัจจุบัน)', action: () => { doRoute(); closeMobSheet(); } },
-        { icon: '📂', name: 'เลือกรายการ...', action: () => { openMobDrawer(); closeMobSheet(); } },
-        { icon: '🔗', name: 'รวมรายการ...', action: () => { document.getElementById('btnMergeList').click(); closeMobSheet(); } }
+        { icon: '📂', name: 'เลือกรายการ', action: openListPickerSheet },
+        { icon: '🔗', name: 'รวมรายการ', action: openMergeListSheet }
     ];
     
     const container = document.getElementById('mobSheetList');
