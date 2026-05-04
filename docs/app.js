@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.55';
+const APP_VERSION = 'v6.9.56';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1564,8 +1564,10 @@ function _showDistrictPopup(district, data, marker) {
                 `).join('')}
             </div>
             <div style="padding:8px 0 0;">
-                <button type="button" class="district-popup-action primary" data-district="${districtAttr}" style="width:100%;height:38px;border-radius:9px;background:var(--bl);border:none;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 14px rgba(91,143,255,0.35);cursor:pointer;">
-                    <i class="fa-solid fa-magnifying-glass-plus" style="font-size:12px;"></i> ซูมเข้า
+                <button type="button" class="district-popup-action primary action-card" data-district="${districtAttr}" style="width:100%;box-sizing:border-box;border-color:rgba(91,143,255,0.3);">
+                    <div class="ac-title">ซูมเข้า</div>
+                    <div class="ac-desc">ดูจุดทั้งหมดในพื้นที่นี้</div>
+                    <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">ZOOM</span>
                 </button>
             </div>
         </div>
@@ -1574,7 +1576,8 @@ function _showDistrictPopup(district, data, marker) {
     marker.bindPopup(popupContent, {
         className: 'district-popup',
         closeButton: true,
-        minWidth: 240
+        minWidth: 260,
+        maxWidth: 300
     }).openPopup();
 
     const bindPopupActions = () => {
