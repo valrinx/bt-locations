@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.18';
+const APP_VERSION = 'v6.9.19';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3098,6 +3098,16 @@ window.openEdit=function(idx){
     setPhotoPreview(loc.photo||'');
     closePlaceCard();
     document.getElementById('editModalOverlay').classList.add('open');
+    // If city is missing, auto-fill via reverse geocode
+    if(!loc.city){
+        _reverseGeocodeCity(loc.lat,loc.lng).then(city=>{
+            if(city&&!document.getElementById('modalCity').value){
+                document.getElementById('modalCity').value=city;
+                if(!document.getElementById('modalList').value)
+                    document.getElementById('modalList').value=city;
+            }
+        });
+    }
 };
 
 const editModalCancel=document.getElementById('editModalCancel');
