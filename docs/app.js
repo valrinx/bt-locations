@@ -3525,40 +3525,38 @@ function openInfoPanel(mode){
         document.getElementById('infoPanelTitle').textContent='BT Locations';
         const _syncAgo=getToken()?` · ${Math.round((Date.now()-_lastSyncTime)/1000)}s ago`:'';
         const _darkLabel=document.body.classList.contains('light')?'🌙 Dark mode':'☀️ Light mode';
-        const _trackLabel=trackingActive?'⏹ หยุดบันทึก':'▶ บันทึกเส้นทาง';
-        const _menuSection=(title,items)=>`
-            <div style="margin-bottom:8px;">
-                <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:12px 16px 4px;">${title}</div>
-                <div style="background:var(--surface);border-radius:14px;margin:0 12px;overflow:hidden;box-shadow:var(--shadow-sm);">
-                    ${items.map(([icon,label,id,cls])=>`
-                        <button class="om-item ${cls||''}" id="${id}">
-                            <span style="font-size:16px;width:24px;text-align:center;">${icon}</span>
-                            <span style="flex:1;font-size:14px;">${label}</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text3);opacity:0.4;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        const _menuGrid=(title,items)=>`
+            <div style="margin-bottom:16px;padding:0 16px;">
+                <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px;padding-left:4px;">${title}</div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+                    ${items.filter(i=>i[0]!=='—').map(([icon,label,id,cls])=>`
+                        <button id="${id}" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--s2);border-radius:12px;border:none;cursor:pointer;color:var(--text);font-size:13px;text-align:left;transition:all 0.15s;${cls==='red'?'color:#ff6b6b;':''}">
+                            <span style="font-size:18px;flex-shrink:0;">${icon}</span>
+                            <span style="font-weight:500;flex:1;">${label}</span>
+                            <span style="font-size:12px;color:var(--text3);opacity:0.5;">›</span>
                         </button>
                     `).join('')}
                 </div>
             </div>`;
         body.innerHTML=`
-            <div style="padding:8px 4px 4px;">
-                <div style="padding:16px 16px 8px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:var(--bl);display:flex;align-items:center;justify-content:center;">
-                        <span style="font-size:22px;color:#fff;">📍</span>
+            <div style="padding:20px 0;">
+                <div style="padding:0 20px 20px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--bl),#6366f1);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 15px rgba(91,143,255,0.3);">
+                        <span style="font-size:26px;">📍</span>
                     </div>
                     <div>
-                        <div style="font-size:16px;font-weight:700;color:var(--text);">BT Locations</div>
-                        <div style="font-size:12px;color:var(--text3);">${locations.length} สถานที่${_syncAgo}</div>
+                        <div style="font-size:18px;font-weight:700;color:var(--text);letter-spacing:-0.3px;">BT Locations</div>
+                        <div style="font-size:13px;color:var(--text3);margin-top:2px;">${locations.length.toLocaleString()} สถานที่</div>
                     </div>
                 </div>
-                ${_menuSection('จัดการข้อมูล',[
+                ${_menuGrid('จัดการข้อมูล',[
                     ['↩️','เลิกทำ','omUndoM',''],
                     ['↪️','ทำซ้ำ','omRedoM',''],
-                    ['—','','',''],
-                    ['📤','Export ข้อมูล','omExportM',''],
-                    ['📥','นำเข้าข้อมูล','omImportM',''],
+                    ['📤','Export','omExportM',''],
+                    ['📥','Import','omImportM',''],
                     ['🔄','Sync','omSyncM',''],
                 ])}
-                ${_menuSection('ดูข้อมูล',[
+                ${_menuGrid('ดูข้อมูล',[
                     ['📊','สถิติ','omStatsM',''],
                     ['📝','Changelog','omChangelogM',''],
                 ])}
