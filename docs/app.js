@@ -1649,6 +1649,7 @@ function openMergeListSheet() {
 
 function openListOptionsSheet(){
     const list = [
+        { icon: '🗺️', name: 'วางแผนเส้นทาง', action: () => { closeMobSheet(); doRoute(); } },
         { icon: '📂', name: 'เลือกรายการ', action: openListPickerSheet },
         { icon: '🔗', name: 'รวมรายการ', action: openMergeListSheet }
     ];
@@ -1657,7 +1658,7 @@ function openListOptionsSheet(){
     const title = document.getElementById('mobSheetTitle');
     if(!container || !title) return;
     
-    title.innerText = 'จัดการรายการ';
+    title.innerText = 'วางแผนเส้นทาง';
     container.innerHTML = list.map(item => `
         <div class="ms-item" style="display:flex;align-items:center;gap:12px;padding:14px;border-bottom:0.5px solid var(--bd2);cursor:pointer;">
             <div style="font-size:18px;width:30px;display:flex;justify-content:center;">${item.icon}</div>
