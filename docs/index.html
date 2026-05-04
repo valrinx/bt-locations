@@ -4905,13 +4905,21 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="modal-btn modal-btn-cancel" id="editGroupCancel">ยกเลิก</button>
-                <button class="modal-btn" id="editGroupDelete" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3);color:var(--rd);flex:1;display:flex;align-items:center;justify-content:center;gap:6px;">
-                    <i class="fa-solid fa-arrow-right-arrow-left" style="font-size:11px;"></i> ย้ายหมุด
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:4px 14px 14px;">
+                <button class="action-card" id="editGroupCancel" style="width:100%;">
+                    <div class="ac-title">ยกเลิก</div>
+                    <div class="ac-desc">ปิดโดยไม่บันทึก</div>
+                    <span class="ac-chip" style="background:var(--s3);color:var(--tx2);">ESC</span>
                 </button>
-                <button class="modal-btn modal-btn-save" id="editGroupSave" style="display:flex;align-items:center;justify-content:center;gap:6px;">
-                    <i class="fa-solid fa-check" style="font-size:11px;"></i> บันทึก
+                <button class="action-card" id="editGroupDelete" style="width:100%;border-color:rgba(239,68,68,0.3);">
+                    <div class="ac-title">ย้ายหมุด</div>
+                    <div class="ac-desc">ย้ายไปรายการอื่น</div>
+                    <span class="ac-chip" style="background:rgba(239,68,68,0.12);color:var(--rd);">MOVE</span>
+                </button>
+                <button class="action-card" id="editGroupSave" style="width:100%;border-color:rgba(91,143,255,0.3);">
+                    <div class="ac-title">บันทึก</div>
+                    <div class="ac-desc">บันทึกชื่อใหม่</div>
+                    <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">SAVE</span>
                 </button>
             </div>
         </div>
