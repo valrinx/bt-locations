@@ -219,12 +219,22 @@ function _renderSidebar(){
 }
 // Filter setters for mobile
 function setFilterList(name){
-    filterList = name;
-    filterCity = '';
-    _lastFilteredKey = null;
-    update();
-    _renderSidebar();
-    _updateMobChips();
+    try {
+        console.log(`[FILTER] Setting filter list to: "${name}"`);
+        filterList = name;
+        filterCity = '';
+        _lastFilteredKey = null;
+        // Force clear any search query when changing filter
+        const searchInput = document.getElementById('search');
+        if(searchInput) searchInput.value = '';
+        update();
+        _renderSidebar();
+        _updateMobChips();
+        console.log(`[FILTER] After update: filterList="${filterList}", locations count=${locations.length}, filtered count=${getFiltered().length}`);
+    } catch(err) {
+        console.error('[FILTER] Error in setFilterList:', err);
+        showToast('เกิดข้อผิดพลาดในการกรองข้อมูล', true);
+    }
 }
 function setFilterCity(name){
     filterCity = name;
@@ -3536,14 +3546,16 @@ async function doSync(silent=true){
             const merged = [];
             const rMap = new Map();
             remote.forEach(l => rMap.set(l.sb_id, l));
-            
+
             locations.forEach(local => {
                 const r = rMap.get(local.sb_id);
                 if(r){
-                    // Conflict: use latest
-                    if(r.updatedAt > local.updatedAt){
+                    // Conflict: use latest - แก้ไข: ใช้ remote เมื่อมีการอัพเดทใหม่กว่า หรือเท่ากัน (เพื่อป้องกันข้อมูลเก่าซ่อน)
+                    if(r.updatedAt >= local.updatedAt){
+                        console.log(`[SYNC] Using REMOTE version for ${r.name} (remote: ${new Date(r.updatedAt).toISOString()}, local: ${new Date(local.updatedAt).toISOString()})`);
                         merged.push(r);
                     } else {
+                        console.log(`[SYNC] Using LOCAL version for ${local.name} (remote: ${new Date(r.updatedAt).toISOString()}, local: ${new Date(local.updatedAt).toISOString()})`);
                         merged.push(local);
                     }
                     rMap.delete(local.sb_id);
