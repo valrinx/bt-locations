@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.46';
+const APP_VERSION = 'v6.9.47';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4931,7 +4931,6 @@ function _parseFileText(text, ext, fallbackListName){
 }
 
 document.getElementById('fileImport').onchange=async e=>{
-    console.log('[fileImport] files=',e.target.files.length);
     const files=[...e.target.files]; e.target.value='';
     if(!files.length)return;
 
@@ -4975,7 +4974,6 @@ document.getElementById('fileImport').onchange=async e=>{
         showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${allImp.length-toAdd.length} ซ้ำ)`,false,true);
         if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
     };
-    console.log('[fileImport] calling showConfirm, allImp=',allImp.length,'doMerge=',typeof doMerge);
     closeImportModal();
     showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,
         async()=>{pushUndo();locations=allImp;saveLocations();invalidateCache();update();showToast(`Replace: ${allImp.length} จุด`,false,true);if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}},

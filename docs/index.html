@@ -5125,23 +5125,6 @@
                     var ms = document.getElementById('btnMeasure');
                     if (ms && typeof startMeasureMode === 'function') ms.onclick = startMeasureMode;
 
-                    /* ── showConfirm: app.js calls this to show confirm dialog ── */
-                    window.showConfirm = function (icon, title, text, onOk) {
-                        var el = document.getElementById('confirmModalOverlay');
-                        var iconEl = document.getElementById('confirmIcon');
-                        var titleEl = document.getElementById('confirmTitle');
-                        var textEl = document.getElementById('confirmText');
-                        var okBtn = document.getElementById('confirmOk');
-                        var cancelBtn = document.getElementById('confirmCancel');
-                        if (!el) return;
-                        if (iconEl) iconEl.textContent = icon || '⚠️';
-                        if (titleEl) titleEl.textContent = title || 'ยืนยัน';
-                        if (textEl) textEl.textContent = text || '';
-                        el.classList.add('open');
-                        if (okBtn) okBtn.onclick = function () { el.classList.remove('open'); if (onOk) onOk(); };
-                        if (cancelBtn) cancelBtn.onclick = function () { el.classList.remove('open'); };
-                        el.onclick = function (e) { if (e.target === el) el.classList.remove('open'); };
-                    };
 
                 }, 800);
             });
