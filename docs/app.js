@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.8.1';
+const APP_VERSION = 'v6.9.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -838,48 +838,9 @@ let currentTileIdx = 0;
 tileLayers[tileNames[0]].addTo(map);
 
 // ════════════════════════════════════════════
-// CLUSTER + COLORS
+// MARKER SYSTEM (District-based Hierarchical Clustering)
 // ════════════════════════════════════════════
-function getDensityClass(count) {
-    if (count < 10) return 'cluster-density-low';
-    if (count < 50) return 'cluster-density-medium';
-    if (count < 100) return 'cluster-density-high';
-    return 'cluster-density-extreme';
-}
-function createClusterGroup() {
-    return L.markerClusterGroup({
-        maxClusterRadius: function(zoom) {
-            if (zoom >= 18) return 10;
-            if (zoom >= 16) return 20;
-            if (zoom >= 14) return 30;
-            if (zoom >= 12) return 50;
-            if (zoom >= 10) return 70;
-            return 90;
-        },
-        disableClusteringAtZoom: 17,
-        spiderfyOnMaxZoom: true,
-        zoomToBoundsOnClick: true,
-        animate: true,
-        animateAddingMarkers: false,
-        chunkedLoading: true,
-        chunkInterval: 100,
-        chunkDelay: 20,
-        removeOutsideVisibleBounds: true,
-        iconCreateFunction(cluster) {
-            const count = cluster.getChildCount();
-            // Proportional sizing: 30px for small clusters, up to 60px for large
-            const size = Math.min(60, Math.max(30, 30 + Math.sqrt(count) * 3));
-            const fontSize = Math.min(16, Math.max(11, 11 + count / 20));
-            return L.divIcon({ 
-                html: `<div style="width:${size}px;height:${size}px;font-size:${fontSize}px;"><span>${count}</span></div>`, 
-                className: `marker-cluster ${getDensityClass(count)}`, 
-                iconSize: L.point(size, size) 
-            });
-        }
-    });
-}
-
-let markerCluster = createClusterGroup(), currentMarkers = [], heatLayer = null;
+let currentMarkers = [], heatLayer = null;
 const colorPalette = ['#ea4335','#fbbc04','#34a853','#4285f4','#9334e6','#00897b','#e91e63','#ff6d00','#0097a7','#795548'];
 const listColors = {};
 function getColor(list) {
@@ -1002,13 +963,14 @@ function _buildMarkerCache() {
 function _heatZoom(){ if(heatmapMode){_lastFilteredKey=null;update();} }
 
 function renderMarkers(filtered) {
-    // Hide normal markers in route mode to avoid overlap with route stops
+    // Hide normal markers in route mode
     if (routeMode) { 
-        if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+        if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         return; 
     }
-    // build cache ถ้าตัวแรกหรือ locations เปลี่ยน
+    
+    // Build cache if needed
     if (_markerCache.size === 0 || _clusterDirty) _buildMarkerCache();
 
     const filteredIdxSet = new Set(filtered.map(l => getLocIndex(l)));
@@ -1020,7 +982,6 @@ function renderMarkers(filtered) {
     // ── heatmap mode ──
     if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
     if (heatmapMode) {
-        if (map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         const z=map.getZoom();
@@ -1035,10 +996,10 @@ function renderMarkers(filtered) {
         return;
     }
 
-    // ── Hierarchical District Clustering (when zoomed out and no district selected) ──
-    if (_districtClusterMode && zoom <= 13 && !_selectedDistrict) {
-        // Remove old layers
-        map.removeLayer(markerCluster);
+    // ── Hierarchical District Clustering ──
+    // Case 1: Zoomed out (≤13) AND no district selected → Show district clusters
+    if (zoom <= 13 && !_selectedDistrict) {
+        // Remove individual markers
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         
@@ -1064,69 +1025,23 @@ function renderMarkers(filtered) {
         return;
     }
     
-    // ── District selected mode: show individual markers for selected district ──
-    if (_selectedDistrict) {
-        // Keep showing individual markers for the selected district
-        // Don't switch to standard cluster mode
-        const districtFiltered = filtered.filter(l => (l.district || l.city || 'ไม่ระบุเขต') === _selectedDistrict);
-        if (districtFiltered.length > 0) {
-            // Remove other layers
-            map.removeLayer(markerCluster);
-            if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
-            
-            // Update individual markers layer
-            if (!_individualMarkersLayer || !map.hasLayer(_individualMarkersLayer)) {
-                _showIndividualMarkers(districtFiltered);
-            }
-            
-            // Update stats
-            const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${districtFiltered.length} ตู้ใน ${_selectedDistrict}`;
-            const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
-            const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=districtFiltered.length;
-            const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=1;
-            
-            return;
-        }
-    }
-    
-    // ── Standard cluster mode: เอาแค่ filtered markers เข้า cluster ──
-    // Remove district clusters if present
+    // Case 2: Zoomed in (>13) OR district selected → Show individual markers
     if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
     
-    // ถ้า filtered = ทั้งหมด ไม่ต้อง diff — addLayers ใหม่เลย
-    map.removeLayer(markerCluster);
-    markerCluster = createClusterGroup();
-
-    const MAX_MARKERS = _mobile
-        ? (zoom >= 15 ? 600 : zoom >= 13 ? 400 : 250)
-        : (zoom >= 15 ? 2000 : zoom >= 13 ? 1200 : 600);
-    const layers = [];
-    let truncated = false;
-    filteredIdxSet.forEach(idx => {
-        if (layers.length >= MAX_MARKERS) { truncated = true; return; }
-        const m = _markerCache.get(idx);
-        if (m) layers.push(m);
-    });
-    if (truncated) console.warn(`Marker limit reached (${MAX_MARKERS}), showing partial`);
-
-    // requestAnimationFrame — ให้ browser วาด frame นี้ให้เสร็จก่อน
-    requestAnimationFrame(() => {
-        markerCluster.addLayers(layers, { chunkedLoading: true });
-        map.addLayer(markerCluster);
-        const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = filtered.length + ' สถานที่';
-        const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
-
-        // Update map stat counters
-        const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=filtered.length;
-        const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=markerCluster.getLayers().length;
-        const _lvc=document.getElementById('lvCount');if(_lvc)_lvc.textContent='แสดง '+filtered.length+' จาก '+locations.length+' จุด';
-
-        // Cluster click → show list of locations (bottom sheet on mobile, list panel on desktop)
-        markerCluster.on('clusterclick', function(e) {
-            const childMarkers = e.layer.getAllChildMarkers();
-            handleClusterClick(childMarkers);
-        });
-    });
+    // If district is selected, filter to that district only
+    const markersToShow = _selectedDistrict 
+        ? filtered.filter(l => (l.district || l.city || 'ไม่ระบุเขต') === _selectedDistrict)
+        : filtered;
+    
+    // Show individual markers
+    _showIndividualMarkers(markersToShow);
+    
+    // Update stats
+    const _cp=document.getElementById('countPill');if(_cp)_cp.textContent = `${markersToShow.length} ตู้`;
+    const _cp2=document.getElementById('countPill');if(_cp2)_cp2.classList.add('show');
+    const _mst=document.getElementById('mapStatTotal');if(_mst)_mst.textContent=filtered.length;
+    const _msc=document.getElementById('mapStatClusters');if(_msc)_msc.textContent=markersToShow.length;
+    const _lvc=document.getElementById('lvCount');if(_lvc)_lvc.textContent='แสดง '+markersToShow.length+' จาก '+locations.length+' จุด';
 }
 
 // เรียกเมื่อ locations เปลี่ยน (add/edit/delete/import/reset)
@@ -2234,8 +2149,7 @@ function hideRoute(){
     // Keep _routeStops data
     const chipRoute = document.getElementById('chipRoute');
     if(chipRoute) chipRoute.classList.remove('active');
-    // Restore markers
-    if(!map.hasLayer(markerCluster)) map.addLayer(markerCluster);
+    // Restore markers by updating
     update();
 }
 
@@ -3381,7 +3295,8 @@ async function _routeDraw(){
     if(routeLine){map.removeLayer(routeLine);}
     if(_routeStops.length<1)return;
     // Remove normal markers/clusters
-    if(map.hasLayer(markerCluster))map.removeLayer(markerCluster);
+    if(_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+    if(_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
 
     const group=L.layerGroup();
     const waypoints=[];
@@ -3637,7 +3552,8 @@ async function doMultiRoute(){
         }
         
         // Hide clusters to show routes clearly
-        if(map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+        if(_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+        if(_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         renderMarkers();
     } catch(e) {
         console.error('[BT] doMultiRoute error:', e);
@@ -3649,7 +3565,6 @@ function clearMultiRoutes(){
     if(multiRouteLayer){ map.removeLayer(multiRouteLayer); multiRouteLayer = null; }
     multiRouteMode = false;
     document.getElementById('btnPlanMultipleRoutes')?.classList.remove('active');
-    if(!map.hasLayer(markerCluster)) map.addLayer(markerCluster);
     update();
 }
 
