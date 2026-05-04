@@ -925,7 +925,7 @@ let _markerCache = new Map(); // idx → marker
 let _lastFilteredKey = null;
 let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 const DISTRICT_CLUSTER_MAX_ZOOM = 13;
-const MARKER_VIEWPORT_PAD = 0.22;
+const MARKER_VIEWPORT_PAD = _mobile ? 0 : 0.08;
 let _lastMarkerRenderMode = null;
 let _tooltipPermanentState = null;
 
@@ -962,13 +962,6 @@ function _filterToViewport(items) {
     if (!map || !map.getBounds || map.getZoom() <= DISTRICT_CLUSTER_MAX_ZOOM) return items;
     const b = map.getBounds().pad(MARKER_VIEWPORT_PAD);
     return items.filter(l => b.contains([l.lat, l.lng]));
-}
-
-function _setMarkerGestureMode(active) {
-    if (!_mobile) return;
-    const mapEl = document.getElementById('map');
-    if (!mapEl) return;
-    mapEl.classList.toggle('map-marker-gesture', !!active);
 }
 
 function _getScopedFiltered() {
@@ -2488,16 +2481,13 @@ map.on('zoomend', () => {
         _lastFilteredKey = null;
         update();
     }
-    requestAnimationFrame(() => _setMarkerGestureMode(false));
 });
-map.on('zoomstart movestart', () => _setMarkerGestureMode(true));
 map.on('moveend', () => {
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
         _lastFilteredKey = null;
         update();
     }
-    requestAnimationFrame(() => _setMarkerGestureMode(false));
 });
 
 if(btnGps){
