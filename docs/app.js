@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.24';
+const APP_VERSION = 'v6.6.25';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1511,6 +1511,18 @@ function openListOptionsSheet(){
     openMobSheet();
 }
 window.openListOptionsSheet = openListOptionsSheet;
+
+// Initial wire-up for chipList
+document.addEventListener('DOMContentLoaded', () => {
+    const chipList = document.getElementById('chipList');
+    if(chipList) {
+        chipList.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openListOptionsSheet();
+        });
+    }
+});
 
 // Search bar listeners
 const mobSearchInput = document.getElementById('mobSearchInput');
