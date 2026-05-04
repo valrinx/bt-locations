@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.5';
+const APP_VERSION = 'v6.9.6';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5090,7 +5090,8 @@ async function doSync(silent=true){
         const pendingPush = [];
         const dirtyNow = _isDirty();
         const effectiveDirty = dirtyAtStart || dirtyNow;
-        const shouldMerge = (_sbLoaded || effectiveDirty) && locations.length > 0;
+        const clearingAll = effectiveDirty && locations.length === 0;
+        const shouldMerge = (_sbLoaded || effectiveDirty) && (locations.length > 0 || clearingAll);
         const forceMerge = !_sbLoaded && locations.length > 0 && remote.length === 0;
         if(shouldMerge || forceMerge){
             // Use updatedAt merge strategy
@@ -5124,8 +5125,10 @@ async function doSync(silent=true){
                     pendingPush.push(local);
                 }
             });
-            // Add remaining remote items
-            rMap.forEach(r => merged.push(r));
+            // Add remaining remote items unless we're intentionally clearing everything
+            if(!clearingAll){
+                rMap.forEach(r => merged.push(r));
+            }
             locations = merged;
         } else {
             locations = remote;
