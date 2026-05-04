@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.44';
+const APP_VERSION = 'v6.6.45';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3550,44 +3550,27 @@ function openInfoPanel(mode){
                         <div style="font-size:12px;color:var(--text3);">${locations.length} สถานที่${_syncAgo}</div>
                     </div>
                 </div>
-                ${_menuSection('ดำเนินการ',[
+                ${_menuSection('จัดการข้อมูล',[
                     ['↩️','เลิกทำ','omUndoM',''],
                     ['↪️','ทำซ้ำ','omRedoM',''],
-                    ['—','','',''], // separator
+                    ['—','','',''],
+                    ['📤','Export ข้อมูล','omExportM',''],
+                    ['📥','นำเข้าข้อมูล','omImportM',''],
                     ['🔄','Sync','omSyncM',''],
-                    ['📤','Export','omExportM',''],
-                    ['📥','Import','omImportM',''],
+                ])}
+                ${_menuSection('ดูข้อมูล',[
                     ['📊','สถิติ','omStatsM',''],
                     ['📝','Changelog','omChangelogM',''],
-                ])}
-                ${_menuSection('เครื่องมือ',[
-                    [_darkLabel.split(' ')[0],_darkLabel.split(' ').slice(1).join(' '),'omDarkM',''],
-                    ['📍',_trackLabel,'omTrackM',''],
-                    ['🗺️','ดูเส้นทาง ('+savedPaths.length+')','omShowPathsM',''],
-                    ['📤','Export เส้นทาง','omExportPathsM',''],
-                    ['🖼️','Export รูปแผนที่','omExportImgM',''],
-                ])}
-                ${_menuSection('แก้ไข (ระวัง!)',[
-                    ['🗑️','ลบที่กรอง','omBulkDelM','red'],
-                    ['⚠️','รีเซ็ตข้อมูล','omResetM','red'],
                 ])}
             </div>`;
         const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
         b('omExportM',  doExport);
-        b('omExportImgM', doExportImage);
         b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
         b('omStatsM',   ()=>openInfoPanel('stats'));
         b('omChangelogM',()=>openInfoPanel('changelog'));
         b('omSyncM',    ()=>{closeInfo();doSync(false);});
-        b('omHeatmapM', ()=>{heatmapMode=!heatmapMode;document.getElementById('chipHeatmap').classList.toggle('active',heatmapMode);update();closeInfo();});
-        b('omDarkM',    toggleDark);
-        b('omTrackM',   ()=>{closeInfo();if(trackingActive)stopTracking();else startTracking();});
-        b('omShowPathsM',()=>{closeInfo();showSavedPaths();});
-        b('omExportPathsM',()=>{closeInfo();exportPaths();});
         b('omUndoM',    doUndo);
         b('omRedoM',    doRedo);
-        b('omBulkDelM', doBulkDel);
-        b('omResetM',   doReset);
     }
     document.getElementById('infoPanel').classList.add('open');
     document.getElementById('infoPanelBackdrop').classList.add('show');
