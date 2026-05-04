@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.39';
+const APP_VERSION = 'v6.9.40';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5058,37 +5058,40 @@ function showConfirm(icon,title,text,cb,mergeCallback){
     document.getElementById('confirmTitle').textContent=title;
     document.getElementById('confirmText').textContent=text;
     confirmCallback=cb;
-    // Import cards: show for import, hide for everything else
-    const importCards=document.getElementById('confirmImportCards');
-    const normalFooter=document.getElementById('confirmNormalFooter');
-    const mergeBtn=document.getElementById('confirmMerge');
-    const replaceBtn=document.getElementById('confirmOkReplace');
-    if(importCards && normalFooter){
-        const cancelImport=document.getElementById('confirmCancelImport');
+    const zone=document.getElementById('confirmFooterZone');
+    if(zone){
         if(mergeCallback){
-            importCards.removeAttribute('hidden');
-            importCards.style.display='block';
-            normalFooter.setAttribute('hidden','');
-            if(mergeBtn) mergeBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
-            if(replaceBtn) replaceBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
-            if(cancelImport) cancelImport.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); };
+            zone.innerHTML=`
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 8px;">
+                    <button id="_cfMerge" class="action-card" style="border-color:rgba(46,204,144,0.25);">
+                        <div class="ac-title">Merge</div>
+                        <div class="ac-desc">เพิ่มเฉพาะจุดใหม่</div>
+                        <span class="ac-chip" style="background:var(--gn-d);color:var(--gn);">MERGE</span>
+                    </button>
+                    <button id="_cfReplace" class="action-card" style="border-color:rgba(91,143,255,0.25);">
+                        <div class="ac-title">Replace</div>
+                        <div class="ac-desc">แทนที่ข้อมูลทั้งหมด</div>
+                        <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">REPLACE</span>
+                    </button>
+                </div>
+                <div class="modal-footer"><button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;">ยกเลิก</button></div>`;
+            document.getElementById('_cfMerge').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
+            document.getElementById('_cfReplace').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
+            document.getElementById('_cfCancel').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); };
         } else {
-            importCards.setAttribute('hidden','');
-            normalFooter.removeAttribute('hidden');
-            if(mergeBtn) mergeBtn.onclick=null;
-            if(replaceBtn) replaceBtn.onclick=null;
+            const okLabel=icon==='delete'?'ยืนยันลบ':'ยืนยัน';
+            const okClass=icon==='delete'?'modal-btn modal-btn-save btn-danger':'modal-btn modal-btn-save';
+            zone.innerHTML=`<div class="modal-footer">
+                <button id="_cfCancel" class="modal-btn modal-btn-cancel" style="flex:1;">ยกเลิก</button>
+                <button id="_cfOk" class="${okClass}" style="flex:1;">${okLabel}</button>
+            </div>`;
+            document.getElementById('_cfCancel').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); };
+            document.getElementById('_cfOk').onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
         }
     }
     document.getElementById('confirmModalOverlay').classList.add('open');
 }
-const confirmCancel=document.getElementById('confirmCancel');
-const confirmOk=document.getElementById('confirmOk');
 const confirmModalOverlay=document.getElementById('confirmModalOverlay');
-if(confirmCancel) confirmCancel.onclick=()=>{if(confirmModalOverlay)confirmModalOverlay.classList.remove('open');};
-if(confirmOk) confirmOk.onclick=()=>{
-    if(confirmModalOverlay)confirmModalOverlay.classList.remove('open');
-    if(confirmCallback){confirmCallback();confirmCallback=null;}
-};
 if(confirmModalOverlay) confirmModalOverlay.onclick=e=>{if(e.target===confirmModalOverlay)confirmModalOverlay.classList.remove('open');};
 
 // ════════════════════════════════════════════

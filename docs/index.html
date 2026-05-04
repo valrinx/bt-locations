@@ -4924,28 +4924,8 @@
                 <div class="confirm-title" id="confirmTitle">ยืนยันการลบ</div>
                 <div class="confirm-text" id="confirmText"></div>
             </div>
-            <!-- Import action cards (shown only for import confirm) -->
-            <div id="confirmImportCards" hidden>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 8px;">
-                    <button id="confirmMerge" class="action-card" style="border-color:rgba(46,204,144,0.25);">
-                        <div class="ac-title">Merge</div>
-                        <div class="ac-desc">เพิ่มเฉพาะจุดใหม่</div>
-                        <span class="ac-chip" style="background:var(--gn-d);color:var(--gn);">MERGE</span>
-                    </button>
-                    <button id="confirmOkReplace" class="action-card" style="border-color:rgba(91,143,255,0.25);">
-                        <div class="ac-title">Replace</div>
-                        <div class="ac-desc">แทนที่ข้อมูลทั้งหมด</div>
-                        <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">REPLACE</span>
-                    </button>
-                </div>
-                <div class="modal-footer">
-                    <button class="modal-btn modal-btn-cancel" id="confirmCancelImport" style="flex:1;">ยกเลิก</button>
-                </div>
-            </div>
-            <div class="modal-footer" id="confirmNormalFooter">
-                <button class="modal-btn modal-btn-cancel" id="confirmCancel" style="flex:1;">ยกเลิก</button>
-                <button class="modal-btn modal-btn-save btn-danger" id="confirmOk" style="flex:1;">ยืนยัน</button>
-            </div>
+            <!-- Footer rendered by JS via showConfirm() -->
+            <div id="confirmFooterZone"></div>
         </div>
     </div>
 
