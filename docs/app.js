@@ -281,6 +281,8 @@ document.querySelectorAll('.chip').forEach(chip=>{
                 const isOpen = drop.classList.contains('open');
                 document.querySelectorAll('.chip-dropdown').forEach(d => d.classList.remove('open'));
                 if(!isOpen) drop.classList.add('open');
+            } else if(typeof window.openListOptionsSheet === 'function') {
+                window.openListOptionsSheet();
             }
             return; // Don't call update() yet, wait for dropdown choice
         } else if(filter === 'city'){
@@ -781,6 +783,7 @@ const map = L.map('map', {
     tapTolerance: 15,
     maxBoundsViscosity: 1.0,
 }).setView([13.75, 100.5], 11);
+window.map = map;
 
 const _tileOpts = {
     updateWhenIdle: _mobile,      // mobile: load tiles only after pan/zoom ends
