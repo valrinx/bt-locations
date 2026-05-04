@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.34';
+const APP_VERSION = 'v6.9.35';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -129,10 +129,14 @@ function switchView(view){
     const mobChipsRow = document.getElementById('mobChipsRow');
     const mobSearchRow = document.getElementById('mobSearchRow');
     if(mobChipsContainer) {
+        const bodyEl = document.querySelector('.body');
         if(view === 'map') {
             mobChipsContainer.style.setProperty('display', 'flex', 'important');
+            if(bodyEl) bodyEl.style.removeProperty('top');
         } else {
             mobChipsContainer.style.setProperty('display', 'none', 'important');
+            // Collapse the chips gap so list/stats views start right below topbar
+            if(bodyEl) bodyEl.style.setProperty('top', 'calc(var(--topbar-h) + env(safe-area-inset-top, 0px))', 'important');
         }
     }
     
