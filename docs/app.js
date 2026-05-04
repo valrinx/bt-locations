@@ -1215,16 +1215,16 @@ function updateChipLabels() {
     const chipMore = document.getElementById('chipMore');
     if(chipListLabel) chipListLabel.textContent=filterList||'รายการ';
     if(chipCityLabel) chipCityLabel.textContent=filterCity||'เขต';
-    if(chipList) chipList.classList.toggle('active',!!filterList);
-    if(chipCity) chipCity.classList.toggle('active',!!filterCity);
+    if(chipList) chipList.classList.toggle('on',!!filterList);
+    if(chipCity) chipCity.classList.toggle('on',!!filterCity);
     // Dropdown items
-    if(chipAll) chipAll.classList.toggle('active',!filterList&&!filterCity&&!nearbyMode&&!filterFavorites);
-    if(chipNearby) chipNearby.classList.toggle('active',nearbyMode);
-    if(chipHeatmap) chipHeatmap.classList.toggle('active',heatmapMode);
-    if(chipFav) chipFav.classList.toggle('active',filterFavorites);
+    if(chipAll) chipAll.classList.toggle('on',!filterList&&!filterCity&&!nearbyMode&&!filterFavorites);
+    if(chipNearby) chipNearby.classList.toggle('on',nearbyMode);
+    if(chipHeatmap) chipHeatmap.classList.toggle('on',heatmapMode);
+    if(chipFav) chipFav.classList.toggle('on',filterFavorites);
     // Highlight "more" button if any dropdown item is active
     const anyDropActive=nearbyMode||heatmapMode||filterFavorites;
-    if(chipMore) chipMore.classList.toggle('active',anyDropActive);
+    if(chipMore) chipMore.classList.toggle('on',anyDropActive);
 }
 
 // ════════════════════════════════════════════
@@ -1519,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chipList.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            openListOptionsSheet();
+            if(typeof openListOptionsSheet === 'function') openListOptionsSheet();
         });
     }
 });
@@ -3522,14 +3522,43 @@ async function doSync(silent=true){
             from+=pageSize;
         }
         const data=allData;
-        const loaded=data.map(r=>normalizeLocation({
+        const remote=data.map(r=>normalizeLocation({
             sb_id:r.id, name:r.name||'', lat:r.lat, lng:r.lng,
             list:r.list||'', city:r.city||'', note:r.note||'',
             tags:r.tags?r.tags.split(',').filter(Boolean):[],
             photo:r.photo||'',
             updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now(),
         }));
-        locations=loaded;
+        
+        // 3-way merge or deterministic merge to preserve local changes
+        if(_sbLoaded && locations.length > 0){
+            // Use updatedAt merge strategy
+            const merged = [];
+            const rMap = new Map();
+            remote.forEach(l => rMap.set(l.sb_id, l));
+            
+            locations.forEach(local => {
+                const r = rMap.get(local.sb_id);
+                if(r){
+                    // Conflict: use latest
+                    if(r.updatedAt > local.updatedAt){
+                        merged.push(r);
+                    } else {
+                        merged.push(local);
+                    }
+                    rMap.delete(local.sb_id);
+                } else if(!local.sb_id){
+                    // New local item not yet synced
+                    merged.push(local);
+                }
+            });
+            // Add remaining remote items
+            rMap.forEach(r => merged.push(r));
+            locations = merged;
+        } else {
+            locations = remote;
+        }
+
         _clearDirty(); // clear BEFORE writeCache so saveLocations won't re-push
         localStorage.setItem(STORAGE_KEY,JSON.stringify(locations)); // bypass saveLocations
         invalidateCache();update();
