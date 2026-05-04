@@ -5150,7 +5150,7 @@
                             `).join('')}
                             ${others.length > 0 ? `
                                 <div class="show-all-lists" style="display:flex;align-items:center;gap:8px;padding-top:4px;border-top:0.5px solid var(--bd2);cursor:pointer;background:var(--s2);border-radius:8px;padding:8px;margin-top:4px;" data-all-lists='${JSON.stringify(others.map(([n,c])=>({name:n,count:c,color:getColor(n)})))}'>
-                                    <div style="width:28px;height:28px;border-radius:8px;background:#8b5cf6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">+</div>
+                                    <div style="width:28px;height:28px;border-radius:8px;background:hsl(260, 60%, 50%);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;">+</div>
                                     <div style="flex:1;">
                                         <div style="font-size:12px;color:var(--tx);font-weight:500;">อื่นๆ ${others.length} รายการ</div>
                                         <div style="font-size:10px;color:var(--tx3);">${othersCount} จุด · ${Math.round(othersCount/locs.length*100)}%</div>
@@ -5173,7 +5173,7 @@
                                         const dashOffset = -accumulated * 75;
                                         accumulated += percentage;
                                         return `<circle cx="50" cy="50" r="25" fill="none" stroke="${getColor(n)}" stroke-width="50" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}" />`;
-                                    }).join('') + (othersCount > 0 ? `<circle cx="50" cy="50" r="25" fill="none" stroke="#8b5cf6" stroke-width="50" stroke-dasharray="${othersCount/total * 75} ${100 - othersCount/total * 75}" stroke-dashoffset="${-accumulated * 75}" />` : '');
+                                    }).join('') + (othersCount > 0 ? `<circle cx="50" cy="50" r="25" fill="none" stroke="hsl(260, 60%, 50%)" stroke-width="50" stroke-dasharray="${othersCount/total * 75} ${100 - othersCount/total * 75}" stroke-dashoffset="${-accumulated * 75}" />` : '');
                                 })()}
                             </svg>
                         </div>

@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.36';
+const APP_VERSION = 'v6.6.37';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -838,8 +838,16 @@ const colorPalette = ['#ea4335','#fbbc04','#34a853','#4285f4','#9334e6','#00897b
 const listColors = {};
 function getColor(list) {
     if (!listColors[list]) {
-        let h = 0; for (let i = 0; i < list.length; i++) h = list.charCodeAt(i) + ((h << 5) - h);
-        listColors[list] = colorPalette[Math.abs(h) % colorPalette.length];
+        // Generate unique HSL color based on list name hash
+        let hash = 0;
+        for (let i = 0; i < list.length; i++) {
+            hash = list.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        // Use hash to generate hue (0-360), with good saturation and lightness
+        const hue = Math.abs(hash) % 360;
+        const sat = 70 + (Math.abs(hash >> 8) % 20); // 70-90% saturation
+        const light = 45 + (Math.abs(hash >> 16) % 15); // 45-60% lightness
+        listColors[list] = `hsl(${hue}, ${sat}%, ${light}%)`;
     }
     return listColors[list];
 }
