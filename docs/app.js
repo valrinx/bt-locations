@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.15';
+const APP_VERSION = 'v6.9.16';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -4782,67 +4782,88 @@ function dedupeExactLocations(items) {
     return { unique, removed };
 }
 
-document.getElementById('fileImport').onchange=e=>{
-    const file=e.target.files[0]; if(!file)return;
-    const ext=file.name.split('.').pop().toLowerCase();
-    const fallbackListName = (file.name.replace(/\.[^.]+$/, '') || 'Imported').trim();
-    const reader=new FileReader();
-    reader.onload=ev=>{
-        const text=ev.target.result;
-        let imp=[];
-        try {
-            if(ext==='csv'){
-                imp=parseCSV(text, fallbackListName);
-            } else if(ext==='kml'){
-                imp=parseKML(text, fallbackListName);
-            } else if(ext==='gpx'){
-                imp=parseGPX(text, fallbackListName);
-            } else if(ext==='geojson'){
-                const obj=JSON.parse(text);
-                imp=parseGeoJSON(obj, fallbackListName);
-            } else {
-                const obj=JSON.parse(text);
-                if(Array.isArray(obj))imp=obj;
-                else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj, fallbackListName);
-                else if(obj.locations||obj.points||obj.data)imp=obj.locations||obj.points||obj.data;
-                else {showToast('รูปแบบ JSON ไม่ถูกต้อง',true);return;}
-            }
-        }catch(err){showToast('ไฟล์ไม่ถูกต้อง: '+err.message,true);return;}
-        imp=normalizeImportedLocations(imp, fallbackListName);
-        const deduped=dedupeExactLocations(imp);
-        imp=deduped.unique;
-        if(!imp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
-        const duplicateText=deduped.removed?`\nคัดจุดซ้ำพิกัดเป๊ะๆ ออก ${deduped.removed} จุด`:'';
-        showConfirm('📥',`Import ${imp.length} จุด?`,`จากไฟล์ ${file.name} (.${ext})${duplicateText}\nเลือก Merge หรือ Replace`,async()=>{
-            pushUndo();locations=imp;saveLocations();invalidateCache();update();showToast(`Replace: ${imp.length} จุด`,false,true);
-            if(_sbLoaded){for(const loc of imp){await sbInsert(loc);}}
-        });
-        // Add merge button to confirm dialog
-        setTimeout(()=>{
-            const footer=document.querySelector('.confirm-footer');
-            if(!footer||footer.querySelector('#btnMergeImport'))return;
-            const mergeBtn=document.createElement('button');
-            mergeBtn.id='btnMergeImport';
-            mergeBtn.className='modal-btn modal-btn-save';
-            mergeBtn.style.cssText='background:#059669;';
-            mergeBtn.textContent='🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
-            mergeBtn.onclick=async()=>{
-                pushUndo();
-                const existing=new Set(locations.map(exactCoordKey));
-                const toAdd=[];
-                imp.forEach(loc=>{
-                    const key=exactCoordKey(loc);
-                    if(!existing.has(key)){locations.push(loc);existing.add(key);toAdd.push(loc);}
-                });
-                saveLocations();invalidateCache();update();
-                showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${imp.length-toAdd.length} ซ้ำ)`,false,true);
-                document.getElementById('confirmModalOverlay').classList.remove('open');
-                if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
-            };
-            footer.insertBefore(mergeBtn,footer.firstChild);
-        },100);
-    };
-    reader.readAsText(file); e.target.value='';
+function _parseFileText(text, ext, fallbackListName){
+    let imp=[];
+    if(ext==='csv'){
+        imp=parseCSV(text, fallbackListName);
+    } else if(ext==='kml'){
+        imp=parseKML(text, fallbackListName);
+    } else if(ext==='gpx'){
+        imp=parseGPX(text, fallbackListName);
+    } else if(ext==='geojson'){
+        const obj=JSON.parse(text);
+        imp=parseGeoJSON(obj, fallbackListName);
+    } else {
+        const obj=JSON.parse(text);
+        if(Array.isArray(obj))imp=obj;
+        else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj, fallbackListName);
+        else if(obj.locations||obj.points||obj.data)imp=obj.locations||obj.points||obj.data;
+        else throw new Error('รูปแบบ JSON ไม่ถูกต้อง');
+    }
+    return normalizeImportedLocations(imp, fallbackListName);
+}
+
+document.getElementById('fileImport').onchange=async e=>{
+    const files=[...e.target.files]; e.target.value='';
+    if(!files.length)return;
+
+    // Read all files concurrently
+    const readFile=f=>new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=ev=>res(ev.target.result);
+        r.onerror=()=>rej(new Error('อ่านไฟล์ไม่ได้'));
+        r.readAsText(f);
+    });
+
+    let allImp=[];
+    const errors=[];
+    await Promise.all(files.map(async f=>{
+        const ext=f.name.split('.').pop().toLowerCase();
+        const name=(f.name.replace(/\.[^.]+$/,'')||'Imported').trim();
+        try{
+            const text=await readFile(f);
+            const items=_parseFileText(text,ext,name);
+            allImp=allImp.concat(items);
+        }catch(err){errors.push(`${f.name}: ${err.message}`);}
+    }));
+
+    if(errors.length)showToast('⚠️ '+errors.join(' | '),true);
+    const deduped=dedupeExactLocations(allImp);
+    allImp=deduped.unique;
+    if(!allImp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
+
+    const fileNames=files.map(f=>f.name).join(', ');
+    const dupText=deduped.removed?`\nคัดจุดซ้ำพิกัดเป๊ะๆ ออก ${deduped.removed} จุด`:'';
+    const multiText=files.length>1?` (${files.length} ไฟล์)`:'';
+    showConfirm('📥',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,async()=>{
+        pushUndo();locations=allImp;saveLocations();invalidateCache();update();
+        showToast(`Replace: ${allImp.length} จุด`,false,true);
+        if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}
+    });
+    // Add merge button
+    setTimeout(()=>{
+        const footer=document.querySelector('.confirm-footer');
+        if(!footer||footer.querySelector('#btnMergeImport'))return;
+        const mergeBtn=document.createElement('button');
+        mergeBtn.id='btnMergeImport';
+        mergeBtn.className='modal-btn modal-btn-save';
+        mergeBtn.style.cssText='background:#059669;';
+        mergeBtn.textContent='🔀 Merge (เพิ่มเฉพาะจุดใหม่)';
+        mergeBtn.onclick=async()=>{
+            pushUndo();
+            const existing=new Set(locations.map(exactCoordKey));
+            const toAdd=[];
+            allImp.forEach(loc=>{
+                const key=exactCoordKey(loc);
+                if(!existing.has(key)){locations.push(loc);existing.add(key);toAdd.push(loc);}
+            });
+            saveLocations();invalidateCache();update();
+            showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${allImp.length-toAdd.length} ซ้ำ)`,false,true);
+            document.getElementById('confirmModalOverlay').classList.remove('open');
+            if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
+        };
+        footer.insertBefore(mergeBtn,footer.firstChild);
+    },100);
 };
 
 function doUndo(){if(!undoStack.length){showToast('ไม่มี Undo');return;}redoStack.push(JSON.stringify(locations));locations=JSON.parse(undoStack.pop());saveLocations();invalidateCache();update();showToast('Undo แล้ว');closeInfo();}
