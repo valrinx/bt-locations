@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.7.3';
+const APP_VERSION = 'v6.7.4';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3417,24 +3417,50 @@ function clearManualRoute(){
     closeManualRoutePanel();
 }
 
-function calculateManualRoute(){
+async function calculateManualRoute(){
     if(manualRoutePoints.length < 2){
         showToast('ต้องมีอย่างน้อย 2 จุด', true);
         return;
     }
     showToast('🗺️ กำลังคำนวณเส้นทาง...');
-    // Use TSP to optimize order
-    const optimized = _tspSolve(
-        manualRoutePoints.map(p => ({...p, lat: p.lat, lng: p.lng})),
-        manualRoutePoints[0].lat, manualRoutePoints[0].lng
-    );
-    // Draw route
-    const pts = optimized.map(p => [p.lat, p.lng]);
-    if(routeLine) map.removeLayer(routeLine);
-    routeLine = L.polyline(pts, {color: '#5b8fff', weight: 4, opacity: 0.8}).addTo(map);
-    routeMode = true;
-    map.fitBounds(routeLine.getBounds(), {padding: [50, 50]});
-    showToast(`✅ เส้นทาง ${optimized.length} จุด พร้อม!`);
+    
+    try {
+        // Build waypoints for OSRM [lng, lat]
+        const waypoints = manualRoutePoints.map(p => [p.lng, p.lat]);
+        
+        // Fetch actual road route from OSRM
+        const result = await _routeFetchOSRM(waypoints);
+        
+        // Draw actual road route
+        const coords = result.coords; // [lat, lng] pairs
+        if(routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(coords, {color: '#5b8fff', weight: 4, opacity: 0.85}).addTo(map);
+        routeMode = true;
+        
+        // Fit bounds
+        map.fitBounds(routeLine.getBounds(), {padding: [50, 50]});
+        
+        // Show success with distance
+        const distText = formatDist(result.distance);
+        const etaText = Math.round(result.duration / 60);
+        showToast(`✅ เส้นทาง ${manualRoutePoints.length} จุด · ${distText} · ~${etaText} นาที`);
+        
+        // Close panel after successful calculation
+        closeManualRoutePanel();
+        manualRouteMode = false;
+        
+    } catch(e) {
+        console.warn('[BT] Manual route OSRM failed:', e.message);
+        showToast('❌ ไม่สามารถคำนวณเส้นทางได้ (ลองเลือกจุดที่อยู่บนถนน)', true);
+        
+        // Fallback: draw straight lines with warning
+        const pts = manualRoutePoints.map(p => [p.lat, p.lng]);
+        if(routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(pts, {color: '#ff6b6b', weight: 3, opacity: 0.6, dashArray: '10, 5'}).addTo(map);
+        routeMode = true;
+        map.fitBounds(routeLine.getBounds(), {padding: [50, 50]});
+        showToast('⚠️ แสดงเส้นตรง (ไม่ใช่เส้นทางจริง)', true);
+    }
 }
 
 let _manualRoutePanelOpen = false;
