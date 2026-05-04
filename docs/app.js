@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.21';
+const APP_VERSION = 'v6.9.22';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -203,7 +203,7 @@ function _renderMobDrawer(){
     let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:#5b8fff"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
     lists.forEach(([name,count],i)=>{
         const col=colorPalette[i % colorPalette.length];
-        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span></div>`;
+        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('list','${name.replace(/'/g,"\\'")}')">✏️</button></div>`;
     });
     listContainer.innerHTML = listHtml;
     
@@ -213,7 +213,7 @@ function _renderMobDrawer(){
     let cityHtml = '';
     cities.forEach(([name,count],i)=>{
         const col=colorPalette[i % colorPalette.length];
-        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span></div>`;
+        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('city','${name.replace(/'/g,"\\'")}')">✏️</button></div>`;
     });
     cityContainer.innerHTML = cityHtml;
 }
@@ -2064,11 +2064,12 @@ function renderListDirectory() {
         ${items.map(([name,count], i) => {
             const color = kind === 'list' ? getColor(name) : colorPalette[i % colorPalette.length];
             const active = kind === 'list' ? filterList === name : filterCity === name;
-            return `<button class="list-directory-item ${active ? 'active' : ''}" data-kind="${kind}" data-name="${_escapeHtml(name)}" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border:0;border-bottom:0.5px solid var(--bd);background:${active ? 'var(--bl-d)' : 'transparent'};color:var(--tx);font-family:inherit;text-align:left;cursor:pointer;">
-                <span style="width:10px;height:10px;border-radius:999px;background:${color};box-shadow:0 0 8px ${color}66;"></span>
+            return `<div class="list-directory-item ${active ? 'active' : ''}" data-kind="${kind}" data-name="${_escapeHtml(name)}" style="width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border:0;border-bottom:0.5px solid var(--bd);background:${active ? 'var(--bl-d)' : 'transparent'};color:var(--tx);font-family:inherit;text-align:left;cursor:pointer;">
+                <span style="width:10px;height:10px;border-radius:999px;background:${color};box-shadow:0 0 8px ${color}66;flex-shrink:0;"></span>
                 <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;">${_escapeHtml(name)}</span>
                 <span style="min-width:34px;text-align:right;color:var(--tx2);font-size:12px;">${count}</span>
-            </button>`;
+                <button class="fl-edit" style="opacity:0.5;font-size:13px;padding:4px 7px;" onclick="event.stopPropagation();openEditGroup('${kind}','${name.replace(/'/g,"\\'")}')">✏️</button>
+            </div>`;
         }).join('')}`;
 
     table.innerHTML = `
