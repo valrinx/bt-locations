@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.0';
+const APP_VERSION = 'v6.9.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -948,6 +948,9 @@ let _lastFilteredKey = null;
 let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 const DISTRICT_CLUSTER_MAX_ZOOM = 13;
 const MARKER_VIEWPORT_PAD = _mobile ? 0 : 0.08;
+const STACK_PROXIMITY_PRECISION = 5; // decimal places for duplicate detection
+const MAX_VIEWPORT_MARKERS_DESKTOP = 500;
+const MAX_VIEWPORT_MARKERS_MOBILE = 220;
 let _lastMarkerRenderMode = null;
 let _tooltipPermanentState = null;
 let _visibleMarkerIdxs = new Set();
@@ -1025,6 +1028,70 @@ function _getScopedFiltered() {
         _getDistrictName(l) === _selectedDistrict &&
         (!_selectedDistrictList || (l.list || 'ไม่ระบุ') === _selectedDistrictList)
     );
+}
+
+function _getStackKeyFromLoc(loc) {
+    return `${Number(loc.lat).toFixed(STACK_PROXIMITY_PRECISION)}|${Number(loc.lng).toFixed(STACK_PROXIMITY_PRECISION)}`;
+}
+
+function _createStackMarkerIcon(count) {
+    const size = Math.min(44, 30 + Math.sqrt(count) * 3);
+    return L.divIcon({
+        className: 'bt-stack-marker-shell',
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+        html: `
+            <div class="bt-stack-marker" style="--stack-size:${size}px">
+                <span class="bt-stack-count">${count}</span>
+            </div>
+        `
+    });
+}
+
+function _openStackPopup(locs, marker) {
+    const popupHtml = `
+        <div class="stack-popup">
+            <div class="stack-popup-title">${locs.length} ตำแหน่งซ้อนกัน</div>
+            <div class="stack-popup-list">
+                ${locs.map(loc => {
+                    const idx = getLocIndex(loc);
+                    const name = _escapeHtml(loc.name || 'ไม่มีชื่อ');
+                    const list = _escapeHtml(loc.list || 'ไม่ระบุ');
+                    const area = _escapeHtml(_getDistrictName(loc));
+                    return `
+                        <button class="stack-popup-row" data-idx="${idx}">
+                            <div class="stack-popup-name">${name}</div>
+                            <div class="stack-popup-meta">${list} · ${area}</div>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    const popup = L.popup({
+        className: 'stack-popup-shell',
+        maxWidth: 280,
+        autoPan: true,
+        closeButton: true
+    })
+        .setLatLng(marker.getLatLng())
+        .setContent(popupHtml)
+        .openOn(map);
+
+    setTimeout(() => {
+        const container = popup.getElement();
+        if (!container) return;
+        container.querySelectorAll('.stack-popup-row').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = Number(btn.dataset.idx);
+                const loc = locations[idx];
+                if (!loc) return;
+                map.closePopup(popup);
+                showLocationDetails(loc, idx);
+            });
+        });
+    }, 0);
 }
 
 function _createLocationIcon(loc, idx) {
@@ -1471,27 +1538,43 @@ function _showIndividualMarkers(filtered) {
         _individualMarkersLayer = L.layerGroup();
     }
     if (_markerCache.size === 0 || _clusterDirty) {
-        _individualMarkersLayer.clearLayers();
-        _visibleMarkerIdxs.clear();
         _buildMarkerCache();
     }
 
-    const nextVisibleIdxs = new Set();
+    _individualMarkersLayer.clearLayers();
+
+    const groups = new Map();
     filtered.forEach(loc => {
+        const key = _getStackKeyFromLoc(loc);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(loc);
+    });
+
+    const nextVisibleIdxs = new Set();
+
+    // Single markers
+    groups.forEach((locs, key) => {
+        if (locs.length > 1) return;
+        const loc = locs[0];
         const idx = getLocIndex(loc);
         if (idx < 0) return;
         nextVisibleIdxs.add(idx);
-        if (_visibleMarkerIdxs.has(idx)) return;
         const marker = _markerCache.get(idx);
         if (marker) _individualMarkersLayer.addLayer(marker);
     });
 
-    _visibleMarkerIdxs.forEach(idx => {
-        if (nextVisibleIdxs.has(idx)) return;
-        const marker = _markerCache.get(idx);
-        if (marker && _individualMarkersLayer.hasLayer(marker)) {
-            _individualMarkersLayer.removeLayer(marker);
-        }
+    // Stacked markers (duplicate coordinates)
+    groups.forEach((locs, key) => {
+        if (locs.length <= 1) return;
+        const idxs = locs.map(getLocIndex).filter(idx => idx >= 0);
+        idxs.forEach(idx => nextVisibleIdxs.add(idx));
+        const { lat, lng } = locs[0];
+        const stackMarker = L.marker([lat, lng], {
+            icon: _createStackMarkerIcon(locs.length),
+            bubblingMouseEvents: false
+        });
+        stackMarker.on('click', () => _openStackPopup(locs, stackMarker));
+        _individualMarkersLayer.addLayer(stackMarker);
     });
 
     _visibleMarkerIdxs = nextVisibleIdxs;

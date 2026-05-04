@@ -3386,8 +3386,97 @@
         }
         
         .district-popup .leaflet-popup-tip {
-            background: var(--s1) !important;
-            border: 1px solid var(--bd2) !important;
+            background: var(--surface) !important;
+        }
+
+        .bt-stack-marker-shell {
+            pointer-events: auto;
+        }
+
+        .bt-stack-marker {
+            width: var(--stack-size, 36px);
+            height: var(--stack-size, 36px);
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(91,143,255,0.95), rgba(88,130,242,0.9));
+            border: 3px solid rgba(255,255,255,0.9);
+            box-shadow: 0 8px 20px rgba(45,68,125,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .bt-stack-marker::after {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 18px;
+            border: 2px dashed rgba(255,255,255,0.35);
+            pointer-events: none;
+        }
+
+        .stack-popup-shell .leaflet-popup-content-wrapper {
+            border-radius: 18px;
+            background: rgba(13,18,33,0.96);
+            color: #fff;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.45);
+        }
+
+        .stack-popup-shell .leaflet-popup-content {
+            margin: 0;
+            padding: 0;
+        }
+
+        .stack-popup {
+            padding: 16px 18px;
+            min-width: 210px;
+            max-width: 260px;
+        }
+
+        .stack-popup-title {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 10px;
+            color: #8fb4ff;
+        }
+
+        .stack-popup-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .stack-popup-row {
+            width: 100%;
+            text-align: left;
+            border: 1px solid rgba(143,180,255,0.2);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            padding: 10px 12px;
+            color: #fff;
+            font-family: inherit;
+            cursor: pointer;
+            transition: border 0.12s, background 0.12s;
+        }
+
+        .stack-popup-row:hover {
+            border-color: rgba(143,180,255,0.6);
+            background: rgba(143,180,255,0.08);
+        }
+
+        .stack-popup-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .stack-popup-meta {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
         }
 
         .district-popup-card {
