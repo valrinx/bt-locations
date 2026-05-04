@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.22';
+const APP_VERSION = 'v6.9.23';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -288,6 +288,9 @@ function openEditGroup(type, name){
     const count = locations.filter(l => type==='list' ? l.list===name : l.city===name).length;
     document.getElementById('editGroupTitle').textContent = `แก้ไข${label}: ${name} (${count} จุด)`;
     document.getElementById('editGroupInput').value = name;
+    // Show delete-all only for list type
+    const delAllBtn = document.getElementById('editGroupDeleteAll');
+    if(delAllBtn) delAllBtn.style.display = type==='list' ? '' : 'none';
     document.getElementById('editGroupModalOverlay').classList.add('open');
     setTimeout(()=>document.getElementById('editGroupInput').select(), 100);
 }
@@ -317,7 +320,7 @@ document.getElementById('editGroupDelete').onclick = () => {
     const count = locations.filter(l => _editGroupType==='list' ? l.list===_editGroupOldName : l.city===_editGroupOldName).length;
     document.getElementById('editGroupModalOverlay').classList.remove('open');
     showConfirm('🗑️', `ลบ${label} "${_editGroupOldName}"?`,
-        `จุด ${count} จุดจะถูกย้ายไปใส่ "${_editGroupType==='list'?'ยังไม่บันทึก':''}"`,
+        `จุด ${count} จุดจะถูกย้ายไปใส่ "ยังไม่บันทึก"`,
         () => {
             pushUndo();
             locations.forEach(l => {
@@ -331,6 +334,22 @@ document.getElementById('editGroupDelete').onclick = () => {
             if(filterCity===_editGroupOldName && _editGroupType==='city') filterCity='';
             saveLocations(); invalidateCache(); update(); _renderSidebar();
             showToast(`ลบ${label} "${_editGroupOldName}" แล้ว`, false, true);
+        }
+    );
+};
+document.getElementById('editGroupDeleteAll').onclick = () => {
+    const count = locations.filter(l => l.list===_editGroupOldName).length;
+    document.getElementById('editGroupModalOverlay').classList.remove('open');
+    showConfirm('🗑️', `ลบหมุด ${count} จุดใน "${_editGroupOldName}"?`,
+        'หมุดทั้งหมดใน List นี้จะถูกลบออกจากระบบถาวร',
+        async () => {
+            pushUndo();
+            const toDelete = locations.filter(l => l.list===_editGroupOldName);
+            locations = locations.filter(l => l.list!==_editGroupOldName);
+            if(filterList===_editGroupOldName) filterList='';
+            saveLocations(); invalidateCache(); update(); _renderSidebar();
+            showToast(`ลบ ${toDelete.length} จุดแล้ว`, true);
+            if(_sbLoaded){ for(const l of toDelete) await sbDelete(l); }
         }
     );
 };
