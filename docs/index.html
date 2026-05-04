@@ -4925,7 +4925,7 @@
         </div>
     </div>
 
-    <!-- Confirm Delete Modal (app.js uses: confirmModalOverlay, confirmIcon, confirmTitle, confirmText, confirmOk, confirmCancel) -->
+    <!-- Confirm Modal -->
     <div class="modal-overlay" id="confirmModalOverlay">
         <div class="modal" style="width:360px;max-width:95vw;">
             <div class="confirm-body" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 20px 8px;text-align:center;">
@@ -4933,12 +4933,22 @@
                 <div class="confirm-title" id="confirmTitle">ยืนยันการลบ</div>
                 <div class="confirm-text" id="confirmText"></div>
             </div>
-            <div class="modal-footer" style="flex-direction:column;gap:6px;">
-                <button class="modal-btn" id="confirmMerge" style="display:none;background:#059669;color:#fff;width:100%;justify-content:center;gap:8px;"><i class="fa-solid fa-code-merge"></i> Merge (เพิ่มเฉพาะจุดใหม่)</button>
-                <div style="display:flex;gap:8px;width:100%;">
-                    <button class="modal-btn modal-btn-cancel" id="confirmCancel" style="flex:1;">ยกเลิก</button>
-                    <button class="modal-btn modal-btn-save btn-danger" id="confirmOk" style="flex:1;">ยืนยัน</button>
-                </div>
+            <!-- Import action cards (shown only for import confirm) -->
+            <div id="confirmImportCards" hidden style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 8px;">
+                <button id="confirmMerge" class="action-card" style="border-color:rgba(46,204,144,0.25);">
+                    <div class="ac-title">Merge</div>
+                    <div class="ac-desc">เพิ่มเฉพาะจุดใหม่</div>
+                    <span class="ac-chip" style="background:var(--gn-d);color:var(--gn);">MERGE</span>
+                </button>
+                <button id="confirmOkReplace" class="action-card" style="border-color:rgba(91,143,255,0.25);">
+                    <div class="ac-title">Replace</div>
+                    <div class="ac-desc">แทนที่ข้อมูลทั้งหมด</div>
+                    <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">REPLACE</span>
+                </button>
+            </div>
+            <div class="modal-footer" id="confirmNormalFooter">
+                <button class="modal-btn modal-btn-cancel" id="confirmCancel" style="flex:1;">ยกเลิก</button>
+                <button class="modal-btn modal-btn-save btn-danger" id="confirmOk" style="flex:1;">ยืนยัน</button>
             </div>
         </div>
     </div>
@@ -4958,15 +4968,34 @@
 
     <!-- Share / Export Modal -->
     <div class="modal-overlay" id="shareModalOverlay">
-        <div class="modal confirm-modal">
-            <div class="confirm-icon info"><i class="fa-solid fa-arrow-up-from-bracket"></i></div>
-            <div class="confirm-title">Export ข้อมูล</div>
-            <div class="confirm-text" id="shareModalText">เลือกวิธี export</div>
-            <div class="confirm-footer" style="flex-direction:column;gap:8px;">
-                <button class="modal-btn modal-btn-save" id="shareBtnDownload" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fa-solid fa-download"></i> ดาวน์โหลดไฟล์ JSON</button>
-                <button class="modal-btn modal-btn-save" id="shareBtnShare" style="width:100%;background:#059669;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fa-solid fa-share-nodes"></i> แชร์ผ่าน Share API</button>
-                <button class="modal-btn modal-btn-save" id="shareBtnCopy" style="width:100%;background:#7b1fa2;display:flex;align-items:center;justify-content:center;gap:8px;"><i class="fa-solid fa-copy"></i> คัดลอก JSON</button>
-                <button class="modal-btn modal-btn-cancel" id="shareBtnCancel">ยกเลิก</button>
+        <div class="modal" style="width:360px;max-width:95vw;">
+            <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Export ข้อมูล</span>
+                <button onclick="document.getElementById('shareModalOverlay').classList.remove('open')" style="background:none;border:none;color:var(--tx3);font-size:16px;cursor:pointer;padding:0;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding:8px 12px 4px;">
+                <div style="font-size:11px;color:var(--tx3);font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 2px 8px;">เลือกวิธี</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <button id="shareBtnDownload" class="action-card">
+                        <div class="ac-title">Download</div>
+                        <div class="ac-desc">บันทึกเป็นไฟล์ JSON</div>
+                        <span class="ac-chip" style="background:var(--bl-d);color:var(--bl);">OUT</span>
+                    </button>
+                    <button id="shareBtnShare" class="action-card">
+                        <div class="ac-title">Share</div>
+                        <div class="ac-desc">แชร์ผ่าน Share API</div>
+                        <span class="ac-chip" style="background:var(--gn-d);color:var(--gn);">SHARE</span>
+                    </button>
+                    <button id="shareBtnCopy" class="action-card" style="grid-column:1/-1;">
+                        <div class="ac-title">Copy JSON</div>
+                        <div class="ac-desc">คัดลอกข้อมูลทั้งหมดไว้ใน clipboard</div>
+                        <span class="ac-chip" style="background:var(--pu-d);color:var(--pu);">COPY</span>
+                    </button>
+                </div>
+                <div style="font-size:11px;color:var(--tx3);text-align:center;padding:10px 0 4px;" id="shareModalText"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" id="shareBtnCancel" style="flex:1;">ยกเลิก</button>
             </div>
         </div>
     </div>
@@ -5285,6 +5314,33 @@
         .modal-btn-cancel:hover {
             background: var(--s3);
             color: var(--tx);
+        }
+
+        .action-card {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            padding: 12px 12px 10px;
+            background: var(--s2);
+            border: 0.5px solid var(--bd2);
+            border-radius: 10px;
+            color: var(--tx);
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .action-card:hover { background: var(--s3); border-color: var(--bd3); }
+        .ac-title { font-size: 13px; font-weight: 700; color: var(--tx); }
+        .ac-desc { font-size: 11px; color: var(--tx3); line-height: 1.4; }
+        .ac-chip {
+            margin-top: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .06em;
+            padding: 2px 7px;
+            border-radius: 4px;
         }
 
         .modal-btn-save {

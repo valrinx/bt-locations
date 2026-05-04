@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.31';
+const APP_VERSION = 'v6.9.32';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -5034,18 +5034,22 @@ function showConfirm(icon,title,text,cb,mergeCallback){
     document.getElementById('confirmTitle').textContent=title;
     document.getElementById('confirmText').textContent=text;
     confirmCallback=cb;
-    // Merge button: show only for import
+    // Import cards: show for import, hide for everything else
+    const importCards=document.getElementById('confirmImportCards');
+    const normalFooter=document.getElementById('confirmNormalFooter');
     const mergeBtn=document.getElementById('confirmMerge');
-    if(mergeBtn){
+    const replaceBtn=document.getElementById('confirmOkReplace');
+    if(importCards && normalFooter){
         if(mergeCallback){
-            mergeBtn.style.cssText='display:flex!important;background:#059669;color:#fff;width:100%;justify-content:center;gap:8px;';
-            mergeBtn.onclick=()=>{
-                document.getElementById('confirmModalOverlay').classList.remove('open');
-                mergeCallback();
-            };
+            importCards.hidden=false;
+            normalFooter.style.display='none';
+            if(mergeBtn) mergeBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); mergeCallback(); };
+            if(replaceBtn) replaceBtn.onclick=()=>{ document.getElementById('confirmModalOverlay').classList.remove('open'); if(confirmCallback){confirmCallback();confirmCallback=null;} };
         } else {
-            mergeBtn.style.cssText='display:none!important;';
-            mergeBtn.onclick=null;
+            importCards.hidden=true;
+            normalFooter.style.display='';
+            if(mergeBtn) mergeBtn.onclick=null;
+            if(replaceBtn) replaceBtn.onclick=null;
         }
     }
     document.getElementById('confirmModalOverlay').classList.add('open');
