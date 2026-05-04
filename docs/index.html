@@ -5204,22 +5204,14 @@
                     </div>
                 ` : ''}
                 
-                <!-- Recent Items -->
+                <!-- Recent Items from Changelog -->
                 <div style="background:var(--s1);border-radius:16px;padding:16px;margin-top:16px;border:0.5px solid var(--bd2);">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                        <div style="font-size:12px;font-weight:600;color:var(--tx);">เพิ่มล่าสุด</div>
-                        <div style="font-size:10px;color:var(--tx3);">5 รายการล่าสุด</div>
+                        <div style="font-size:12px;font-weight:600;color:var(--tx);">กิจกรรมล่าสุด</div>
+                        <div style="font-size:10px;color:var(--tx3);">จาก Changelog</div>
                     </div>
-                    <div style="display:flex;flex-direction:column;gap:8px;">
-                        ${[...locs].reverse().slice(0, 5).map(l => `
-                            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--s2);border-radius:10px;">
-                                <div style="width:32px;height:32px;border-radius:8px;background:${getColor(l.list)};display:flex;align-items:center;justify-content:center;font-size:14px;">📍</div>
-                                <div style="flex:1;min-width:0;">
-                                    <div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${l.name || l.list}</div>
-                                    <div style="font-size:10px;color:var(--tx3);">${l.list}${l.city ? ' · ' + l.city : ''}</div>
-                                </div>
-                            </div>
-                        `).join('')}
+                    <div style="display:flex;flex-direction:column;gap:8px;" id="recentChangelogItems">
+                        <!-- Will be populated by JS -->
                     </div>
                 </div>
             `;
@@ -5235,6 +5227,34 @@
                 const allCities = JSON.parse(this.dataset.allCities);
                 showAllCitiesModal(allCities);
             });
+            
+            // Populate recent changelog items
+            const recentItems = svInner.querySelector('#recentChangelogItems');
+            if(recentItems && typeof window.getChangelog === 'function') {
+                const log = window.getChangelog().slice(0, 5);
+                const actionIcon = {add:'➕', edit:'✏️', delete:'🗑️'};
+                const actionColor = {add:'#34a853', edit:'#4285f4', delete:'#ea4335'};
+                recentItems.innerHTML = log.map(e => {
+                    const d = new Date(e.t);
+                    const ts = d.toLocaleDateString('th-TH', {day:'numeric', month:'short'}) + ' ' + d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+                    return `
+                        <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--s2);border-radius:10px;cursor:pointer;" onclick="window.showChangelogDetail(${e.t})">
+                            <div style="width:32px;height:32px;border-radius:8px;background:${actionColor[e.a] || 'var(--bl)'};display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;">${actionIcon[e.a] || '❓'}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.n || 'ไม่มีชื่อ'}</div>
+                                <div style="font-size:10px;color:var(--tx3);display:flex;gap:6px;flex-wrap:wrap;">
+                                    <span>${e.a === 'add' ? 'เพิ่ม' : e.a === 'edit' ? 'แก้ไข' : 'ลบ'}</span>
+                                    <span>·</span>
+                                    <span>👤 ${e.user || 'unknown'}</span>
+                                    <span>·</span>
+                                    <span>🕐 ${ts}</span>
+                                </div>
+                            </div>
+                            <span style="font-size:12px;color:var(--bl);">›</span>
+                        </div>
+                    `;
+                }).join('') || '<div style="padding:16px;text-align:center;color:var(--tx3);font-size:12px;">ยังไม่มีกิจกรรม</div>';
+            }
         };
 
         window.renderListView = function () {

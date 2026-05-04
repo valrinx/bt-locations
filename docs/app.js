@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.39';
+const APP_VERSION = 'v6.6.40';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -531,9 +531,9 @@ function exportPaths() {
 let _currentIP = 'unknown';
 let _currentDevice = navigator.userAgent.slice(0, 50);
 
-function getChangelog(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
+window.getChangelog = function(){try{return JSON.parse(localStorage.getItem(CHANGELOG_KEY)||'[]');}catch{return[];}}
 function addChangelogEntry(action, loc, changes = null){
-    const log=getChangelog();
+    const log=window.getChangelog();
     const username = localStorage.getItem('bt_username') || 'anonymous';
     const device = _currentDevice;
     const ip = _currentIP;
@@ -3340,7 +3340,7 @@ if(infoPanelClose) infoPanelClose.onclick = closeInfo;
 if(infoPanelBackdrop) infoPanelBackdrop.onclick = closeInfo;
 
 window.showChangelogDetail = function(timestamp) {
-    const log = getChangelog().find(e => e.t === timestamp);
+    const log = window.getChangelog().find(e => e.t === timestamp);
     if(!log) return;
     const body = document.getElementById('infoPanelBody');
     body.dataset.auditName = log.n;
@@ -3351,7 +3351,7 @@ function openInfoPanel(mode){
     const body=document.getElementById('infoPanelBody');
     if(mode==='changelog'){
         document.getElementById('infoPanelTitle').textContent='ประวัติการแก้ไข';
-        const log=getChangelog();
+        const log=window.getChangelog();
         const actionLabel={add:'เพิ่ม',edit:'แก้ไข',delete:'ลบ'};
         const actionIcon={add:'➕',edit:'✏️',delete:'🗑️'};
         const actionColor={add:'#34a853',edit:'#4285f4',delete:'#ea4335'};
@@ -3488,7 +3488,7 @@ function openInfoPanel(mode){
     } else if(mode==='audit'){
         // Show detailed audit for a specific location
         const locName = body.dataset.auditName;
-        const locLog = getChangelog().filter(e => e.n === locName).slice(0, 10);
+        const locLog = window.getChangelog().filter(e => e.n === locName).slice(0, 10);
         document.getElementById('infoPanelTitle').textContent = `ประวัติ: ${locName}`;
         if(!locLog.length){
             body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);">ไม่มีประวัติการแก้ไข</div>';
