@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.6.27';
+const APP_VERSION = 'v6.6.28';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -266,34 +266,7 @@ function _updateMobChips(){
 }
 
 // Chip click handlers
-document.querySelectorAll('.chip').forEach(chip=>{
-    chip.onclick = () => {
-        const filter = chip.dataset.filter;
-        document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
-        chip.classList.add('on');
-        if(filter === 'all'){
-            filterList = ''; filterCity = ''; filterFavorites = false;
-        } else if(filter === 'fav'){
-            filterFavorites = true; filterList = ''; filterCity = '';
-        } else if(filter === 'list'){
-            const drop = document.getElementById('listDropdown');
-            if(drop) {
-                const isOpen = drop.classList.contains('open');
-                document.querySelectorAll('.chip-dropdown').forEach(d => d.classList.remove('open'));
-                if(!isOpen) drop.classList.add('open');
-            } else if(typeof window.openListOptionsSheet === 'function') {
-                window.openListOptionsSheet();
-            }
-            return; // Don't call update() yet, wait for dropdown choice
-        } else if(filter === 'city'){
-            // Open drawer to select city
-            openMobDrawer();
-        }
-        _lastFilteredKey = null;
-        update();
-        _renderSidebar();
-    };
-});
+// Removed duplicate chip click handlers
 
 // Mobile search sync
 document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e)=>{
@@ -421,12 +394,16 @@ onClick('btnImportData', () => openImportModal());
 
 // Import modal functions
 window.openImportModal = function(){
-    document.getElementById('importModalOverlay').classList.add('open');
-    document.getElementById('importJsonText').value = '';
-    document.getElementById('importUrl').value = '';
+    const modal = document.getElementById('importModalOverlay');
+    if(modal) modal.classList.add('open');
+    const jsonText = document.getElementById('importJsonText');
+    if(jsonText) jsonText.value = '';
+    const url = document.getElementById('importUrl');
+    if(url) url.value = '';
 };
 window.closeImportModal = function(){
-    document.getElementById('importModalOverlay').classList.remove('open');
+    const modal = document.getElementById('importModalOverlay');
+    if(modal) modal.classList.remove('open');
 };
 window.doImportData = async function(){
     const jsonText = document.getElementById('importJsonText').value.trim();
@@ -757,8 +734,10 @@ let _datalistDirty = true;
 function markDatalistDirty() { _datalistDirty = true; }
 function refreshDatalistSuggestions() {
     if (!_datalistDirty) return;
-    document.getElementById('listSuggestions').innerHTML = [...new Set(locations.map(l => l.list).filter(Boolean))].map(l => `<option value="${l}">`).join('');
-    document.getElementById('citySuggestions').innerHTML = [...new Set(locations.map(l => l.city).filter(Boolean))].map(c => `<option value="${c}">`).join('');
+    const listSuggestions = document.getElementById('listSuggestions');
+    const citySuggestions = document.getElementById('citySuggestions');
+    if(listSuggestions) listSuggestions.innerHTML = [...new Set(locations.map(l => l.list).filter(Boolean))].map(l => `<option value="${l}">`).join('');
+    if(citySuggestions) citySuggestions.innerHTML = [...new Set(locations.map(l => l.city).filter(Boolean))].map(c => `<option value="${c}">`).join('');
     _datalistDirty = false;
 }
 
@@ -1074,8 +1053,10 @@ async function initApp(){
         // 3. Show app immediately
         setLoader('พร้อมใช้งาน');
         setTimeout(() => {
-            document.getElementById('loader').classList.add('done');
-            document.getElementById('app').style.display = 'flex';
+            const loader = document.getElementById('loader');
+            const app = document.getElementById('app');
+            if(loader) loader.classList.add('done');
+            if(app) app.style.display = 'flex';
             console.log('[BT] Loader hidden');
             setTimeout(()=>{map.invalidateSize();update();},100);
         }, 200);
@@ -3008,20 +2989,25 @@ function _routeNavigate(){
 }
 
 async function doRoute(){
-    const filtered=getFiltered();
-    if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
-    if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
+    try {
+        const filtered=getFiltered();
+        if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
+        if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
 
-    showToast('🛤️ กำลังวางแผนเส้นทาง...');
+        showToast('🛤️ กำลังวางแผนเส้นทาง...');
 
-    const startLat=myLatLng?myLatLng.lat:filtered[0].lat;
-    const startLng=myLatLng?myLatLng.lng:filtered[0].lng;
+        const startLat=myLatLng?myLatLng.lat:filtered[0].lat;
+        const startLng=myLatLng?myLatLng.lng:filtered[0].lng;
 
-    _routeStops=_tspSolve(filtered, startLat, startLng);
-    routeMode=true;
-    const chipRoute = document.getElementById('chipRoute');
-    if(chipRoute) chipRoute.classList.add('active');
-    await _routeDraw();
+        _routeStops=_tspSolve(filtered, startLat, startLng);
+        routeMode=true;
+        const chipRoute = document.getElementById('chipRoute');
+        if(chipRoute) chipRoute.classList.add('active');
+        await _routeDraw();
+    } catch(e) {
+        console.error('[BT] doRoute error:', e);
+        showToast('เกิดข้อผิดพลาดในการวางแผนเส้นทาง', true);
+    }
 }
 
 const chipRoute=document.getElementById('chipRoute');
@@ -3036,38 +3022,44 @@ if(chipRoute) chipRoute.onclick=(e)=>{
     }
 };
 async function doMultiRoute(){
-    const uniqueLists = [...new Set(locations.map(l => l.list))].filter(l => l);
-    if(uniqueLists.length < 1){showToast('ไม่พบรายการข้อมูล',true);return;}
-    
-    showToast('🗺️ กำลังวางแผนหลายเส้นทาง...');
-    clearRoute();
-    if(multiRouteLayer) map.removeLayer(multiRouteLayer);
-    multiRouteLayer = L.layerGroup().addTo(map);
-    multiRouteMode = true;
-    document.getElementById('btnPlanMultipleRoutes')?.classList.add('active');
-
-    const colors = ['#4285f4', '#34a853', '#fbbc05', '#ea4335', '#a78bfa', '#ff7f5c', '#2ecc90', '#f5a623'];
-    
-    for (let i = 0; i < uniqueLists.length; i++) {
-        const listName = uniqueLists[i];
-        const listPoints = locations.filter(l => l.list === listName);
-        if (listPoints.length < 2) continue;
-
-        const color = colors[i % colors.length];
-        const stops = _tspSolve(listPoints, listPoints[0].lat, listPoints[0].lng);
+    try {
+        const uniqueLists = [...new Set(locations.map(l => l.list))].filter(l => l);
+        if(uniqueLists.length < 1){showToast('ไม่พบรายการข้อมูล',true);return;}
         
-        const pts = stops.map(l => [l.lat, l.lng]);
-        L.polyline(pts, {
-            color: color,
-            weight: 3,
-            opacity: 0.7,
-            dashArray: '5, 5'
-        }).addTo(multiRouteLayer).bindTooltip(`รายการ: ${listName}`, {sticky: true});
+        showToast('🗺️ กำลังวางแผนหลายเส้นทาง...');
+        clearRoute();
+        if(multiRouteLayer) map.removeLayer(multiRouteLayer);
+        multiRouteLayer = L.layerGroup().addTo(map);
+        multiRouteMode = true;
+        const btnPlanMultipleRoutes = document.getElementById('btnPlanMultipleRoutes');
+        if(btnPlanMultipleRoutes) btnPlanMultipleRoutes.classList.add('active');
+
+        const colors = ['#4285f4', '#34a853', '#fbbc05', '#ea4335', '#a78bfa', '#ff7f5c', '#2ecc90', '#f5a623'];
+        
+        for (let i = 0; i < uniqueLists.length; i++) {
+            const listName = uniqueLists[i];
+            const listPoints = locations.filter(l => l.list === listName);
+            if (listPoints.length < 2) continue;
+
+            const color = colors[i % colors.length];
+            const stops = _tspSolve(listPoints, listPoints[0].lat, listPoints[0].lng);
+            
+            const pts = stops.map(l => [l.lat, l.lng]);
+            L.polyline(pts, {
+                color: color,
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '5, 5'
+            }).addTo(multiRouteLayer).bindTooltip(`รายการ: ${listName}`, {sticky: true});
+        }
+        
+        // Hide clusters to show routes clearly
+        if(map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
+        renderMarkers();
+    } catch(e) {
+        console.error('[BT] doMultiRoute error:', e);
+        showToast('เกิดข้อผิดพลาดในการวางแผนหลายเส้นทาง', true);
     }
-    
-    // Hide clusters to show routes clearly
-    if(map.hasLayer(markerCluster)) map.removeLayer(markerCluster);
-    renderMarkers(); 
 }
 
 function clearMultiRoutes(){
