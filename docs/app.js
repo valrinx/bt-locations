@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.9';
+const APP_VERSION = 'v6.9.10';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -963,7 +963,7 @@ let _mobileZoomRestoreTimer = null;
 let _lastMarkerRenderMs = 0;
 
 function _getDistrictName(loc) {
-    return loc.district || loc.city || 'ไม่ระบุเขต';
+    return loc.district || loc.city || loc.list || 'ไม่ระบุเขต';
 }
 
 function _getMarkerColor(loc) {
