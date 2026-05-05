@@ -379,8 +379,7 @@ function _updateMobChips(){
 // Mobile search sync
 document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e)=>{
     const si = document.getElementById('search');
-    if(si) si.value = e.target.value;
-    renderSearchResults();
+    if(si) si.value = e.target.value; renderSearchResults();
     update();
 }, 150));
 
@@ -2259,7 +2258,7 @@ function renderSearchResults() {
             </div>
         </div>`;
     }).join('');
-    searchResults.innerHTML=html;
+    searchResults.innerHTML = html; if(searchResults) searchResults.style.display = html.length > 0 ? 'block' : 'none';
 }
 
 // ════════════════════════════════════════════
