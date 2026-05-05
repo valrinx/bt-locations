@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v6.9.8';
+const APP_VERSION = 'v6.9.9';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -3056,6 +3056,7 @@ let _orientationBound = false;
 let _orientationPermissionTried = false;
 let _lastOrientationUpdateAt = 0;
 let _lastGpsFixAt = 0;
+let _gpsStatusTimer = null;
 
 function _clearGpsResumeTimer() {
     if (_gpsResumeTimer) {
@@ -3145,6 +3146,16 @@ function _stopOrientationTracking() {
     _lastOrientationUpdateAt = 0;
 }
 
+function _setGpsStatusTicker(active) {
+    if (_gpsStatusTimer) {
+        clearInterval(_gpsStatusTimer);
+        _gpsStatusTimer = null;
+    }
+    if (active) {
+        _gpsStatusTimer = setInterval(_updateGpsStatusPanel, 1000);
+    }
+}
+
 function _smoothGpsDisplay(lat, lng, accuracy, force=false) {
     if (!_gpsDisplayLatLng || force) {
         _gpsDisplayLatLng = { lat, lng };
@@ -3206,6 +3217,7 @@ function _setGpsUi(state, detail='') {
 async function _setGpsMode(mode, detail='') {
     gpsMode = mode;
     gpsTracking = mode === 'follow' || mode === 'compass';
+    _setGpsStatusTicker(mode !== 'off');
     _clearGpsResumeTimer();
     if (!btnGps) return;
     if (mode === 'off') {
@@ -3251,12 +3263,23 @@ function _gpsModeText(mode=gpsMode) {
     return 'ยังไม่เปิดตำแหน่ง';
 }
 
+function _gpsQualityState() {
+    if (!gpsActive) return 'off';
+    if (!_lastGpsFixAt) return 'searching';
+    const age = (Date.now() - _lastGpsFixAt) / 1000;
+    if (age > 20) return 'stale';
+    if (_lastGpsAccuracy > 120) return 'weak';
+    if (_lastGpsAccuracy > 45) return 'fair';
+    return 'good';
+}
+
 function _updateGpsStatusPanel(detail='') {
     const panel = document.getElementById('mobGpsStatus');
     if (!panel) return;
     const modeEl = document.getElementById('mobGpsMode');
     const detailEl = document.getElementById('mobGpsDetail');
     panel.dataset.state = gpsMode || 'off';
+    panel.dataset.quality = _gpsQualityState();
     if (modeEl) modeEl.textContent = _gpsModeLabel();
     if (!detailEl) return;
     if (!gpsActive) {
@@ -3264,7 +3287,12 @@ function _updateGpsStatusPanel(detail='') {
         return;
     }
     const parts = [_gpsModeText()];
-    if (_lastGpsAccuracy < Infinity) parts.push(`แม่นยำ ±${Math.round(_lastGpsAccuracy)}ม.`);
+    if (_lastGpsAccuracy < Infinity) {
+        const accuracyText = _lastGpsAccuracy > 120 ? 'สัญญาณอ่อน' : _lastGpsAccuracy > 45 ? 'ปานกลาง' : 'ดี';
+        parts.push(`${accuracyText} ±${Math.round(_lastGpsAccuracy)}ม.`);
+    } else {
+        parts.push('กำลังหาสัญญาณ');
+    }
     const heading = _lastGpsHeading === null ? _deviceHeading : _lastGpsHeading;
     if (heading !== null) parts.push(`ทิศ ${Math.round(heading)}°`);
     if (_lastGpsFixAt) {
@@ -3398,6 +3426,7 @@ function stopGps() {
     _gpsDisplayLatLng = null;
     _lastGpsHeading = null;
     _lastGpsIconHeadingBucket = null;
+    _setGpsStatusTicker(false);
     _updateGpsStatusPanel();
 }
 
@@ -6337,9 +6366,31 @@ window.btDebug = {
     clearSearchPin: ()=>{_clearSearchMarker();showToast('ล้าง search pin แล้ว', false, true);},
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
+    refreshApp: ()=>refreshAppNow(),
     exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
+
+async function refreshAppNow() {
+    showToast('กำลังรีโหลดแอป...');
+    try {
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.filter(key => key.startsWith('bt-locations-')).map(key => caches.delete(key)));
+        }
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) await reg.update();
+        }
+    } catch (err) {
+        console.warn('[BT] App refresh failed:', err);
+    } finally {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set('v', `${APP_VERSION}-${Date.now()}`);
+        window.location.replace(nextUrl.toString());
+    }
+}
+window.refreshAppNow = refreshAppNow;
 
 // Version badge & Update Announcement
 (async function showVersion(){

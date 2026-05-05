@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bt-locations-v6.9.8';
+const CACHE_NAME = 'bt-locations-v6.9.9';
 // Only truly static assets (libs, icons) — NOT app code
 const STATIC_ASSETS = [
   './manifest.json',

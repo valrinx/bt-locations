@@ -2877,6 +2877,17 @@
             background: linear-gradient(180deg, oklch(20% 0.05 76), oklch(16% 0.034 260));
         }
 
+        .mob-gps-status[data-quality="weak"],
+        .mob-gps-status[data-quality="stale"] {
+            border-color: oklch(62% 0.16 34 / 0.5);
+            background: linear-gradient(180deg, oklch(20% 0.052 34), oklch(16% 0.034 260));
+        }
+
+        .mob-gps-status[data-quality="good"] .mob-gps-mode {
+            background: oklch(31% 0.1 154 / 0.78);
+            color: oklch(84% 0.16 154);
+        }
+
         .mob-gps-status b {
             display: block;
             font-size: 12px;
@@ -4843,6 +4854,10 @@
                     <button class="mob-menu-item" onclick="window.btDebug?.toggleMapOverlay(); closeMobDrawer()">
                         <span><b>Map Debug</b><small>ดู marker, zoom และ render time บนแผนที่</small></span>
                         <span class="mob-menu-ico">DBG</span>
+                    </button>
+                    <button class="mob-menu-item" onclick="refreshAppNow(); closeMobDrawer()">
+                        <span><b>รีโหลดแอป</b><small>ล้าง cache แอปและโหลดเวอร์ชันล่าสุด</small></span>
+                        <span class="mob-menu-ico">LOAD</span>
                     </button>
                     <div class="mob-menu-section">จัดการข้อมูล</div>
                     <button class="mob-menu-item" onclick="protectedDataAction('export'); closeMobDrawer()">
