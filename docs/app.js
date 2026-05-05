@@ -546,15 +546,19 @@ window.doImportData = async function(){
     }
     
     if(data && data.length > 0){
-        data = normalizeImportedLocations(data);
-        const deduped = dedupeExactLocations(data);
+        const prepared = prepareImportedLocations(data);
+        data = prepared.items;
+        if(!data.length){
+            showToast('❌ ไม่มีพิกัดที่ผ่านการตรวจสอบ', true);
+            return;
+        }
         pushUndo();
-        locations = deduped.unique;
+        locations = data;
         saveLocations();
         invalidateCache();
         update();
         closeImportModal();
-        showToast(`✅ นำเข้า ${locations.length} จุด${deduped.removed ? ` · ตัดซ้ำ ${deduped.removed}` : ''}`, false, true);
+        showToast(`✅ นำเข้า ${locations.length} จุด${formatImportReport(prepared.report)}`, false, true);
     } else {
         showToast('❌ ไม่พบข้อมูลที่ถูกต้อง', true);
     }
@@ -702,8 +706,17 @@ function normalizeLocation(l) {
     };
 }
 
+const DATA_SCHEMA_VERSION = 1;
+const THAILAND_BOUNDS = { minLat: 5.5, maxLat: 20.5, minLng: 97.0, maxLng: 106.5 };
+
 function _looksLikeCoordinateName(value) {
     return /^\s*-?\d{1,2}\.\d+\s*,\s*-?\d{2,3}\.\d+\s*$/.test(String(value || ''));
+}
+
+function isInThailandBounds(loc) {
+    const lat = Number(loc.lat), lng = Number(loc.lng);
+    return lat >= THAILAND_BOUNDS.minLat && lat <= THAILAND_BOUNDS.maxLat &&
+        lng >= THAILAND_BOUNDS.minLng && lng <= THAILAND_BOUNDS.maxLng;
 }
 
 function getDataQualityReport(data = locations) {
@@ -723,6 +736,7 @@ function getDataQualityReport(data = locations) {
     return {
         total: data.length,
         invalidCoordinates: data.filter(l => !Number.isFinite(Number(l.lat)) || !Number.isFinite(Number(l.lng))).length,
+        outOfThailandBounds: data.filter(l => Number.isFinite(Number(l.lat)) && Number.isFinite(Number(l.lng)) && !isInThailandBounds(l)).length,
         emptyNames: data.filter(l => !String(l.name || '').trim()).length,
         coordinateNames: data.filter(l => _looksLikeCoordinateName(l.name)).length,
         duplicateCoordinateGroups: duplicateGroups.length,
@@ -4689,7 +4703,7 @@ function doExportImage() {
 // ════════════════════════════════════════════
 function doExport() {
     closeInfo();
-    const jsonStr = JSON.stringify(locations, null, 2);
+    const jsonStr = JSON.stringify(buildExportPayload(), null, 2);
     const filename = `bt_locations_${new Date().toISOString().slice(0,10)}.json`;
 
     // ถ้า Share API รองรับ (มือถือ)
@@ -4704,6 +4718,17 @@ function doExport() {
         }
     }
     fallbackExport(jsonStr, filename);
+}
+
+function buildExportPayload() {
+    return {
+        schema: 'bt-locations',
+        schemaVersion: DATA_SCHEMA_VERSION,
+        appVersion: typeof APP_VERSION !== 'undefined' ? APP_VERSION : '',
+        exportedAt: new Date().toISOString(),
+        count: locations.length,
+        locations
+    };
 }
 
 function fallbackExport(jsonStr, filename) {
@@ -4923,21 +4948,22 @@ function parseGeoJSON(obj, fallbackList = 'GeoJSON Import') {
 }
 
 function normalizeImportedLocations(items, fallbackList = 'Imported') {
-    return items.map((l, i) => normalizeLocation({
-        id: l.id || Date.now() + i,
+    return items.map((l, i) => ({
+        ...(l.sb_id || l.id ? { sb_id: l.sb_id || l.id } : { id: Date.now() + i }),
         name: l.name || l.title || l.label || '',
         lat: parseFloat(l.lat ?? l.latitude ?? l.y),
         lng: parseFloat(l.lng ?? l.lon ?? l.longitude ?? l.x),
         list: l.list || l.category || l.group || fallbackList,
         city: l.city || l.district || l.area || '',
         note: l.note || l.notes || l.desc || l.description || '',
-        tags: Array.isArray(l.tags) ? l.tags : [],
-        photo: l.photo || ''
-    })).filter(l => Number.isFinite(l.lat) && Number.isFinite(l.lng));
+        updatedAt: l.updatedAt || Date.now(),
+        ...(Array.isArray(l.tags) && l.tags.length ? { tags: l.tags } : {}),
+        ...(l.photo ? { photo: l.photo } : {})
+    }));
 }
 
 function exactCoordKey(loc) {
-    return `${String(loc.lat).trim()},${String(loc.lng).trim()}`;
+    return `${Number(loc.lat).toFixed(6)},${Number(loc.lng).toFixed(6)}`;
 }
 
 function dedupeExactLocations(items) {
@@ -4951,6 +4977,34 @@ function dedupeExactLocations(items) {
         unique.push(loc);
     });
     return { unique, removed };
+}
+
+function prepareImportedLocations(items, fallbackList = 'Imported') {
+    const normalized = normalizeImportedLocations(items, fallbackList);
+    const valid = [];
+    const report = { invalid: 0, outOfBounds: 0, duplicate: 0 };
+    normalized.forEach(loc => {
+        if (!Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) {
+            report.invalid++;
+            return;
+        }
+        if (!isInThailandBounds(loc)) {
+            report.outOfBounds++;
+            return;
+        }
+        valid.push(loc);
+    });
+    const deduped = dedupeExactLocations(valid);
+    report.duplicate = deduped.removed;
+    return { items: deduped.unique, report };
+}
+
+function formatImportReport(report) {
+    const parts = [];
+    if (report.duplicate) parts.push(`ตัดซ้ำ ${report.duplicate}`);
+    if (report.invalid) parts.push(`พิกัดเสีย ${report.invalid}`);
+    if (report.outOfBounds) parts.push(`นอกไทย ${report.outOfBounds}`);
+    return parts.length ? ` · ${parts.join(' · ')}` : '';
 }
 
 function _parseFileText(text, ext, fallbackListName){
@@ -4968,10 +5022,11 @@ function _parseFileText(text, ext, fallbackListName){
         const obj=JSON.parse(text);
         if(Array.isArray(obj))imp=obj;
         else if(obj.type==='FeatureCollection'||obj.type==='Feature')imp=parseGeoJSON(obj, fallbackListName);
+        else if(obj.schema==='bt-locations'&&Array.isArray(obj.locations))imp=obj.locations;
         else if(obj.locations||obj.points||obj.data)imp=obj.locations||obj.points||obj.data;
         else throw new Error('รูปแบบ JSON ไม่ถูกต้อง');
     }
-    return normalizeImportedLocations(imp, fallbackListName);
+    return prepareImportedLocations(imp, fallbackListName);
 }
 
 document.getElementById('fileImport').onchange=async e=>{
@@ -4987,24 +5042,30 @@ document.getElementById('fileImport').onchange=async e=>{
     });
 
     let allImp=[];
+    const importReport = { invalid: 0, outOfBounds: 0, duplicate: 0 };
     const errors=[];
     await Promise.all(files.map(async f=>{
         const ext=f.name.split('.').pop().toLowerCase();
         const name=(f.name.replace(/\.[^.]+$/,'')||'Imported').trim();
         try{
             const text=await readFile(f);
-            const items=_parseFileText(text,ext,name);
-            allImp=allImp.concat(items);
+            const parsed=_parseFileText(text,ext,name);
+            importReport.invalid += parsed.report.invalid;
+            importReport.outOfBounds += parsed.report.outOfBounds;
+            importReport.duplicate += parsed.report.duplicate;
+            allImp=allImp.concat(parsed.items);
         }catch(err){errors.push(`${f.name}: ${err.message}`);}
     }));
 
     if(errors.length)showToast('⚠️ '+errors.join(' | '),true);
     const deduped=dedupeExactLocations(allImp);
+    importReport.duplicate += deduped.removed;
     allImp=deduped.unique;
     if(!allImp.length){showToast('ไม่พบข้อมูลพิกัดในไฟล์',true);return;}
 
     const fileNames=files.map(f=>f.name).join(', ');
-    const dupText=deduped.removed?`\nคัดจุดซ้ำพิกัดเป๊ะๆ ออก ${deduped.removed} จุด`:'';
+    const reportText=formatImportReport(importReport);
+    const importReportText=reportText?`\nตรวจข้อมูล: ${reportText.replace(/^ · /,'')}`:'';
     const multiText=files.length>1?` (${files.length} ไฟล์)`:'';
     const doMerge=async()=>{
         pushUndo();
@@ -5019,7 +5080,7 @@ document.getElementById('fileImport').onchange=async e=>{
         if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
     };
     closeImportModal();
-    showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${dupText}\nเลือก Merge หรือ Replace`,
+    showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${importReportText}\nเลือก Merge หรือ Replace`,
         async()=>{pushUndo();locations=allImp;saveLocations();invalidateCache();update();showToast(`Replace: ${allImp.length} จุด`,false,true);if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}},
         doMerge
     );
@@ -5635,7 +5696,7 @@ window.btDebug = {
     },
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
-    exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
