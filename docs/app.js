@@ -1335,6 +1335,7 @@ function _updateMapDebugOverlay() {
         pending: !!_mapOnlyUpdateRaf,
         zooming: map.getContainer().classList.contains('is-gesture-zooming')
     };
+    const gps = typeof window.btGpsDebugSnapshot === 'function' ? window.btGpsDebugSnapshot() : null;
     el.innerHTML = `
         <span style="color:var(--tx3);">zoom</span><span>${stats.zoom}</span>
         <span style="color:var(--tx3);">mode</span><span>${_escapeHtml(stats.mode)}</span>
@@ -1345,6 +1346,12 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">full/map</span><span>${stats.fullMs}/${stats.mapMs}ms</span>
         <span style="color:var(--tx3);">queue</span><span style="color:${stats.pending ? 'var(--am)' : 'var(--gn)'}">${stats.pending ? 'yes' : 'no'}</span>
         <span style="color:var(--tx3);">gesture</span><span style="color:${stats.zooming ? 'var(--am)' : 'var(--gn)'}">${stats.zooming ? 'yes' : 'no'}</span>
+        ${gps ? `
+        <span style="grid-column:1/-1;height:1px;background:rgba(91,143,255,0.25);margin:2px 0;"></span>
+        <span style="color:var(--tx3);">gps</span><span>${_escapeHtml(gps.mode)} · ${_escapeHtml(gps.quality)}</span>
+        <span style="color:var(--tx3);">acc/head</span><span>${gps.accuracy === null ? '-' : `±${gps.accuracy}m`}/${gps.heading === null ? '-' : `${gps.heading}°`}</span>
+        <span style="color:var(--tx3);">fix age</span><span style="color:${gps.ageSeconds !== null && gps.ageSeconds > 20 ? 'var(--am)' : 'var(--gn)'}">${gps.ageSeconds === null ? '-' : `${gps.ageSeconds}s`}</span>
+        ` : ''}
     `;
 }
 
@@ -3273,6 +3280,20 @@ function _gpsQualityState() {
     return 'good';
 }
 
+window.btGpsDebugSnapshot = function() {
+    const heading = _lastGpsHeading === null ? _deviceHeading : _lastGpsHeading;
+    return {
+        active: gpsActive,
+        mode: gpsMode,
+        quality: _gpsQualityState(),
+        tracking: gpsTracking,
+        accuracy: _lastGpsAccuracy < Infinity ? Math.round(_lastGpsAccuracy) : null,
+        heading: heading === null ? null : Math.round(heading),
+        ageSeconds: _lastGpsFixAt ? Math.max(0, Math.round((Date.now() - _lastGpsFixAt) / 1000)) : null,
+        orientationBound: _orientationBound
+    };
+};
+
 function _updateGpsStatusPanel(detail='') {
     const panel = document.getElementById('mobGpsStatus');
     if (!panel) return;
@@ -3302,6 +3323,7 @@ function _updateGpsStatusPanel(detail='') {
         parts.push(detail);
     }
     detailEl.textContent = parts.join(' · ');
+    _updateMapDebugOverlay();
 }
 
 function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, speed=null, markFix=true) {
