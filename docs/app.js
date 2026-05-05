@@ -3047,6 +3047,9 @@ const btnGps=document.getElementById('btnGps');
 let _lastGpsPanAt = 0;
 let _lastGpsAccuracy = Infinity;
 let _gpsResumeTimer = null;
+let _gpsDisplayLatLng = null;
+let _lastGpsHeading = null;
+let _lastGpsIconHeadingBucket = null;
 
 function _clearGpsResumeTimer() {
     if (_gpsResumeTimer) {
@@ -3059,6 +3062,59 @@ function _gpsTargetZoom(accuracy) {
     if (accuracy > 900) return Math.max(map.getZoom(), 13);
     if (accuracy > 220) return Math.max(map.getZoom(), 15);
     return Math.max(map.getZoom(), 17);
+}
+
+function _normalizeHeading(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return null;
+    return ((n % 360) + 360) % 360;
+}
+
+function _bearingBetween(lat1, lng1, lat2, lng2) {
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => r * 180 / Math.PI;
+    const p1 = toRad(lat1);
+    const p2 = toRad(lat2);
+    const dLng = toRad(lng2 - lng1);
+    const y = Math.sin(dLng) * Math.cos(p2);
+    const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dLng);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function _smoothHeading(nextHeading) {
+    const next = _normalizeHeading(nextHeading);
+    if (next === null) return _lastGpsHeading;
+    if (_lastGpsHeading === null) {
+        _lastGpsHeading = next;
+        return next;
+    }
+    const delta = ((next - _lastGpsHeading + 540) % 360) - 180;
+    _lastGpsHeading = (_lastGpsHeading + delta * 0.38 + 360) % 360;
+    return _lastGpsHeading;
+}
+
+function _smoothGpsDisplay(lat, lng, accuracy, force=false) {
+    if (!_gpsDisplayLatLng || force) {
+        _gpsDisplayLatLng = { lat, lng };
+        return _gpsDisplayLatLng;
+    }
+    const moved = haversine(_gpsDisplayLatLng.lat, _gpsDisplayLatLng.lng, lat, lng);
+    const alpha = moved > 55 ? 0.82 : accuracy > 80 ? 0.28 : 0.46;
+    _gpsDisplayLatLng = {
+        lat: _gpsDisplayLatLng.lat + (lat - _gpsDisplayLatLng.lat) * alpha,
+        lng: _gpsDisplayLatLng.lng + (lng - _gpsDisplayLatLng.lng) * alpha
+    };
+    return _gpsDisplayLatLng;
+}
+
+function _createGpsIcon(heading) {
+    const safeHeading = _normalizeHeading(heading);
+    const hasHeading = safeHeading !== null;
+    const cone = hasHeading
+        ? `<div class="you-are-here-cone" style="transform:translateX(-50%) rotate(${safeHeading}deg);"></div>`
+        : '';
+    const iconHtml = `<div class="you-are-here-wrap${hasHeading ? ' has-heading' : ''}" aria-label="ตำแหน่งของฉัน">${cone}<div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"><span class="you-are-here-core"></span></div></div>`;
+    return L.divIcon({className:'you-are-here-icon', html:iconHtml, iconSize:[70,70], iconAnchor:[35,35]});
 }
 
 function _smoothFollow(lat, lng, accuracy=0, force=false) {
@@ -3092,34 +3148,49 @@ function _setGpsUi(state, detail='') {
     if (state === 'gps-found') btnGps.dataset.gpsState = detail || 'พร้อม';
 }
 
-function updateGpsMarker(lat, lng, accuracy, forceFollow=false) {
+function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, speed=null) {
+    const previousRaw = myLatLng;
+    const normalizedHeading = _normalizeHeading(heading);
+    let displayHeading = normalizedHeading;
+    if (displayHeading === null && previousRaw) {
+        const movedRaw = haversine(previousRaw.lat, previousRaw.lng, lat, lng);
+        if (movedRaw > 4) displayHeading = _bearingBetween(previousRaw.lat, previousRaw.lng, lat, lng);
+    }
+    displayHeading = displayHeading !== null ? _smoothHeading(displayHeading) : _lastGpsHeading;
+
+    const display = _smoothGpsDisplay(lat, lng, accuracy, forceFollow);
     if (myLocationCircle) {
-        myLocationCircle.setLatLng([lat, lng]);
+        myLocationCircle.setLatLng([display.lat, display.lng]);
         myLocationCircle.setRadius(Math.min(accuracy, 500));
     } else {
-        myLocationCircle = L.circle([lat, lng], {
+        myLocationCircle = L.circle([display.lat, display.lng], {
             radius: Math.min(accuracy, 500), color:'#2563eb',
             fillColor:'#3b82f6', fillOpacity:0.14, weight:2, className:'gps-accuracy-circle'
         }).addTo(map);
     }
-    const iconHtml = `<div class="you-are-here-wrap" aria-label="ตำแหน่งของฉัน"><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"><span class="you-are-here-core"></span></div></div>`;
-    const icon = L.divIcon({className:'you-are-here-icon', html:iconHtml, iconSize:[58,58], iconAnchor:[29,29]});
+    const icon = _createGpsIcon(displayHeading);
+    const headingBucket = displayHeading === null ? 'none' : Math.round(displayHeading / 5) * 5 % 360;
     if (myLocationMarker) {
-        myLocationMarker.setLatLng([lat, lng]);
+        myLocationMarker.setLatLng([display.lat, display.lng]);
+        if (_lastGpsIconHeadingBucket !== headingBucket) {
+            myLocationMarker.setIcon(icon);
+            _lastGpsIconHeadingBucket = headingBucket;
+        }
     } else {
-        myLocationMarker = L.marker([lat, lng], {icon, zIndexOffset:3000, interactive:true}).addTo(map)
+        myLocationMarker = L.marker([display.lat, display.lng], {icon, zIndexOffset:3000, interactive:true}).addTo(map)
             .bindPopup(`<div style="padding:12px;font-size:13px;min-width:180px;">
                 <b>📍 ตำแหน่งของฉัน</b><br>
                 <small style="color:var(--text3);">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
                 <small style="color:var(--text3);">±${Math.round(accuracy)}ม.</small><br><br>
                 <button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button>
             </div>`);
+        _lastGpsIconHeadingBucket = headingBucket;
     }
     myLatLng = {lat, lng};
     if (myLocationMarker.isPopupOpen()) {
         myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
     }
-    _smoothFollow(lat, lng, accuracy, forceFollow);
+    _smoothFollow(display.lat, display.lng, accuracy, forceFollow);
     if (listSortMode==='near' || nearbyMode) update();
 }
 
@@ -3208,6 +3279,9 @@ function stopGps() {
     if(btnGps) _setGpsUi('');
     _lastGpsLat = null; _lastGpsLng = null;
     _lastGpsAccuracy = Infinity;
+    _gpsDisplayLatLng = null;
+    _lastGpsHeading = null;
+    _lastGpsIconHeadingBucket = null;
 }
 
 // btnGps: กดครั้งที่ 1 = เปิด GPS + เปิด tracking, กดครั้งที่ 2 = กล้องบินไปตำแหน่ง + เปิด tracking อีกครั้ง
@@ -3232,12 +3306,12 @@ if(btnGps) btnGps.onclick = () => {
     navigator.geolocation.getCurrentPosition(
         pos => {
             if (!gpsActive) return;
-            const {latitude:lat, longitude:lng, accuracy} = pos.coords;
+            const {latitude:lat, longitude:lng, accuracy, heading, speed} = pos.coords;
             gpsCoarseShown = true;
             _lastGpsLat = lat; _lastGpsLng = lng; _lastGpsAccuracy = accuracy;
             const firstFollow = !gpsFlyDone;
             gpsFlyDone = true;
-            updateGpsMarker(lat, lng, accuracy, firstFollow);
+            updateGpsMarker(lat, lng, accuracy, firstFollow, heading, speed);
             _setGpsUi('gps-tracking', `±${Math.round(accuracy)}ม.`);
             if (!gpsToastShown) {
                 gpsToastShown = true;
@@ -3247,7 +3321,7 @@ if(btnGps) btnGps.onclick = () => {
             gpsWatcher = navigator.geolocation.watchPosition(
                 pos2 => {
                     if (!gpsActive) return;
-                    const {latitude:lat2, longitude:lng2, accuracy:acc2} = pos2.coords;
+                    const {latitude:lat2, longitude:lng2, accuracy:acc2, heading:heading2, speed:speed2} = pos2.coords;
                     // กรอง noise: ถ้าตำแหน่งไม่เปลี่ยนมากพอ ไม่ต้อง update marker
                     if (_lastGpsLat !== null) {
                         const moved = haversine(_lastGpsLat, _lastGpsLng, lat2, lng2);
@@ -3255,7 +3329,7 @@ if(btnGps) btnGps.onclick = () => {
                         if (moved < 1.5 && !accuracyImproved) return;
                     }
                     _lastGpsLat = lat2; _lastGpsLng = lng2; _lastGpsAccuracy = acc2;
-                    updateGpsMarker(lat2, lng2, acc2);
+                    updateGpsMarker(lat2, lng2, acc2, false, heading2, speed2);
                     if (gpsTracking) _setGpsUi('gps-tracking', `±${Math.round(acc2)}ม.`);
                     if (!gpsFineToastShown && acc2 < 50) {
                         gpsFineToastShown = true;
@@ -5839,6 +5913,9 @@ html.is-mobile-map .bt-marker-area { color: oklch(73% 0.11 220) !important; font
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
+.you-are-here-wrap { width:70px !important; height:70px !important; }
+.you-are-here-cone { position:absolute !important; left:50% !important; top:2px !important; width:38px !important; height:46px !important; transform-origin:50% 33px !important; clip-path:polygon(50% 0%,100% 100%,50% 78%,0% 100%) !important; background:linear-gradient(180deg,rgba(59,130,246,0.34),rgba(59,130,246,0.03)) !important; border-radius:999px !important; z-index:1 !important; }
+.you-are-here { width:26px !important; height:26px !important; }
 `;
 document.head.appendChild(style);
 
