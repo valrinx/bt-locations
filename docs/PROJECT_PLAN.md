@@ -26,6 +26,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Batched map-only pan/zoom updates with `requestAnimationFrame`.
 - Documented the current mobile/GPS work and next steps in `WORKLOG_HANDOFF.md`.
 - Added a mobile drawer GPS status strip and explicit stop GPS action for field testing.
+- Bumped app/service-worker versioning and forced service-worker update checks to bypass stale mobile code more reliably.
 
 ## Phase 1: Mobile Map Stability
 

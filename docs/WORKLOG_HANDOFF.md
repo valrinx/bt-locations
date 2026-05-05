@@ -29,6 +29,7 @@ Latest known commit before this handoff:
 - Added GPS track recording controls and export flow.
 - Added a mobile drawer GPS status strip with mode, accuracy, heading, and last update age.
 - Added an explicit mobile menu action to stop GPS and compass tracking.
+- Bumped app/service-worker version to `v6.9.8` and registered the service worker with `updateViaCache: 'none'` to reduce stale mobile code after deploy.
 
 ## Mobile QA Checklist
 
@@ -69,8 +70,7 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 
 1. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
 2. Start helper extraction from `app.js` with no behavior changes.
-3. Add a small deploy checklist that reminds testers to clear old service worker cache.
-4. Add screenshot-based mobile QA once browser automation is available in the current session.
+3. Add screenshot-based mobile QA once browser automation is available in the current session.
 
 ## Useful Commands
 
