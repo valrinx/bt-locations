@@ -1459,6 +1459,9 @@ function update() {
     }
     updateChipLabels();
     refreshDatalistSuggestions();
+    if (currentView === 'list' || document.getElementById('view-list')?.classList.contains('show')) {
+        renderListDirectory();
+    }
     _renderSidebar();
     _updateMobChips(); // Sync mobile chip state
 }
