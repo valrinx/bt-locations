@@ -702,6 +702,35 @@ function normalizeLocation(l) {
     };
 }
 
+function _looksLikeCoordinateName(value) {
+    return /^\s*-?\d{1,2}\.\d+\s*,\s*-?\d{2,3}\.\d+\s*$/.test(String(value || ''));
+}
+
+function getDataQualityReport(data = locations) {
+    const coordCounts = new Map();
+    const keyFor = l => `${Number(l.lat).toFixed(6)},${Number(l.lng).toFixed(6)}`;
+    data.forEach(l => {
+        if (Number.isFinite(Number(l.lat)) && Number.isFinite(Number(l.lng))) {
+            const key = keyFor(l);
+            coordCounts.set(key, (coordCounts.get(key) || 0) + 1);
+        }
+    });
+    const duplicateGroups = [...coordCounts.values()].filter(count => count > 1);
+    const suspiciousLabels = data
+        .filter(l => /^[ูุู]/.test(l.list || '') || ((l.city || '').includes('(') && !(l.city || '').includes(')')))
+        .slice(0, 10)
+        .map(l => ({ name: l.name || '', list: l.list || '', city: l.city || '', lat: l.lat, lng: l.lng }));
+    return {
+        total: data.length,
+        invalidCoordinates: data.filter(l => !Number.isFinite(Number(l.lat)) || !Number.isFinite(Number(l.lng))).length,
+        emptyNames: data.filter(l => !String(l.name || '').trim()).length,
+        coordinateNames: data.filter(l => _looksLikeCoordinateName(l.name)).length,
+        duplicateCoordinateGroups: duplicateGroups.length,
+        duplicateCoordinatePoints: duplicateGroups.reduce((sum, count) => sum + count, 0),
+        suspiciousLabels
+    };
+}
+
 // Note: DEFAULT_LOCATIONS is declared in locations.js which loads before app.js
 let locations = (() => {
     try { 
@@ -927,11 +956,11 @@ function _setupAC(inputId, dropId, getItems) {
     inp.addEventListener('input', () => showDrop(inp.value));
     inp.addEventListener('blur', () => setTimeout(() => drop.classList.remove('open'), 150));
 }
-function refreshDatalistSuggestions() {
-    if (!_datalistDirty) return;
-    _setupAC('modalList', 'acListDrop', () => [...new Set(locations.map(l => l.list).filter(Boolean))].sort());
-    _setupAC('modalCity', 'acCityDrop', () => [...new Set(locations.map(l => l.city).filter(Boolean))].sort());
-    _datalistDirty = false;
+function _renderDatalistOptions(items) {
+    return [...new Set(items.filter(Boolean))]
+        .sort()
+        .map(item => `<option value="${_escapeHtml(item)}"></option>`)
+        .join('');
 }
 
 function pushUndo() { undoStack.push(JSON.stringify(locations)); if (undoStack.length > MAX_UNDO) undoStack.shift(); redoStack.length = 0; }
@@ -1906,10 +1935,16 @@ try {
 }
 
 function refreshDatalistSuggestions() {
+    if (!_datalistDirty) return;
+    const lists = locations.map(l => l.list);
+    const cities = locations.map(l => l.city);
     const listSuggestions = document.getElementById('listSuggestions');
     const citySuggestions = document.getElementById('citySuggestions');
-    if(listSuggestions) listSuggestions.innerHTML=[...new Set(locations.map(l=>l.list).filter(Boolean))].map(l=>`<option value="${l}">`).join('');
-    if(citySuggestions) citySuggestions.innerHTML=[...new Set(locations.map(l=>l.city).filter(Boolean))].map(c=>`<option value="${c}">`).join('');
+    if(listSuggestions) listSuggestions.innerHTML = _renderDatalistOptions(lists);
+    if(citySuggestions) citySuggestions.innerHTML = _renderDatalistOptions(cities);
+    _setupAC('modalList', 'acListDrop', () => [...new Set(lists.filter(Boolean))].sort());
+    _setupAC('modalCity', 'acCityDrop', () => [...new Set(cities.filter(Boolean))].sort());
+    _datalistDirty = false;
 }
 
 function updateChipLabels() {
@@ -5344,6 +5379,7 @@ async function doSync(silent=true){
         
         // 3-way merge or deterministic merge to preserve local changes
         const pendingPush = [];
+        let merged = null;
         const dirtyNow = _isDirty();
         const effectiveDirty = dirtyAtStart || dirtyNow;
         const clearingAll = effectiveDirty && locations.length === 0;
@@ -5360,7 +5396,7 @@ async function doSync(silent=true){
                 return;
             }
             // Use updatedAt merge strategy
-            const merged = [];
+            merged = [];
             const rMap = new Map();
             const coordMap = new Map();
             remote.forEach(l => {
@@ -5402,7 +5438,7 @@ async function doSync(silent=true){
             if(item.loc){
                 // New item — use sbInsert so sb_id gets set on the object itself
                 ok = await sbInsert(item.loc);
-                if(ok) merged[item.idx] = item.loc; // update reference with new sb_id
+                if(ok && merged) merged[item.idx] = item.loc; // update reference with new sb_id
             } else {
                 ok = await sbUpdate(item);
             }
@@ -5582,6 +5618,7 @@ window.btDebug = {
         const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
         return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,dirty:_isDirty(),lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};
     },
+    get dataQuality() { return getDataQualityReport(); },
     get mapStats() {
         return {
             zoom: map.getZoom(),
