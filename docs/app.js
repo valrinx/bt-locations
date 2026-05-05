@@ -3163,7 +3163,7 @@ function _createGpsIcon(heading) {
     const cone = hasHeading
         ? `<div class="you-are-here-cone" style="transform:translateX(-50%) rotate(${safeHeading}deg);"></div>`
         : '';
-    const iconHtml = `<div class="you-are-here-wrap${hasHeading ? ' has-heading' : ''}" aria-label="ตำแหน่งของฉัน">${cone}<div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"><span class="you-are-here-core"></span></div></div>`;
+    const iconHtml = `<div class="you-are-here-wrap${hasHeading ? ' has-heading' : ''}" aria-label="ตำแหน่งของฉัน">${cone}<div class="you-are-here-ring"></div><div class="you-are-here"><span class="you-are-here-core"></span></div></div>`;
     return L.divIcon({className:'you-are-here-icon', html:iconHtml, iconSize:[70,70], iconAnchor:[35,35]});
 }
 
@@ -3215,7 +3215,7 @@ function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, sp
     } else {
         myLocationCircle = L.circle([display.lat, display.lng], {
             radius: Math.min(accuracy, 500), color:'#2563eb',
-            fillColor:'#3b82f6', fillOpacity:0.14, weight:2, className:'gps-accuracy-circle'
+            fillColor:'#3b82f6', fillOpacity:0.08, weight:1.25, className:'gps-accuracy-circle'
         }).addTo(map);
     }
     const icon = _createGpsIcon(displayHeading);
@@ -5966,9 +5966,10 @@ html.is-mobile-map .bt-marker-area { color: oklch(73% 0.11 220) !important; font
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
-.you-are-here-wrap { width:70px !important; height:70px !important; }
-.you-are-here-cone { position:absolute !important; left:50% !important; top:2px !important; width:38px !important; height:46px !important; transform-origin:50% 33px !important; clip-path:polygon(50% 0%,100% 100%,50% 78%,0% 100%) !important; background:linear-gradient(180deg,rgba(59,130,246,0.34),rgba(59,130,246,0.03)) !important; border-radius:999px !important; z-index:1 !important; }
-.you-are-here { width:26px !important; height:26px !important; }
+.you-are-here-wrap { width:70px !important; height:70px !important; filter:drop-shadow(0 6px 11px rgba(8,20,42,0.28)) !important; }
+.you-are-here-cone { position:absolute !important; left:50% !important; top:0 !important; width:34px !important; height:48px !important; transform-origin:50% 35px !important; clip-path:polygon(50% 0%,94% 100%,50% 82%,6% 100%) !important; background:linear-gradient(180deg,rgba(59,130,246,0.32),rgba(59,130,246,0.04)) !important; border-radius:999px !important; z-index:1 !important; }
+.you-are-here-ring { width:42px !important; height:42px !important; background:rgba(37,99,235,0.08) !important; border:2px solid rgba(37,99,235,0.46) !important; animation:gps-ring 2.4s ease-out infinite !important; }
+.you-are-here { width:24px !important; height:24px !important; box-shadow:0 0 0 1px rgba(37,99,235,0.32),0 4px 11px rgba(37,99,235,0.42) !important; }
 `;
 document.head.appendChild(style);
 
