@@ -5204,6 +5204,14 @@ document.addEventListener('click',(e)=>{
        !target.closest('.search-result-item')){
         closePlaceCard();
     }
+
+    // ปิด searchResults เมื่อแตะที่ว่าง
+    const sr = document.getElementById('searchResults');
+    const msb = document.getElementById('mobSearchRow');
+    if(sr && sr.style.display !== 'none' &&
+       !(msb && msb.contains(e.target))){
+        sr.style.display = 'none';
+    }
 });
 
 // ════════════════════════════════════════════
