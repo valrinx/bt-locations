@@ -2624,9 +2624,12 @@ onClick('chipRouteMenu', (e) => {
 const mobSearchInput = document.getElementById('mobSearchInput');
 if(mobSearchInput) {
     mobSearchInput.oninput = (e) => {
-        searchTerm = e.target.value;
-        update();
-    };
+    searchTerm = e.target.value;
+    // Sync ไปหา #search แล้วเรียก dropdown
+    if(searchInput) searchInput.value = e.target.value;
+    renderSearchResults();
+    update();
+};
 }
 
 onClick('chipAll', ()=>{
