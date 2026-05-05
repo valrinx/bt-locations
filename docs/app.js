@@ -3050,6 +3050,10 @@ let _gpsResumeTimer = null;
 let _gpsDisplayLatLng = null;
 let _lastGpsHeading = null;
 let _lastGpsIconHeadingBucket = null;
+let _deviceHeading = null;
+let _orientationBound = false;
+let _orientationPermissionTried = false;
+let _lastOrientationUpdateAt = 0;
 
 function _clearGpsResumeTimer() {
     if (_gpsResumeTimer) {
@@ -3091,6 +3095,52 @@ function _smoothHeading(nextHeading) {
     const delta = ((next - _lastGpsHeading + 540) % 360) - 180;
     _lastGpsHeading = (_lastGpsHeading + delta * 0.38 + 360) % 360;
     return _lastGpsHeading;
+}
+
+function _readOrientationHeading(event) {
+    if (typeof event.webkitCompassHeading === 'number') return event.webkitCompassHeading;
+    if (event.absolute === true && typeof event.alpha === 'number') return 360 - event.alpha;
+    if (typeof event.alpha === 'number') return 360 - event.alpha;
+    return null;
+}
+
+function _handleDeviceOrientation(event) {
+    const heading = _normalizeHeading(_readOrientationHeading(event));
+    if (heading === null) return;
+    _deviceHeading = heading;
+    if (!gpsActive || !myLatLng || !myLocationMarker) return;
+    const now = Date.now();
+    if (now - _lastOrientationUpdateAt < 120) return;
+    _lastOrientationUpdateAt = now;
+    updateGpsMarker(myLatLng.lat, myLatLng.lng, _lastGpsAccuracy < Infinity ? _lastGpsAccuracy : 0, false, heading, null);
+}
+
+async function _ensureOrientationTracking() {
+    if (_orientationBound || typeof window === 'undefined') return;
+    try {
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function' &&
+            !_orientationPermissionTried) {
+            _orientationPermissionTried = true;
+            const result = await DeviceOrientationEvent.requestPermission();
+            if (result !== 'granted') return;
+        }
+    } catch (err) {
+        console.warn('[BT] Device orientation permission failed:', err);
+        return;
+    }
+    window.addEventListener('deviceorientationabsolute', _handleDeviceOrientation, true);
+    window.addEventListener('deviceorientation', _handleDeviceOrientation, true);
+    _orientationBound = true;
+}
+
+function _stopOrientationTracking() {
+    if (!_orientationBound || typeof window === 'undefined') return;
+    window.removeEventListener('deviceorientationabsolute', _handleDeviceOrientation, true);
+    window.removeEventListener('deviceorientation', _handleDeviceOrientation, true);
+    _orientationBound = false;
+    _deviceHeading = null;
+    _lastOrientationUpdateAt = 0;
 }
 
 function _smoothGpsDisplay(lat, lng, accuracy, force=false) {
@@ -3150,7 +3200,7 @@ function _setGpsUi(state, detail='') {
 
 function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, speed=null) {
     const previousRaw = myLatLng;
-    const normalizedHeading = _normalizeHeading(heading);
+    const normalizedHeading = _normalizeHeading(heading) ?? _normalizeHeading(_deviceHeading);
     let displayHeading = normalizedHeading;
     if (displayHeading === null && previousRaw) {
         const movedRaw = haversine(previousRaw.lat, previousRaw.lng, lat, lng);
@@ -3276,6 +3326,7 @@ function stopGps() {
     gpsActive = false; gpsTracking = false; gpsCoarseShown = false; gpsFlyDone = false;
     gpsToastShown = false; gpsFineToastShown = false;
     _clearGpsResumeTimer();
+    _stopOrientationTracking();
     if(btnGps) _setGpsUi('');
     _lastGpsLat = null; _lastGpsLng = null;
     _lastGpsAccuracy = Infinity;
@@ -3285,7 +3336,7 @@ function stopGps() {
 }
 
 // btnGps: กดครั้งที่ 1 = เปิด GPS + เปิด tracking, กดครั้งที่ 2 = กล้องบินไปตำแหน่ง + เปิด tracking อีกครั้ง
-if(btnGps) btnGps.onclick = () => {
+if(btnGps) btnGps.onclick = async () => {
     if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS', true); return; }
     if (gpsActive && myLocationMarker) {
         // toggle tracking: ถ้า tracking อยู่ → บินไปตำแหน่ง, ถ้าไม่ → เปิด tracking
@@ -3295,6 +3346,7 @@ if(btnGps) btnGps.onclick = () => {
         const ll = myLocationMarker.getLatLng();
         _smoothFollow(ll.lat, ll.lng, _lastGpsAccuracy, true);
         showToast('GPS tracking เปิดอยู่');
+        await _ensureOrientationTracking();
         return;
     }
     stopGps();
@@ -3303,6 +3355,7 @@ if(btnGps) btnGps.onclick = () => {
     _lastGpsAccuracy = Infinity;
     _setGpsUi('gps-searching');
     showToast('กำลังหาตำแหน่ง...');
+    await _ensureOrientationTracking();
     navigator.geolocation.getCurrentPosition(
         pos => {
             if (!gpsActive) return;
