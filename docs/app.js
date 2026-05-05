@@ -3164,9 +3164,6 @@ map.on('zoomstart', () => {
     }
     map.getContainer().classList.add('is-gesture-zooming');
     map.getContainer().classList.remove('show-mobile-marker-labels');
-    if (_individualMarkersLayer && map.hasLayer(_individualMarkersLayer)) {
-        map.removeLayer(_individualMarkersLayer);
-    }
     _updateMapDebugOverlay();
 });
 map.on('zoomend', () => {
@@ -5829,6 +5826,7 @@ html.is-mobile-map .bt-field-marker-core { box-shadow: 0 0 0 1px oklch(12% 0.025
 html.is-mobile-map .bt-field-marker-ring,
 html.is-mobile-map .bt-field-marker-label,
 html.is-mobile-map #map.is-gesture-zooming .leaflet-tooltip { display: none !important; }
+html.is-mobile-map #map.is-gesture-zooming .bt-field-marker { filter: none !important; }
 html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label { display: grid !important; top: 20px !important; min-width: 72px !important; max-width: 128px !important; padding: 4px 6px 5px !important; gap: 2px !important; background: oklch(13% 0.026 260 / 0.72) !important; border: 1px solid oklch(86% 0.07 230 / 0.18) !important; font-size: 9px !important; opacity: 0.88 !important; transform: translateX(-50%) translateY(0) !important; box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important; transition: none !important; }
 html.is-mobile-map .bt-marker-name,
 html.is-mobile-map .bt-marker-area { display: block !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }

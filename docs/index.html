@@ -3363,6 +3363,10 @@
             display: none !important;
         }
 
+        html.is-mobile-map #map.is-gesture-zooming .bt-field-marker {
+            filter: none !important;
+        }
+
         html.is-mobile-map #map.show-mobile-marker-labels .bt-field-marker-label {
             display: grid !important;
             top: 20px;
@@ -3821,10 +3825,15 @@
         /* ════════════════════════════════════════
            PERFORMANCE
         ════════════════════════════════════════ */
-        .leaflet-map-pane,
-        .leaflet-tile-pane,
-        .leaflet-overlay-pane {
+        .leaflet-map-pane {
             will-change: transform;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .leaflet-tile,
+        .leaflet-marker-icon {
+            backface-visibility: hidden;
         }
 
         .info-panel {
