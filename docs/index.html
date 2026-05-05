@@ -975,6 +975,13 @@
             animation: gps-track-pulse 2s ease-in-out infinite;
         }
 
+        .map-btn.gps-compass {
+            color: var(--gn);
+            background: var(--gn-d);
+            border-color: var(--gn-b);
+            box-shadow: 0 0 0 2px var(--gn-b), var(--shadow-md);
+        }
+
         .map-btn#btnGps[data-gps-state]:not([data-gps-state=""])::after {
             content: attr(data-gps-state);
             position: absolute;

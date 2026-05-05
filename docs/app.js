@@ -896,6 +896,7 @@ let nearbyMode = false, nearbyRadius = 2000;
 let gpsWatcher = null, gpsCoarseShown = false, gpsFlyDone = false;
 let gpsActive = false, gpsToastShown = false, gpsFineToastShown = false;
 let gpsTracking = false;
+let gpsMode = 'off';
 let _lastGpsLat = null, _lastGpsLng = null;
 
 const isMobile = () => /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 600;
@@ -3189,13 +3190,48 @@ function _smoothFollow(lat, lng, accuracy=0, force=false) {
 
 function _setGpsUi(state, detail='') {
     if (!btnGps) return;
-    btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking', 'gps-paused');
+    btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking', 'gps-paused', 'gps-compass');
     btnGps.dataset.gpsState = '';
     if (state) btnGps.classList.add(state);
     if (state === 'gps-searching') btnGps.dataset.gpsState = 'หา GPS';
     if (state === 'gps-tracking') btnGps.dataset.gpsState = detail || 'ติดตาม';
+    if (state === 'gps-compass') btnGps.dataset.gpsState = detail || 'เข็มทิศ';
     if (state === 'gps-paused') btnGps.dataset.gpsState = 'หยุดตาม';
     if (state === 'gps-found') btnGps.dataset.gpsState = detail || 'พร้อม';
+}
+
+async function _setGpsMode(mode, detail='') {
+    gpsMode = mode;
+    gpsTracking = mode === 'follow' || mode === 'compass';
+    _clearGpsResumeTimer();
+    if (!btnGps) return;
+    if (mode === 'off') {
+        btnGps.title = 'ตำแหน่งของฉัน';
+        _setGpsUi('');
+    } else if (mode === 'free') {
+        btnGps.title = 'โหมดอิสระ (แตะเพื่อกลับไปติดตาม)';
+        _setGpsUi('gps-paused', detail || 'อิสระ');
+    } else if (mode === 'compass') {
+        btnGps.title = 'โหมดเข็มทิศ';
+        await _ensureOrientationTracking();
+        _setGpsUi('gps-compass', detail || 'เข็มทิศ');
+    } else {
+        btnGps.title = 'ติดตามตำแหน่งของฉัน';
+        _setGpsUi('gps-tracking', detail || 'ติดตาม');
+    }
+}
+
+async function _cycleGpsMode() {
+    if (gpsMode === 'follow') return _setGpsMode('compass');
+    if (gpsMode === 'compass') return _setGpsMode('free');
+    return _setGpsMode('follow');
+}
+
+function _updateGpsModeAccuracy(accuracy) {
+    const detail = Number.isFinite(Number(accuracy)) ? `±${Math.round(accuracy)}ม.` : '';
+    if (gpsMode === 'compass') _setGpsUi('gps-compass', detail || 'เข็มทิศ');
+    else if (gpsMode === 'free') _setGpsUi('gps-paused', 'อิสระ');
+    else if (gpsMode === 'follow') _setGpsUi('gps-tracking', detail || 'ติดตาม');
 }
 
 function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, speed=null) {
@@ -3298,20 +3334,8 @@ map.on('zoomend', () => {
 
 if(btnGps){
 map.on('dragstart', () => {
-    if (gpsActive && gpsTracking) {
-        gpsTracking = false;
-        btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
-        _setGpsUi('gps-paused', 'พัก');
-        _clearGpsResumeTimer();
-        _gpsResumeTimer = setTimeout(() => {
-            _gpsResumeTimer = null;
-            if (!gpsActive || !myLocationMarker) return;
-            gpsTracking = true;
-            btnGps.title = 'ติดตามตำแหน่งของฉัน';
-            _setGpsUi('gps-tracking', _lastGpsAccuracy < Infinity ? `±${Math.round(_lastGpsAccuracy)}ม.` : 'ติดตาม');
-            const ll = myLocationMarker.getLatLng();
-            _smoothFollow(ll.lat, ll.lng, _lastGpsAccuracy, true);
-        }, 8000);
+    if (gpsActive && gpsMode !== 'free') {
+        _setGpsMode('free', 'อิสระ');
     }
 });
 }
@@ -3319,6 +3343,7 @@ map.on('dragstart', () => {
 function stopGps() {
     if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
     gpsActive = false; gpsTracking = false; gpsCoarseShown = false; gpsFlyDone = false;
+    gpsMode = 'off';
     gpsToastShown = false; gpsFineToastShown = false;
     _clearGpsResumeTimer();
     _stopOrientationTracking();
@@ -3334,18 +3359,15 @@ function stopGps() {
 if(btnGps) btnGps.onclick = async () => {
     if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS', true); return; }
     if (gpsActive && myLocationMarker) {
-        // toggle tracking: ถ้า tracking อยู่ → บินไปตำแหน่ง, ถ้าไม่ → เปิด tracking
-        _clearGpsResumeTimer();
-        gpsTracking = true;
-        _setGpsUi('gps-tracking');
+        await _cycleGpsMode();
         const ll = myLocationMarker.getLatLng();
-        _smoothFollow(ll.lat, ll.lng, _lastGpsAccuracy, true);
-        showToast('GPS tracking เปิดอยู่');
-        await _ensureOrientationTracking();
+        if (gpsTracking) _smoothFollow(ll.lat, ll.lng, _lastGpsAccuracy, true);
+        showToast(gpsMode === 'compass' ? 'GPS: โหมดเข็มทิศ' : gpsMode === 'free' ? 'GPS: โหมดอิสระ' : 'GPS: ติดตามตำแหน่ง');
         return;
     }
     stopGps();
-    gpsActive = true; gpsTracking = true;
+    gpsActive = true;
+    await _setGpsMode('follow');
     _lastGpsPanAt = 0;
     _lastGpsAccuracy = Infinity;
     _setGpsUi('gps-searching');
@@ -3360,7 +3382,7 @@ if(btnGps) btnGps.onclick = async () => {
             const firstFollow = !gpsFlyDone;
             gpsFlyDone = true;
             updateGpsMarker(lat, lng, accuracy, firstFollow, heading, speed);
-            _setGpsUi('gps-tracking', `±${Math.round(accuracy)}ม.`);
+            _updateGpsModeAccuracy(accuracy);
             if (!gpsToastShown) {
                 gpsToastShown = true;
                 showToast(accuracy > 500 ? `📡 ±${Math.round(accuracy)}ม.` : `✅ พบตำแหน่ง ±${Math.round(accuracy)}ม.`, false, true);
@@ -3378,10 +3400,10 @@ if(btnGps) btnGps.onclick = async () => {
                     }
                     _lastGpsLat = lat2; _lastGpsLng = lng2; _lastGpsAccuracy = acc2;
                     updateGpsMarker(lat2, lng2, acc2, false, heading2, speed2);
-                    if (gpsTracking) _setGpsUi('gps-tracking', `±${Math.round(acc2)}ม.`);
+                    _updateGpsModeAccuracy(acc2);
                     if (!gpsFineToastShown && acc2 < 50) {
                         gpsFineToastShown = true;
-                        _setGpsUi('gps-tracking', `±${Math.round(acc2)}ม.`);
+                        _updateGpsModeAccuracy(acc2);
                         showToast(`แม่นยำ ±${Math.round(acc2)}ม.`, false, true);
                     }
                 },
