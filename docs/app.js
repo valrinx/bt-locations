@@ -4427,13 +4427,88 @@ window.showChangelogDetail = function(timestamp) {
     openInfoPanel('audit');
 };
 
-window.copyAuditCoords = function(lat, lng) {
+function _auditButtonFeedback(btn, label, duration = 1400) {
+    if(!btn) return;
+    const original = btn.dataset.originalText || btn.textContent;
+    btn.dataset.originalText = original;
+    btn.textContent = label;
+    btn.classList.add('is-confirmed');
+    window.clearTimeout(btn._auditFeedbackTimer);
+    btn._auditFeedbackTimer = window.setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('is-confirmed');
+    }, duration);
+}
+
+window.copyAuditCoords = function(lat, lng, btn) {
     fallbackCopy(`${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`);
+    _auditButtonFeedback(btn, 'คัดลอกแล้ว');
 };
 
-window.openAuditCoords = function(lat, lng) {
+window.openAuditCoords = function(lat, lng, btn) {
+    _auditButtonFeedback(btn, 'เปิดแล้ว', 900);
     window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
 };
+
+(function ensureAuditActionStyles(){
+    if(document.getElementById('auditActionStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'auditActionStyles';
+    style.textContent = `
+        .audit-action-btn {
+            position: relative;
+            overflow: hidden;
+            border: 0.5px solid var(--bd2);
+            background: var(--s2);
+            color: var(--tx2);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font: 700 10px/1.1 inherit;
+            cursor: pointer;
+            transition: transform 160ms cubic-bezier(0.22,1,0.36,1), background 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .audit-action-btn::after {
+            content: "";
+            position: absolute;
+            inset: 50% auto auto 50%;
+            width: 0;
+            height: 0;
+            border-radius: 999px;
+            background: currentColor;
+            opacity: 0;
+            transform: translate(-50%, -50%);
+        }
+        .audit-action-btn:active {
+            transform: scale(0.94);
+        }
+        .audit-action-btn:active::after {
+            animation: auditButtonRipple 520ms cubic-bezier(0.22,1,0.36,1);
+        }
+        .audit-action-btn.is-map {
+            border-color: var(--bl-b);
+            background: var(--bl-d);
+            color: var(--bl);
+        }
+        .audit-action-btn.is-confirmed {
+            border-color: var(--gn-b);
+            background: var(--gn-d);
+            color: var(--gn);
+            box-shadow: 0 0 0 3px rgba(46,204,144,0.12);
+            animation: auditButtonConfirm 420ms cubic-bezier(0.22,1,0.36,1);
+        }
+        @keyframes auditButtonRipple {
+            0% { width: 0; height: 0; opacity: 0.24; }
+            100% { width: 52px; height: 52px; opacity: 0; }
+        }
+        @keyframes auditButtonConfirm {
+            0% { transform: scale(0.94); }
+            60% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    `;
+    document.head.appendChild(style);
+})();
 
 function _auditField(label, value) {
     const text = value === undefined || value === null || value === '' ? 'ไม่ระบุ' : value;
@@ -4637,8 +4712,8 @@ function openInfoPanel(mode){
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
                             <div style="font-size:10px;font-weight:800;color:var(--tx3);letter-spacing:.04em;text-transform:uppercase;">พิกัด</div>
                             ${hasCoords ? `<div style="display:flex;gap:6px;">
-                                <button type="button" onclick="copyAuditCoords(${lat},${lng})" style="border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx2);border-radius:8px;padding:5px 8px;font-size:10px;">คัดลอก</button>
-                                <button type="button" onclick="openAuditCoords(${lat},${lng})" style="border:0.5px solid var(--bl-b);background:var(--bl-d);color:var(--bl);border-radius:8px;padding:5px 8px;font-size:10px;">แผนที่</button>
+                                <button type="button" class="audit-action-btn" onclick="copyAuditCoords(${lat},${lng},this)">คัดลอก</button>
+                                <button type="button" class="audit-action-btn is-map" onclick="openAuditCoords(${lat},${lng},this)">แผนที่</button>
                             </div>` : ''}
                         </div>
                         ${_auditField('Latitude', hasCoords ? lat.toFixed(6) : '')}
