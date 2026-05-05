@@ -4,6 +4,24 @@
 
 Mobile map performance is the active blocker. The app has about 1,600+ location points, so the map must never make the phone animate every individual DOM marker during pinch zoom.
 
+## Large File Strategy
+
+The current app is intentionally being split gradually. Avoid one large rewrite because `app.js` and `index.html` still share many globals and inline event handlers.
+
+- Keep each refactor small, shippable, and reversible.
+- Reduce startup work before moving code: lazy-load large data, avoid repeated DOM rebuilds, and gate mobile-only handlers.
+- Split pure helpers first because they have the lowest dependency risk.
+- Split CSS and UI panels after mobile behavior is stable.
+- Keep `locations.js` as a fallback snapshot, but do not load it on every startup.
+- Keep `all_locations.json` as the source snapshot.
+
+### Completed Refactor Safety Steps
+
+- Added map-only update path for pan/zoom.
+- Prevented duplicate long-press handlers on mobile.
+- Optimized sidebar counts to avoid repeated full-array filters.
+- Lazy-load `locations.js` only when no local location data exists.
+
 ## Phase 1: Mobile Map Stability
 
 - Keep district clusters at broad zoom levels.

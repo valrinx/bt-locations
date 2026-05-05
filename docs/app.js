@@ -835,13 +835,11 @@ function getDataQualityReport(data = locations) {
     };
 }
 
-// Note: DEFAULT_LOCATIONS is declared in locations.js which loads before app.js
 let locations = (() => {
     try { 
         const s = localStorage.getItem(STORAGE_KEY); 
-        // Use DEFAULT_LOCATIONS from locations.js, or empty array if not available
-        const defaultData = (typeof DEFAULT_LOCATIONS !== 'undefined') ? DEFAULT_LOCATIONS : [];
-        const raw = s ? JSON.parse(s) : JSON.parse(JSON.stringify(defaultData)); 
+        if (!s) return [];
+        const raw = JSON.parse(s); 
         return raw.map(normalizeLocation); 
     }
     catch(e) { 
@@ -849,8 +847,31 @@ let locations = (() => {
         return []; // Return empty array as safe fallback
     }
 })();
-// Auto-clean DMS names from localStorage data on load
-(function(){
+
+function loadDefaultLocationsScript() {
+    if (typeof DEFAULT_LOCATIONS !== 'undefined') return Promise.resolve(true);
+    return new Promise(resolve => {
+        const script = document.createElement('script');
+        script.src = `locations.js?v=${encodeURIComponent(APP_VERSION)}`;
+        script.onload = () => resolve(typeof DEFAULT_LOCATIONS !== 'undefined');
+        script.onerror = () => {
+            console.warn('[BT] locations.js fallback failed to load');
+            resolve(false);
+        };
+        document.head.appendChild(script);
+    });
+}
+
+async function ensureDefaultLocationsLoaded() {
+    if (locations.length > 0) return;
+    const loaded = await loadDefaultLocationsScript();
+    if (!loaded || typeof DEFAULT_LOCATIONS === 'undefined' || !Array.isArray(DEFAULT_LOCATIONS)) return;
+    locations = JSON.parse(JSON.stringify(DEFAULT_LOCATIONS)).map(normalizeLocation);
+    cleanLoadedLocationNames(false);
+    rebuildIndexMap();
+}
+
+function cleanLoadedLocationNames(persist = true) {
     if(!Array.isArray(locations) || locations.length === 0) return;
     let dirty=false;
     locations.forEach(l=>{
@@ -858,8 +879,11 @@ let locations = (() => {
         const c=_cleanDMSName(l.name);
         if(c!==l.name){l.name=c||'';dirty=true;}
     });
-    if(dirty){localStorage.setItem(STORAGE_KEY,JSON.stringify(locations));}
-})();
+    if(dirty && persist){localStorage.setItem(STORAGE_KEY,JSON.stringify(locations));}
+}
+
+// Auto-clean DMS names from localStorage data on load
+cleanLoadedLocationNames();
 
 let addMode = false, editingIndex = -1;
 let filterList = '', filterCity = '';
@@ -1939,6 +1963,7 @@ async function initApp(){
         // 1. Data already loaded from localStorage at module init (line ~720)
         // If no localStorage data, locations will be empty and we use sample data
         setLoader('กำลังเริ่มต้น...');
+        await ensureDefaultLocationsLoaded();
         if(locations.length === 0) {
             console.log('[BT] No locations, loading sample data');
             loadSampleData();
