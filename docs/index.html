@@ -5997,6 +5997,35 @@
                 });
         }
 
+        function animateStatsView(root) {
+            if (!root) return;
+            const easeOut = t => 1 - Math.pow(1 - t, 4);
+            root.querySelectorAll('[data-count-up]').forEach(el => {
+                const target = Number(el.dataset.countUp || 0);
+                const suffix = el.dataset.suffix || '';
+                const duration = Number(el.dataset.duration || 720);
+                const start = performance.now();
+                el.textContent = '0' + suffix;
+                function tick(now) {
+                    const p = Math.min(1, (now - start) / duration);
+                    el.textContent = Math.round(target * easeOut(p)).toLocaleString('th-TH') + suffix;
+                    if (p < 1) requestAnimationFrame(tick);
+                }
+                requestAnimationFrame(tick);
+            });
+            root.querySelectorAll('.stats-pie-slice').forEach((slice, i) => {
+                const finalDash = slice.dataset.dash;
+                const finalOffset = slice.dataset.offset;
+                slice.style.strokeDasharray = '0 100';
+                slice.style.strokeDashoffset = '0';
+                slice.style.transition = `stroke-dasharray 760ms cubic-bezier(0.22,1,0.36,1) ${i * 65}ms, stroke-dashoffset 760ms cubic-bezier(0.22,1,0.36,1) ${i * 65}ms`;
+                requestAnimationFrame(() => {
+                    slice.style.strokeDasharray = finalDash;
+                    slice.style.strokeDashoffset = finalOffset;
+                });
+            });
+        }
+
         // 2. Global View Rendering Functions
         window.renderStatsView = function () {
             console.log('Rendering stats view...');
@@ -6036,15 +6065,15 @@
                 <!-- Summary Cards -->
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
                     <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
-                        <div style="font-size:24px;font-weight:700;color:var(--bl);">${locs.length}</div>
+                        <div data-count-up="${locs.length}" style="font-size:24px;font-weight:700;color:var(--bl);">0</div>
                         <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">จุดทั้งหมด</div>
                     </div>
                     <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
-                        <div style="font-size:24px;font-weight:700;color:var(--bl);">${Object.keys(lists).length}</div>
+                        <div data-count-up="${Object.keys(lists).length}" style="font-size:24px;font-weight:700;color:var(--bl);">0</div>
                         <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">รายการ</div>
                     </div>
                     <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
-                        <div style="font-size:24px;font-weight:700;color:var(--bl);">${Object.keys(cities).length}</div>
+                        <div data-count-up="${Object.keys(cities).length}" style="font-size:24px;font-weight:700;color:var(--bl);">0</div>
                         <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">เขต</div>
                     </div>
                 </div>
@@ -6066,7 +6095,7 @@
                                         <div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
                                         <div style="font-size:10px;color:var(--tx3);">${c} จุด · ${Math.round(c/locs.length*100)}%</div>
                                     </div>
-                                    <div style="font-size:13px;font-weight:600;color:var(--bl);">${c}</div>
+                                    <div data-count-up="${c}" style="font-size:13px;font-weight:600;color:var(--bl);">0</div>
                                 </div>
                             `).join('')}
                             ${others.length > 0 ? `
@@ -6076,7 +6105,7 @@
                                         <div style="font-size:12px;color:var(--tx);font-weight:500;">อื่นๆ ${others.length} รายการ</div>
                                         <div style="font-size:10px;color:var(--tx3);">${othersCount} จุด · ${Math.round(othersCount/locs.length*100)}%</div>
                                     </div>
-                                    <div style="font-size:13px;font-weight:600;color:var(--bl);">${othersCount}</div>
+                                    <div data-count-up="${othersCount}" style="font-size:13px;font-weight:600;color:var(--bl);">0</div>
                                     <div style="font-size:12px;color:var(--tx3);">›</div>
                                 </div>
                             ` : ''}
@@ -6093,8 +6122,8 @@
                                         const dashArray = `${percentage * 75} ${100 - percentage * 75}`;
                                         const dashOffset = -accumulated * 75;
                                         accumulated += percentage;
-                                        return `<circle cx="50" cy="50" r="25" fill="none" stroke="${getColor(n)}" stroke-width="50" stroke-dasharray="${dashArray}" stroke-dashoffset="${dashOffset}" />`;
-                                    }).join('') + (othersCount > 0 ? `<circle cx="50" cy="50" r="25" fill="none" stroke="hsl(260, 60%, 50%)" stroke-width="50" stroke-dasharray="${othersCount/total * 75} ${100 - othersCount/total * 75}" stroke-dashoffset="${-accumulated * 75}" />` : '');
+                                        return `<circle class="stats-pie-slice" cx="50" cy="50" r="25" fill="none" stroke="${getColor(n)}" stroke-width="50" data-dash="${dashArray}" data-offset="${dashOffset}" />`;
+                                    }).join('') + (othersCount > 0 ? `<circle class="stats-pie-slice" cx="50" cy="50" r="25" fill="none" stroke="hsl(260, 60%, 50%)" stroke-width="50" data-dash="${othersCount/total * 75} ${100 - othersCount/total * 75}" data-offset="${-accumulated * 75}" />` : '');
                                 })()}
                             </svg>
                         </div>
@@ -6115,7 +6144,7 @@
                                     <div style="flex:1;min-width:0;">
                                         <div style="font-size:11px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
                                     </div>
-                                    <div style="font-size:11px;font-weight:600;color:var(--bl);">${c}</div>
+                                    <div data-count-up="${c}" style="font-size:11px;font-weight:600;color:var(--bl);">0</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -6136,6 +6165,7 @@
             `;
 
             svInner.innerHTML = html;
+            animateStatsView(svInner);
             
             // Add click handlers for show-all buttons
             svInner.querySelector('.show-all-lists')?.addEventListener('click', function() {
