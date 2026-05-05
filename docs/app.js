@@ -1113,6 +1113,8 @@ let _tooltipPermanentState = null;
 let _visibleMarkerIdxs = new Set();
 let _mobileZoomRestoreTimer = null;
 let _lastMarkerRenderMs = 0;
+let _mapDebugOverlayEnabled = localStorage.getItem('bt_map_debug_overlay') === '1';
+let _mapDebugOverlay = null;
 
 function _getDistrictName(loc) {
     return loc.district || loc.city || loc.list || 'ไม่ระบุเขต';
@@ -1176,6 +1178,52 @@ function _updateMobileMarkerLabels(count) {
     const mapEl = map.getContainer();
     const canShow = map.getZoom() >= 14 && count <= 90 && !mapEl.classList.contains('is-gesture-zooming');
     mapEl.classList.toggle('show-mobile-marker-labels', canShow);
+}
+
+function _ensureMapDebugOverlay() {
+    if (_mapDebugOverlay || !_mapDebugOverlayEnabled) return _mapDebugOverlay;
+    const el = document.createElement('div');
+    el.id = 'mapDebugOverlay';
+    el.style.cssText = 'position:absolute;left:10px;bottom:calc(var(--mob-above-nav, 0px) + 10px);z-index:260;display:grid;grid-template-columns:auto auto;gap:3px 10px;padding:8px 10px;border-radius:10px;background:rgba(9,13,20,0.84);border:1px solid rgba(91,143,255,0.28);box-shadow:0 8px 24px rgba(0,0,0,0.32);color:var(--tx);font:700 10px/1.25 monospace;pointer-events:none;backdrop-filter:blur(6px);';
+    map.getContainer().appendChild(el);
+    _mapDebugOverlay = el;
+    return el;
+}
+
+function _updateMapDebugOverlay() {
+    if (!_mapDebugOverlayEnabled) {
+        if (_mapDebugOverlay) {
+            _mapDebugOverlay.remove();
+            _mapDebugOverlay = null;
+        }
+        return;
+    }
+    const el = _ensureMapDebugOverlay();
+    if (!el) return;
+    const stats = {
+        zoom: map.getZoom(),
+        mode: _getMarkerRenderMode(),
+        visible: _visibleMarkerIdxs.size,
+        layer: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
+        limit: _getMobileMarkerLimit(),
+        ms: _lastMarkerRenderMs,
+        zooming: map.getContainer().classList.contains('is-gesture-zooming')
+    };
+    el.innerHTML = `
+        <span style="color:var(--tx3);">zoom</span><span>${stats.zoom}</span>
+        <span style="color:var(--tx3);">mode</span><span>${_escapeHtml(stats.mode)}</span>
+        <span style="color:var(--tx3);">markers</span><span>${stats.visible}/${stats.layer}</span>
+        <span style="color:var(--tx3);">limit</span><span>${stats.limit === Infinity ? '∞' : stats.limit}</span>
+        <span style="color:var(--tx3);">render</span><span>${stats.ms}ms</span>
+        <span style="color:var(--tx3);">gesture</span><span style="color:${stats.zooming ? 'var(--am)' : 'var(--gn)'}">${stats.zooming ? 'yes' : 'no'}</span>
+    `;
+}
+
+function setMapDebugOverlay(enabled) {
+    _mapDebugOverlayEnabled = !!enabled;
+    localStorage.setItem('bt_map_debug_overlay', _mapDebugOverlayEnabled ? '1' : '0');
+    _updateMapDebugOverlay();
+    showToast(_mapDebugOverlayEnabled ? 'เปิด Map debug overlay' : 'ปิด Map debug overlay', false, true);
 }
 
 function _getScopedFiltered() {
@@ -1481,6 +1529,7 @@ function update() {
     }
     _renderSidebar();
     _updateMobChips(); // Sync mobile chip state
+    _updateMapDebugOverlay();
 }
 
 // ════════════════════════════════════════════
@@ -2926,6 +2975,7 @@ map.on('zoomstart', () => {
     if (_individualMarkersLayer && map.hasLayer(_individualMarkersLayer)) {
         map.removeLayer(_individualMarkersLayer);
     }
+    _updateMapDebugOverlay();
 });
 map.on('zoomend', () => {
     if (!_mobile) return;
@@ -2935,6 +2985,7 @@ map.on('zoomend', () => {
         _mobileZoomRestoreTimer = null;
         update();
     }, 60);
+    _updateMapDebugOverlay();
 });
 
 if(btnGps){
@@ -4778,6 +4829,7 @@ function openInfoPanel(mode){
                 ${_menuGrid('ดูข้อมูล',[
                     ['📊','สถิติ','omStatsM',''],
                     ['📝','Changelog','omChangelogM',''],
+                    ['📈',_mapDebugOverlayEnabled?'ปิด Map Debug':'เปิด Map Debug','omMapDebugM',''],
                 ])}
                 ${_menuGrid('เส้นทาง',[
                     ['🗺️','เลือกจุดเอง','omManualRouteM',''],
@@ -4788,6 +4840,7 @@ function openInfoPanel(mode){
         b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
         b('omStatsM',   ()=>openInfoPanel('stats'));
         b('omChangelogM',()=>openInfoPanel('changelog'));
+        b('omMapDebugM',()=>{closeInfo();setMapDebugOverlay(!_mapDebugOverlayEnabled);});
         b('omSyncM',    ()=>{closeInfo();doSync(false);});
         b('omUndoM',    doUndo);
         b('omRedoM',    doRedo);
@@ -5854,6 +5907,7 @@ window.btDebug = {
             mobileZooming: map.getContainer().classList.contains('is-gesture-zooming')
         };
     },
+    toggleMapOverlay: (enabled)=>setMapDebugOverlay(enabled === undefined ? !_mapDebugOverlayEnabled : enabled),
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
