@@ -3210,13 +3210,8 @@ function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, sp
 
     const display = _smoothGpsDisplay(lat, lng, accuracy, forceFollow);
     if (myLocationCircle) {
-        myLocationCircle.setLatLng([display.lat, display.lng]);
-        myLocationCircle.setRadius(Math.min(accuracy, 500));
-    } else {
-        myLocationCircle = L.circle([display.lat, display.lng], {
-            radius: Math.min(accuracy, 500), color:'#2563eb',
-            fillColor:'#3b82f6', fillOpacity:0.08, weight:1.25, className:'gps-accuracy-circle'
-        }).addTo(map);
+        map.removeLayer(myLocationCircle);
+        myLocationCircle = null;
     }
     const icon = _createGpsIcon(displayHeading);
     const headingBucket = displayHeading === null ? 'none' : Math.round(displayHeading / 5) * 5 % 360;
