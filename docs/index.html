@@ -4352,11 +4352,13 @@
                     </div>
                 </div>
                 <div class="tb-center">
-                    <div class="search-box">
-                        <span class="si">⌕</span>
-                        <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
-                        <span class="kbd">⌘K</span>
-                    </div>
+                    <div class="search-box" id="searchBox">
+    <span class="si">⌕</span>
+    <input type="text" id="search" placeholder="ค้นหาจุด, เมือง, list..." autocomplete="off">
+    <button id="btnClearSearch" style="display:none;background:none;border:none;color:var(--tx2);cursor:pointer;padding:0 4px;">✕</button>
+    <span class="kbd">⌘K</span>
+    <div id="searchResults" style="position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--s2);border:0.5px solid var(--bd2);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:var(--z-controls);max-height:320px;overflow-y:auto;"></div>
+</div>
                 </div>
                 <div class="tb-right">
                     <div class="live-p" id="topSyncBadge">
