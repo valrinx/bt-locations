@@ -3192,6 +3192,7 @@ function _setGpsUi(state, detail='') {
     if (!btnGps) return;
     btnGps.classList.remove('gps-searching', 'gps-found', 'gps-tracking', 'gps-paused', 'gps-compass');
     btnGps.dataset.gpsState = '';
+    btnGps.dataset.gpsMode = gpsMode || 'off';
     if (state) btnGps.classList.add(state);
     if (state === 'gps-searching') btnGps.dataset.gpsState = 'หา GPS';
     if (state === 'gps-tracking') btnGps.dataset.gpsState = detail || 'ติดตาม';
@@ -3228,7 +3229,7 @@ async function _cycleGpsMode() {
 }
 
 function _updateGpsModeAccuracy(accuracy) {
-    const detail = Number.isFinite(Number(accuracy)) ? `±${Math.round(accuracy)}ม.` : '';
+    const detail = Number.isFinite(Number(accuracy)) ? `${gpsMode === 'compass' ? 'เข็มทิศ ' : ''}±${Math.round(accuracy)}ม.` : '';
     if (gpsMode === 'compass') _setGpsUi('gps-compass', detail || 'เข็มทิศ');
     else if (gpsMode === 'free') _setGpsUi('gps-paused', 'อิสระ');
     else if (gpsMode === 'follow') _setGpsUi('gps-tracking', detail || 'ติดตาม');
@@ -6272,6 +6273,19 @@ window.btDebug = {
             lastUpdateKind: _lastUpdateKind,
             mapUpdateQueued: !!_mapOnlyUpdateRaf,
             mobileZooming: map.getContainer().classList.contains('is-gesture-zooming')
+        };
+    },
+    get gps() {
+        return {
+            active: gpsActive,
+            mode: gpsMode,
+            tracking: gpsTracking,
+            accuracy: _lastGpsAccuracy < Infinity ? Math.round(_lastGpsAccuracy) : null,
+            heading: _lastGpsHeading === null ? null : Math.round(_lastGpsHeading),
+            deviceHeading: _deviceHeading === null ? null : Math.round(_deviceHeading),
+            orientationBound: _orientationBound,
+            hasMarker: !!myLocationMarker,
+            position: myLatLng
         };
     },
     toggleMapOverlay: (enabled)=>setMapDebugOverlay(enabled === undefined ? !_mapDebugOverlayEnabled : enabled),

@@ -982,6 +982,14 @@
             box-shadow: 0 0 0 2px var(--gn-b), var(--shadow-md);
         }
 
+        .map-btn#btnGps[data-gps-mode="free"] svg {
+            opacity: 0.62;
+        }
+
+        .map-btn#btnGps[data-gps-mode="compass"] svg {
+            transform: rotate(45deg);
+        }
+
         .map-btn#btnGps[data-gps-state]:not([data-gps-state=""])::after {
             content: attr(data-gps-state);
             position: absolute;
