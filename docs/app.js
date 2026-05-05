@@ -207,7 +207,7 @@ function _renderMobDrawer(){
     let listHtml = `<div class="fi ${!filterList?'on':''}" onclick="setFilterList('');closeMobDrawer()"><div class="fdot" style="background:#5b8fff"></div><span class="fn">ทั้งหมด</span><span class="fc">${locations.length}</span></div>`;
     lists.forEach(([name,count],i)=>{
         const col=colorPalette[i % colorPalette.length];
-        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}')";closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('list','${name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button></div>`;
+        listHtml += `<div class="fi ${filterList===name?'on':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="fdot" style="background:${col}"></div><span class="fn">${name}</span><span class="fc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('list','${name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button></div>`;
     });
     listContainer.innerHTML = listHtml;
     
@@ -217,7 +217,7 @@ function _renderMobDrawer(){
     let cityHtml = '';
     cities.forEach(([name,count],i)=>{
         const col=colorPalette[i % colorPalette.length];
-        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}')";closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('city','${name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button></div>`;
+        cityHtml += `<div class="ci ${filterCity===name?'on':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}');closeMobDrawer()"><div class="cpip" style="background:${col}"></div><span class="cn">${name}</span><span class="cc">${count}</span><button class="fl-edit" onclick="event.stopPropagation();closeMobDrawer();openEditGroup('city','${name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-pen"></i></button></div>`;
     });
     cityContainer.innerHTML = cityHtml;
 }
@@ -227,14 +227,20 @@ function _renderSidebar(){
     const cityContainer = document.getElementById('cityContainer');
     if(!listContainer || !cityContainer) { _renderMobDrawer(); return; }
     
-    const lists = [...new Set(locations.map(l=>l.list))].filter(Boolean).sort();
-    const cities = [...new Set(locations.map(l=>l.city))].filter(Boolean).sort();
+    const listCounts = {};
+    const cityCounts = {};
+    locations.forEach(l => {
+        if (l.list) listCounts[l.list] = (listCounts[l.list] || 0) + 1;
+        if (l.city) cityCounts[l.city] = (cityCounts[l.city] || 0) + 1;
+    });
+    const lists = Object.keys(listCounts).sort();
+    const cities = Object.keys(cityCounts).sort();
     
     listContainer.innerHTML = lists.map(name =>
         `<div class="flist-item${filterList===name?' active':''}" onclick="setFilterList('${name.replace(/'/g,"\\'")}')">
             <span class="fl-dot" style="background:${getColor(name)}"></span>
             <span class="fl-name">${name}</span>
-            <span class="fl-count">${locations.filter(l=>l.list===name).length}</span>
+            <span class="fl-count">${listCounts[name]}</span>
             <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('list','${name.replace(/'/g,"\\'")}')"><i class='fa-solid fa-pen'></i></button>
         </div>`
     ).join('');
@@ -242,7 +248,7 @@ function _renderSidebar(){
     cityContainer.innerHTML = cities.map(name =>
         `<div class="clist-item${filterCity===name?' active':''}" onclick="setFilterCity('${name.replace(/'/g,"\\'")}')">
             <span class="fl-name">${name}</span>
-            <span class="fl-count">${locations.filter(l=>l.city===name).length}</span>
+            <span class="fl-count">${cityCounts[name]}</span>
             <button class="fl-edit" title="แก้ไข" onclick="event.stopPropagation();openEditGroup('city','${name.replace(/'/g,"\\'")}')"><i class='fa-solid fa-pen'></i></button>
         </div>`
     ).join('');
@@ -1590,11 +1596,16 @@ function invalidateCache() {
     invalidateMarkerCache();
 }
 
-function update() {
+function update(options = {}) {
+    const mapOnly = !!options.mapOnly;
     const filtered = getFiltered();
     const markerRenderStart = performance.now();
     renderMarkers(filtered);
     _lastMarkerRenderMs = Math.round((performance.now() - markerRenderStart) * 10) / 10;
+    if (mapOnly) {
+        _updateMapDebugOverlay();
+        return filtered;
+    }
     // render list panel เฉพาะเมื่อเปิดอยู่ และไม่ได้อยู่ใน route mode
     const _lp=document.getElementById('listPanel');
     if (_lp && _lp.classList.contains('open') && !routeMode) {
@@ -1611,6 +1622,7 @@ function update() {
     _renderSidebar();
     _updateMobChips(); // Sync mobile chip state
     _updateMapDebugOverlay();
+    return filtered;
 }
 
 // ════════════════════════════════════════════
@@ -3077,7 +3089,7 @@ map.on('zoomend', () => {
     const mode = _getMarkerRenderMode();
     if (mode !== _lastMarkerRenderMode) {
         _lastFilteredKey = null;
-        update();
+        update({ mapOnly: true });
     }
 });
 map.on('moveend', () => {
@@ -3085,7 +3097,7 @@ map.on('moveend', () => {
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
         _lastFilteredKey = null;
-        update();
+        update({ mapOnly: true });
     }
 });
 map.on('zoomstart', () => {
@@ -3107,7 +3119,7 @@ map.on('zoomend', () => {
     _lastFilteredKey = null;
     _mobileZoomRestoreTimer = setTimeout(() => {
         _mobileZoomRestoreTimer = null;
-        update();
+        update({ mapOnly: true });
     }, 60);
     _updateMapDebugOverlay();
 });
@@ -5677,6 +5689,7 @@ document.addEventListener('click',(e)=>{
 if (_mobile) {
     // Long-press on map → add location
     let _lpTimer=null, _lpStart=null;
+    window.__btMapLongPressBound = true;
     map.getContainer().addEventListener('touchstart', e=>{
         if (e.touches.length !== 1) return;
         _lpStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};

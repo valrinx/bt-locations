@@ -5648,6 +5648,8 @@
                     if (window.map && typeof window.map.on === 'function') {
                         clearInterval(_amInterval);
                         if (!on) return; // only bind events in mobile mode
+                        if (window.__btMapLongPressBound) return;
+                        window.__btMapLongPressBound = true;
                         var pressTimer;
                         window.map.on('mousedown touchstart', function () {
                             pressTimer = window.setTimeout(function () {
@@ -6393,12 +6395,15 @@
 
             if (!window.map || typeof window.map.on !== 'function') return;
 
-            // Long-press to Add
-            let pressTimer;
-            window.map.on('mousedown touchstart', (e) => {
-                pressTimer = window.setTimeout(() => document.getElementById('btAdd')?.click(), 800);
-            });
-            window.map.on('mouseup mousemove touchend touchmove', () => clearTimeout(pressTimer));
+            // Long-press is owned by app.js on real mobile. Bind once only for forced mobile dev mode.
+            if (!window.__btMapLongPressBound && document.body.classList.contains('force-mobile')) {
+                window.__btMapLongPressBound = true;
+                let pressTimer;
+                window.map.on('mousedown touchstart', (e) => {
+                    pressTimer = window.setTimeout(() => document.getElementById('btAdd')?.click(), 800);
+                });
+                window.map.on('mouseup mousemove touchend touchmove', () => clearTimeout(pressTimer));
+            }
 
             // Google Maps Nav Link Patch
             if (typeof window.showLocationDetails === 'function') {
