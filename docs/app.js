@@ -1096,13 +1096,17 @@ function pushUndo() { undoStack.push(JSON.stringify(locations)); if (undoStack.l
 // ════════════════════════════════════════════
 // MAP
 // ════════════════════════════════════════════
-const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 600;
+const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+    window.innerWidth < 768 ||
+    localStorage.getItem('bt_force_mobile_mode') === 'true' ||
+    document.body.classList.contains('force-mobile');
 if (_mobile) document.documentElement.classList.add('is-mobile-map');
 const map = L.map('map', {
     zoomControl: false,
     zoomAnimation: !_mobile,   // ปิดบน mobile เพื่อ performance
     fadeAnimation: !_mobile,   // ปิดบน mobile
     markerZoomAnimation: !_mobile,
+    inertia: !_mobile,
     preferCanvas: _mobile,     // Canvas renderer บน mobile — เร็วกว่า SVG
     zoomSnap: _mobile ? 1 : 0.25,
     zoomDelta: 1,
@@ -1116,9 +1120,9 @@ const map = L.map('map', {
 window.map = map;
 
 const _tileOpts = {
-    updateWhenIdle: _mobile,      // mobile: load tiles only after pan/zoom ends
-    updateWhenZooming: false,     // don't load mid-zoom
-    keepBuffer: _mobile ? 2 : 4, // fewer buffer tiles on mobile
+    updateWhenIdle: false,
+    updateWhenZooming: _mobile,
+    keepBuffer: _mobile ? 4 : 4,
 };
 const tileLayers = {
 'Street': L.tileLayer('https://maps.hereapi.com/v3/base/mc/{z}/{x}/{y}/png?style=explore.day&apiKey=XKsObVLJR-LAaRG13TU3ZUzKFFvC02D5uJpgVUPozkk', { attribution: '© HERE', maxZoom: 20, ..._tileOpts }),
