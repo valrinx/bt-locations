@@ -3055,6 +3055,7 @@ let _deviceHeading = null;
 let _orientationBound = false;
 let _orientationPermissionTried = false;
 let _lastOrientationUpdateAt = 0;
+let _lastGpsFixAt = 0;
 
 function _clearGpsResumeTimer() {
     if (_gpsResumeTimer) {
@@ -3113,7 +3114,7 @@ function _handleDeviceOrientation(event) {
     const now = Date.now();
     if (now - _lastOrientationUpdateAt < 120) return;
     _lastOrientationUpdateAt = now;
-    updateGpsMarker(myLatLng.lat, myLatLng.lng, _lastGpsAccuracy < Infinity ? _lastGpsAccuracy : 0, false, heading, null);
+    updateGpsMarker(myLatLng.lat, myLatLng.lng, _lastGpsAccuracy < Infinity ? _lastGpsAccuracy : 0, false, heading, null, false);
 }
 
 async function _ensureOrientationTracking() {
@@ -3199,6 +3200,7 @@ function _setGpsUi(state, detail='') {
     if (state === 'gps-compass') btnGps.dataset.gpsState = detail || 'เข็มทิศ';
     if (state === 'gps-paused') btnGps.dataset.gpsState = 'หยุดตาม';
     if (state === 'gps-found') btnGps.dataset.gpsState = detail || 'พร้อม';
+    _updateGpsStatusPanel(detail);
 }
 
 async function _setGpsMode(mode, detail='') {
@@ -3235,7 +3237,47 @@ function _updateGpsModeAccuracy(accuracy) {
     else if (gpsMode === 'follow') _setGpsUi('gps-tracking', detail || 'ติดตาม');
 }
 
-function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, speed=null) {
+function _gpsModeLabel(mode=gpsMode) {
+    if (mode === 'follow') return 'FOLLOW';
+    if (mode === 'compass') return 'COMPASS';
+    if (mode === 'free') return 'FREE';
+    return 'OFF';
+}
+
+function _gpsModeText(mode=gpsMode) {
+    if (mode === 'follow') return 'ติดตามตำแหน่ง';
+    if (mode === 'compass') return 'เข็มทิศ';
+    if (mode === 'free') return 'อิสระ';
+    return 'ยังไม่เปิดตำแหน่ง';
+}
+
+function _updateGpsStatusPanel(detail='') {
+    const panel = document.getElementById('mobGpsStatus');
+    if (!panel) return;
+    const modeEl = document.getElementById('mobGpsMode');
+    const detailEl = document.getElementById('mobGpsDetail');
+    panel.dataset.state = gpsMode || 'off';
+    if (modeEl) modeEl.textContent = _gpsModeLabel();
+    if (!detailEl) return;
+    if (!gpsActive) {
+        detailEl.textContent = 'ยังไม่เปิดตำแหน่ง';
+        return;
+    }
+    const parts = [_gpsModeText()];
+    if (_lastGpsAccuracy < Infinity) parts.push(`แม่นยำ ±${Math.round(_lastGpsAccuracy)}ม.`);
+    const heading = _lastGpsHeading === null ? _deviceHeading : _lastGpsHeading;
+    if (heading !== null) parts.push(`ทิศ ${Math.round(heading)}°`);
+    if (_lastGpsFixAt) {
+        const age = Math.max(0, Math.round((Date.now() - _lastGpsFixAt) / 1000));
+        parts.push(age < 3 ? 'อัปเดตเมื่อกี้' : `${age} วิที่แล้ว`);
+    } else if (detail) {
+        parts.push(detail);
+    }
+    detailEl.textContent = parts.join(' · ');
+}
+
+function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, speed=null, markFix=true) {
+    if (markFix) _lastGpsFixAt = Date.now();
     const previousRaw = myLatLng;
     const normalizedHeading = _normalizeHeading(heading) ?? _normalizeHeading(_deviceHeading);
     let displayHeading = normalizedHeading;
@@ -3273,6 +3315,7 @@ function updateGpsMarker(lat, lng, accuracy, forceFollow=false, heading=null, sp
         myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
     }
     _smoothFollow(display.lat, display.lng, accuracy, forceFollow);
+    _updateGpsStatusPanel();
     if (listSortMode==='near' || nearbyMode) update();
 }
 
@@ -3351,9 +3394,11 @@ function stopGps() {
     if(btnGps) _setGpsUi('');
     _lastGpsLat = null; _lastGpsLng = null;
     _lastGpsAccuracy = Infinity;
+    _lastGpsFixAt = 0;
     _gpsDisplayLatLng = null;
     _lastGpsHeading = null;
     _lastGpsIconHeadingBucket = null;
+    _updateGpsStatusPanel();
 }
 
 // btnGps: กดครั้งที่ 1 = เปิด GPS + เปิด tracking, กดครั้งที่ 2 = กล้องบินไปตำแหน่ง + เปิด tracking อีกครั้ง

@@ -9,6 +9,7 @@ Mobile-first stability, smoother map interaction, and Google Maps-style GPS trac
 Latest known commit before this handoff:
 
 - `b1cbe87 Expose GPS mode diagnostics`
+- `ed57786 Add project handoff worklog`
 
 ## What Is Done
 
@@ -26,6 +27,8 @@ Latest known commit before this handoff:
 - Added GPS follow mode cycling: `follow -> compass -> free -> follow`.
 - Added GPS diagnostics at `window.btDebug.gps`.
 - Added GPS track recording controls and export flow.
+- Added a mobile drawer GPS status strip with mode, accuracy, heading, and last update age.
+- Added an explicit mobile menu action to stop GPS and compass tracking.
 
 ## Mobile QA Checklist
 
@@ -41,6 +44,7 @@ Use this when testing on a real phone or mobile viewport:
 8. Check `window.btDebug.gps` in the console for mode, heading, accuracy, and marker state.
 9. Delete a location that was searched/selected and confirm the search pin disappears immediately.
 10. Open the Stat tab and confirm counters/charts animate once, then settle.
+11. Open Menu while GPS is active and confirm the GPS status strip changes between FOLLOW, COMPASS, FREE, and OFF.
 
 ## Known Caveats
 
@@ -63,11 +67,10 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 
 ## Next Recommended Work
 
-1. Add a tiny in-app GPS debug row showing mode, heading, and last update time for testers.
-2. Add a clear GPS stop/disable control in the mobile menu.
-3. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
-4. Start helper extraction from `app.js` with no behavior changes.
-5. Add a small deploy checklist that reminds testers to clear old service worker cache.
+1. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
+2. Start helper extraction from `app.js` with no behavior changes.
+3. Add a small deploy checklist that reminds testers to clear old service worker cache.
+4. Add screenshot-based mobile QA once browser automation is available in the current session.
 
 ## Useful Commands
 
@@ -82,4 +85,3 @@ Local server command that has worked in this workspace:
 ```powershell
 Start-Process -FilePath python -ArgumentList '-m','http.server','4173','--bind','127.0.0.1' -WorkingDirectory 'C:\Users\T\Documents\GitHub\bt-locations\docs' -WindowStyle Hidden
 ```
-

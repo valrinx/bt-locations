@@ -25,6 +25,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Lazy-load `locations.js` only when no local location data exists.
 - Batched map-only pan/zoom updates with `requestAnimationFrame`.
 - Documented the current mobile/GPS work and next steps in `WORKLOG_HANDOFF.md`.
+- Added a mobile drawer GPS status strip and explicit stop GPS action for field testing.
 
 ## Phase 1: Mobile Map Stability
 
