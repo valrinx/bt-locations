@@ -380,7 +380,9 @@ function _updateMobChips(){
 // Mobile search sync
 document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e)=>{
     const si = document.getElementById('search');
-    if(si) si.value = e.target.value; renderSearchResults();
+    if(si) si.value = e.target.value;
+    if(!e.target.value.trim()) _clearSearchMarker();
+    renderSearchResults();
     update();
 }, 150));
 
@@ -2329,6 +2331,16 @@ function _clearSearchMarkerIfDeleted(deleted) {
     const items = Array.isArray(deleted) ? deleted : [deleted];
     if (items.some(loc => _samePoint(loc, pin))) _clearSearchMarker();
 }
+function _pruneSearchMarkerForQuery() {
+    if (!_searchMarker || !searchInput) return;
+    const q = searchInput.value.trim();
+    if (!q) {
+        _clearSearchMarker();
+        return;
+    }
+    const coords = parseLatLng(q);
+    if (!coords || !_samePoint(coords, _searchMarker.getLatLng())) _clearSearchMarker();
+}
 // Inject pulse animation CSS
 (function(){const st=document.createElement('style');st.textContent='@keyframes searchPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}';document.head.appendChild(st);})();
 
@@ -2348,7 +2360,8 @@ searchInput.addEventListener('paste',e=>{
 
 function renderSearchResults() {
     const q=searchInput.value.toLowerCase().trim();
-    if(!q){searchResults.innerHTML='';return;}
+    _pruneSearchMarkerForQuery();
+    if(!q){searchResults.innerHTML='';searchResults.style.display='none';return;}
     let html='';
     const coords=parseLatLng(searchInput.value.trim());
     if(coords){
@@ -5919,6 +5932,7 @@ window.btDebug = {
         };
     },
     toggleMapOverlay: (enabled)=>setMapDebugOverlay(enabled === undefined ? !_mapDebugOverlayEnabled : enabled),
+    clearSearchPin: ()=>{_clearSearchMarker();showToast('ล้าง search pin แล้ว', false, true);},
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
