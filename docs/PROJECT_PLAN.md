@@ -21,6 +21,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Prevented duplicate long-press handlers on mobile.
 - Optimized sidebar counts to avoid repeated full-array filters.
 - Lazy-load `locations.js` only when no local location data exists.
+- Batched map-only pan/zoom updates with `requestAnimationFrame`.
 
 ## Phase 1: Mobile Map Stability
 

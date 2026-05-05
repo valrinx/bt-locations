@@ -1224,6 +1224,11 @@ let _tooltipPermanentState = null;
 let _visibleMarkerIdxs = new Set();
 let _mobileZoomRestoreTimer = null;
 let _lastMarkerRenderMs = 0;
+let _lastFullUpdateMs = 0;
+let _lastMapOnlyUpdateMs = 0;
+let _lastUpdateKind = 'init';
+let _mapOnlyUpdateRaf = null;
+let _pendingMapOnlyReason = '';
 let _mapDebugOverlayEnabled = localStorage.getItem('bt_map_debug_overlay') === '1';
 let _mapDebugOverlay = null;
 
@@ -1318,6 +1323,10 @@ function _updateMapDebugOverlay() {
         layer: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
         limit: _getMobileMarkerLimit(),
         ms: _lastMarkerRenderMs,
+        updateKind: _lastUpdateKind,
+        fullMs: _lastFullUpdateMs,
+        mapMs: _lastMapOnlyUpdateMs,
+        pending: !!_mapOnlyUpdateRaf,
         zooming: map.getContainer().classList.contains('is-gesture-zooming')
     };
     el.innerHTML = `
@@ -1326,6 +1335,9 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">markers</span><span>${stats.visible}/${stats.layer}</span>
         <span style="color:var(--tx3);">limit</span><span>${stats.limit === Infinity ? '∞' : stats.limit}</span>
         <span style="color:var(--tx3);">render</span><span>${stats.ms}ms</span>
+        <span style="color:var(--tx3);">update</span><span>${stats.updateKind}</span>
+        <span style="color:var(--tx3);">full/map</span><span>${stats.fullMs}/${stats.mapMs}ms</span>
+        <span style="color:var(--tx3);">queue</span><span style="color:${stats.pending ? 'var(--am)' : 'var(--gn)'}">${stats.pending ? 'yes' : 'no'}</span>
         <span style="color:var(--tx3);">gesture</span><span style="color:${stats.zooming ? 'var(--am)' : 'var(--gn)'}">${stats.zooming ? 'yes' : 'no'}</span>
     `;
 }
@@ -1620,13 +1632,31 @@ function invalidateCache() {
     invalidateMarkerCache();
 }
 
+function scheduleMapOnlyUpdate(reason = 'map') {
+    _lastFilteredKey = null;
+    _pendingMapOnlyReason = reason;
+    if (_mapOnlyUpdateRaf) {
+        _updateMapDebugOverlay();
+        return;
+    }
+    _mapOnlyUpdateRaf = requestAnimationFrame(() => {
+        _mapOnlyUpdateRaf = null;
+        update({ mapOnly: true, reason: _pendingMapOnlyReason });
+        _pendingMapOnlyReason = '';
+    });
+    _updateMapDebugOverlay();
+}
+
 function update(options = {}) {
     const mapOnly = !!options.mapOnly;
+    const updateStart = performance.now();
     const filtered = getFiltered();
     const markerRenderStart = performance.now();
     renderMarkers(filtered);
     _lastMarkerRenderMs = Math.round((performance.now() - markerRenderStart) * 10) / 10;
     if (mapOnly) {
+        _lastUpdateKind = options.reason ? `map:${options.reason}` : 'map';
+        _lastMapOnlyUpdateMs = Math.round((performance.now() - updateStart) * 10) / 10;
         _updateMapDebugOverlay();
         return filtered;
     }
@@ -1645,6 +1675,8 @@ function update(options = {}) {
     }
     _renderSidebar();
     _updateMobChips(); // Sync mobile chip state
+    _lastUpdateKind = 'full';
+    _lastFullUpdateMs = Math.round((performance.now() - updateStart) * 10) / 10;
     _updateMapDebugOverlay();
     return filtered;
 }
@@ -3113,16 +3145,14 @@ map.on('zoomend', () => {
     _updateTooltipVisibility();
     const mode = _getMarkerRenderMode();
     if (mode !== _lastMarkerRenderMode) {
-        _lastFilteredKey = null;
-        update({ mapOnly: true });
+        scheduleMapOnlyUpdate('zoom');
     }
 });
 map.on('moveend', () => {
     if (_mobile && map.getContainer().classList.contains('is-gesture-zooming')) return;
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
-        _lastFilteredKey = null;
-        update({ mapOnly: true });
+        scheduleMapOnlyUpdate('move');
     }
 });
 map.on('zoomstart', () => {
@@ -3141,10 +3171,9 @@ map.on('zoomstart', () => {
 map.on('zoomend', () => {
     if (!_mobile) return;
     map.getContainer().classList.remove('is-gesture-zooming');
-    _lastFilteredKey = null;
     _mobileZoomRestoreTimer = setTimeout(() => {
         _mobileZoomRestoreTimer = null;
-        update({ mapOnly: true });
+        scheduleMapOnlyUpdate('zoom');
     }, 60);
     _updateMapDebugOverlay();
 });
@@ -6087,6 +6116,10 @@ window.btDebug = {
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
             lastMarkerRenderMs: _lastMarkerRenderMs,
+            lastFullUpdateMs: _lastFullUpdateMs,
+            lastMapOnlyUpdateMs: _lastMapOnlyUpdateMs,
+            lastUpdateKind: _lastUpdateKind,
+            mapUpdateQueued: !!_mapOnlyUpdateRaf,
             mobileZooming: map.getContainer().classList.contains('is-gesture-zooming')
         };
     },
