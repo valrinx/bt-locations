@@ -2238,7 +2238,7 @@ function renderSearchResults() {
     let html='';
     const coords=parseLatLng(searchInput.value.trim());
     if(coords){
-        html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});_showSearchMarker(${coords.lat},${coords.lng});document.getElementById('search').blur();">
+        html+=`<div class="search-result-item" onclick="map.flyTo([${coords.lat},${coords.lng}],16,{animate:true,duration:0.8});_showSearchMarker(${coords.lat},${coords.lng});document.getElementById('searchResults').style.display='none';">
             <div class="search-result-icon" style="background:var(--am);color:var(--bl)">🎯</div>
             <div class="search-result-text">
                 <div class="search-result-name">ไปที่พิกัด ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}</div>
@@ -2250,7 +2250,7 @@ function renderSearchResults() {
     html+=matches.map(loc=>{
         const color=getColor(loc.list);
         const idx=getLocIndex(loc);
-        return `<div class="search-result-item" onclick="showPlaceCard(locations[${idx}],${idx});document.getElementById('search').blur();">
+        return `<div class="search-result-item" onclick="showPlaceCard(locations[${idx}],${idx});document.getElementById('search').blur();document.getElementById('searchResults').style.display='none';">
             <div class="search-result-icon" style="background:${color}20;color:${color}">📍</div>
             <div class="search-result-text">
                 <div class="search-result-name">${loc.name||'ไม่มีชื่อ'}</div>
