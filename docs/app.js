@@ -681,6 +681,9 @@ function addChangelogEntry(action, loc, changes = null){
         lat: loc.lat,
         lng: loc.lng,
         list: loc.list || '',
+        city: loc.city || '',
+        note: loc.note || '',
+        tags: Array.isArray(loc.tags) ? loc.tags : [],
         user: username,
         device: device,
         ip: ip,
@@ -3279,7 +3282,24 @@ if(editModalSave) editModalSave.onclick=()=>{
     const entry={name,lat,lng,list,city,note,updatedAt:Date.now()};
     if(tags.length)entry.tags=tags;
     if(photo)entry.photo=photo;
-    addChangelogEntry(editingIndex>=0?'edit':'add',entry);
+    let editChanges = null;
+    if(editingIndex >= 0 && locations[editingIndex]){
+        const old = locations[editingIndex];
+        editChanges = {};
+        [
+            ['name', old.name || '', entry.name || ''],
+            ['list', old.list || '', entry.list || ''],
+            ['city', old.city || '', entry.city || ''],
+            ['note', old.note || '', entry.note || ''],
+            ['lat', Number(old.lat).toFixed(6), Number(entry.lat).toFixed(6)],
+            ['lng', Number(old.lng).toFixed(6), Number(entry.lng).toFixed(6)],
+            ['tags', (old.tags || []).join(', '), (entry.tags || []).join(', ')]
+        ].forEach(([key, before, after]) => {
+            if(before !== after) editChanges[key] = { old: before, new: after };
+        });
+        if(!Object.keys(editChanges).length) editChanges = null;
+    }
+    addChangelogEntry(editingIndex>=0?'edit':'add',entry,editChanges);
     document.getElementById('editModalOverlay').classList.remove('open');
     showToast(editingIndex>=0?'บันทึกสำเร็จ':'เพิ่มสถานที่แล้ว',false,true);
     // Optimistic local update
@@ -4407,6 +4427,42 @@ window.showChangelogDetail = function(timestamp) {
     openInfoPanel('audit');
 };
 
+window.copyAuditCoords = function(lat, lng) {
+    fallbackCopy(`${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`);
+};
+
+window.openAuditCoords = function(lat, lng) {
+    window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
+};
+
+function _auditField(label, value) {
+    const text = value === undefined || value === null || value === '' ? 'ไม่ระบุ' : value;
+    return `<div style="display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:start;padding:6px 0;border-bottom:0.5px solid var(--bd);">
+        <span style="color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;">${label}</span>
+        <span style="color:var(--tx);font-size:12px;line-height:1.45;word-break:break-word;">${_escapeHtml(text)}</span>
+    </div>`;
+}
+
+function _renderAuditChanges(changes) {
+    if(!changes) return '';
+    const rows = Object.entries(changes);
+    if(!rows.length) return '';
+    const labels = { name:'ชื่อ', list:'รายการ', city:'เขต', note:'หมายเหตุ', lat:'Lat', lng:'Lng', tags:'Tags', count:'จำนวน' };
+    return `<div style="margin-top:10px;padding:10px;border-radius:10px;background:var(--s1);border:0.5px solid var(--bd2);">
+        <div style="font-size:10px;font-weight:800;color:var(--tx3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;">รายละเอียดที่เปลี่ยน</div>
+        <div style="display:grid;gap:8px;">
+            ${rows.map(([key, value]) => `<div style="display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:start;">
+                <span style="font-size:11px;color:var(--tx2);font-weight:700;">${_escapeHtml(labels[key] || key)}</span>
+                <span style="font-size:11px;color:var(--tx);line-height:1.45;word-break:break-word;">
+                    <span style="color:var(--rd);">${_escapeHtml(value.old ?? '')}</span>
+                    <span style="color:var(--tx3);padding:0 5px;">→</span>
+                    <span style="color:var(--gn);">${_escapeHtml(value.new ?? '')}</span>
+                </span>
+            </div>`).join('')}
+        </div>
+    </div>`;
+}
+
 function openInfoPanel(mode){
     const body=document.getElementById('infoPanelBody');
     if(mode==='changelog'){
@@ -4555,18 +4611,47 @@ function openInfoPanel(mode){
         } else {
             body.innerHTML = `<div style="padding:8px 16px;">${locLog.map(e=>{
                 const d=new Date(e.t);
-                const ts=d.toLocaleString('th-TH');
+                const ts=d.toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'medium'});
+                const iso=new Date(e.t).toISOString();
                 const actionColor={add:'#34a853',edit:'#4285f4',delete:'#ea4335'}[e.a]||'var(--text)';
-                return `<div style="padding:12px;background:var(--s2);border-radius:12px;margin-bottom:8px;border-left:3px solid ${actionColor};">
-                    <div style="font-size:12px;font-weight:600;color:${actionColor};margin-bottom:4px;">${{add:'➕ เพิ่ม',edit:'✏️ แก้ไข',delete:'🗑️ ลบ'}[e.a]}</div>
-                    <div style="font-size:13px;color:var(--text);margin-bottom:8px;">${e.details || e.n}</div>
-                    <div style="font-size:10px;color:var(--text3);display:grid;gap:4px;">
-                        <div>👤 ผู้ใช้: ${e.user || 'unknown'}</div>
-                        <div>🌐 IP: ${e.ip || 'unknown'}</div>
-                        <div>📱 อุปกรณ์: ${getDeviceSummary(e.device || '')}</div>
-                        <div>🕐 เวลา: ${ts}</div>
-                        ${e.changes ? `<div style="margin-top:4px;padding:4px;background:var(--s3);border-radius:4px;">📝 เปลี่ยนแปลง: ${Object.entries(e.changes).map(([k,v])=>`${k}: ${v.old}→${v.new}`).join(', ')}</div>` : ''}
+                const actionLabel={add:'เพิ่มจุด',edit:'แก้ไขจุด',delete:'ลบจุด'}[e.a]||e.a;
+                const actionIcon={add:'➕',edit:'✏️',delete:'🗑️'}[e.a]||'•';
+                const lat=Number(e.lat), lng=Number(e.lng);
+                const hasCoords=Number.isFinite(lat)&&Number.isFinite(lng);
+                return `<div style="padding:12px;background:var(--s2);border-radius:12px;margin-bottom:10px;border:1px solid ${actionColor}66;box-shadow:0 8px 22px rgba(0,0,0,0.18);">
+                    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">
+                        <div style="width:30px;height:30px;border-radius:9px;background:${actionColor}22;color:${actionColor};display:grid;place-items:center;font-size:14px;flex-shrink:0;">${actionIcon}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:12px;font-weight:800;color:${actionColor};">${actionLabel}</div>
+                            <div style="font-size:14px;font-weight:700;color:var(--tx);line-height:1.35;word-break:break-word;">${_escapeHtml(e.n||'(ไม่มีชื่อ)')}</div>
+                        </div>
                     </div>
+                    <div style="padding:10px;border-radius:10px;background:var(--s1);border:0.5px solid var(--bd2);margin-bottom:10px;">
+                        ${_auditField('รายละเอียด', e.details || e.n)}
+                        ${_auditField('รายการ', e.list || '')}
+                        ${_auditField('เขต', e.city || '')}
+                        ${_auditField('หมายเหตุ', e.note || '')}
+                        ${_auditField('Tags', Array.isArray(e.tags) ? e.tags.join(', ') : '')}
+                    </div>
+                    <div style="padding:10px;border-radius:10px;background:var(--s1);border:0.5px solid var(--bd2);margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                            <div style="font-size:10px;font-weight:800;color:var(--tx3);letter-spacing:.04em;text-transform:uppercase;">พิกัด</div>
+                            ${hasCoords ? `<div style="display:flex;gap:6px;">
+                                <button type="button" onclick="copyAuditCoords(${lat},${lng})" style="border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx2);border-radius:8px;padding:5px 8px;font-size:10px;">คัดลอก</button>
+                                <button type="button" onclick="openAuditCoords(${lat},${lng})" style="border:0.5px solid var(--bl-b);background:var(--bl-d);color:var(--bl);border-radius:8px;padding:5px 8px;font-size:10px;">แผนที่</button>
+                            </div>` : ''}
+                        </div>
+                        ${_auditField('Latitude', hasCoords ? lat.toFixed(6) : '')}
+                        ${_auditField('Longitude', hasCoords ? lng.toFixed(6) : '')}
+                    </div>
+                    <div style="padding:10px;border-radius:10px;background:var(--s1);border:0.5px solid var(--bd2);">
+                        ${_auditField('ผู้ใช้', e.user || 'unknown')}
+                        ${_auditField('IP', e.ip || 'unknown')}
+                        ${_auditField('อุปกรณ์', e.device || getDeviceSummary(e.device || ''))}
+                        ${_auditField('เวลาไทย', ts)}
+                        ${_auditField('เวลา ISO', iso)}
+                    </div>
+                    ${_renderAuditChanges(e.changes)}
                 </div>`;
             }).join('')}</div>`;
         }
