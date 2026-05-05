@@ -351,6 +351,7 @@ document.getElementById('editGroupDeleteAll').onclick = () => {
             pushUndo();
             const toDelete = locations.filter(l => l.list===_editGroupOldName);
             locations = locations.filter(l => l.list!==_editGroupOldName);
+            _clearSearchMarkerIfDeleted(toDelete);
             if(filterList===_editGroupOldName) filterList='';
             saveLocations(); invalidateCache(); update(); _renderSidebar();
             showToast(`ลบ ${toDelete.length} จุดแล้ว`, true);
@@ -2319,6 +2320,15 @@ function _showSearchMarker(lat,lng){
     _searchMarker.bindPopup(`📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}`).openPopup();
 }
 function _clearSearchMarker(){if(_searchMarker){map.removeLayer(_searchMarker);_searchMarker=null;}}
+function _samePoint(a, b) {
+    return !!a && !!b && Math.abs(Number(a.lat) - Number(b.lat)) < 0.000001 && Math.abs(Number(a.lng) - Number(b.lng)) < 0.000001;
+}
+function _clearSearchMarkerIfDeleted(deleted) {
+    if (!_searchMarker) return;
+    const pin = _searchMarker.getLatLng();
+    const items = Array.isArray(deleted) ? deleted : [deleted];
+    if (items.some(loc => _samePoint(loc, pin))) _clearSearchMarker();
+}
 // Inject pulse animation CSS
 (function(){const st=document.createElement('style');st.textContent='@keyframes searchPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.7}}';document.head.appendChild(st);})();
 
@@ -3382,7 +3392,7 @@ window.doConfirmDelete=function(idx){
     const loc=locations[idx]; if(!loc)return;
     showConfirm('delete','ลบสถานที่?',`"${loc.name||loc.list}" จะถูกลบ (Undo ได้)`,()=>{
         addChangelogEntry('delete',loc);
-        pushUndo();locations.splice(idx,1);saveLocations();invalidateCache();closePlaceCard();update();showToast('ลบแล้ว');
+        pushUndo();locations.splice(idx,1);_clearSearchMarkerIfDeleted(loc);saveLocations();invalidateCache();closePlaceCard();update();showToast('ลบแล้ว');
         if(_sbLoaded)sbDelete(loc);
     });
 };
@@ -5022,6 +5032,7 @@ function doDeleteAllLocations() {
         pushUndo();
         const toDelete = [...locations];
         locations = [];
+        _clearSearchMarker();
         saveLocations();
         invalidateCache();
         closePlaceCard();
@@ -5307,7 +5318,7 @@ function doBulkDel(){
     if(!filterList&&!filterCity&&!document.getElementById('search').value&&!nearbyMode){showToast('กรุณา filter ก่อน',true);return;}
     if(!f.length){showToast('ไม่มีจุดในตัวกรอง',true);return;}
     showConfirm('delete',`ลบ ${f.length} จุด?`,'จุดที่อยู่ในตัวกรองปัจจุบันจะถูกลบทั้งหมด',()=>{
-        pushUndo();const rm=new Set(f);const toDelSb=[...rm];locations=locations.filter(l=>!rm.has(l));saveLocations();invalidateCache();update();showToast(`ลบ ${f.length} จุดแล้ว`);
+        pushUndo();const rm=new Set(f);const toDelSb=[...rm];locations=locations.filter(l=>!rm.has(l));_clearSearchMarkerIfDeleted(toDelSb);saveLocations();invalidateCache();update();showToast(`ลบ ${f.length} จุดแล้ว`);
         if(_sbLoaded)toDelSb.forEach(l=>sbDelete(l));
     });
     closeInfo();
