@@ -1010,7 +1010,7 @@ const _tileOpts = {
     keepBuffer: _mobile ? 2 : 4, // fewer buffer tiles on mobile
 };
 const tileLayers = {
-    'Street':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19, ..._tileOpts }),
+'Street': L.tileLayer('https://maps.hereapi.com/v3/base/mc/{z}/{x}/{y}/png?style=explore.day&apiKey=XKsObVLJR-LAaRG13TU3ZUzKFFvC02D5uJpgVUPozkk', { attribution: '© HERE', maxZoom: 20, ..._tileOpts }),
     'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19, ..._tileOpts }),
     'Terrain':   L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17, ..._tileOpts }),
     'Dark':      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CartoDB', maxZoom: 19, ..._tileOpts })
