@@ -2,11 +2,16 @@
   "name": "BT Locations",
   "short_name": "BT Map",
   "description": "แผนที่จุด BT Locations",
+  "id": "/bt-locations/",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1a73e8",
+  "background_color": "#090a10",
+  "theme_color": "#0b0c10",
   "orientation": "any",
+  "lang": "th",
+  "dir": "ltr",
+  "categories": ["navigation", "utilities"],
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,6 +24,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ]
 }
