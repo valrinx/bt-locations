@@ -380,6 +380,7 @@ function _updateMobChips(){
 document.getElementById('mobSearchInput')?.addEventListener('input', debounce((e)=>{
     const si = document.getElementById('search');
     if(si) si.value = e.target.value;
+    renderSearchResults();
     update();
 }, 150));
 
