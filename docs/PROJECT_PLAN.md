@@ -4,6 +4,8 @@
 
 Mobile map performance is the active blocker. The app has about 1,600+ location points, so the map must never make the phone animate every individual DOM marker during pinch zoom.
 
+The active handoff/status file is `WORKLOG_HANDOFF.md`. Use it first if this conversation context is missing or compacted.
+
 ## Large File Strategy
 
 The current app is intentionally being split gradually. Avoid one large rewrite because `app.js` and `index.html` still share many globals and inline event handlers.
@@ -22,6 +24,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Optimized sidebar counts to avoid repeated full-array filters.
 - Lazy-load `locations.js` only when no local location data exists.
 - Batched map-only pan/zoom updates with `requestAnimationFrame`.
+- Documented the current mobile/GPS work and next steps in `WORKLOG_HANDOFF.md`.
 
 ## Phase 1: Mobile Map Stability
 
