@@ -32,6 +32,7 @@ Latest known commit before this handoff:
 - Bumped app/service-worker version to `v6.9.8` and registered the service worker with `updateViaCache: 'none'` to reduce stale mobile code after deploy.
 - Bumped app/service-worker version to `v6.9.9`, added a mobile "reload app" action that clears app caches, and made the GPS status strip refresh its age/quality while GPS is active.
 - Added GPS mode, quality, accuracy, heading, and fix age to the Map Debug overlay for real-device testing without opening the console.
+- Expanded `window.btDebug.gps` and `window.btDebug.exportDebug()` so bug reports include GPS quality, fix age, map stats, and app version.
 
 ## Mobile QA Checklist
 

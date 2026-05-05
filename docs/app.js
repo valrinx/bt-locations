@@ -6372,6 +6372,12 @@ window.btDebug = {
         };
     },
     get gps() {
+        const gpsSnapshot = typeof window.btGpsDebugSnapshot === 'function' ? window.btGpsDebugSnapshot() : null;
+        if (gpsSnapshot) return {
+            ...gpsSnapshot,
+            hasMarker: !!myLocationMarker,
+            position: myLatLng
+        };
         return {
             active: gpsActive,
             mode: gpsMode,
@@ -6389,7 +6395,7 @@ window.btDebug = {
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     refreshApp: ()=>refreshAppNow(),
-    exportDebug: ()=>JSON.stringify({locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
