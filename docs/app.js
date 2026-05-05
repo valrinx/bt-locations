@@ -593,13 +593,71 @@ let _syncTimer = null, _syncing = false, _lastSyncTime = 0;
 // Tracking & paths (referenced in menu)
 let trackingActive = false, _trackWatchId = null, _currentTrack = [];
 let savedPaths = (() => { try { return JSON.parse(localStorage.getItem(TRACKING_KEY) || '[]'); } catch { return []; } })();
+let _trackLine = null, _savedPathsLayer = null;
+
+function _trackDistance(points) {
+    let total = 0;
+    for (let i = 1; i < points.length; i++) {
+        total += haversine(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+    }
+    return total;
+}
+
+function _formatTrackDistance(meters) {
+    return meters >= 1000 ? `${(meters / 1000).toFixed(2)} กม.` : `${Math.round(meters)} ม.`;
+}
+
+function _persistSavedPaths() {
+    localStorage.setItem(TRACKING_KEY, JSON.stringify(savedPaths));
+}
+
+function _ensureSavedPathsLayer() {
+    if (!_savedPathsLayer) _savedPathsLayer = L.layerGroup().addTo(map);
+    return _savedPathsLayer;
+}
+
+function _clearLiveTrackLine() {
+    if (_trackLine) {
+        map.removeLayer(_trackLine);
+        _trackLine = null;
+    }
+}
+
 function startTracking() {
     if (!navigator.geolocation) { showToast('GPS ไม่รองรับ'); return; }
+    if (trackingActive) { showToast('กำลังบันทึกเส้นทางอยู่แล้ว'); return; }
     trackingActive = true;
     _currentTrack = [];
+    _clearLiveTrackLine();
+    _trackLine = L.polyline([], {
+        color: '#2ecc90',
+        weight: 5,
+        opacity: 0.88,
+        lineCap: 'round',
+        lineJoin: 'round'
+    }).addTo(map);
     _trackWatchId = navigator.geolocation.watchPosition(pos => {
-        _currentTrack.push({ lat: pos.coords.latitude, lng: pos.coords.longitude, t: Date.now() });
-    }, err => console.warn('Track error:', err), { enableHighAccuracy: true, maximumAge: 5000 });
+        const { latitude: lat, longitude: lng, accuracy, speed } = pos.coords;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        const prev = _currentTrack[_currentTrack.length - 1];
+        if (prev) {
+            const moved = haversine(prev.lat, prev.lng, lat, lng);
+            if (moved < 1.5 && accuracy > 25) return;
+        }
+        const point = { lat, lng, accuracy: Math.round(accuracy || 0), speed: speed || null, t: Date.now() };
+        _currentTrack.push(point);
+        if (_trackLine) _trackLine.setLatLngs(_currentTrack.map(pt => [pt.lat, pt.lng]));
+        if (_currentTrack.length === 1) map.panTo([lat, lng], { animate: true, duration: 0.35 });
+    }, err => {
+        console.warn('Track error:', err);
+        if (!_currentTrack.length || err.code === err.PERMISSION_DENIED) {
+            if (_trackWatchId !== null) navigator.geolocation.clearWatch(_trackWatchId);
+            _trackWatchId = null;
+            trackingActive = false;
+            _clearLiveTrackLine();
+        }
+        showToast('อ่าน GPS สำหรับ Track ไม่ได้', true);
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 1200 });
     showToast('▶ เริ่มบันทึกเส้นทาง');
 }
 function stopTracking() {
@@ -607,20 +665,40 @@ function stopTracking() {
     _trackWatchId = null;
     trackingActive = false;
     if (_currentTrack.length > 1) {
-        savedPaths.push({ points: _currentTrack, date: Date.now() });
-        localStorage.setItem(TRACKING_KEY, JSON.stringify(savedPaths));
-        showToast(`⏹ บันทึก ${_currentTrack.length} จุด`);
+        const distance = _trackDistance(_currentTrack);
+        savedPaths.push({ points: _currentTrack, date: Date.now(), distance });
+        _persistSavedPaths();
+        showToast(`⏹ บันทึก ${_currentTrack.length} จุด · ${_formatTrackDistance(distance)}`);
     } else {
         showToast('⏹ หยุดบันทึก (ไม่มีจุด)');
+        _clearLiveTrackLine();
     }
     _currentTrack = [];
 }
+function toggleTracking() {
+    if (trackingActive) stopTracking();
+    else startTracking();
+}
 function showSavedPaths() {
     if (!savedPaths.length) { showToast('ไม่มีเส้นทางที่บันทึก'); return; }
+    const layer = _ensureSavedPathsLayer();
+    layer.clearLayers();
+    const bounds = [];
     savedPaths.forEach((p, i) => {
         const latlngs = p.points.map(pt => [pt.lat, pt.lng]);
-        L.polyline(latlngs, { color: '#4285f4', weight: 3, opacity: 0.7 }).addTo(map);
+        bounds.push(...latlngs);
+        L.polyline(latlngs, {
+            color: i === savedPaths.length - 1 ? '#5b8fff' : '#8a8aaa',
+            weight: i === savedPaths.length - 1 ? 5 : 3,
+            opacity: i === savedPaths.length - 1 ? 0.86 : 0.5,
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).bindTooltip(`${new Date(p.date).toLocaleString('th-TH')} · ${_formatTrackDistance(p.distance || _trackDistance(p.points))}`, {
+            sticky: true,
+            className: 'bt-tooltip'
+        }).addTo(layer);
     });
+    if (bounds.length) map.fitBounds(bounds, { padding: [28, 28], maxZoom: 17, animate: true });
     showToast(`แสดง ${savedPaths.length} เส้นทาง`);
 }
 function exportPaths() {
@@ -4893,6 +4971,9 @@ function openInfoPanel(mode){
                 ])}
                 ${_menuGrid('เส้นทาง',[
                     ['🗺️','เลือกจุดเอง','omManualRouteM',''],
+                    [trackingActive?'⏹️':'▶️',trackingActive?'หยุดบันทึก':'บันทึก Track','omTrackM',''],
+                    ['👁️','แสดง Track','omShowPathsM',''],
+                    ['📤','Export Track','omExportPathsM',''],
                 ])}
             </div>`;
         const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
@@ -4905,6 +4986,9 @@ function openInfoPanel(mode){
         b('omUndoM',    doUndo);
         b('omRedoM',    doRedo);
         b('omManualRouteM', ()=>{closeInfo();startManualRouteMode();});
+        b('omTrackM',   ()=>{closeInfo();toggleTracking();});
+        b('omShowPathsM',()=>{closeInfo();showSavedPaths();});
+        b('omExportPathsM',()=>{closeInfo();exportPaths();});
     }
     document.getElementById('infoPanel').classList.add('open');
     document.getElementById('infoPanelBackdrop').classList.add('show');

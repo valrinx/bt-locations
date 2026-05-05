@@ -4735,6 +4735,18 @@
                         <span><b>เลือกจุดเอง</b><small>สร้างเส้นทางจากจุดที่แตะบนแผนที่</small></span>
                         <span class="mob-menu-ico">PICK</span>
                     </button>
+                    <button class="mob-menu-item" onclick="toggleTracking(); closeMobDrawer()">
+                        <span><b>บันทึก Track</b><small>เริ่มหรือหยุดบันทึกเส้นทาง GPS</small></span>
+                        <span class="mob-menu-ico">REC</span>
+                    </button>
+                    <button class="mob-menu-item" onclick="showSavedPaths(); closeMobDrawer()">
+                        <span><b>แสดง Track</b><small>วาดเส้นทางที่เคยบันทึกบนแผนที่</small></span>
+                        <span class="mob-menu-ico">PATH</span>
+                    </button>
+                    <button class="mob-menu-item" onclick="exportPaths(); closeMobDrawer()">
+                        <span><b>Export Track</b><small>สำรองเส้นทางที่บันทึกเป็น JSON</small></span>
+                        <span class="mob-menu-ico">OUT</span>
+                    </button>
                     <div class="mob-menu-section">ดูข้อมูล</div>
                     <button class="mob-menu-item" onclick="openInfoPanel('stats'); closeMobDrawer()">
                         <span><b>สถิติ</b><small>สรุปจำนวนตามรายการและเขต</small></span>
