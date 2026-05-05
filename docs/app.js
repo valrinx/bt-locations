@@ -2893,17 +2893,40 @@ onClick('btnTile', ()=>{
 // ════════════════════════════════════════════
 const btnGps=document.getElementById('btnGps');
 let _lastGpsPanAt = 0;
+let _lastGpsAccuracy = Infinity;
+let _gpsResumeTimer = null;
 
-// ── smooth pan ด้วย panTo แทน flyTo — ไม่กระตุกเมื่อตำแหน่งเปลี่ยนนิดเดียว ──
-function _smoothFollow(lat, lng) {
+function _clearGpsResumeTimer() {
+    if (_gpsResumeTimer) {
+        clearTimeout(_gpsResumeTimer);
+        _gpsResumeTimer = null;
+    }
+}
+
+function _gpsTargetZoom(accuracy) {
+    if (accuracy > 900) return Math.max(map.getZoom(), 13);
+    if (accuracy > 220) return Math.max(map.getZoom(), 15);
+    return Math.max(map.getZoom(), 17);
+}
+
+function _smoothFollow(lat, lng, accuracy=0, force=false) {
     if (!gpsTracking) return;
     const now = Date.now();
-    if (now - _lastGpsPanAt < 2200) return;
+    const point = L.latLng(lat, lng);
+    const bounds = map.getBounds();
+    const nearEdge = !bounds.pad(-0.22).contains(point);
+    if (!force && !nearEdge && now - _lastGpsPanAt < 950) return;
     const cur = map.getCenter();
     const dist = haversine(cur.lat, cur.lng, lat, lng);
-    if (dist < 12) return;
+    const minMove = accuracy > 120 ? 28 : 8;
+    if (!force && !nearEdge && dist < minMove) return;
     _lastGpsPanAt = now;
-    map.panTo([lat, lng], {animate: true, duration: 0.35, easeLinearity: 0.35, noMoveStart: true});
+    const next = [lat, lng];
+    if (force || !bounds.pad(-0.08).contains(point)) {
+        map.flyTo(next, _gpsTargetZoom(accuracy), {animate: true, duration: force ? 0.55 : 0.65, easeLinearity: 0.28});
+    } else {
+        map.panTo(next, {animate: true, duration: 0.45, easeLinearity: 0.25, noMoveStart: true});
+    }
 }
 
 function _setGpsUi(state, detail='') {
@@ -2917,22 +2940,22 @@ function _setGpsUi(state, detail='') {
     if (state === 'gps-found') btnGps.dataset.gpsState = detail || 'พร้อม';
 }
 
-function updateGpsMarker(lat, lng, accuracy) {
+function updateGpsMarker(lat, lng, accuracy, forceFollow=false) {
     if (myLocationCircle) {
         myLocationCircle.setLatLng([lat, lng]);
         myLocationCircle.setRadius(Math.min(accuracy, 500));
     } else {
         myLocationCircle = L.circle([lat, lng], {
-            radius: Math.min(accuracy, 500), color:'#1a73e8',
-            fillColor:'#1a73e8', fillOpacity:0.08, weight:1.5
+            radius: Math.min(accuracy, 500), color:'#2563eb',
+            fillColor:'#3b82f6', fillOpacity:0.14, weight:2, className:'gps-accuracy-circle'
         }).addTo(map);
     }
-    const iconHtml = `<div class="you-are-here-wrap"><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"></div></div>`;
-    const icon = L.divIcon({className:'', html:iconHtml, iconSize:[48,48], iconAnchor:[24,24]});
+    const iconHtml = `<div class="you-are-here-wrap" aria-label="ตำแหน่งของฉัน"><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here-ring"></div><div class="you-are-here"><span class="you-are-here-core"></span></div></div>`;
+    const icon = L.divIcon({className:'you-are-here-icon', html:iconHtml, iconSize:[58,58], iconAnchor:[29,29]});
     if (myLocationMarker) {
         myLocationMarker.setLatLng([lat, lng]);
     } else {
-        myLocationMarker = L.marker([lat, lng], {icon, zIndexOffset:1000, interactive:true}).addTo(map)
+        myLocationMarker = L.marker([lat, lng], {icon, zIndexOffset:3000, interactive:true}).addTo(map)
             .bindPopup(`<div style="padding:12px;font-size:13px;min-width:180px;">
                 <b>📍 ตำแหน่งของฉัน</b><br>
                 <small style="color:var(--text3);">${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br>
@@ -2944,7 +2967,7 @@ function updateGpsMarker(lat, lng, accuracy) {
     if (myLocationMarker.isPopupOpen()) {
         myLocationMarker.setPopupContent(`<div style="padding:12px;font-size:13px;min-width:180px;"><b>📍 ตำแหน่งของฉัน</b><br><small>${lat.toFixed(6)}, ${lng.toFixed(6)}</small><br><small>±${Math.round(accuracy)}ม.</small><br><br><button onclick="openAddAt(${lat},${lng})" style="background:var(--bl);color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:12px;font-family:inherit;">+ ปักหมุดที่นี่</button></div>`);
     }
-    _smoothFollow(lat, lng);
+    _smoothFollow(lat, lng, accuracy, forceFollow);
     if (listSortMode==='near' || nearbyMode) update();
 }
 
@@ -3013,10 +3036,20 @@ map.on('zoomend', () => {
 
 if(btnGps){
 map.on('dragstart', () => {
-    if (gpsTracking) {
+    if (gpsActive && gpsTracking) {
         gpsTracking = false;
         btnGps.title = 'ติดตามตำแหน่ง (ปิด — แตะเพื่อเปิด)';
-        _setGpsUi('gps-paused');
+        _setGpsUi('gps-paused', 'พัก');
+        _clearGpsResumeTimer();
+        _gpsResumeTimer = setTimeout(() => {
+            _gpsResumeTimer = null;
+            if (!gpsActive || !myLocationMarker) return;
+            gpsTracking = true;
+            btnGps.title = 'ติดตามตำแหน่งของฉัน';
+            _setGpsUi('gps-tracking', _lastGpsAccuracy < Infinity ? `±${Math.round(_lastGpsAccuracy)}ม.` : 'ติดตาม');
+            const ll = myLocationMarker.getLatLng();
+            _smoothFollow(ll.lat, ll.lng, _lastGpsAccuracy, true);
+        }, 8000);
     }
 });
 }
@@ -3025,8 +3058,10 @@ function stopGps() {
     if (gpsWatcher !== null) { navigator.geolocation.clearWatch(gpsWatcher); gpsWatcher = null; }
     gpsActive = false; gpsTracking = false; gpsCoarseShown = false; gpsFlyDone = false;
     gpsToastShown = false; gpsFineToastShown = false;
+    _clearGpsResumeTimer();
     if(btnGps) _setGpsUi('');
     _lastGpsLat = null; _lastGpsLng = null;
+    _lastGpsAccuracy = Infinity;
 }
 
 // btnGps: กดครั้งที่ 1 = เปิด GPS + เปิด tracking, กดครั้งที่ 2 = กล้องบินไปตำแหน่ง + เปิด tracking อีกครั้ง
@@ -3034,15 +3069,18 @@ if(btnGps) btnGps.onclick = () => {
     if (!navigator.geolocation) { showToast('Browser ไม่รองรับ GPS', true); return; }
     if (gpsActive && myLocationMarker) {
         // toggle tracking: ถ้า tracking อยู่ → บินไปตำแหน่ง, ถ้าไม่ → เปิด tracking
+        _clearGpsResumeTimer();
         gpsTracking = true;
         _setGpsUi('gps-tracking');
         const ll = myLocationMarker.getLatLng();
-        map.flyTo([ll.lat, ll.lng], Math.max(map.getZoom(), 17), {animate:true, duration:0.8});
+        _smoothFollow(ll.lat, ll.lng, _lastGpsAccuracy, true);
         showToast('GPS tracking เปิดอยู่');
         return;
     }
     stopGps();
     gpsActive = true; gpsTracking = true;
+    _lastGpsPanAt = 0;
+    _lastGpsAccuracy = Infinity;
     _setGpsUi('gps-searching');
     showToast('กำลังหาตำแหน่ง...');
     navigator.geolocation.getCurrentPosition(
@@ -3050,12 +3088,10 @@ if(btnGps) btnGps.onclick = () => {
             if (!gpsActive) return;
             const {latitude:lat, longitude:lng, accuracy} = pos.coords;
             gpsCoarseShown = true;
-            updateGpsMarker(lat, lng, accuracy);
-            if (!gpsFlyDone) {
-                gpsFlyDone = true;
-                const z = accuracy > 1000 ? 13 : accuracy > 200 ? 15 : 17;
-                map.flyTo([lat, lng], z, {animate:true, duration:1.0});
-            }
+            _lastGpsLat = lat; _lastGpsLng = lng; _lastGpsAccuracy = accuracy;
+            const firstFollow = !gpsFlyDone;
+            gpsFlyDone = true;
+            updateGpsMarker(lat, lng, accuracy, firstFollow);
             _setGpsUi('gps-tracking', `±${Math.round(accuracy)}ม.`);
             if (!gpsToastShown) {
                 gpsToastShown = true;
@@ -3069,9 +3105,10 @@ if(btnGps) btnGps.onclick = () => {
                     // กรอง noise: ถ้าตำแหน่งไม่เปลี่ยนมากพอ ไม่ต้อง update marker
                     if (_lastGpsLat !== null) {
                         const moved = haversine(_lastGpsLat, _lastGpsLng, lat2, lng2);
-                        if (moved < 1 && acc2 > 20) return; // < 1ม. และ accuracy ไม่ดีขึ้น → skip
+                        const accuracyImproved = acc2 + 5 < _lastGpsAccuracy;
+                        if (moved < 1.5 && !accuracyImproved) return;
                     }
-                    _lastGpsLat = lat2; _lastGpsLng = lng2;
+                    _lastGpsLat = lat2; _lastGpsLng = lng2; _lastGpsAccuracy = acc2;
                     updateGpsMarker(lat2, lng2, acc2);
                     if (gpsTracking) _setGpsUi('gps-tracking', `±${Math.round(acc2)}ม.`);
                     if (!gpsFineToastShown && acc2 < 50) {
