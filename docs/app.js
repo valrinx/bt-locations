@@ -1297,10 +1297,11 @@ function _updateMobileMarkerLabels(count) {
 }
 
 function _ensureMapDebugOverlay() {
+    if (_mapDebugOverlay && !_mapDebugOverlay.isConnected) _mapDebugOverlay = null;
     if (_mapDebugOverlay || !_mapDebugOverlayEnabled) return _mapDebugOverlay;
     const el = document.createElement('div');
     el.id = 'mapDebugOverlay';
-    el.style.cssText = 'position:absolute;left:10px;bottom:calc(var(--mob-above-nav, 0px) + 10px);z-index:260;display:grid;grid-template-columns:auto auto;gap:3px 10px;padding:8px 10px;border-radius:10px;background:rgba(9,13,20,0.84);border:1px solid rgba(91,143,255,0.28);box-shadow:0 8px 24px rgba(0,0,0,0.32);color:var(--tx);font:700 10px/1.25 monospace;pointer-events:none;backdrop-filter:blur(6px);';
+    el.style.cssText = 'position:absolute;left:10px;bottom:calc(var(--mob-above-nav, 0px) + 10px);z-index:1400;display:grid;grid-template-columns:auto auto;gap:3px 10px;padding:8px 10px;border-radius:10px;background:rgba(9,13,20,0.9);border:1px solid rgba(91,143,255,0.35);box-shadow:0 8px 24px rgba(0,0,0,0.42);color:var(--tx);font:700 10px/1.25 monospace;pointer-events:none;backdrop-filter:blur(6px);transform:translateZ(0);';
     map.getContainer().appendChild(el);
     _mapDebugOverlay = el;
     return el;
