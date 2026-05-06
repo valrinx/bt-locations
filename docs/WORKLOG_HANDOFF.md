@@ -34,6 +34,7 @@ Latest known commit before this handoff:
 - Added GPS mode, quality, accuracy, heading, and fix age to the Map Debug overlay for real-device testing without opening the console.
 - Expanded `window.btDebug.gps` and `window.btDebug.exportDebug()` so bug reports include GPS quality, fix age, map stats, and app version.
 - Added Android performance mode in `v7.0.1`: lower Android marker limits, Android-specific tile update behavior, reduced marker labels, and lighter map CSS during gestures.
+- Added Android "lite" mode in `v7.0.2`: user-facing menu toggle that keeps clusters longer, lowers marker caps further, and disables labels for laggy Android devices.
 
 ## Mobile QA Checklist
 
@@ -53,6 +54,7 @@ Use this when testing on a real phone or mobile viewport:
 12. Use Menu -> Reload App after deploy if a phone still shows older behavior; it should reload with a cache-busting query string.
 13. Enable Map Debug while GPS is active and confirm the overlay shows gps, acc/head, and fix age.
 14. Test on Android Chrome with Map Debug open. The overlay should show `android perf`, marker limit should be lower than iOS, and pinch zoom should feel steadier.
+15. If Android still lags, open Menu -> โหมดลื่นพิเศษ. Map Debug should show `android lite` and marker limits should drop again.
 
 ## Known Caveats
 
@@ -77,7 +79,7 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 ## Next Recommended Work
 
 1. Measure Android after `v7.0.1` with Map Debug: render ms, marker count, gesture smoothness, and whether tiles blank during zoom.
-2. If Android still lags, add a user-facing "Performance mode" toggle and an even stricter marker cap.
+2. If Android still lags in lite mode, consider switching dense point rendering to canvas or using server-side/vector tile clustering.
 3. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
 4. Start helper extraction from `app.js` with no behavior changes.
 5. Add screenshot-based mobile QA once browser automation is available in the current session.

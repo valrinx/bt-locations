@@ -33,6 +33,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Added GPS status lines to Map Debug so field testers can inspect map and GPS health together.
 - Expanded debug export with app version, map stats, and GPS health snapshot.
 - Added Android-specific performance mode with lower marker caps, deferred tile updates during zoom, reduced labels, and lighter CSS effects during gestures.
+- Added Android lite mode toggle with stricter caps and longer cluster mode for laggy Android devices.
 
 ## Phase 1: Mobile Map Stability
 
