@@ -38,6 +38,7 @@ Latest known commit before this handoff:
 - Delayed post-zoom marker rebuilds longer on Android in `v7.0.3` so Chrome can finish tile compositing before the app re-renders markers.
 - Added Map Debug long-task monitoring so Android tests can see when JavaScript blocks the main thread.
 - Repaired Android lite mode in `v7.0.6`: removed marker-layer suspension because it could leave pins hidden after pan/zoom. Lite mode now keeps pins visible while still using stricter marker caps and labels.
+- Rebalanced Android lite mode in `v7.0.7`: restored normal cluster zoom, restored marker names from zoom 14, and raised marker caps because the prior version hurt field usability.
 
 ## Mobile QA Checklist
 
@@ -57,9 +58,9 @@ Use this when testing on a real phone or mobile viewport:
 12. Use Menu -> Reload App after deploy if a phone still shows older behavior; it should reload with a cache-busting query string.
 13. Enable Map Debug while GPS is active and confirm the overlay shows gps, acc/head, and fix age.
 14. Test on Android Chrome with Map Debug open. The overlay should show `android perf`, marker limit should be lower than iOS, and pinch zoom should feel steadier.
-15. If Android still lags, open Menu -> โหมดลื่นพิเศษ. Map Debug should show `android lite` and marker limits should drop again.
+15. If Android still lags, open Menu -> โหมดเบา Android. Map Debug should show `android lite` while marker names remain visible from zoom 14 when marker count is reasonable.
 16. Watch Map Debug `longtask`; repeated values above 80ms mean main-thread JavaScript is still blocking Android frames.
-17. In lite mode, pinch or drag the map. Pins should remain visible, and Map Debug should stay on `android lite`.
+17. In lite mode, pinch or drag the map. Pins and nearby marker names should remain usable; do not accept a performance fix that hides important field labels.
 
 ## Known Caveats
 
@@ -84,7 +85,7 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 ## Next Recommended Work
 
 1. Measure Android after `v7.0.1` with Map Debug: render ms, marker count, gesture smoothness, and whether tiles blank during zoom.
-2. If Android still lags in repaired lite mode, the next fix should be replacing DOM point markers with a canvas renderer at dense zooms.
+2. If Android still lags after `v7.0.7`, stop tuning DOM visibility and replace dense point markers with a canvas renderer at dense zooms.
 3. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
 4. Start helper extraction from `app.js` with no behavior changes.
 5. Add screenshot-based mobile QA once browser automation is available in the current session.

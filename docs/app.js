@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.0.6';
+const APP_VERSION = 'v7.0.7';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1275,7 +1275,7 @@ function _getMarkerRenderMode() {
 }
 
 function _getDistrictClusterMaxZoom() {
-    return _androidLiteMode ? DISTRICT_CLUSTER_MAX_ZOOM + 2 : DISTRICT_CLUSTER_MAX_ZOOM;
+    return DISTRICT_CLUSTER_MAX_ZOOM;
 }
 
 function _getViewportKey() {
@@ -1301,10 +1301,10 @@ function _getMobileMarkerLimit() {
     if (!_mobile) return Infinity;
     const zoom = map.getZoom();
     if (_androidLiteMode) {
-        if (zoom <= 14) return 30;
-        if (zoom <= 15) return 50;
-        if (zoom <= 16) return 80;
-        return 130;
+        if (zoom <= 14) return 120;
+        if (zoom <= 15) return 220;
+        if (zoom <= 16) return 360;
+        return 520;
     }
     if (_androidPerfMode) {
         if (zoom <= 14) return 80;
@@ -1319,7 +1319,7 @@ function _getMobileMarkerLimit() {
 }
 
 function _getMobileZoomSettleDelay() {
-    if (_androidLiteMode) return 220;
+    if (_androidLiteMode) return 140;
     if (_androidPerfMode) return 120;
     return 60;
 }
@@ -1340,8 +1340,8 @@ function _limitMobileMarkers(items) {
 function _updateMobileMarkerLabels(count) {
     if (!_mobile) return;
     const mapEl = map.getContainer();
-    const labelLimit = _androidLiteMode ? 0 : _androidPerfMode ? 36 : 90;
-    const minZoom = _androidPerfMode ? 17 : 14;
+    const labelLimit = _androidPerfMode ? 110 : 90;
+    const minZoom = 14;
     const canShow = map.getZoom() >= minZoom && count <= labelLimit && !mapEl.classList.contains('is-gesture-zooming');
     mapEl.classList.toggle('show-mobile-marker-labels', canShow);
 }
