@@ -1683,6 +1683,8 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         const size = this._map.getSize();
         const topLeft = this._map.containerPointToLayerPoint([0, 0]);
         const ctx = this._ctx;
+        // Critical: move canvas with map to prevent floating markers
+        L.DomUtil.setPosition(this._canvas, topLeft);
         ctx.clearRect(0, 0, size.x, size.y);
         this._positions = [];
         for (const loc of this.items) {
@@ -1872,6 +1874,8 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
         const size = this._map.getSize();
         const topLeft = this._map.containerPointToLayerPoint([0, 0]);
         const ctx = this._ctx;
+        // Critical: move canvas with map to prevent floating clusters
+        L.DomUtil.setPosition(this._canvas, topLeft);
         ctx.clearRect(0, 0, size.x, size.y);
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
