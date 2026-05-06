@@ -41,6 +41,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Added Android pan/zoom debounce so map-only marker updates wait until gestures settle instead of competing with tile compositing.
 - Added Android canvas marker renderer for dense point views to avoid transforming hundreds of DOM marker nodes during pinch and pan.
 - Fixed Android canvas marker drift by redrawing the canvas layer on move/zoom animation frames.
+- Added Android canvas cluster renderer for broad-zoom group bubbles to remove large DOM cluster transforms during pinch and pan.
 
 ## Phase 1: Mobile Map Stability
 

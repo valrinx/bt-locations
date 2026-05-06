@@ -42,6 +42,7 @@ Latest known commit before this handoff:
 - Added Android gesture render debounce in `v7.0.8`: pan/zoom now queues one delayed marker update after the gesture settles instead of rendering immediately while Android Chrome is still compositing tiles.
 - Added Android canvas marker renderer in `v7.1.0` for dense point views: Android now draws visible point markers and labels on one canvas instead of hundreds of DOM marker nodes during pan/zoom.
 - Fixed Android canvas marker drift in `v7.1.1`: the canvas layer now redraws on `move` and `zoom` with `requestAnimationFrame`, so markers stay attached to the map during simultaneous pinch and pan.
+- Added Android canvas cluster renderer in `v7.2.0`: broad-zoom district/group bubbles now draw on canvas too, avoiding large DOM cluster markers during pinch and pan.
 
 ## Mobile QA Checklist
 
@@ -67,6 +68,7 @@ Use this when testing on a real phone or mobile viewport:
 18. During Android pan/zoom, names may hide only while the finger is moving, then return after the gesture. Pins should remain visible.
 19. On Android at point zoom, Map Debug should show `canvas` with a count instead of `off`. Tapping a canvas marker should still open location details.
 20. During Android pinch+pan, canvas pins should track the basemap; labels should hide only while moving and return after the gesture.
+21. At broad zoom on Android, Map Debug should show `clusters` with a count. Large group bubbles should track the basemap during pinch+pan.
 
 ## Known Caveats
 
@@ -91,7 +93,7 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 ## Next Recommended Work
 
 1. Measure Android after `v7.0.1` with Map Debug: render ms, marker count, gesture smoothness, and whether tiles blank during zoom.
-2. If Android still lags after `v7.1.0`, inspect Map Debug `longtask` and canvas count; the next step is optimizing canvas draw density or tile provider behavior, not returning to DOM marker tuning.
+2. If Android still lags after `v7.2.0`, inspect Map Debug `longtask`, `canvas`, and `clusters`; the next step is optimizing canvas draw density or tile provider behavior, not returning to DOM marker tuning.
 3. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
 4. Start helper extraction from `app.js` with no behavior changes.
 5. Add screenshot-based mobile QA once browser automation is available in the current session.

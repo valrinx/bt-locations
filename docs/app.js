@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.1.1';
+const APP_VERSION = 'v7.2.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1223,6 +1223,8 @@ function getSorted(filtered) {
 let _markerCache = new Map(); // idx → marker
 let _androidCanvasMarkerLayer = null;
 let _androidCanvasMarkerItems = [];
+let _androidCanvasClusterLayer = null;
+let _androidCanvasClusterItems = [];
 let _lastFilteredKey = null;
 let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 const DISTRICT_CLUSTER_MAX_ZOOM = 13;
@@ -1398,6 +1400,7 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">markers</span><span>${stats.visible}/${stats.layer}</span>
         <span style="color:var(--tx3);">limit</span><span>${stats.limit === Infinity ? '∞' : stats.limit}</span>
         <span style="color:var(--tx3);">canvas</span><span style="color:${_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer) ? 'var(--gn)' : 'var(--tx2)'}">${_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer) ? _androidCanvasMarkerItems.length : 'off'}</span>
+        <span style="color:var(--tx3);">clusters</span><span style="color:${_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer) ? 'var(--gn)' : 'var(--tx2)'}">${_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer) ? _androidCanvasClusterItems.length : 'off'}</span>
         <span style="color:var(--tx3);">android</span><span style="color:${stats.androidPerfMode ? 'var(--am)' : 'var(--tx2)'}">${stats.androidPerfMode ? (stats.lite ? 'lite' : 'perf') : 'off'}</span>
         <span style="color:var(--tx3);">render</span><span>${stats.ms}ms</span>
         <span style="color:var(--tx3);">update</span><span>${stats.updateKind}</span>
@@ -1680,6 +1683,173 @@ function _hideAndroidCanvasMarkers() {
     }
 }
 
+const AndroidCanvasClusterLayer = L.Layer.extend({
+    initialize(items = []) {
+        this.items = items;
+        this._canvas = null;
+        this._ctx = null;
+        this._positions = [];
+        this._raf = null;
+        this._clickHandler = this._handleMapClick.bind(this);
+        this._reset = this._reset.bind(this);
+        this._scheduleReset = this._scheduleReset.bind(this);
+    },
+    onAdd(mapInstance) {
+        this._map = mapInstance;
+        this._canvas = L.DomUtil.create('canvas', 'android-canvas-cluster-layer');
+        this._canvas.style.position = 'absolute';
+        this._canvas.style.pointerEvents = 'none';
+        this._ctx = this._canvas.getContext('2d');
+        mapInstance.getPanes().overlayPane.appendChild(this._canvas);
+        mapInstance.on('move zoom', this._scheduleReset);
+        mapInstance.on('moveend zoomend resize viewreset', this._reset);
+        mapInstance.on('click', this._clickHandler);
+        this._reset();
+    },
+    onRemove(mapInstance) {
+        mapInstance.off('move zoom', this._scheduleReset);
+        mapInstance.off('moveend zoomend resize viewreset', this._reset);
+        mapInstance.off('click', this._clickHandler);
+        if (this._raf) {
+            cancelAnimationFrame(this._raf);
+            this._raf = null;
+        }
+        if (this._canvas) {
+            L.DomUtil.remove(this._canvas);
+            this._canvas = null;
+            this._ctx = null;
+        }
+        this._positions = [];
+    },
+    setItems(items = []) {
+        this.items = items;
+        this._reset();
+    },
+    _scheduleReset() {
+        if (this._raf) return;
+        this._raf = requestAnimationFrame(() => {
+            this._raf = null;
+            this._reset();
+        });
+    },
+    _reset() {
+        if (!this._map || !this._canvas || !this._ctx) return;
+        const size = this._map.getSize();
+        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        this._canvas.width = Math.round(size.x * dpr);
+        this._canvas.height = Math.round(size.y * dpr);
+        this._canvas.style.width = `${size.x}px`;
+        this._canvas.style.height = `${size.y}px`;
+        L.DomUtil.setPosition(this._canvas, topLeft);
+        this._ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this._draw(topLeft, size);
+    },
+    _draw(topLeft, size) {
+        const ctx = this._ctx;
+        ctx.clearRect(0, 0, size.x, size.y);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        this._positions = [];
+        const moving = this._map.getContainer().classList.contains('is-map-moving') ||
+            this._map.getContainer().classList.contains('is-gesture-zooming');
+        for (const item of this.items) {
+            const center = item.center;
+            const layerPoint = this._map.latLngToLayerPoint(center);
+            const x = layerPoint.x - topLeft.x;
+            const y = layerPoint.y - topLeft.y;
+            const radius = item.size / 2;
+            if (x < -radius - 20 || y < -radius - 20 || x > size.x + radius + 20 || y > size.y + radius + 20) continue;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = item.color;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(245,248,255,0.72)';
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x - radius * 0.24, y - radius * 0.28, radius * 0.22, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.16)';
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.96)';
+            ctx.font = '900 15px "Noto Sans Thai", system-ui, sans-serif';
+            ctx.fillText(String(item.count), x, y - 4);
+            if (!moving) {
+                ctx.font = '800 9px "Noto Sans Thai", system-ui, sans-serif';
+                ctx.fillStyle = 'rgba(232,238,255,0.9)';
+                ctx.fillText(item.label, x, y + 12);
+            }
+            this._positions.push({ ...item, x, y, radius });
+        }
+    },
+    _handleMapClick(e) {
+        if (!_androidPerfMode || !this._positions.length || routeMode || manualRouteMode) return;
+        const p = this._map.latLngToContainerPoint(e.latlng);
+        let nearest = null;
+        let min = Infinity;
+        for (const item of this._positions) {
+            const dx = item.x - p.x;
+            const dy = item.y - p.y;
+            const d = dx * dx + dy * dy;
+            const hit = Math.max(28, item.radius + 8);
+            if (d <= hit * hit && d < min) {
+                min = d;
+                nearest = item;
+            }
+        }
+        if (!nearest) return;
+        if (nearest.data._aggregate && nearest.data.districts && nearest.data.districts.size > 1) {
+            this._map.fitBounds(nearest.data.bounds.pad(0.18), { animate: false, maxZoom: _getDistrictClusterMaxZoom() + 1 });
+            return;
+        }
+        _showDistrictPopup(nearest.displayDistrict, nearest.data, {
+            getLatLng: () => nearest.center
+        });
+    }
+});
+
+function _getAndroidCanvasClusterItems(districtGroups) {
+    return Object.entries(districtGroups).map(([district, data]) => {
+        const count = data.locations.length;
+        const center = data.bounds.getCenter();
+        const lists = Array.from(data.lists);
+        const districtCount = data.districts ? data.districts.size : 1;
+        const displayDistrict = data.districtName || (districtCount === 1 && data.districts ? Array.from(data.districts)[0] : district);
+        const size = Math.min(50, Math.max(30, 28 + Math.sqrt(count) * 1.8));
+        const topList = lists[0] || 'ไม่ระบุ';
+        return {
+            district,
+            displayDistrict,
+            data,
+            center,
+            count,
+            size,
+            label: data._aggregate && districtCount > 1 ? `${districtCount} เขต` : 'ตู้',
+            color: getColor(topList)
+        };
+    });
+}
+
+function _showAndroidCanvasClusters(districtGroups) {
+    if (_districtClusterGroup && map.hasLayer(_districtClusterGroup)) map.removeLayer(_districtClusterGroup);
+    _hideAndroidCanvasMarkers();
+    _androidCanvasClusterItems = _getAndroidCanvasClusterItems(districtGroups);
+    if (!_androidCanvasClusterLayer) {
+        _androidCanvasClusterLayer = new AndroidCanvasClusterLayer(_androidCanvasClusterItems);
+        _androidCanvasClusterLayer.addTo(map);
+    } else {
+        _androidCanvasClusterLayer.setItems(_androidCanvasClusterItems);
+        if (!map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer.addTo(map);
+    }
+}
+
+function _hideAndroidCanvasClusters() {
+    _androidCanvasClusterItems = [];
+    if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) {
+        map.removeLayer(_androidCanvasClusterLayer);
+    }
+}
+
 function _updateDistrictScopeControl(count) {
     let el = document.getElementById('districtScopeControl');
     const mapEl = document.getElementById('map');
@@ -1751,6 +1921,7 @@ function renderMarkers(filtered) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         _hideAndroidCanvasMarkers();
+        _hideAndroidCanvasClusters();
         _updateDistrictScopeControl(0);
         return; 
     }
@@ -1773,6 +1944,7 @@ function renderMarkers(filtered) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
         _hideAndroidCanvasMarkers();
+        _hideAndroidCanvasClusters();
         _updateDistrictScopeControl(0);
         const z=map.getZoom();
         const hr=Math.max(8,Math.min(40, z<=10?10:z<=12?18:z<=14?28:40));
@@ -1789,6 +1961,7 @@ function renderMarkers(filtered) {
     if (manualRouteMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         _hideAndroidCanvasMarkers();
+        _hideAndroidCanvasClusters();
         const visibleManual = _limitMobileMarkers(_filterToViewport(filtered));
         _showIndividualMarkers(visibleManual);
         _updateDistrictScopeControl(filtered.length);
@@ -1810,14 +1983,17 @@ function renderMarkers(filtered) {
         
         // Create district clusters
         const districtGroups = _createMobileClusterCells(_createDistrictClusters(filtered));
-        _districtClusterGroup = L.layerGroup();
-        
-        Object.entries(districtGroups).forEach(([district, data]) => {
-            const marker = _createDistrictClusterMarker(district, data);
-            _districtClusterGroup.addLayer(marker);
-        });
-        
-        map.addLayer(_districtClusterGroup);
+        if (_androidPerfMode) {
+            _showAndroidCanvasClusters(districtGroups);
+        } else {
+            _hideAndroidCanvasClusters();
+            _districtClusterGroup = L.layerGroup();
+            Object.entries(districtGroups).forEach(([district, data]) => {
+                const marker = _createDistrictClusterMarker(district, data);
+                _districtClusterGroup.addLayer(marker);
+            });
+            map.addLayer(_districtClusterGroup);
+        }
         
         // Update stats
         const districtCount = Object.keys(districtGroups).length;
@@ -1832,6 +2008,7 @@ function renderMarkers(filtered) {
     
     // Case 2: Zoomed in (>13) OR district selected → Show individual markers
     if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+    _hideAndroidCanvasClusters();
     
     // If district is selected, filter to that district only
     const markersToShow = _selectedDistrict
@@ -2151,6 +2328,7 @@ function _zoomToDistrictList(district, list) {
 // Show individual markers for filtered data
 function _showIndividualMarkers(filtered) {
     _hideAndroidCanvasMarkers();
+    _hideAndroidCanvasClusters();
     if (_districtClusterGroup) {
         map.removeLayer(_districtClusterGroup);
     }
@@ -2214,6 +2392,7 @@ function _resetToDistrictView() {
         _individualMarkersLayer = null;
     }
     _hideAndroidCanvasMarkers();
+    _hideAndroidCanvasClusters();
     _visibleMarkerIdxs.clear();
     _updateMobileMarkerLabels(0);
     update(); // Re-render clusters
@@ -6355,7 +6534,8 @@ html.is-android-map #map.is-gesture-zooming .you-are-here-ring { animation: none
 html.is-android-map #map.is-map-moving .bt-field-marker { transition: none !important; filter: none !important; }
 html.is-android-map #map.is-map-moving .bt-field-marker-label,
 html.is-android-map #map.is-map-moving .leaflet-tooltip { display: none !important; }
-.android-canvas-marker-layer { z-index: 430 !important; image-rendering:auto; }
+.android-canvas-marker-layer,
+.android-canvas-cluster-layer { z-index: 430 !important; image-rendering:auto; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
@@ -6643,6 +6823,8 @@ window.btDebug = {
             androidLiteMode: _androidLiteMode,
             androidCanvasMarkers: _androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer),
             androidCanvasMarkerCount: _androidCanvasMarkerItems.length,
+            androidCanvasClusters: _androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer),
+            androidCanvasClusterCount: _androidCanvasClusterItems.length,
             visibleMarkers: _visibleMarkerIdxs.size,
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
@@ -6682,7 +6864,7 @@ window.btDebug = {
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     refreshApp: ()=>refreshAppNow(),
-    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,androidCanvasMarkers:!!(_androidCanvasMarkerLayer&&map.hasLayer(_androidCanvasMarkerLayer)),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,androidCanvasMarkers:!!(_androidCanvasMarkerLayer&&map.hasLayer(_androidCanvasMarkerLayer)),androidCanvasClusters:!!(_androidCanvasClusterLayer&&map.hasLayer(_androidCanvasClusterLayer)),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
