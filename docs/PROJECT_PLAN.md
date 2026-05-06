@@ -36,7 +36,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Added Android lite mode toggle with stricter caps and longer cluster mode for laggy Android devices.
 - Increased Android post-zoom settle delay before marker rebuilds to reduce frame contention after pinch gestures.
 - Added long-task counters to Map Debug for Android main-thread diagnosis.
-- Strengthened Android lite mode by hiding individual marker DOM during pan/zoom and redrawing after gestures settle.
+- Repaired Android lite mode by removing marker-layer suspension after reports that pins disappeared.
 
 ## Phase 1: Mobile Map Stability
 
