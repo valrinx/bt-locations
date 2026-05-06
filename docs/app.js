@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.0.4';
+const APP_VERSION = 'v7.0.5';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1104,6 +1104,7 @@ const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
 const _android = /Android/i.test(navigator.userAgent);
 const _androidPerfMode = _android || localStorage.getItem('bt_android_perf_mode') === 'true';
 let _androidLiteMode = _androidPerfMode && localStorage.getItem('bt_android_lite_mode') === 'true';
+let _androidLiteMarkersSuspended = false;
 if (_mobile) document.documentElement.classList.add('is-mobile-map');
 if (_androidPerfMode) document.documentElement.classList.add('is-android-map');
 if (_androidLiteMode) document.documentElement.classList.add('is-android-lite-map');
@@ -1275,7 +1276,7 @@ function _getMarkerRenderMode() {
 }
 
 function _getDistrictClusterMaxZoom() {
-    return _androidLiteMode ? DISTRICT_CLUSTER_MAX_ZOOM + 1 : DISTRICT_CLUSTER_MAX_ZOOM;
+    return _androidLiteMode ? DISTRICT_CLUSTER_MAX_ZOOM + 2 : DISTRICT_CLUSTER_MAX_ZOOM;
 }
 
 function _getViewportKey() {
@@ -1301,10 +1302,10 @@ function _getMobileMarkerLimit() {
     if (!_mobile) return Infinity;
     const zoom = map.getZoom();
     if (_androidLiteMode) {
-        if (zoom <= 14) return 50;
-        if (zoom <= 15) return 90;
-        if (zoom <= 16) return 140;
-        return 220;
+        if (zoom <= 14) return 30;
+        if (zoom <= 15) return 50;
+        if (zoom <= 16) return 80;
+        return 130;
     }
     if (_androidPerfMode) {
         if (zoom <= 14) return 80;
@@ -1319,9 +1320,32 @@ function _getMobileMarkerLimit() {
 }
 
 function _getMobileZoomSettleDelay() {
-    if (_androidLiteMode) return 180;
+    if (_androidLiteMode) return 220;
     if (_androidPerfMode) return 120;
     return 60;
+}
+
+function _suspendAndroidLiteMarkers(reason='gesture') {
+    if (!_androidLiteMode || !_individualMarkersLayer) return;
+    const mapEl = map.getContainer();
+    mapEl.classList.add('is-android-lite-suspended');
+    if (map.hasLayer(_individualMarkersLayer)) {
+        map.removeLayer(_individualMarkersLayer);
+        _androidLiteMarkersSuspended = true;
+        _visibleMarkerIdxs.clear();
+        _lastUpdateKind = `lite-hide:${reason}`;
+        _updateMapDebugOverlay();
+    }
+}
+
+function _resumeAndroidLiteMarkers(reason='gesture') {
+    if (!_androidLiteMode) return;
+    map.getContainer().classList.remove('is-android-lite-suspended');
+    if (_androidLiteMarkersSuspended) {
+        _androidLiteMarkersSuspended = false;
+        _lastFilteredKey = null;
+        scheduleMapOnlyUpdate(`lite-${reason}`);
+    }
 }
 
 function _limitMobileMarkers(items) {
@@ -1374,6 +1398,7 @@ function _updateMapDebugOverlay() {
         layer: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
         limit: _getMobileMarkerLimit(),
         lite: _androidLiteMode,
+        suspended: _androidLiteMarkersSuspended,
         ms: _lastMarkerRenderMs,
         updateKind: _lastUpdateKind,
         fullMs: _lastFullUpdateMs,
@@ -1387,7 +1412,7 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">mode</span><span>${_escapeHtml(stats.mode)}</span>
         <span style="color:var(--tx3);">markers</span><span>${stats.visible}/${stats.layer}</span>
         <span style="color:var(--tx3);">limit</span><span>${stats.limit === Infinity ? '∞' : stats.limit}</span>
-        <span style="color:var(--tx3);">android</span><span style="color:${stats.androidPerfMode ? 'var(--am)' : 'var(--tx2)'}">${stats.androidPerfMode ? (stats.lite ? 'lite' : 'perf') : 'off'}</span>
+        <span style="color:var(--tx3);">android</span><span style="color:${stats.androidPerfMode ? 'var(--am)' : 'var(--tx2)'}">${stats.androidPerfMode ? (stats.lite ? (stats.suspended ? 'lite-hide' : 'lite') : 'perf') : 'off'}</span>
         <span style="color:var(--tx3);">render</span><span>${stats.ms}ms</span>
         <span style="color:var(--tx3);">update</span><span>${stats.updateKind}</span>
         <span style="color:var(--tx3);">full/map</span><span>${stats.fullMs}/${stats.mapMs}ms</span>
@@ -1952,6 +1977,11 @@ function _zoomToDistrictList(district, list) {
 
 // Show individual markers for filtered data
 function _showIndividualMarkers(filtered) {
+    const mapEl = map.getContainer();
+    if (_androidLiteMode && (mapEl.classList.contains('is-gesture-zooming') || mapEl.classList.contains('is-map-moving'))) {
+        _suspendAndroidLiteMarkers('render-skip');
+        return;
+    }
     if (_districtClusterGroup) {
         map.removeLayer(_districtClusterGroup);
     }
@@ -2000,6 +2030,8 @@ function _showIndividualMarkers(filtered) {
     });
 
     _visibleMarkerIdxs = nextVisibleIdxs;
+    _androidLiteMarkersSuspended = false;
+    mapEl.classList.remove('is-android-lite-suspended');
     _individualMarkersLayer.addTo(map);
     _updateMobileMarkerLabels(nextVisibleIdxs.size);
     if (typeof _updateTooltipVisibility === 'function') _updateTooltipVisibility();
@@ -3449,10 +3481,17 @@ map.on('zoomend', () => {
 });
 map.on('moveend', () => {
     if (_mobile && map.getContainer().classList.contains('is-gesture-zooming')) return;
+    map.getContainer().classList.remove('is-map-moving');
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
-        scheduleMapOnlyUpdate('move');
+        if (_androidLiteMode && _androidLiteMarkersSuspended) _resumeAndroidLiteMarkers('move');
+        else scheduleMapOnlyUpdate('move');
     }
+});
+map.on('movestart', () => {
+    if (!_androidLiteMode) return;
+    map.getContainer().classList.add('is-map-moving');
+    _suspendAndroidLiteMarkers('move');
 });
 map.on('zoomstart', () => {
     if (!_mobile) return;
@@ -3462,6 +3501,7 @@ map.on('zoomstart', () => {
     }
     map.getContainer().classList.add('is-gesture-zooming');
     map.getContainer().classList.remove('show-mobile-marker-labels');
+    _suspendAndroidLiteMarkers('zoom');
     _updateMapDebugOverlay();
 });
 map.on('zoomend', () => {
@@ -3469,7 +3509,8 @@ map.on('zoomend', () => {
     map.getContainer().classList.remove('is-gesture-zooming');
     _mobileZoomRestoreTimer = setTimeout(() => {
         _mobileZoomRestoreTimer = null;
-        scheduleMapOnlyUpdate('zoom');
+        if (_androidLiteMode && _androidLiteMarkersSuspended) _resumeAndroidLiteMarkers('zoom');
+        else scheduleMapOnlyUpdate('zoom');
     }, _getMobileZoomSettleDelay());
     _updateMapDebugOverlay();
 });
@@ -6138,6 +6179,9 @@ html.is-android-map #map.is-gesture-zooming .bt-field-marker,
 html.is-android-map #map.is-gesture-zooming .marker-cluster,
 html.is-android-map #map.is-gesture-zooming .you-are-here-wrap { filter: none !important; box-shadow: none !important; }
 html.is-android-map #map.is-gesture-zooming .you-are-here-ring { animation: none !important; }
+html.is-android-lite-map #map.is-android-lite-suspended .leaflet-marker-pane { opacity: 0 !important; pointer-events: none !important; }
+html.is-android-lite-map #map.is-map-moving .bt-field-marker-label,
+html.is-android-lite-map #map.is-map-moving .leaflet-tooltip { display: none !important; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
@@ -6423,6 +6467,7 @@ window.btDebug = {
             mode: _getMarkerRenderMode(),
             androidPerfMode: _androidPerfMode,
             androidLiteMode: _androidLiteMode,
+            androidLiteSuspended: _androidLiteMarkersSuspended,
             visibleMarkers: _visibleMarkerIdxs.size,
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
@@ -6462,7 +6507,7 @@ window.btDebug = {
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     refreshApp: ()=>refreshAppNow(),
-    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,androidLiteSuspended:_androidLiteMarkersSuspended,map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
@@ -6474,11 +6519,21 @@ function toggleAndroidLiteMode() {
     _androidLiteMode = !_androidLiteMode;
     localStorage.setItem('bt_android_lite_mode', _androidLiteMode ? 'true' : 'false');
     document.documentElement.classList.toggle('is-android-lite-map', _androidLiteMode);
+    _updateAndroidLiteButton();
     invalidateMarkerCache();
     update({ mapOnly: true, reason: 'android-lite' });
     showToast(_androidLiteMode ? 'เปิดโหมดลื่นพิเศษ' : 'ปิดโหมดลื่นพิเศษ', false, true);
 }
 window.toggleAndroidLiteMode = toggleAndroidLiteMode;
+
+function _updateAndroidLiteButton() {
+    const btn = document.getElementById('btnAndroidLiteMode');
+    if (!btn) return;
+    btn.classList.toggle('active', _androidLiteMode);
+    const ico = btn.querySelector('.mob-menu-ico');
+    if (ico) ico.textContent = _androidLiteMode ? 'ON' : 'FAST';
+}
+_updateAndroidLiteButton();
 
 async function refreshAppNow() {
     showToast('กำลังรีโหลดแอป...');

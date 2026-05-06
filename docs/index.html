@@ -2939,6 +2939,16 @@
             background: var(--s3);
         }
 
+        .mob-menu-item.active {
+            border-color: var(--gn-b);
+            background: linear-gradient(180deg, oklch(20% 0.055 154), oklch(16% 0.034 260));
+        }
+
+        .mob-menu-item.active .mob-menu-ico {
+            background: oklch(31% 0.1 154 / 0.78);
+            color: oklch(84% 0.16 154);
+        }
+
         .mob-menu-item.danger {
             background: linear-gradient(180deg, oklch(20% 0.045 28), oklch(16% 0.035 28));
             border-color: oklch(55% 0.16 28 / 0.42);
@@ -4855,7 +4865,7 @@
                         <span><b>Map Debug</b><small>ดู marker, zoom และ render time บนแผนที่</small></span>
                         <span class="mob-menu-ico">DBG</span>
                     </button>
-                    <button class="mob-menu-item" onclick="toggleAndroidLiteMode(); closeMobDrawer()">
+                    <button class="mob-menu-item" id="btnAndroidLiteMode" onclick="toggleAndroidLiteMode(); closeMobDrawer()">
                         <span><b>โหมดลื่นพิเศษ</b><small>ลด marker และ label สำหรับ Android ที่ยังหน่วง</small></span>
                         <span class="mob-menu-ico">FAST</span>
                     </button>

@@ -37,6 +37,7 @@ Latest known commit before this handoff:
 - Added Android "lite" mode in `v7.0.2`: user-facing menu toggle that keeps clusters longer, lowers marker caps further, and disables labels for laggy Android devices.
 - Delayed post-zoom marker rebuilds longer on Android in `v7.0.3` so Chrome can finish tile compositing before the app re-renders markers.
 - Added Map Debug long-task monitoring so Android tests can see when JavaScript blocks the main thread.
+- Strengthened Android lite mode in `v7.0.5`: it now hides individual marker layers during pan/zoom and redraws them after the gesture settles.
 
 ## Mobile QA Checklist
 
@@ -58,6 +59,7 @@ Use this when testing on a real phone or mobile viewport:
 14. Test on Android Chrome with Map Debug open. The overlay should show `android perf`, marker limit should be lower than iOS, and pinch zoom should feel steadier.
 15. If Android still lags, open Menu -> โหมดลื่นพิเศษ. Map Debug should show `android lite` and marker limits should drop again.
 16. Watch Map Debug `longtask`; repeated values above 80ms mean main-thread JavaScript is still blocking Android frames.
+17. In lite mode, pinch or drag the map. Map Debug should briefly show `android lite-hide`, then return to `android lite` after markers redraw.
 
 ## Known Caveats
 
@@ -82,7 +84,7 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 ## Next Recommended Work
 
 1. Measure Android after `v7.0.1` with Map Debug: render ms, marker count, gesture smoothness, and whether tiles blank during zoom.
-2. If Android still lags in lite mode, consider switching dense point rendering to canvas or using server-side/vector tile clustering.
+2. If Android still lags in strengthened lite mode, the next fix should be replacing DOM point markers with a canvas renderer at dense zooms.
 3. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
 4. Start helper extraction from `app.js` with no behavior changes.
 5. Add screenshot-based mobile QA once browser automation is available in the current session.
