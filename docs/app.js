@@ -1544,6 +1544,8 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         this._clickHandler = this._handleMapClick.bind(this);
         this._reset = this._reset.bind(this);
         this._scheduleReset = this._scheduleReset.bind(this);
+        this._scheduleThrottled = this._scheduleThrottled.bind(this);
+        this._throttleTimer = null;
     },
     onAdd(mapInstance) {
         this._map = mapInstance;
@@ -1552,17 +1554,23 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         this._canvas.style.pointerEvents = 'none';
         this._ctx = this._canvas.getContext('2d');
         mapInstance.getPanes().overlayPane.appendChild(this._canvas);
-        // Optimized: skip 'move zoom' during gestures for 60fps, only render on settle
+        // Smooth gestures: simplified dots during move, full render on settle
+        mapInstance.on('move zoom', this._scheduleThrottled);
         mapInstance.on('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.on('click', this._clickHandler);
         this._reset();
     },
     onRemove(mapInstance) {
+        mapInstance.off('move zoom', this._scheduleThrottled);
         mapInstance.off('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.off('click', this._clickHandler);
         if (this._raf) {
             cancelAnimationFrame(this._raf);
             this._raf = null;
+        }
+        if (this._throttleTimer) {
+            clearTimeout(this._throttleTimer);
+            this._throttleTimer = null;
         }
         if (this._canvas) {
             L.DomUtil.remove(this._canvas);
@@ -1577,12 +1585,23 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
     },
     _scheduleReset() {
         if (this._raf) return;
-        // Skip render during gestures for smooth pan/zoom
-        if (typeof _isAndroidGestureLiteActive === 'function' && _isAndroidGestureLiteActive()) return;
         this._raf = requestAnimationFrame(() => {
             this._raf = null;
             this._reset();
         });
+    },
+    _scheduleThrottled() {
+        // During gestures: throttle to ~30fps, render simplified
+        if (this._raf || this._throttleTimer) return;
+        this._throttleTimer = setTimeout(() => {
+            this._throttleTimer = null;
+            if (!this._raf) {
+                this._raf = requestAnimationFrame(() => {
+                    this._raf = null;
+                    this._drawSimplified();
+                });
+            }
+        }, 33);
     },
     _reset() {
         if (!this._map || !this._canvas || !this._ctx) return;
@@ -1655,6 +1674,30 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
                     ctx.font = '800 10px "Noto Sans Thai", system-ui, sans-serif';
                 }
             }
+            this._positions.push({ idx, loc, x, y });
+        }
+    },
+    _drawSimplified() {
+        // Fast render during gestures: simple dots, no labels, no text measurement
+        if (!this._map || !this._canvas || !this._ctx) return;
+        const size = this._map.getSize();
+        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        const ctx = this._ctx;
+        ctx.clearRect(0, 0, size.x, size.y);
+        this._positions = [];
+        for (const loc of this.items) {
+            if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) continue;
+            const idx = getLocIndex(loc);
+            if (idx < 0) continue;
+            const layerPoint = this._map.latLngToLayerPoint([loc.lat, loc.lng]);
+            const x = layerPoint.x - topLeft.x;
+            const y = layerPoint.y - topLeft.y;
+            if (x < -20 || y < -20 || x > size.x + 20 || y > size.y + 20) continue;
+            // Simple solid dot - fastest path
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = _getMarkerColor(loc);
+            ctx.fill();
             this._positions.push({ idx, loc, x, y });
         }
     },
