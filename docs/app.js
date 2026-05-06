@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.1.0';
+const APP_VERSION = 'v7.1.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1522,8 +1522,10 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         this._canvas = null;
         this._ctx = null;
         this._positions = [];
+        this._raf = null;
         this._clickHandler = this._handleMapClick.bind(this);
         this._reset = this._reset.bind(this);
+        this._scheduleReset = this._scheduleReset.bind(this);
     },
     onAdd(mapInstance) {
         this._map = mapInstance;
@@ -1532,13 +1534,19 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         this._canvas.style.pointerEvents = 'none';
         this._ctx = this._canvas.getContext('2d');
         mapInstance.getPanes().overlayPane.appendChild(this._canvas);
+        mapInstance.on('move zoom', this._scheduleReset);
         mapInstance.on('moveend zoomend resize viewreset', this._reset);
         mapInstance.on('click', this._clickHandler);
         this._reset();
     },
     onRemove(mapInstance) {
+        mapInstance.off('move zoom', this._scheduleReset);
         mapInstance.off('moveend zoomend resize viewreset', this._reset);
         mapInstance.off('click', this._clickHandler);
+        if (this._raf) {
+            cancelAnimationFrame(this._raf);
+            this._raf = null;
+        }
         if (this._canvas) {
             L.DomUtil.remove(this._canvas);
             this._canvas = null;
@@ -1549,6 +1557,13 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
     setItems(items = []) {
         this.items = items;
         this._reset();
+    },
+    _scheduleReset() {
+        if (this._raf) return;
+        this._raf = requestAnimationFrame(() => {
+            this._raf = null;
+            this._reset();
+        });
     },
     _reset() {
         if (!this._map || !this._canvas || !this._ctx) return;

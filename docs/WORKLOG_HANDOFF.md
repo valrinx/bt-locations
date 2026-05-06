@@ -41,6 +41,7 @@ Latest known commit before this handoff:
 - Rebalanced Android lite mode in `v7.0.7`: restored normal cluster zoom, restored marker names from zoom 14, and raised marker caps because the prior version hurt field usability.
 - Added Android gesture render debounce in `v7.0.8`: pan/zoom now queues one delayed marker update after the gesture settles instead of rendering immediately while Android Chrome is still compositing tiles.
 - Added Android canvas marker renderer in `v7.1.0` for dense point views: Android now draws visible point markers and labels on one canvas instead of hundreds of DOM marker nodes during pan/zoom.
+- Fixed Android canvas marker drift in `v7.1.1`: the canvas layer now redraws on `move` and `zoom` with `requestAnimationFrame`, so markers stay attached to the map during simultaneous pinch and pan.
 
 ## Mobile QA Checklist
 
@@ -65,6 +66,7 @@ Use this when testing on a real phone or mobile viewport:
 17. In lite mode, pinch or drag the map. Pins and nearby marker names should remain usable; do not accept a performance fix that hides important field labels.
 18. During Android pan/zoom, names may hide only while the finger is moving, then return after the gesture. Pins should remain visible.
 19. On Android at point zoom, Map Debug should show `canvas` with a count instead of `off`. Tapping a canvas marker should still open location details.
+20. During Android pinch+pan, canvas pins should track the basemap; labels should hide only while moving and return after the gesture.
 
 ## Known Caveats
 
