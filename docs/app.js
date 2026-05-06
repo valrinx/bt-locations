@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.0';
+const APP_VERSION = 'v7.2.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1354,8 +1354,16 @@ function _updateMobileMarkerLabels(count) {
     const mapEl = map.getContainer();
     const labelLimit = _androidPerfMode ? 110 : 90;
     const minZoom = 14;
-    const canShow = map.getZoom() >= minZoom && count <= labelLimit && !mapEl.classList.contains('is-gesture-zooming');
+    const canShow = map.getZoom() >= minZoom && count <= labelLimit && !_isAndroidGestureLiteActive() && !mapEl.classList.contains('is-gesture-zooming');
     mapEl.classList.toggle('show-mobile-marker-labels', canShow);
+}
+
+function _isAndroidGestureLiteActive() {
+    if (!_androidPerfMode || !map) return false;
+    const mapEl = map.getContainer();
+    return mapEl.classList.contains('is-android-gesture-lite') ||
+        mapEl.classList.contains('is-map-moving') ||
+        mapEl.classList.contains('is-gesture-zooming');
 }
 
 function _ensureMapDebugOverlay() {
@@ -1385,7 +1393,9 @@ function _updateMapDebugOverlay() {
         visible: _visibleMarkerIdxs.size,
         layer: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
         limit: _getMobileMarkerLimit(),
+        androidPerfMode: _androidPerfMode,
         lite: _androidLiteMode,
+        gestureLite: _isAndroidGestureLiteActive(),
         ms: _lastMarkerRenderMs,
         updateKind: _lastUpdateKind,
         fullMs: _lastFullUpdateMs,
@@ -1406,7 +1416,7 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">update</span><span>${stats.updateKind}</span>
         <span style="color:var(--tx3);">full/map</span><span>${stats.fullMs}/${stats.mapMs}ms</span>
         <span style="color:var(--tx3);">queue</span><span style="color:${stats.pending ? 'var(--am)' : 'var(--gn)'}">${stats.pending ? 'yes' : 'no'}</span>
-        <span style="color:var(--tx3);">gesture</span><span style="color:${stats.zooming ? 'var(--am)' : 'var(--gn)'}">${stats.zooming ? 'yes' : 'no'}</span>
+        <span style="color:var(--tx3);">gesture</span><span style="color:${stats.gestureLite ? 'var(--am)' : 'var(--gn)'}">${stats.gestureLite ? 'lite' : (stats.zooming ? 'yes' : 'no')}</span>
         <span style="color:var(--tx3);">longtask</span><span style="color:${_lastLongTaskMs > 80 ? 'var(--am)' : 'var(--tx2)'}">${_longTaskCount}/${_lastLongTaskMs}ms</span>
         ${gps ? `
         <span style="grid-column:1/-1;height:1px;background:rgba(91,143,255,0.25);margin:2px 0;"></span>
@@ -1588,9 +1598,8 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         ctx.font = '800 10px "Noto Sans Thai", system-ui, sans-serif';
         this._positions = [];
         const zoom = this._map.getZoom();
-        const showLabels = zoom >= 14 && this.items.length <= (_androidLiteMode ? 260 : 360);
-        const moving = this._map.getContainer().classList.contains('is-map-moving') ||
-            this._map.getContainer().classList.contains('is-gesture-zooming');
+        const gestureLite = _isAndroidGestureLiteActive();
+        const showLabels = zoom >= 14 && this.items.length <= (_androidLiteMode ? 260 : 360) && !gestureLite;
         for (const loc of this.items) {
             if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) continue;
             const idx = getLocIndex(loc);
@@ -1601,18 +1610,23 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
             if (x < -40 || y < -40 || x > size.x + 40 || y > size.y + 40) continue;
             const color = _getMarkerColor(loc);
             const fav = isFavorite(loc);
+            const outerRadius = gestureLite ? (fav ? 6.6 : 5.4) : (fav ? 8 : 6.5);
             ctx.beginPath();
-            ctx.arc(x, y, fav ? 8 : 6.5, 0, Math.PI * 2);
+            ctx.arc(x, y, outerRadius, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
-            ctx.lineWidth = fav ? 2.6 : 2;
-            ctx.strokeStyle = fav ? 'rgba(255,226,95,0.95)' : 'rgba(246,248,255,0.94)';
+            ctx.lineWidth = gestureLite ? 1.35 : (fav ? 2.6 : 2);
+            ctx.strokeStyle = fav
+                ? (gestureLite ? 'rgba(255,226,95,0.76)' : 'rgba(255,226,95,0.95)')
+                : (gestureLite ? 'rgba(246,248,255,0.68)' : 'rgba(246,248,255,0.94)');
             ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(x, y, 2.2, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.92)';
-            ctx.fill();
-            if (showLabels && !moving) {
+            if (!gestureLite) {
+                ctx.beginPath();
+                ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.92)';
+                ctx.fill();
+            }
+            if (showLabels) {
                 const name = String(loc.name || loc.list || 'ตำแหน่ง');
                 const area = String(_getDistrictName(loc) || '');
                 const label = name.length > 18 ? `${name.slice(0, 17)}…` : name;
@@ -1751,30 +1765,31 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         this._positions = [];
-        const moving = this._map.getContainer().classList.contains('is-map-moving') ||
-            this._map.getContainer().classList.contains('is-gesture-zooming');
+        const gestureLite = _isAndroidGestureLiteActive();
         for (const item of this.items) {
             const center = item.center;
             const layerPoint = this._map.latLngToLayerPoint(center);
             const x = layerPoint.x - topLeft.x;
             const y = layerPoint.y - topLeft.y;
-            const radius = item.size / 2;
+            const radius = gestureLite ? Math.max(15, item.size * 0.39) : item.size / 2;
             if (x < -radius - 20 || y < -radius - 20 || x > size.x + radius + 20 || y > size.y + radius + 20) continue;
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
             ctx.fillStyle = item.color;
             ctx.fill();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = 'rgba(245,248,255,0.72)';
+            ctx.lineWidth = gestureLite ? 1.4 : 2;
+            ctx.strokeStyle = gestureLite ? 'rgba(245,248,255,0.52)' : 'rgba(245,248,255,0.72)';
             ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(x - radius * 0.24, y - radius * 0.28, radius * 0.22, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.16)';
-            ctx.fill();
+            if (!gestureLite) {
+                ctx.beginPath();
+                ctx.arc(x - radius * 0.24, y - radius * 0.28, radius * 0.22, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.16)';
+                ctx.fill();
+            }
             ctx.fillStyle = 'rgba(255,255,255,0.96)';
-            ctx.font = '900 15px "Noto Sans Thai", system-ui, sans-serif';
-            ctx.fillText(String(item.count), x, y - 4);
-            if (!moving) {
+            ctx.font = gestureLite ? '900 13px "Noto Sans Thai", system-ui, sans-serif' : '900 15px "Noto Sans Thai", system-ui, sans-serif';
+            ctx.fillText(String(item.count), x, gestureLite ? y : y - 4);
+            if (!gestureLite) {
                 ctx.font = '800 9px "Noto Sans Thai", system-ui, sans-serif';
                 ctx.fillStyle = 'rgba(232,238,255,0.9)';
                 ctx.fillText(item.label, x, y + 12);
@@ -3830,7 +3845,13 @@ map.on('moveend', () => {
     const mapEl = map.getContainer();
     if (_androidPerfMode) {
         setTimeout(() => {
-            if (!mapEl.classList.contains('is-gesture-zooming')) mapEl.classList.remove('is-map-moving');
+            if (!mapEl.classList.contains('is-gesture-zooming')) {
+                mapEl.classList.remove('is-map-moving', 'is-android-gesture-lite');
+                if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._reset();
+                if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._reset();
+                _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
+                _updateMapDebugOverlay();
+            }
         }, _androidLiteMode ? 120 : 80);
     } else {
         mapEl.classList.remove('is-map-moving');
@@ -3843,7 +3864,9 @@ map.on('moveend', () => {
 });
 map.on('movestart', () => {
     if (!_androidPerfMode) return;
-    map.getContainer().classList.add('is-map-moving');
+    const mapEl = map.getContainer();
+    mapEl.classList.add('is-map-moving', 'is-android-gesture-lite');
+    _updateMapDebugOverlay();
 });
 map.on('zoomstart', () => {
     if (!_mobile) return;
@@ -3851,8 +3874,10 @@ map.on('zoomstart', () => {
         clearTimeout(_mobileZoomRestoreTimer);
         _mobileZoomRestoreTimer = null;
     }
-    map.getContainer().classList.add('is-gesture-zooming');
-    map.getContainer().classList.remove('show-mobile-marker-labels');
+    const mapEl = map.getContainer();
+    mapEl.classList.add('is-gesture-zooming');
+    if (_androidPerfMode) mapEl.classList.add('is-android-gesture-lite');
+    mapEl.classList.remove('show-mobile-marker-labels');
     _updateMapDebugOverlay();
 });
 map.on('zoomend', () => {
@@ -3862,7 +3887,12 @@ map.on('zoomend', () => {
     mapEl.classList.remove('is-map-moving');
     _mobileZoomRestoreTimer = setTimeout(() => {
         _mobileZoomRestoreTimer = null;
+        mapEl.classList.remove('is-android-gesture-lite');
         scheduleMapOnlyUpdate('zoom');
+        if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._reset();
+        if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._reset();
+        _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
+        _updateMapDebugOverlay();
     }, _getMobileZoomSettleDelay());
     _updateMapDebugOverlay();
 });
@@ -6533,7 +6563,11 @@ html.is-android-map #map.is-gesture-zooming .you-are-here-wrap { filter: none !i
 html.is-android-map #map.is-gesture-zooming .you-are-here-ring { animation: none !important; }
 html.is-android-map #map.is-map-moving .bt-field-marker { transition: none !important; filter: none !important; }
 html.is-android-map #map.is-map-moving .bt-field-marker-label,
+html.is-android-map #map.is-android-gesture-lite .bt-field-marker-label,
+html.is-android-map #map.is-android-gesture-lite .leaflet-tooltip,
 html.is-android-map #map.is-map-moving .leaflet-tooltip { display: none !important; }
+html.is-android-map #map.is-android-gesture-lite .bt-field-marker,
+html.is-android-map #map.is-android-gesture-lite .marker-cluster { transition: none !important; filter: none !important; box-shadow: none !important; }
 .android-canvas-marker-layer,
 .android-canvas-cluster-layer { z-index: 430 !important; image-rendering:auto; }
 .marker-cluster { transition: opacity 120ms ease !important; }
@@ -6825,6 +6859,7 @@ window.btDebug = {
             androidCanvasMarkerCount: _androidCanvasMarkerItems.length,
             androidCanvasClusters: _androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer),
             androidCanvasClusterCount: _androidCanvasClusterItems.length,
+            androidGestureLite: _isAndroidGestureLiteActive(),
             visibleMarkers: _visibleMarkerIdxs.size,
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
@@ -6864,7 +6899,7 @@ window.btDebug = {
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     refreshApp: ()=>refreshAppNow(),
-    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,androidCanvasMarkers:!!(_androidCanvasMarkerLayer&&map.hasLayer(_androidCanvasMarkerLayer)),androidCanvasClusters:!!(_androidCanvasClusterLayer&&map.hasLayer(_androidCanvasClusterLayer)),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,androidGestureLite:_isAndroidGestureLiteActive(),androidCanvasMarkers:!!(_androidCanvasMarkerLayer&&map.hasLayer(_androidCanvasMarkerLayer)),androidCanvasClusters:!!(_androidCanvasClusterLayer&&map.hasLayer(_androidCanvasClusterLayer)),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 

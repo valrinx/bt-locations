@@ -42,6 +42,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Added Android canvas marker renderer for dense point views to avoid transforming hundreds of DOM marker nodes during pinch and pan.
 - Fixed Android canvas marker drift by redrawing the canvas layer on move/zoom animation frames.
 - Added Android canvas cluster renderer for broad-zoom group bubbles to remove large DOM cluster transforms during pinch and pan.
+- Added Android gesture-lite canvas rendering so the app keeps the full BT Locations look at rest, but uses simpler pins/clusters only while the user is actively dragging or pinching.
 
 ## Phase 1: Mobile Map Stability
 
