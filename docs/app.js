@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.3';
+const APP_VERSION = 'v7.2.4';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1552,14 +1552,13 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         this._canvas.style.pointerEvents = 'none';
         this._ctx = this._canvas.getContext('2d');
         mapInstance.getPanes().overlayPane.appendChild(this._canvas);
-        mapInstance.on('move zoom', this._scheduleReset);
-        mapInstance.on('moveend zoomend resize viewreset', this._reset);
+        // Optimized: skip 'move zoom' during gestures for 60fps, only render on settle
+        mapInstance.on('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.on('click', this._clickHandler);
         this._reset();
     },
     onRemove(mapInstance) {
-        mapInstance.off('move zoom', this._scheduleReset);
-        mapInstance.off('moveend zoomend resize viewreset', this._reset);
+        mapInstance.off('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.off('click', this._clickHandler);
         if (this._raf) {
             cancelAnimationFrame(this._raf);
@@ -1578,6 +1577,8 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
     },
     _scheduleReset() {
         if (this._raf) return;
+        // Skip render during gestures for smooth pan/zoom
+        if (typeof _isAndroidGestureLiteActive === 'function' && _isAndroidGestureLiteActive()) return;
         this._raf = requestAnimationFrame(() => {
             this._raf = null;
             this._reset();
@@ -1720,14 +1721,13 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
         this._canvas.style.pointerEvents = 'none';
         this._ctx = this._canvas.getContext('2d');
         mapInstance.getPanes().overlayPane.appendChild(this._canvas);
-        mapInstance.on('move zoom', this._scheduleReset);
-        mapInstance.on('moveend zoomend resize viewreset', this._reset);
+        // Optimized: skip 'move zoom' during gestures for 60fps, only render on settle
+        mapInstance.on('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.on('click', this._clickHandler);
         this._reset();
     },
     onRemove(mapInstance) {
-        mapInstance.off('move zoom', this._scheduleReset);
-        mapInstance.off('moveend zoomend resize viewreset', this._reset);
+        mapInstance.off('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.off('click', this._clickHandler);
         if (this._raf) {
             cancelAnimationFrame(this._raf);
@@ -1746,6 +1746,8 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
     },
     _scheduleReset() {
         if (this._raf) return;
+        // Skip render during gestures for smooth pan/zoom
+        if (typeof _isAndroidGestureLiteActive === 'function' && _isAndroidGestureLiteActive()) return;
         this._raf = requestAnimationFrame(() => {
             this._raf = null;
             this._reset();
@@ -3852,8 +3854,9 @@ map.on('moveend', () => {
         setTimeout(() => {
             if (!mapEl.classList.contains('is-gesture-zooming')) {
                 mapEl.classList.remove('is-map-moving', 'is-android-gesture-lite');
-                if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._reset();
-                if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._reset();
+                // Use _scheduleReset for consistent gesture handling
+                if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._scheduleReset();
+                if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._scheduleReset();
                 _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
                 _updateMapDebugOverlay();
             }
@@ -3894,8 +3897,9 @@ map.on('zoomend', () => {
         _mobileZoomRestoreTimer = null;
         mapEl.classList.remove('is-android-gesture-lite');
         scheduleMapOnlyUpdate('zoom');
-        if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._reset();
-        if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._reset();
+        // Use _scheduleReset instead of _reset to respect gesture check
+        if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._scheduleReset();
+        if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._scheduleReset();
         _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
         _updateMapDebugOverlay();
     }, _getMobileZoomSettleDelay());
