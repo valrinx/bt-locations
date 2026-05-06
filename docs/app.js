@@ -1601,7 +1601,7 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
                     this._drawSimplified();
                 });
             }
-        }, 33);
+        }, 16);
     },
     _reset() {
         if (!this._map || !this._canvas || !this._ctx) return;
@@ -1813,7 +1813,7 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
                     this._drawSimplified();
                 });
             }
-        }, 33);
+        }, 16);
     },
     _reset() {
         if (!this._map || !this._canvas || !this._ctx) return;
