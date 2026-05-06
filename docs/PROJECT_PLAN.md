@@ -35,6 +35,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Added Android-specific performance mode with lower marker caps, deferred tile updates during zoom, reduced labels, and lighter CSS effects during gestures.
 - Added Android lite mode toggle with stricter caps and longer cluster mode for laggy Android devices.
 - Increased Android post-zoom settle delay before marker rebuilds to reduce frame contention after pinch gestures.
+- Added long-task counters to Map Debug for Android main-thread diagnosis.
 
 ## Phase 1: Mobile Map Stability
 

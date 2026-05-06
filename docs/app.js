@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.0.3';
+const APP_VERSION = 'v7.0.4';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1240,6 +1240,23 @@ let _mapOnlyUpdateRaf = null;
 let _pendingMapOnlyReason = '';
 let _mapDebugOverlayEnabled = localStorage.getItem('bt_map_debug_overlay') === '1';
 let _mapDebugOverlay = null;
+let _longTaskCount = 0;
+let _lastLongTaskMs = 0;
+
+if (typeof PerformanceObserver !== 'undefined') {
+    try {
+        const _longTaskObserver = new PerformanceObserver(list => {
+            for (const entry of list.getEntries()) {
+                _longTaskCount += 1;
+                _lastLongTaskMs = Math.round(entry.duration);
+            }
+            _updateMapDebugOverlay();
+        });
+        _longTaskObserver.observe({ entryTypes: ['longtask'] });
+    } catch (err) {
+        console.warn('[BT] Long task observer unavailable:', err);
+    }
+}
 
 function _getDistrictName(loc) {
     return loc.district || loc.city || loc.list || 'ไม่ระบุเขต';
@@ -1376,6 +1393,7 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">full/map</span><span>${stats.fullMs}/${stats.mapMs}ms</span>
         <span style="color:var(--tx3);">queue</span><span style="color:${stats.pending ? 'var(--am)' : 'var(--gn)'}">${stats.pending ? 'yes' : 'no'}</span>
         <span style="color:var(--tx3);">gesture</span><span style="color:${stats.zooming ? 'var(--am)' : 'var(--gn)'}">${stats.zooming ? 'yes' : 'no'}</span>
+        <span style="color:var(--tx3);">longtask</span><span style="color:${_lastLongTaskMs > 80 ? 'var(--am)' : 'var(--tx2)'}">${_longTaskCount}/${_lastLongTaskMs}ms</span>
         ${gps ? `
         <span style="grid-column:1/-1;height:1px;background:rgba(91,143,255,0.25);margin:2px 0;"></span>
         <span style="color:var(--tx3);">gps</span><span>${_escapeHtml(gps.mode)} · ${_escapeHtml(gps.quality)}</span>
@@ -6409,6 +6427,8 @@ window.btDebug = {
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
             mobileZoomSettleDelay: _getMobileZoomSettleDelay(),
+            longTaskCount: _longTaskCount,
+            lastLongTaskMs: _lastLongTaskMs,
             lastMarkerRenderMs: _lastMarkerRenderMs,
             lastFullUpdateMs: _lastFullUpdateMs,
             lastMapOnlyUpdateMs: _lastMapOnlyUpdateMs,

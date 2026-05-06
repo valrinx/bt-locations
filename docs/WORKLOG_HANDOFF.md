@@ -36,6 +36,7 @@ Latest known commit before this handoff:
 - Added Android performance mode in `v7.0.1`: lower Android marker limits, Android-specific tile update behavior, reduced marker labels, and lighter map CSS during gestures.
 - Added Android "lite" mode in `v7.0.2`: user-facing menu toggle that keeps clusters longer, lowers marker caps further, and disables labels for laggy Android devices.
 - Delayed post-zoom marker rebuilds longer on Android in `v7.0.3` so Chrome can finish tile compositing before the app re-renders markers.
+- Added Map Debug long-task monitoring so Android tests can see when JavaScript blocks the main thread.
 
 ## Mobile QA Checklist
 
@@ -56,6 +57,7 @@ Use this when testing on a real phone or mobile viewport:
 13. Enable Map Debug while GPS is active and confirm the overlay shows gps, acc/head, and fix age.
 14. Test on Android Chrome with Map Debug open. The overlay should show `android perf`, marker limit should be lower than iOS, and pinch zoom should feel steadier.
 15. If Android still lags, open Menu -> โหมดลื่นพิเศษ. Map Debug should show `android lite` and marker limits should drop again.
+16. Watch Map Debug `longtask`; repeated values above 80ms mean main-thread JavaScript is still blocking Android frames.
 
 ## Known Caveats
 
