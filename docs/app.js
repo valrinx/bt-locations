@@ -6938,20 +6938,24 @@ _updateAndroidLiteButton();
 async function refreshAppNow() {
     showToast('กำลังรีโหลดแอป...');
     try {
+        // 1. Unregister all service workers (force fresh install)
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(reg => reg.unregister()));
+        }
+        // 2. Clear ALL BT-related caches (including old versions like v7.3.2)
         if ('caches' in window) {
             const keys = await caches.keys();
-            await Promise.all(keys.filter(key => key.startsWith('bt-locations-')).map(key => caches.delete(key)));
-        }
-        if ('serviceWorker' in navigator) {
-            const reg = await navigator.serviceWorker.getRegistration();
-            if (reg) await reg.update();
+            await Promise.all(keys.filter(key => key.startsWith('bt-')).map(key => caches.delete(key)));
         }
     } catch (err) {
         console.warn('[BT] App refresh failed:', err);
     } finally {
+        // 3. Hard reload with cache-busting
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.set('v', `${APP_VERSION}-${Date.now()}`);
-        window.location.replace(nextUrl.toString());
+        // Use location.href instead of replace to force fresh load
+        window.location.href = nextUrl.toString();
     }
 }
 window.refreshAppNow = refreshAppNow;
