@@ -1121,8 +1121,8 @@ const map = L.map('map', {
 window.map = map;
 
 const _tileOpts = {
-    updateWhenIdle: true,
-updateWhenZooming: false,
+    updateWhenIdle: false,
+updateWhenZooming: true,
 keepBuffer: 4,
 };
 const tileLayers = {
