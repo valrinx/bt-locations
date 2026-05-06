@@ -35,6 +35,7 @@ Latest known commit before this handoff:
 - Expanded `window.btDebug.gps` and `window.btDebug.exportDebug()` so bug reports include GPS quality, fix age, map stats, and app version.
 - Added Android performance mode in `v7.0.1`: lower Android marker limits, Android-specific tile update behavior, reduced marker labels, and lighter map CSS during gestures.
 - Added Android "lite" mode in `v7.0.2`: user-facing menu toggle that keeps clusters longer, lowers marker caps further, and disables labels for laggy Android devices.
+- Delayed post-zoom marker rebuilds longer on Android in `v7.0.3` so Chrome can finish tile compositing before the app re-renders markers.
 
 ## Mobile QA Checklist
 

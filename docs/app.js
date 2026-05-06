@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.0.2';
+const APP_VERSION = 'v7.0.3';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1299,6 +1299,12 @@ function _getMobileMarkerLimit() {
     if (zoom <= 15) return 260;
     if (zoom <= 16) return 420;
     return 650;
+}
+
+function _getMobileZoomSettleDelay() {
+    if (_androidLiteMode) return 180;
+    if (_androidPerfMode) return 120;
+    return 60;
 }
 
 function _limitMobileMarkers(items) {
@@ -3446,7 +3452,7 @@ map.on('zoomend', () => {
     _mobileZoomRestoreTimer = setTimeout(() => {
         _mobileZoomRestoreTimer = null;
         scheduleMapOnlyUpdate('zoom');
-    }, 60);
+    }, _getMobileZoomSettleDelay());
     _updateMapDebugOverlay();
 });
 
@@ -6402,6 +6408,7 @@ window.btDebug = {
             visibleMarkers: _visibleMarkerIdxs.size,
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
+            mobileZoomSettleDelay: _getMobileZoomSettleDelay(),
             lastMarkerRenderMs: _lastMarkerRenderMs,
             lastFullUpdateMs: _lastFullUpdateMs,
             lastMapOnlyUpdateMs: _lastMapOnlyUpdateMs,
