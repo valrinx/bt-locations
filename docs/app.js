@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.0.8';
+const APP_VERSION = 'v7.1.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1221,6 +1221,8 @@ function getSorted(filtered) {
 // ══ Marker cache: สร้างครั้งเดียว, ไม่ rebuild ══
 // key = index ใน locations[], value = L.Marker
 let _markerCache = new Map(); // idx → marker
+let _androidCanvasMarkerLayer = null;
+let _androidCanvasMarkerItems = [];
 let _lastFilteredKey = null;
 let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 const DISTRICT_CLUSTER_MAX_ZOOM = 13;
@@ -1395,6 +1397,7 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">mode</span><span>${_escapeHtml(stats.mode)}</span>
         <span style="color:var(--tx3);">markers</span><span>${stats.visible}/${stats.layer}</span>
         <span style="color:var(--tx3);">limit</span><span>${stats.limit === Infinity ? '∞' : stats.limit}</span>
+        <span style="color:var(--tx3);">canvas</span><span style="color:${_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer) ? 'var(--gn)' : 'var(--tx2)'}">${_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer) ? _androidCanvasMarkerItems.length : 'off'}</span>
         <span style="color:var(--tx3);">android</span><span style="color:${stats.androidPerfMode ? 'var(--am)' : 'var(--tx2)'}">${stats.androidPerfMode ? (stats.lite ? 'lite' : 'perf') : 'off'}</span>
         <span style="color:var(--tx3);">render</span><span>${stats.ms}ms</span>
         <span style="color:var(--tx3);">update</span><span>${stats.updateKind}</span>
@@ -1513,6 +1516,155 @@ function _createLocationIcon(loc, idx) {
     });
 }
 
+const AndroidCanvasMarkerLayer = L.Layer.extend({
+    initialize(items = []) {
+        this.items = items;
+        this._canvas = null;
+        this._ctx = null;
+        this._positions = [];
+        this._clickHandler = this._handleMapClick.bind(this);
+        this._reset = this._reset.bind(this);
+    },
+    onAdd(mapInstance) {
+        this._map = mapInstance;
+        this._canvas = L.DomUtil.create('canvas', 'android-canvas-marker-layer');
+        this._canvas.style.position = 'absolute';
+        this._canvas.style.pointerEvents = 'none';
+        this._ctx = this._canvas.getContext('2d');
+        mapInstance.getPanes().overlayPane.appendChild(this._canvas);
+        mapInstance.on('moveend zoomend resize viewreset', this._reset);
+        mapInstance.on('click', this._clickHandler);
+        this._reset();
+    },
+    onRemove(mapInstance) {
+        mapInstance.off('moveend zoomend resize viewreset', this._reset);
+        mapInstance.off('click', this._clickHandler);
+        if (this._canvas) {
+            L.DomUtil.remove(this._canvas);
+            this._canvas = null;
+            this._ctx = null;
+        }
+        this._positions = [];
+    },
+    setItems(items = []) {
+        this.items = items;
+        this._reset();
+    },
+    _reset() {
+        if (!this._map || !this._canvas || !this._ctx) return;
+        const size = this._map.getSize();
+        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        this._canvas.width = Math.round(size.x * dpr);
+        this._canvas.height = Math.round(size.y * dpr);
+        this._canvas.style.width = `${size.x}px`;
+        this._canvas.style.height = `${size.y}px`;
+        L.DomUtil.setPosition(this._canvas, topLeft);
+        this._ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this._draw(topLeft, size);
+    },
+    _draw(topLeft, size) {
+        const ctx = this._ctx;
+        ctx.clearRect(0, 0, size.x, size.y);
+        ctx.textBaseline = 'middle';
+        ctx.font = '800 10px "Noto Sans Thai", system-ui, sans-serif';
+        this._positions = [];
+        const zoom = this._map.getZoom();
+        const showLabels = zoom >= 14 && this.items.length <= (_androidLiteMode ? 260 : 360);
+        const moving = this._map.getContainer().classList.contains('is-map-moving') ||
+            this._map.getContainer().classList.contains('is-gesture-zooming');
+        for (const loc of this.items) {
+            if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) continue;
+            const idx = getLocIndex(loc);
+            if (idx < 0) continue;
+            const layerPoint = this._map.latLngToLayerPoint([loc.lat, loc.lng]);
+            const x = layerPoint.x - topLeft.x;
+            const y = layerPoint.y - topLeft.y;
+            if (x < -40 || y < -40 || x > size.x + 40 || y > size.y + 40) continue;
+            const color = _getMarkerColor(loc);
+            const fav = isFavorite(loc);
+            ctx.beginPath();
+            ctx.arc(x, y, fav ? 8 : 6.5, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.lineWidth = fav ? 2.6 : 2;
+            ctx.strokeStyle = fav ? 'rgba(255,226,95,0.95)' : 'rgba(246,248,255,0.94)';
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x, y, 2.2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.92)';
+            ctx.fill();
+            if (showLabels && !moving) {
+                const name = String(loc.name || loc.list || 'ตำแหน่ง');
+                const area = String(_getDistrictName(loc) || '');
+                const label = name.length > 18 ? `${name.slice(0, 17)}…` : name;
+                const sub = area.length > 16 ? `${area.slice(0, 15)}…` : area;
+                const w = Math.min(132, Math.max(ctx.measureText(label).width + 16, sub ? ctx.measureText(sub).width + 16 : 0, 58));
+                const h = sub ? 27 : 18;
+                const lx = Math.round(x - w / 2);
+                const ly = Math.round(y + 14);
+                ctx.fillStyle = 'rgba(10, 16, 28, 0.74)';
+                ctx.strokeStyle = 'rgba(140, 176, 255, 0.28)';
+                ctx.lineWidth = 1;
+                ctx.fillRect(lx, ly, w, h);
+                ctx.strokeRect(lx, ly, w, h);
+                ctx.fillStyle = 'rgba(248, 251, 255, 0.96)';
+                ctx.fillText(label, lx + 8, ly + 10);
+                if (sub) {
+                    ctx.fillStyle = 'rgba(145, 190, 255, 0.9)';
+                    ctx.font = '750 8px "Noto Sans Thai", system-ui, sans-serif';
+                    ctx.fillText(sub, lx + 8, ly + 21);
+                    ctx.font = '800 10px "Noto Sans Thai", system-ui, sans-serif';
+                }
+            }
+            this._positions.push({ idx, loc, x, y });
+        }
+    },
+    _handleMapClick(e) {
+        if (!_androidPerfMode || !this._positions.length || manualRouteMode || routeMode) return;
+        const p = this._map.latLngToContainerPoint(e.latlng);
+        let nearest = null;
+        let min = Infinity;
+        for (const item of this._positions) {
+            const dx = item.x - p.x;
+            const dy = item.y - p.y;
+            const d = dx * dx + dy * dy;
+            if (d < min) {
+                min = d;
+                nearest = item;
+            }
+        }
+        if (nearest && min <= 26 * 26) {
+            showLocationDetails(nearest.loc, nearest.idx);
+        }
+    }
+});
+
+function _useAndroidCanvasMarkers(renderMode) {
+    return _androidPerfMode && !manualRouteMode && ['points', 'district-detail'].includes(renderMode);
+}
+
+function _showAndroidCanvasMarkers(items) {
+    if (_individualMarkersLayer && map.hasLayer(_individualMarkersLayer)) map.removeLayer(_individualMarkersLayer);
+    _visibleMarkerIdxs = new Set(items.map(getLocIndex).filter(idx => idx >= 0));
+    _androidCanvasMarkerItems = items;
+    if (!_androidCanvasMarkerLayer) {
+        _androidCanvasMarkerLayer = new AndroidCanvasMarkerLayer(items);
+        _androidCanvasMarkerLayer.addTo(map);
+    } else {
+        _androidCanvasMarkerLayer.setItems(items);
+        if (!map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer.addTo(map);
+    }
+    _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
+}
+
+function _hideAndroidCanvasMarkers() {
+    _androidCanvasMarkerItems = [];
+    if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) {
+        map.removeLayer(_androidCanvasMarkerLayer);
+    }
+}
+
 function _updateDistrictScopeControl(count) {
     let el = document.getElementById('districtScopeControl');
     const mapEl = document.getElementById('map');
@@ -1583,6 +1735,7 @@ function renderMarkers(filtered) {
     if (routeMode) { 
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
+        _hideAndroidCanvasMarkers();
         _updateDistrictScopeControl(0);
         return; 
     }
@@ -1604,6 +1757,7 @@ function renderMarkers(filtered) {
     if (heatmapMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
+        _hideAndroidCanvasMarkers();
         _updateDistrictScopeControl(0);
         const z=map.getZoom();
         const hr=Math.max(8,Math.min(40, z<=10?10:z<=12?18:z<=14?28:40));
@@ -1619,6 +1773,7 @@ function renderMarkers(filtered) {
 
     if (manualRouteMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
+        _hideAndroidCanvasMarkers();
         const visibleManual = _limitMobileMarkers(_filterToViewport(filtered));
         _showIndividualMarkers(visibleManual);
         _updateDistrictScopeControl(filtered.length);
@@ -1635,6 +1790,7 @@ function renderMarkers(filtered) {
         _updateDistrictScopeControl(0);
         // Remove individual markers
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
+        _hideAndroidCanvasMarkers();
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         
         // Create district clusters
@@ -1672,7 +1828,11 @@ function renderMarkers(filtered) {
     
     // Show individual markers
     const visibleMarkers = _limitMobileMarkers(_filterToViewport(markersToShow));
-    _showIndividualMarkers(visibleMarkers);
+    if (_useAndroidCanvasMarkers(renderMode)) _showAndroidCanvasMarkers(visibleMarkers);
+    else {
+        _hideAndroidCanvasMarkers();
+        _showIndividualMarkers(visibleMarkers);
+    }
     _updateDistrictScopeControl(markersToShow.length);
     
     // Update stats
@@ -1975,7 +2135,7 @@ function _zoomToDistrictList(district, list) {
 
 // Show individual markers for filtered data
 function _showIndividualMarkers(filtered) {
-    const mapEl = map.getContainer();
+    _hideAndroidCanvasMarkers();
     if (_districtClusterGroup) {
         map.removeLayer(_districtClusterGroup);
     }
@@ -2038,6 +2198,7 @@ function _resetToDistrictView() {
         map.removeLayer(_individualMarkersLayer);
         _individualMarkersLayer = null;
     }
+    _hideAndroidCanvasMarkers();
     _visibleMarkerIdxs.clear();
     _updateMobileMarkerLabels(0);
     update(); // Re-render clusters
@@ -6179,6 +6340,7 @@ html.is-android-map #map.is-gesture-zooming .you-are-here-ring { animation: none
 html.is-android-map #map.is-map-moving .bt-field-marker { transition: none !important; filter: none !important; }
 html.is-android-map #map.is-map-moving .bt-field-marker-label,
 html.is-android-map #map.is-map-moving .leaflet-tooltip { display: none !important; }
+.android-canvas-marker-layer { z-index: 430 !important; image-rendering:auto; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
@@ -6464,6 +6626,8 @@ window.btDebug = {
             mode: _getMarkerRenderMode(),
             androidPerfMode: _androidPerfMode,
             androidLiteMode: _androidLiteMode,
+            androidCanvasMarkers: _androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer),
+            androidCanvasMarkerCount: _androidCanvasMarkerItems.length,
             visibleMarkers: _visibleMarkerIdxs.size,
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
@@ -6503,7 +6667,7 @@ window.btDebug = {
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     refreshApp: ()=>refreshAppNow(),
-    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,androidCanvasMarkers:!!(_androidCanvasMarkerLayer&&map.hasLayer(_androidCanvasMarkerLayer)),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
