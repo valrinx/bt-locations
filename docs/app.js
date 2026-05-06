@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.0.7';
+const APP_VERSION = 'v7.0.8';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1237,6 +1237,7 @@ let _lastFullUpdateMs = 0;
 let _lastMapOnlyUpdateMs = 0;
 let _lastUpdateKind = 'init';
 let _mapOnlyUpdateRaf = null;
+let _mapOnlyUpdateTimer = null;
 let _pendingMapOnlyReason = '';
 let _mapDebugOverlayEnabled = localStorage.getItem('bt_map_debug_overlay') === '1';
 let _mapDebugOverlay = null;
@@ -1324,6 +1325,13 @@ function _getMobileZoomSettleDelay() {
     return 60;
 }
 
+function _getAndroidMapOnlyDelay(reason='map') {
+    if (!_androidPerfMode) return 0;
+    if (reason.includes('zoom')) return _androidLiteMode ? 190 : 150;
+    if (reason.includes('move')) return _androidLiteMode ? 130 : 95;
+    return _androidLiteMode ? 110 : 80;
+}
+
 function _limitMobileMarkers(items) {
     const limit = _getMobileMarkerLimit();
     if (!_mobile || items.length <= limit) return items;
@@ -1378,7 +1386,7 @@ function _updateMapDebugOverlay() {
         updateKind: _lastUpdateKind,
         fullMs: _lastFullUpdateMs,
         mapMs: _lastMapOnlyUpdateMs,
-        pending: !!_mapOnlyUpdateRaf,
+        pending: !!_mapOnlyUpdateRaf || !!_mapOnlyUpdateTimer,
         zooming: map.getContainer().classList.contains('is-gesture-zooming')
     };
     const gps = typeof window.btGpsDebugSnapshot === 'function' ? window.btGpsDebugSnapshot() : null;
@@ -1696,6 +1704,21 @@ function invalidateCache() {
 function scheduleMapOnlyUpdate(reason = 'map') {
     _lastFilteredKey = null;
     _pendingMapOnlyReason = reason;
+    if (_androidPerfMode) {
+        if (_mapOnlyUpdateTimer) clearTimeout(_mapOnlyUpdateTimer);
+        _mapOnlyUpdateTimer = setTimeout(() => {
+            _mapOnlyUpdateTimer = null;
+            if (_mapOnlyUpdateRaf) return;
+            _mapOnlyUpdateRaf = requestAnimationFrame(() => {
+                _mapOnlyUpdateRaf = null;
+                update({ mapOnly: true, reason: _pendingMapOnlyReason });
+                _pendingMapOnlyReason = '';
+            });
+            _updateMapDebugOverlay();
+        }, _getAndroidMapOnlyDelay(reason));
+        _updateMapDebugOverlay();
+        return;
+    }
     if (_mapOnlyUpdateRaf) {
         _updateMapDebugOverlay();
         return;
@@ -3449,15 +3472,22 @@ map.on('zoomend', () => {
     }
 });
 map.on('moveend', () => {
-    if (_mobile && map.getContainer().classList.contains('is-gesture-zooming')) return;
-    map.getContainer().classList.remove('is-map-moving');
+    const mapEl = map.getContainer();
+    if (_androidPerfMode) {
+        setTimeout(() => {
+            if (!mapEl.classList.contains('is-gesture-zooming')) mapEl.classList.remove('is-map-moving');
+        }, _androidLiteMode ? 120 : 80);
+    } else {
+        mapEl.classList.remove('is-map-moving');
+    }
+    if (_mobile && mapEl.classList.contains('is-gesture-zooming')) return;
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
         scheduleMapOnlyUpdate('move');
     }
 });
 map.on('movestart', () => {
-    if (!_androidLiteMode) return;
+    if (!_androidPerfMode) return;
     map.getContainer().classList.add('is-map-moving');
 });
 map.on('zoomstart', () => {
@@ -3472,7 +3502,9 @@ map.on('zoomstart', () => {
 });
 map.on('zoomend', () => {
     if (!_mobile) return;
-    map.getContainer().classList.remove('is-gesture-zooming');
+    const mapEl = map.getContainer();
+    mapEl.classList.remove('is-gesture-zooming');
+    mapEl.classList.remove('is-map-moving');
     _mobileZoomRestoreTimer = setTimeout(() => {
         _mobileZoomRestoreTimer = null;
         scheduleMapOnlyUpdate('zoom');
@@ -6144,8 +6176,9 @@ html.is-android-map #map.is-gesture-zooming .bt-field-marker,
 html.is-android-map #map.is-gesture-zooming .marker-cluster,
 html.is-android-map #map.is-gesture-zooming .you-are-here-wrap { filter: none !important; box-shadow: none !important; }
 html.is-android-map #map.is-gesture-zooming .you-are-here-ring { animation: none !important; }
-html.is-android-lite-map #map.is-map-moving .bt-field-marker-label,
-html.is-android-lite-map #map.is-map-moving .leaflet-tooltip { display: none !important; }
+html.is-android-map #map.is-map-moving .bt-field-marker { transition: none !important; filter: none !important; }
+html.is-android-map #map.is-map-moving .bt-field-marker-label,
+html.is-android-map #map.is-map-moving .leaflet-tooltip { display: none !important; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
@@ -6441,7 +6474,7 @@ window.btDebug = {
             lastFullUpdateMs: _lastFullUpdateMs,
             lastMapOnlyUpdateMs: _lastMapOnlyUpdateMs,
             lastUpdateKind: _lastUpdateKind,
-            mapUpdateQueued: !!_mapOnlyUpdateRaf,
+            mapUpdateQueued: !!_mapOnlyUpdateRaf || !!_mapOnlyUpdateTimer,
             mobileZooming: map.getContainer().classList.contains('is-gesture-zooming')
         };
     },

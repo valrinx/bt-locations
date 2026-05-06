@@ -38,6 +38,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Added long-task counters to Map Debug for Android main-thread diagnosis.
 - Repaired Android lite mode by removing marker-layer suspension after reports that pins disappeared.
 - Rebalanced Android lite mode after usability feedback: labels return at zoom 14, cluster zoom is normal, and caps are less destructive.
+- Added Android pan/zoom debounce so map-only marker updates wait until gestures settle instead of competing with tile compositing.
 
 ## Phase 1: Mobile Map Stability
 
