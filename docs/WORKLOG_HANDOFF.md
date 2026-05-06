@@ -1,6 +1,6 @@
 # BT Locations Worklog Handoff
 
-Updated: 2026-05-06 02:45 Asia/Bangkok
+Updated: 2026-05-07 00:00 Asia/Bangkok
 
 ## Current Focus
 
@@ -33,6 +33,7 @@ Latest known commit before this handoff:
 - Bumped app/service-worker version to `v6.9.9`, added a mobile "reload app" action that clears app caches, and made the GPS status strip refresh its age/quality while GPS is active.
 - Added GPS mode, quality, accuracy, heading, and fix age to the Map Debug overlay for real-device testing without opening the console.
 - Expanded `window.btDebug.gps` and `window.btDebug.exportDebug()` so bug reports include GPS quality, fix age, map stats, and app version.
+- Added Android performance mode in `v7.0.1`: lower Android marker limits, Android-specific tile update behavior, reduced marker labels, and lighter map CSS during gestures.
 
 ## Mobile QA Checklist
 
@@ -51,6 +52,7 @@ Use this when testing on a real phone or mobile viewport:
 11. Open Menu while GPS is active and confirm the GPS status strip changes between FOLLOW, COMPASS, FREE, and OFF.
 12. Use Menu -> Reload App after deploy if a phone still shows older behavior; it should reload with a cache-busting query string.
 13. Enable Map Debug while GPS is active and confirm the overlay shows gps, acc/head, and fix age.
+14. Test on Android Chrome with Map Debug open. The overlay should show `android perf`, marker limit should be lower than iOS, and pinch zoom should feel steadier.
 
 ## Known Caveats
 
@@ -58,6 +60,7 @@ Use this when testing on a real phone or mobile viewport:
 - Compass heading depends on browser support and permission. iOS may require motion/orientation permission after user interaction.
 - Route/navigation mode is separate from GPS tracking and can still be polished into a more Google Maps-like flow.
 - `app.js` and `index.html` are still large and globally coupled, so refactors should remain small and shippable.
+- Android Chrome is more sensitive to DOM markers, backdrop blur, drop shadows, and tile repaint during pinch gestures than iOS Safari.
 
 ## Large File Strategy
 
@@ -73,10 +76,12 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 
 ## Next Recommended Work
 
-1. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
-2. Start helper extraction from `app.js` with no behavior changes.
-3. Add screenshot-based mobile QA once browser automation is available in the current session.
-4. Consider a small settings panel for GPS behavior: auto-follow, compass mode, and map tile preference.
+1. Measure Android after `v7.0.1` with Map Debug: render ms, marker count, gesture smoothness, and whether tiles blank during zoom.
+2. If Android still lags, add a user-facing "Performance mode" toggle and an even stricter marker cap.
+3. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
+4. Start helper extraction from `app.js` with no behavior changes.
+5. Add screenshot-based mobile QA once browser automation is available in the current session.
+6. Consider a small settings panel for GPS behavior: auto-follow, compass mode, and map tile preference.
 
 ## Useful Commands
 

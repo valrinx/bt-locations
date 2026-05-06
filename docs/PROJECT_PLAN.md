@@ -6,6 +6,8 @@ Mobile map performance is the active blocker. The app has about 1,600+ location 
 
 The active handoff/status file is `WORKLOG_HANDOFF.md`. Use it first if this conversation context is missing or compacted.
 
+Current device-specific blocker: Android Chrome lags while iOS stays smooth. Treat Android as a stricter performance tier, not just generic mobile.
+
 ## Large File Strategy
 
 The current app is intentionally being split gradually. Avoid one large rewrite because `app.js` and `index.html` still share many globals and inline event handlers.
@@ -30,6 +32,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Added mobile reload-app control and live GPS status quality/age updates for easier field troubleshooting.
 - Added GPS status lines to Map Debug so field testers can inspect map and GPS health together.
 - Expanded debug export with app version, map stats, and GPS health snapshot.
+- Added Android-specific performance mode with lower marker caps, deferred tile updates during zoom, reduced labels, and lighter CSS effects during gestures.
 
 ## Phase 1: Mobile Map Stability
 

@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.0.0';
+const APP_VERSION = 'v7.0.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1101,7 +1101,10 @@ const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
     window.innerWidth < 768 ||
     localStorage.getItem('bt_force_mobile_mode') === 'true' ||
     document.body.classList.contains('force-mobile');
+const _android = /Android/i.test(navigator.userAgent);
+const _androidPerfMode = _android || localStorage.getItem('bt_android_perf_mode') === 'true';
 if (_mobile) document.documentElement.classList.add('is-mobile-map');
+if (_androidPerfMode) document.documentElement.classList.add('is-android-map');
 const map = L.map('map', {
     zoomControl: false,
     zoomAnimation: !_mobile,   // ปิดบน mobile เพื่อ performance
@@ -1121,9 +1124,9 @@ const map = L.map('map', {
 window.map = map;
 
 const _tileOpts = {
-    updateWhenIdle: false,
-updateWhenZooming: true,
-keepBuffer: 4,
+    updateWhenIdle: _androidPerfMode,
+    updateWhenZooming: _mobile && !_androidPerfMode,
+    keepBuffer: _androidPerfMode ? 5 : 4,
 };
 const tileLayers = {
 'Street': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19, ..._tileOpts }),
@@ -1274,6 +1277,12 @@ function _filterToViewport(items) {
 function _getMobileMarkerLimit() {
     if (!_mobile) return Infinity;
     const zoom = map.getZoom();
+    if (_androidPerfMode) {
+        if (zoom <= 14) return 80;
+        if (zoom <= 15) return 140;
+        if (zoom <= 16) return 220;
+        return 360;
+    }
     if (zoom <= 14) return 140;
     if (zoom <= 15) return 260;
     if (zoom <= 16) return 420;
@@ -1296,7 +1305,9 @@ function _limitMobileMarkers(items) {
 function _updateMobileMarkerLabels(count) {
     if (!_mobile) return;
     const mapEl = map.getContainer();
-    const canShow = map.getZoom() >= 14 && count <= 90 && !mapEl.classList.contains('is-gesture-zooming');
+    const labelLimit = _androidPerfMode ? 36 : 90;
+    const minZoom = _androidPerfMode ? 17 : 14;
+    const canShow = map.getZoom() >= minZoom && count <= labelLimit && !mapEl.classList.contains('is-gesture-zooming');
     mapEl.classList.toggle('show-mobile-marker-labels', canShow);
 }
 
@@ -1340,6 +1351,7 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">mode</span><span>${_escapeHtml(stats.mode)}</span>
         <span style="color:var(--tx3);">markers</span><span>${stats.visible}/${stats.layer}</span>
         <span style="color:var(--tx3);">limit</span><span>${stats.limit === Infinity ? '∞' : stats.limit}</span>
+        <span style="color:var(--tx3);">android</span><span style="color:${stats.androidPerfMode ? 'var(--am)' : 'var(--tx2)'}">${stats.androidPerfMode ? 'perf' : 'off'}</span>
         <span style="color:var(--tx3);">render</span><span>${stats.ms}ms</span>
         <span style="color:var(--tx3);">update</span><span>${stats.updateKind}</span>
         <span style="color:var(--tx3);">full/map</span><span>${stats.fullMs}/${stats.mapMs}ms</span>
@@ -6076,6 +6088,19 @@ html.is-mobile-map .bt-marker-name,
 html.is-mobile-map .bt-marker-area { display: block !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
 html.is-mobile-map .bt-marker-name { color: oklch(98% 0.006 250) !important; font-weight: 850 !important; line-height: 1.1 !important; min-height: 10px !important; }
 html.is-mobile-map .bt-marker-area { color: oklch(73% 0.11 220) !important; font-size: 8px !important; font-weight: 750 !important; line-height: 1.05 !important; min-height: 8px !important; }
+html.is-android-map .map-btn,
+html.is-android-map .map-btn-group,
+html.is-android-map .mobile-bottom-nav,
+html.is-android-map .place-card,
+html.is-android-map .mob-drawer-panel,
+html.is-android-map #mapDebugOverlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.is-android-map #map.is-gesture-zooming .leaflet-marker-pane,
+html.is-android-map #map.is-gesture-zooming .leaflet-overlay-pane,
+html.is-android-map #map.is-gesture-zooming .leaflet-shadow-pane { transition: none !important; }
+html.is-android-map #map.is-gesture-zooming .bt-field-marker,
+html.is-android-map #map.is-gesture-zooming .marker-cluster,
+html.is-android-map #map.is-gesture-zooming .you-are-here-wrap { filter: none !important; box-shadow: none !important; }
+html.is-android-map #map.is-gesture-zooming .you-are-here-ring { animation: none !important; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
@@ -6359,6 +6384,7 @@ window.btDebug = {
         return {
             zoom: map.getZoom(),
             mode: _getMarkerRenderMode(),
+            androidPerfMode: _androidPerfMode,
             visibleMarkers: _visibleMarkerIdxs.size,
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
@@ -6394,7 +6420,7 @@ window.btDebug = {
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     refreshApp: ()=>refreshAppNow(),
-    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
 
