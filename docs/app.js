@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.2';
+const APP_VERSION = 'v7.2.3';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1234,7 +1234,7 @@ let _lastFilteredKey = null;
 let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 const DISTRICT_CLUSTER_MAX_ZOOM = 13;
 const MARKER_VIEWPORT_PAD = _mobile ? 0 : 0.08;
-const STACK_PROXIMITY_PRECISION = 5; // decimal places for duplicate detection
+const STACK_PROXIMITY_PRECISION = 4; // decimal places for duplicate detection (reduced from 5 to group closer markers)
 const MAX_VIEWPORT_MARKERS_DESKTOP = 500;
 const MAX_VIEWPORT_MARKERS_MOBILE = 220;
 let _lastMarkerRenderMode = null;
