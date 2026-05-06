@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.4';
+const APP_VERSION = 'v7.2.5';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1753,9 +1753,11 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
         this._ctx = null;
         this._positions = [];
         this._raf = null;
+        this._throttleTimer = null;
         this._clickHandler = this._handleMapClick.bind(this);
         this._reset = this._reset.bind(this);
         this._scheduleReset = this._scheduleReset.bind(this);
+        this._scheduleThrottled = this._scheduleThrottled.bind(this);
     },
     onAdd(mapInstance) {
         this._map = mapInstance;
@@ -1764,17 +1766,23 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
         this._canvas.style.pointerEvents = 'none';
         this._ctx = this._canvas.getContext('2d');
         mapInstance.getPanes().overlayPane.appendChild(this._canvas);
-        // Optimized: skip 'move zoom' during gestures for 60fps, only render on settle
+        // Smooth gestures: simplified clusters during move, full render on settle
+        mapInstance.on('move zoom', this._scheduleThrottled);
         mapInstance.on('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.on('click', this._clickHandler);
         this._reset();
     },
     onRemove(mapInstance) {
+        mapInstance.off('move zoom', this._scheduleThrottled);
         mapInstance.off('moveend zoomend resize viewreset', this._scheduleReset);
         mapInstance.off('click', this._clickHandler);
         if (this._raf) {
             cancelAnimationFrame(this._raf);
             this._raf = null;
+        }
+        if (this._throttleTimer) {
+            clearTimeout(this._throttleTimer);
+            this._throttleTimer = null;
         }
         if (this._canvas) {
             L.DomUtil.remove(this._canvas);
@@ -1789,12 +1797,23 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
     },
     _scheduleReset() {
         if (this._raf) return;
-        // Skip render during gestures for smooth pan/zoom
-        if (typeof _isAndroidGestureLiteActive === 'function' && _isAndroidGestureLiteActive()) return;
         this._raf = requestAnimationFrame(() => {
             this._raf = null;
             this._reset();
         });
+    },
+    _scheduleThrottled() {
+        // During gestures: throttle to ~30fps, render simplified
+        if (this._raf || this._throttleTimer) return;
+        this._throttleTimer = setTimeout(() => {
+            this._throttleTimer = null;
+            if (!this._raf) {
+                this._raf = requestAnimationFrame(() => {
+                    this._raf = null;
+                    this._drawSimplified();
+                });
+            }
+        }, 33);
     },
     _reset() {
         if (!this._map || !this._canvas || !this._ctx) return;
@@ -1844,6 +1863,35 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
                 ctx.fillStyle = 'rgba(232,238,255,0.9)';
                 ctx.fillText(item.label, x, y + 12);
             }
+            this._positions.push({ ...item, x, y, radius });
+        }
+    },
+    _drawSimplified() {
+        // Fast render during gestures: simple circles + count only, no label
+        if (!this._map || !this._canvas || !this._ctx) return;
+        const size = this._map.getSize();
+        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+        const ctx = this._ctx;
+        ctx.clearRect(0, 0, size.x, size.y);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        this._positions = [];
+        for (const item of this.items) {
+            const center = item.center;
+            const layerPoint = this._map.latLngToLayerPoint(center);
+            const x = layerPoint.x - topLeft.x;
+            const y = layerPoint.y - topLeft.y;
+            const radius = Math.max(12, item.size * 0.35);
+            if (x < -radius - 10 || y < -radius - 10 || x > size.x + radius + 10 || y > size.y + radius + 10) continue;
+            // Simple circle
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = item.color;
+            ctx.fill();
+            // Count only, no label below
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = '900 13px "Noto Sans Thai", system-ui, sans-serif';
+            ctx.fillText(String(item.count), x, y);
             this._positions.push({ ...item, x, y, radius });
         }
     },
