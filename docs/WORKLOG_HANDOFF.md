@@ -44,6 +44,7 @@ Latest known commit before this handoff:
 - Fixed Android canvas marker drift in `v7.1.1`: the canvas layer now redraws on `move` and `zoom` with `requestAnimationFrame`, so markers stay attached to the map during simultaneous pinch and pan.
 - Added Android canvas cluster renderer in `v7.2.0`: broad-zoom district/group bubbles now draw on canvas too, avoiding large DOM cluster markers during pinch and pan.
 - Added Android gesture-lite canvas rendering in `v7.2.1`: while the user is actively dragging or pinching, canvas pins and clusters temporarily draw a simpler skin, then restore the full BT Locations labels and styling after the gesture settles.
+- Added smoother mobile tile loading in `v7.2.2`: mobile keeps Leaflet zoom animation on, updates map tiles during pinch zoom, increases tile buffer on Android, and removes tile fade transitions that can look like flashing.
 
 ## Mobile QA Checklist
 
@@ -71,6 +72,7 @@ Use this when testing on a real phone or mobile viewport:
 20. During Android pinch+pan, canvas pins should track the basemap; labels should hide only while moving and return after the gesture.
 21. At broad zoom on Android, Map Debug should show `clusters` with a count. Large group bubbles should track the basemap during pinch+pan.
 22. During Android pinch+pan, Map Debug should show `gesture lite`; cluster bubbles should simplify while moving, then return to the normal styled count/label after the gesture settles.
+23. During Android pinch zoom, the basemap should scale continuously instead of collapsing to a small tile island or flashing gray. If tiles still flash, compare Street vs Satellite because provider latency can differ.
 
 ## Known Caveats
 
@@ -95,7 +97,7 @@ Each split should be its own commit with a quick syntax check and mobile smoke t
 ## Next Recommended Work
 
 1. Measure Android after `v7.0.1` with Map Debug: render ms, marker count, gesture smoothness, and whether tiles blank during zoom.
-2. If Android still lags after `v7.2.1`, inspect Map Debug `longtask`, `canvas`, `clusters`, and `gesture`; the next step is optimizing tile provider behavior or reducing per-frame tile work, not returning to DOM marker tuning.
+2. If Android still lags or flashes after `v7.2.2`, inspect Map Debug `longtask`, `canvas`, `clusters`, and `gesture`; then compare tile providers. The next step is tile provider/preload behavior, not returning to DOM marker tuning.
 3. Polish route/navigation so GPS tracking and route guidance feel like one workflow.
 4. Start helper extraction from `app.js` with no behavior changes.
 5. Add screenshot-based mobile QA once browser automation is available in the current session.

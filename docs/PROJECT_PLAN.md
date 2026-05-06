@@ -43,6 +43,7 @@ The current app is intentionally being split gradually. Avoid one large rewrite 
 - Fixed Android canvas marker drift by redrawing the canvas layer on move/zoom animation frames.
 - Added Android canvas cluster renderer for broad-zoom group bubbles to remove large DOM cluster transforms during pinch and pan.
 - Added Android gesture-lite canvas rendering so the app keeps the full BT Locations look at rest, but uses simpler pins/clusters only while the user is actively dragging or pinching.
+- Restored smooth mobile Leaflet tile zoom behavior with larger Android tile buffers and no tile fade transitions, targeting the gray/flash behavior seen during pinch zoom.
 
 ## Phase 1: Mobile Map Stability
 

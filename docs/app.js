@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.1';
+const APP_VERSION = 'v7.2.2';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1109,10 +1109,12 @@ if (_androidPerfMode) document.documentElement.classList.add('is-android-map');
 if (_androidLiteMode) document.documentElement.classList.add('is-android-lite-map');
 const map = L.map('map', {
     zoomControl: false,
-    zoomAnimation: !_mobile,   // ปิดบน mobile เพื่อ performance
-    fadeAnimation: !_mobile,   // ปิดบน mobile
+    zoomAnimation: true,
+    fadeAnimation: !_mobile,
     markerZoomAnimation: !_mobile,
-    inertia: !_mobile,
+    inertia: true,
+    inertiaDeceleration: _mobile ? 2600 : 3000,
+    easeLinearity: _mobile ? 0.22 : 0.2,
     preferCanvas: _mobile,     // Canvas renderer บน mobile — เร็วกว่า SVG
     zoomSnap: _mobile ? 1 : 0.25,
     zoomDelta: 1,
@@ -1126,9 +1128,12 @@ const map = L.map('map', {
 window.map = map;
 
 const _tileOpts = {
-    updateWhenIdle: _androidPerfMode,
-    updateWhenZooming: _mobile && !_androidPerfMode,
-    keepBuffer: _androidPerfMode ? 5 : 4,
+    updateWhenIdle: false,
+    updateWhenZooming: _mobile,
+    updateInterval: _androidPerfMode ? 220 : 200,
+    keepBuffer: _androidPerfMode ? 8 : (_mobile ? 6 : 4),
+    crossOrigin: true,
+    className: 'bt-map-tile',
 };
 const tileLayers = {
 'Street': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19, ..._tileOpts }),
@@ -6554,6 +6559,9 @@ html.is-android-map .mobile-bottom-nav,
 html.is-android-map .place-card,
 html.is-android-map .mob-drawer-panel,
 html.is-android-map #mapDebugOverlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.is-mobile-map #map .leaflet-tile-container { will-change: transform; backface-visibility: hidden; transform-style: preserve-3d; }
+html.is-mobile-map #map .leaflet-tile { opacity: 1 !important; transition: none !important; backface-visibility: hidden; }
+html.is-android-map #map .leaflet-zoom-animated { will-change: transform; }
 html.is-android-map #map.is-gesture-zooming .leaflet-marker-pane,
 html.is-android-map #map.is-gesture-zooming .leaflet-overlay-pane,
 html.is-android-map #map.is-gesture-zooming .leaflet-shadow-pane { transition: none !important; }
