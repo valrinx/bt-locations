@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.8';
+const APP_VERSION = 'v7.2.9';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1678,7 +1678,7 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         }
     },
     _drawSimplified() {
-        // Fast render during gestures: professional markers without labels
+        // Fast render during gestures: DOM-like markers (no labels)
         if (!this._map || !this._canvas || !this._ctx) return;
         const size = this._map.getSize();
         const topLeft = this._map.containerPointToLayerPoint([0, 0]);
@@ -1693,25 +1693,37 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
             const layerPoint = this._map.latLngToLayerPoint([loc.lat, loc.lng]);
             const x = layerPoint.x - topLeft.x;
             const y = layerPoint.y - topLeft.y;
-            if (x < -30 || y < -30 || x > size.x + 30 || y > size.y + 30) continue;
+            if (x < -40 || y < -40 || x > size.x + 40 || y > size.y + 40) continue;
             const color = _getMarkerColor(loc);
             const fav = isFavorite(loc);
-            const r = fav ? 7 : 6;
-            // Outer circle with color
+            const coreR = fav ? 7.5 : 6.5; // 15px vs 13px like DOM
+            const ringR = coreR + 4;
+            // Glow ring (simulates radial-gradient fade)
+            const glowGrad = ctx.createRadialGradient(x, y, coreR, x, y, ringR);
+            glowGrad.addColorStop(0, color);
+            glowGrad.addColorStop(1, 'transparent');
+            ctx.globalAlpha = 0.25;
             ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.arc(x, y, ringR, 0, Math.PI * 2);
+            ctx.fillStyle = glowGrad;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            // Core: filled circle with white border (like .bt-field-marker-core)
+            ctx.beginPath();
+            ctx.arc(x, y, coreR, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
-            // White stroke
-            ctx.lineWidth = fav ? 2.2 : 1.8;
-            ctx.strokeStyle = fav ? 'rgba(255,226,95,0.85)' : 'rgba(255,255,255,0.9)';
+            // White border 2px
+            ctx.lineWidth = fav ? 2.5 : 2;
+            ctx.strokeStyle = fav ? '#ffe85c' : 'oklch(96% 0.008 265)';
             ctx.stroke();
-            // Center dot
+            // Outer dark ring 1px (simulates box-shadow)
             ctx.beginPath();
-            ctx.arc(x, y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.95)';
-            ctx.fill();
-            this._positions.push({ idx, loc, x, y, radius: r });
+            ctx.arc(x, y, coreR + 1, 0, Math.PI * 2);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(12, 18, 30, 0.65)';
+            ctx.stroke();
+            this._positions.push({ idx, loc, x, y, radius: coreR });
         }
     },
     _handleMapClick(e) {
