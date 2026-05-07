@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.11';
+const APP_VERSION = 'v7.2.12';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1101,14 +1101,7 @@ const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
     window.innerWidth < 768 ||
     localStorage.getItem('bt_force_mobile_mode') === 'true' ||
     document.body.classList.contains('force-mobile');
-const _android = /Android/i.test(navigator.userAgent);
-// Disabled: Android now uses DOM markers like iOS (canvas causes issues)
-// const _androidPerfMode = _android || localStorage.getItem('bt_android_perf_mode') === 'true';
-const _androidPerfMode = localStorage.getItem('bt_android_perf_mode') === 'true';
-let _androidLiteMode = _androidPerfMode && localStorage.getItem('bt_android_lite_mode') === 'true';
 if (_mobile) document.documentElement.classList.add('is-mobile-map');
-if (_androidPerfMode) document.documentElement.classList.add('is-android-map');
-if (_androidLiteMode) document.documentElement.classList.add('is-android-lite-map');
 const map = L.map('map', {
     zoomControl: false,
     zoomAnimation: true,
@@ -1117,7 +1110,7 @@ const map = L.map('map', {
     inertia: true,
     inertiaDeceleration: _mobile ? 2600 : 3000,
     easeLinearity: _mobile ? 0.22 : 0.2,
-    preferCanvas: _mobile,     // Canvas renderer บน mobile — เร็วกว่า SVG
+    preferCanvas: false,      // Use SVG renderer — DOM markers work better
     zoomSnap: _mobile ? 1 : 0.25,
     zoomDelta: 1,
     wheelPxPerZoomLevel: 80,
@@ -1132,8 +1125,8 @@ window.map = map;
 const _tileOpts = {
     updateWhenIdle: false,
     updateWhenZooming: _mobile,
-    updateInterval: _androidPerfMode ? 220 : 200,
-    keepBuffer: _androidPerfMode ? 8 : (_mobile ? 6 : 4),
+    updateInterval: 200,
+    keepBuffer: _mobile ? 6 : 4,
     crossOrigin: true,
     className: 'bt-map-tile',
 };
@@ -1228,10 +1221,6 @@ function getSorted(filtered) {
 // ══ Marker cache: สร้างครั้งเดียว, ไม่ rebuild ══
 // key = index ใน locations[], value = L.Marker
 let _markerCache = new Map(); // idx → marker
-let _androidCanvasMarkerLayer = null;
-let _androidCanvasMarkerItems = [];
-let _androidCanvasClusterLayer = null;
-let _androidCanvasClusterItems = [];
 let _lastFilteredKey = null;
 let _clusterDirty = false; // ต้อง rebuild cache ทั้งหมดเมื่อ locations เปลี่ยน
 const DISTRICT_CLUSTER_MAX_ZOOM = 13;
@@ -1312,35 +1301,18 @@ function _filterToViewport(items) {
 function _getMobileMarkerLimit() {
     if (!_mobile) return Infinity;
     const zoom = map.getZoom();
-    if (_androidLiteMode) {
-        if (zoom <= 14) return 120;
-        if (zoom <= 15) return 220;
-        if (zoom <= 16) return 360;
-        return 520;
-    }
-    if (_androidPerfMode) {
-        if (zoom <= 14) return 80;
-        if (zoom <= 15) return 140;
-        if (zoom <= 16) return 220;
-        return 360;
-    }
-    if (zoom <= 14) return 140;
+    if (zoom <= 14) return 160;
     if (zoom <= 15) return 260;
     if (zoom <= 16) return 420;
-    return 650;
+    return 680;
 }
 
 function _getMobileZoomSettleDelay() {
-    if (_androidLiteMode) return 140;
-    if (_androidPerfMode) return 120;
     return 60;
 }
 
 function _getAndroidMapOnlyDelay(reason='map') {
-    if (!_androidPerfMode) return 0;
-    if (reason.includes('zoom')) return _androidLiteMode ? 190 : 150;
-    if (reason.includes('move')) return _androidLiteMode ? 130 : 95;
-    return _androidLiteMode ? 110 : 80;
+    return 0;
 }
 
 function _limitMobileMarkers(items) {
@@ -1359,18 +1331,10 @@ function _limitMobileMarkers(items) {
 function _updateMobileMarkerLabels(count) {
     if (!_mobile) return;
     const mapEl = map.getContainer();
-    const labelLimit = _androidPerfMode ? 110 : 90;
+    const labelLimit = 90;
     const minZoom = 14;
-    const canShow = map.getZoom() >= minZoom && count <= labelLimit && !_isAndroidGestureLiteActive() && !mapEl.classList.contains('is-gesture-zooming');
+    const canShow = map.getZoom() >= minZoom && count <= labelLimit && !mapEl.classList.contains('is-gesture-zooming');
     mapEl.classList.toggle('show-mobile-marker-labels', canShow);
-}
-
-function _isAndroidGestureLiteActive() {
-    if (!_androidPerfMode || !map) return false;
-    const mapEl = map.getContainer();
-    return mapEl.classList.contains('is-android-gesture-lite') ||
-        mapEl.classList.contains('is-map-moving') ||
-        mapEl.classList.contains('is-gesture-zooming');
 }
 
 function _ensureMapDebugOverlay() {
@@ -1400,9 +1364,6 @@ function _updateMapDebugOverlay() {
         visible: _visibleMarkerIdxs.size,
         layer: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
         limit: _getMobileMarkerLimit(),
-        androidPerfMode: _androidPerfMode,
-        lite: _androidLiteMode,
-        gestureLite: _isAndroidGestureLiteActive(),
         ms: _lastMarkerRenderMs,
         updateKind: _lastUpdateKind,
         fullMs: _lastFullUpdateMs,
@@ -1416,14 +1377,11 @@ function _updateMapDebugOverlay() {
         <span style="color:var(--tx3);">mode</span><span>${_escapeHtml(stats.mode)}</span>
         <span style="color:var(--tx3);">markers</span><span>${stats.visible}/${stats.layer}</span>
         <span style="color:var(--tx3);">limit</span><span>${stats.limit === Infinity ? '∞' : stats.limit}</span>
-        <span style="color:var(--tx3);">canvas</span><span style="color:${_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer) ? 'var(--gn)' : 'var(--tx2)'}">${_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer) ? _androidCanvasMarkerItems.length : 'off'}</span>
-        <span style="color:var(--tx3);">clusters</span><span style="color:${_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer) ? 'var(--gn)' : 'var(--tx2)'}">${_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer) ? _androidCanvasClusterItems.length : 'off'}</span>
-        <span style="color:var(--tx3);">android</span><span style="color:${stats.androidPerfMode ? 'var(--am)' : 'var(--tx2)'}">${stats.androidPerfMode ? (stats.lite ? 'lite' : 'perf') : 'off'}</span>
         <span style="color:var(--tx3);">render</span><span>${stats.ms}ms</span>
         <span style="color:var(--tx3);">update</span><span>${stats.updateKind}</span>
         <span style="color:var(--tx3);">full/map</span><span>${stats.fullMs}/${stats.mapMs}ms</span>
         <span style="color:var(--tx3);">queue</span><span style="color:${stats.pending ? 'var(--am)' : 'var(--gn)'}">${stats.pending ? 'yes' : 'no'}</span>
-        <span style="color:var(--tx3);">gesture</span><span style="color:${stats.gestureLite ? 'var(--am)' : 'var(--gn)'}">${stats.gestureLite ? 'lite' : (stats.zooming ? 'yes' : 'no')}</span>
+        <span style="color:var(--tx3);">gesture</span><span style="color:${stats.zooming ? 'var(--am)' : 'var(--gn)'}">${stats.zooming ? 'yes' : 'no'}</span>
         <span style="color:var(--tx3);">longtask</span><span style="color:${_lastLongTaskMs > 80 ? 'var(--am)' : 'var(--tx2)'}">${_longTaskCount}/${_lastLongTaskMs}ms</span>
         ${gps ? `
         <span style="grid-column:1/-1;height:1px;background:rgba(91,143,255,0.25);margin:2px 0;"></span>
@@ -1536,493 +1494,6 @@ function _createLocationIcon(loc, idx) {
     });
 }
 
-const AndroidCanvasMarkerLayer = L.Layer.extend({
-    initialize(items = []) {
-        this.items = items;
-        this._canvas = null;
-        this._ctx = null;
-        this._positions = [];
-        this._raf = null;
-        this._clickHandler = this._handleMapClick.bind(this);
-        this._reset = this._reset.bind(this);
-        this._scheduleReset = this._scheduleReset.bind(this);
-        this._scheduleThrottled = this._scheduleThrottled.bind(this);
-        this._throttleTimer = null;
-    },
-    onAdd(mapInstance) {
-        this._map = mapInstance;
-        this._canvas = L.DomUtil.create('canvas', 'android-canvas-marker-layer');
-        this._canvas.style.position = 'absolute';
-        this._canvas.style.pointerEvents = 'none';
-        this._ctx = this._canvas.getContext('2d');
-        mapInstance.getPanes().overlayPane.appendChild(this._canvas);
-        // Smooth gestures: simplified dots during move, full render on settle
-        mapInstance.on('move zoom', this._scheduleThrottled);
-        mapInstance.on('moveend zoomend resize viewreset', this._scheduleReset);
-        mapInstance.on('click', this._clickHandler);
-        this._reset();
-    },
-    onRemove(mapInstance) {
-        mapInstance.off('move zoom', this._scheduleThrottled);
-        mapInstance.off('moveend zoomend resize viewreset', this._scheduleReset);
-        mapInstance.off('click', this._clickHandler);
-        if (this._raf) {
-            cancelAnimationFrame(this._raf);
-            this._raf = null;
-        }
-        if (this._throttleTimer) {
-            clearTimeout(this._throttleTimer);
-            this._throttleTimer = null;
-        }
-        if (this._canvas) {
-            L.DomUtil.remove(this._canvas);
-            this._canvas = null;
-            this._ctx = null;
-        }
-        this._positions = [];
-    },
-    setItems(items = []) {
-        this.items = items;
-        this._reset();
-    },
-    _scheduleReset() {
-        if (this._raf) return;
-        this._raf = requestAnimationFrame(() => {
-            this._raf = null;
-            this._reset();
-        });
-    },
-    _scheduleThrottled() {
-        // During gestures: throttle to ~30fps, render simplified
-        if (this._raf || this._throttleTimer) return;
-        this._throttleTimer = setTimeout(() => {
-            this._throttleTimer = null;
-            if (!this._raf) {
-                this._raf = requestAnimationFrame(() => {
-                    this._raf = null;
-                    this._drawSimplified();
-                });
-            }
-        }, 16);
-    },
-    _reset() {
-        if (!this._map || !this._canvas || !this._ctx) return;
-        const size = this._map.getSize();
-        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        this._canvas.width = Math.round(size.x * dpr);
-        this._canvas.height = Math.round(size.y * dpr);
-        this._canvas.style.width = `${size.x}px`;
-        this._canvas.style.height = `${size.y}px`;
-        L.DomUtil.setPosition(this._canvas, topLeft);
-        this._ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        this._draw(topLeft, size);
-    },
-    _draw(topLeft, size) {
-        const ctx = this._ctx;
-        ctx.clearRect(0, 0, size.x, size.y);
-        ctx.textBaseline = 'middle';
-        ctx.font = '800 10px "Noto Sans Thai", system-ui, sans-serif';
-        this._positions = [];
-        const zoom = this._map.getZoom();
-        const gestureLite = _isAndroidGestureLiteActive();
-        const showLabels = zoom >= 14 && this.items.length <= (_androidLiteMode ? 260 : 360) && !gestureLite;
-        for (const loc of this.items) {
-            if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) continue;
-            const idx = getLocIndex(loc);
-            if (idx < 0) continue;
-            const layerPoint = this._map.latLngToLayerPoint([loc.lat, loc.lng]);
-            const x = layerPoint.x - topLeft.x;
-            const y = layerPoint.y - topLeft.y;
-            if (x < -40 || y < -40 || x > size.x + 40 || y > size.y + 40) continue;
-            const color = _getMarkerColor(loc);
-            const fav = isFavorite(loc);
-            const outerRadius = gestureLite ? (fav ? 6.6 : 5.4) : (fav ? 8 : 6.5);
-            ctx.beginPath();
-            ctx.arc(x, y, outerRadius, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.lineWidth = gestureLite ? 1.35 : (fav ? 2.6 : 2);
-            ctx.strokeStyle = fav
-                ? (gestureLite ? 'rgba(255,226,95,0.76)' : 'rgba(255,226,95,0.95)')
-                : (gestureLite ? 'rgba(246,248,255,0.68)' : 'rgba(246,248,255,0.94)');
-            ctx.stroke();
-            if (!gestureLite) {
-                ctx.beginPath();
-                ctx.arc(x, y, 2.2, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255,255,255,0.92)';
-                ctx.fill();
-            }
-            if (showLabels) {
-                const name = String(loc.name || loc.list || 'ตำแหน่ง');
-                const area = String(_getDistrictName(loc) || '');
-                const label = name.length > 18 ? `${name.slice(0, 17)}…` : name;
-                const sub = area.length > 16 ? `${area.slice(0, 15)}…` : area;
-                const w = Math.min(132, Math.max(ctx.measureText(label).width + 16, sub ? ctx.measureText(sub).width + 16 : 0, 58));
-                const h = sub ? 27 : 18;
-                const lx = Math.round(x - w / 2);
-                const ly = Math.round(y + 14);
-                ctx.fillStyle = 'rgba(10, 16, 28, 0.74)';
-                ctx.strokeStyle = 'rgba(140, 176, 255, 0.28)';
-                ctx.lineWidth = 1;
-                ctx.fillRect(lx, ly, w, h);
-                ctx.strokeRect(lx, ly, w, h);
-                ctx.fillStyle = 'rgba(248, 251, 255, 0.96)';
-                ctx.fillText(label, lx + 8, ly + 10);
-                if (sub) {
-                    ctx.fillStyle = 'rgba(145, 190, 255, 0.9)';
-                    ctx.font = '750 8px "Noto Sans Thai", system-ui, sans-serif';
-                    ctx.fillText(sub, lx + 8, ly + 21);
-                    ctx.font = '800 10px "Noto Sans Thai", system-ui, sans-serif';
-                }
-            }
-            this._positions.push({ idx, loc, x, y });
-        }
-    },
-    _drawSimplified() {
-        // DOM-exact canvas markers (no labels) - matches .bt-field-marker CSS 100%
-        if (!this._map || !this._canvas || !this._ctx) return;
-        const size = this._map.getSize();
-        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-        const ctx = this._ctx;
-        L.DomUtil.setPosition(this._canvas, topLeft);
-        ctx.clearRect(0, 0, size.x, size.y);
-        this._positions = [];
-        for (const loc of this.items) {
-            if (!loc || !Number.isFinite(loc.lat) || !Number.isFinite(loc.lng)) continue;
-            const idx = getLocIndex(loc);
-            if (idx < 0) continue;
-            const layerPoint = this._map.latLngToLayerPoint([loc.lat, loc.lng]);
-            const x = layerPoint.x - topLeft.x;
-            const y = layerPoint.y - topLeft.y;
-            if (x < -40 || y < -40 || x > size.x + 40 || y > size.y + 40) continue;
-            const color = _getMarkerColor(loc);
-            const fav = isFavorite(loc);
-            // DOM sizes: .bt-field-marker-core = 13px (15px fav), container = 28px
-            // .bt-field-marker-ring has inset:2px, so ring extends to ~12px radius
-            const coreR = fav ? 7.5 : 6.5;  // 15px / 13px diameter
-            const ringR = 12;               // ~24px diameter (inset:2px from 28px container)
-            // === 1. RING (behind core) - matches .bt-field-marker-ring ===
-            // opacity: 0.75
-            ctx.globalAlpha = 0.75;
-            // background: radial-gradient(circle, color-mix(color, transparent 68%) 0%, transparent 62%)
-            const ringGrad = ctx.createRadialGradient(x, y, coreR, x, y, ringR);
-            ringGrad.addColorStop(0, color);
-            ringGrad.addColorStop(0.62, 'transparent');
-            ctx.beginPath();
-            ctx.arc(x, y, ringR, 0, Math.PI * 2);
-            ctx.fillStyle = ringGrad;
-            ctx.fill();
-            // border: 1px solid color-mix(in oklch, color, transparent 36%)
-            ctx.beginPath();
-            ctx.arc(x, y, ringR, 0, Math.PI * 2);
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = color;
-            ctx.globalAlpha = 0.36;
-            ctx.stroke();
-            ctx.globalAlpha = 1;
-            // === 2. CORE (on top) - matches .bt-field-marker-core ===
-            // Glow shadow first: 0 0 18px color-mix(color, transparent 58%)
-            ctx.save();
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 18;
-            ctx.globalAlpha = 0.42; // 58% transparent = 42% opacity
-            ctx.beginPath();
-            ctx.arc(x, y, coreR, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.restore();
-            // Core fill
-            ctx.beginPath();
-            ctx.arc(x, y, coreR, 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.fill();
-            // White border: 2px solid oklch(96% 0.008 265) / gold for fav
-            ctx.beginPath();
-            ctx.arc(x, y, coreR, 0, Math.PI * 2);
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = fav ? 'oklch(86% 0.16 84)' : 'oklch(96% 0.008 265)';
-            ctx.stroke();
-            // Dark ring: box-shadow 0 0 0 1px oklch(12% 0.025 265 / 0.65)
-            ctx.beginPath();
-            ctx.arc(x, y, coreR + 0.5, 0, Math.PI * 2);
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = 'rgba(12, 18, 30, 0.65)';
-            ctx.stroke();
-            this._positions.push({ idx, loc, x, y, radius: coreR });
-        }
-    },
-    _handleMapClick(e) {
-        if (!_androidPerfMode || !this._positions.length || manualRouteMode || routeMode) return;
-        const p = this._map.latLngToContainerPoint(e.latlng);
-        let nearest = null;
-        let min = Infinity;
-        for (const item of this._positions) {
-            const dx = item.x - p.x;
-            const dy = item.y - p.y;
-            const d = dx * dx + dy * dy;
-            if (d < min) {
-                min = d;
-                nearest = item;
-            }
-        }
-        if (nearest && min <= 26 * 26) {
-            showLocationDetails(nearest.loc, nearest.idx);
-        }
-    }
-});
-
-function _useAndroidCanvasMarkers(renderMode) {
-    return _androidPerfMode && !manualRouteMode && ['points', 'district-detail'].includes(renderMode);
-}
-
-function _showAndroidCanvasMarkers(items) {
-    if (_individualMarkersLayer && map.hasLayer(_individualMarkersLayer)) map.removeLayer(_individualMarkersLayer);
-    _visibleMarkerIdxs = new Set(items.map(getLocIndex).filter(idx => idx >= 0));
-    _androidCanvasMarkerItems = items;
-    if (!_androidCanvasMarkerLayer) {
-        _androidCanvasMarkerLayer = new AndroidCanvasMarkerLayer(items);
-        _androidCanvasMarkerLayer.addTo(map);
-    } else {
-        _androidCanvasMarkerLayer.setItems(items);
-        if (!map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer.addTo(map);
-    }
-    _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
-}
-
-function _hideAndroidCanvasMarkers() {
-    _androidCanvasMarkerItems = [];
-    if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) {
-        map.removeLayer(_androidCanvasMarkerLayer);
-    }
-}
-
-const AndroidCanvasClusterLayer = L.Layer.extend({
-    initialize(items = []) {
-        this.items = items;
-        this._canvas = null;
-        this._ctx = null;
-        this._positions = [];
-        this._raf = null;
-        this._throttleTimer = null;
-        this._clickHandler = this._handleMapClick.bind(this);
-        this._reset = this._reset.bind(this);
-        this._scheduleReset = this._scheduleReset.bind(this);
-        this._scheduleThrottled = this._scheduleThrottled.bind(this);
-    },
-    onAdd(mapInstance) {
-        this._map = mapInstance;
-        this._canvas = L.DomUtil.create('canvas', 'android-canvas-cluster-layer');
-        this._canvas.style.position = 'absolute';
-        this._canvas.style.pointerEvents = 'none';
-        this._ctx = this._canvas.getContext('2d');
-        mapInstance.getPanes().overlayPane.appendChild(this._canvas);
-        // Smooth gestures: simplified clusters during move, full render on settle
-        mapInstance.on('move zoom', this._scheduleThrottled);
-        mapInstance.on('moveend zoomend resize viewreset', this._scheduleReset);
-        mapInstance.on('click', this._clickHandler);
-        this._reset();
-    },
-    onRemove(mapInstance) {
-        mapInstance.off('move zoom', this._scheduleThrottled);
-        mapInstance.off('moveend zoomend resize viewreset', this._scheduleReset);
-        mapInstance.off('click', this._clickHandler);
-        if (this._raf) {
-            cancelAnimationFrame(this._raf);
-            this._raf = null;
-        }
-        if (this._throttleTimer) {
-            clearTimeout(this._throttleTimer);
-            this._throttleTimer = null;
-        }
-        if (this._canvas) {
-            L.DomUtil.remove(this._canvas);
-            this._canvas = null;
-            this._ctx = null;
-        }
-        this._positions = [];
-    },
-    setItems(items = []) {
-        this.items = items;
-        this._reset();
-    },
-    _scheduleReset() {
-        if (this._raf) return;
-        this._raf = requestAnimationFrame(() => {
-            this._raf = null;
-            this._reset();
-        });
-    },
-    _scheduleThrottled() {
-        // During gestures: throttle to ~30fps, render simplified
-        if (this._raf || this._throttleTimer) return;
-        this._throttleTimer = setTimeout(() => {
-            this._throttleTimer = null;
-            if (!this._raf) {
-                this._raf = requestAnimationFrame(() => {
-                    this._raf = null;
-                    this._drawSimplified();
-                });
-            }
-        }, 16);
-    },
-    _reset() {
-        if (!this._map || !this._canvas || !this._ctx) return;
-        const size = this._map.getSize();
-        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        this._canvas.width = Math.round(size.x * dpr);
-        this._canvas.height = Math.round(size.y * dpr);
-        this._canvas.style.width = `${size.x}px`;
-        this._canvas.style.height = `${size.y}px`;
-        L.DomUtil.setPosition(this._canvas, topLeft);
-        this._ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        this._draw(topLeft, size);
-    },
-    _draw(topLeft, size) {
-        const ctx = this._ctx;
-        ctx.clearRect(0, 0, size.x, size.y);
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        this._positions = [];
-        const gestureLite = _isAndroidGestureLiteActive();
-        for (const item of this.items) {
-            const center = item.center;
-            const layerPoint = this._map.latLngToLayerPoint(center);
-            const x = layerPoint.x - topLeft.x;
-            const y = layerPoint.y - topLeft.y;
-            const radius = gestureLite ? Math.max(15, item.size * 0.39) : item.size / 2;
-            if (x < -radius - 20 || y < -radius - 20 || x > size.x + radius + 20 || y > size.y + radius + 20) continue;
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = item.color;
-            ctx.fill();
-            ctx.lineWidth = gestureLite ? 1.4 : 2;
-            ctx.strokeStyle = gestureLite ? 'rgba(245,248,255,0.52)' : 'rgba(245,248,255,0.72)';
-            ctx.stroke();
-            if (!gestureLite) {
-                ctx.beginPath();
-                ctx.arc(x - radius * 0.24, y - radius * 0.28, radius * 0.22, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255,255,255,0.16)';
-                ctx.fill();
-            }
-            ctx.fillStyle = 'rgba(255,255,255,0.96)';
-            ctx.font = gestureLite ? '900 13px "Noto Sans Thai", system-ui, sans-serif' : '900 15px "Noto Sans Thai", system-ui, sans-serif';
-            ctx.fillText(String(item.count), x, gestureLite ? y : y - 4);
-            if (!gestureLite) {
-                ctx.font = '800 9px "Noto Sans Thai", system-ui, sans-serif';
-                ctx.fillStyle = 'rgba(232,238,255,0.9)';
-                ctx.fillText(item.label, x, y + 12);
-            }
-            this._positions.push({ ...item, x, y, radius });
-        }
-    },
-    _drawSimplified() {
-        // Fast render during gestures: professional clusters without labels
-        if (!this._map || !this._canvas || !this._ctx) return;
-        const size = this._map.getSize();
-        const topLeft = this._map.containerPointToLayerPoint([0, 0]);
-        const ctx = this._ctx;
-        L.DomUtil.setPosition(this._canvas, topLeft);
-        ctx.clearRect(0, 0, size.x, size.y);
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        this._positions = [];
-        for (const item of this.items) {
-            const center = item.center;
-            const layerPoint = this._map.latLngToLayerPoint(center);
-            const x = layerPoint.x - topLeft.x;
-            const y = layerPoint.y - topLeft.y;
-            const radius = Math.max(14, item.size * 0.4);
-            if (x < -radius - 15 || y < -radius - 15 || x > size.x + radius + 15 || y > size.y + radius + 15) continue;
-            // Main circle with color
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = item.color;
-            ctx.fill();
-            // White stroke
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-            ctx.stroke();
-            // Glossy highlight
-            ctx.beginPath();
-            ctx.arc(x - radius * 0.25, y - radius * 0.28, radius * 0.2, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255,255,255,0.25)';
-            ctx.fill();
-            // Count
-            ctx.fillStyle = 'rgba(255,255,255,0.95)';
-            ctx.font = '900 14px "Noto Sans Thai", system-ui, sans-serif';
-            ctx.fillText(String(item.count), x, y);
-            this._positions.push({ ...item, x, y, radius });
-        }
-    },
-    _handleMapClick(e) {
-        if (!_androidPerfMode || !this._positions.length || routeMode || manualRouteMode) return;
-        const p = this._map.latLngToContainerPoint(e.latlng);
-        let nearest = null;
-        let min = Infinity;
-        for (const item of this._positions) {
-            const dx = item.x - p.x;
-            const dy = item.y - p.y;
-            const d = dx * dx + dy * dy;
-            const hit = Math.max(28, item.radius + 8);
-            if (d <= hit * hit && d < min) {
-                min = d;
-                nearest = item;
-            }
-        }
-        if (!nearest) return;
-        if (nearest.data._aggregate && nearest.data.districts && nearest.data.districts.size > 1) {
-            this._map.fitBounds(nearest.data.bounds.pad(0.18), { animate: false, maxZoom: _getDistrictClusterMaxZoom() + 1 });
-            return;
-        }
-        _showDistrictPopup(nearest.displayDistrict, nearest.data, {
-            getLatLng: () => nearest.center
-        });
-    }
-});
-
-function _getAndroidCanvasClusterItems(districtGroups) {
-    return Object.entries(districtGroups).map(([district, data]) => {
-        const count = data.locations.length;
-        const center = data.bounds.getCenter();
-        const lists = Array.from(data.lists);
-        const districtCount = data.districts ? data.districts.size : 1;
-        const displayDistrict = data.districtName || (districtCount === 1 && data.districts ? Array.from(data.districts)[0] : district);
-        const size = Math.min(50, Math.max(30, 28 + Math.sqrt(count) * 1.8));
-        const topList = lists[0] || 'ไม่ระบุ';
-        return {
-            district,
-            displayDistrict,
-            data,
-            center,
-            count,
-            size,
-            label: data._aggregate && districtCount > 1 ? `${districtCount} เขต` : 'ตู้',
-            color: getColor(topList)
-        };
-    });
-}
-
-function _showAndroidCanvasClusters(districtGroups) {
-    if (_districtClusterGroup && map.hasLayer(_districtClusterGroup)) map.removeLayer(_districtClusterGroup);
-    _hideAndroidCanvasMarkers();
-    _androidCanvasClusterItems = _getAndroidCanvasClusterItems(districtGroups);
-    if (!_androidCanvasClusterLayer) {
-        _androidCanvasClusterLayer = new AndroidCanvasClusterLayer(_androidCanvasClusterItems);
-        _androidCanvasClusterLayer.addTo(map);
-    } else {
-        _androidCanvasClusterLayer.setItems(_androidCanvasClusterItems);
-        if (!map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer.addTo(map);
-    }
-}
-
-function _hideAndroidCanvasClusters() {
-    _androidCanvasClusterItems = [];
-    if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) {
-        map.removeLayer(_androidCanvasClusterLayer);
-    }
-}
 
 function _updateDistrictScopeControl(count) {
     let el = document.getElementById('districtScopeControl');
@@ -2094,8 +1565,6 @@ function renderMarkers(filtered) {
     if (routeMode) { 
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
-        _hideAndroidCanvasMarkers();
-        _hideAndroidCanvasClusters();
         _updateDistrictScopeControl(0);
         return; 
     }
@@ -2117,8 +1586,6 @@ function renderMarkers(filtered) {
     if (heatmapMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
-        _hideAndroidCanvasMarkers();
-        _hideAndroidCanvasClusters();
         _updateDistrictScopeControl(0);
         const z=map.getZoom();
         const hr=Math.max(8,Math.min(40, z<=10?10:z<=12?18:z<=14?28:40));
@@ -2134,8 +1601,6 @@ function renderMarkers(filtered) {
 
     if (manualRouteMode) {
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
-        _hideAndroidCanvasMarkers();
-        _hideAndroidCanvasClusters();
         const visibleManual = _limitMobileMarkers(_filterToViewport(filtered));
         _showIndividualMarkers(visibleManual);
         _updateDistrictScopeControl(filtered.length);
@@ -2152,22 +1617,16 @@ function renderMarkers(filtered) {
         _updateDistrictScopeControl(0);
         // Remove individual markers
         if (_individualMarkersLayer) map.removeLayer(_individualMarkersLayer);
-        _hideAndroidCanvasMarkers();
         if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
         
         // Create district clusters
         const districtGroups = _createMobileClusterCells(_createDistrictClusters(filtered));
-        if (_androidPerfMode) {
-            _showAndroidCanvasClusters(districtGroups);
-        } else {
-            _hideAndroidCanvasClusters();
-            _districtClusterGroup = L.layerGroup();
-            Object.entries(districtGroups).forEach(([district, data]) => {
-                const marker = _createDistrictClusterMarker(district, data);
-                _districtClusterGroup.addLayer(marker);
-            });
-            map.addLayer(_districtClusterGroup);
-        }
+        _districtClusterGroup = L.layerGroup();
+        Object.entries(districtGroups).forEach(([district, data]) => {
+            const marker = _createDistrictClusterMarker(district, data);
+            _districtClusterGroup.addLayer(marker);
+        });
+        map.addLayer(_districtClusterGroup);
         
         // Update stats
         const districtCount = Object.keys(districtGroups).length;
@@ -2182,7 +1641,6 @@ function renderMarkers(filtered) {
     
     // Case 2: Zoomed in (>13) OR district selected → Show individual markers
     if (_districtClusterGroup) map.removeLayer(_districtClusterGroup);
-    _hideAndroidCanvasClusters();
     
     // If district is selected, filter to that district only
     const markersToShow = _selectedDistrict
@@ -2194,11 +1652,7 @@ function renderMarkers(filtered) {
     
     // Show individual markers
     const visibleMarkers = _limitMobileMarkers(_filterToViewport(markersToShow));
-    if (_useAndroidCanvasMarkers(renderMode)) _showAndroidCanvasMarkers(visibleMarkers);
-    else {
-        _hideAndroidCanvasMarkers();
-        _showIndividualMarkers(visibleMarkers);
-    }
+    _showIndividualMarkers(visibleMarkers);
     _updateDistrictScopeControl(markersToShow.length);
     
     // Update stats
@@ -2230,21 +1684,6 @@ function invalidateCache() {
 function scheduleMapOnlyUpdate(reason = 'map') {
     _lastFilteredKey = null;
     _pendingMapOnlyReason = reason;
-    if (_androidPerfMode) {
-        if (_mapOnlyUpdateTimer) clearTimeout(_mapOnlyUpdateTimer);
-        _mapOnlyUpdateTimer = setTimeout(() => {
-            _mapOnlyUpdateTimer = null;
-            if (_mapOnlyUpdateRaf) return;
-            _mapOnlyUpdateRaf = requestAnimationFrame(() => {
-                _mapOnlyUpdateRaf = null;
-                update({ mapOnly: true, reason: _pendingMapOnlyReason });
-                _pendingMapOnlyReason = '';
-            });
-            _updateMapDebugOverlay();
-        }, _getAndroidMapOnlyDelay(reason));
-        _updateMapDebugOverlay();
-        return;
-    }
     if (_mapOnlyUpdateRaf) {
         _updateMapDebugOverlay();
         return;
@@ -2501,8 +1940,6 @@ function _zoomToDistrictList(district, list) {
 
 // Show individual markers for filtered data
 function _showIndividualMarkers(filtered) {
-    _hideAndroidCanvasMarkers();
-    _hideAndroidCanvasClusters();
     if (_districtClusterGroup) {
         map.removeLayer(_districtClusterGroup);
     }
@@ -2565,8 +2002,6 @@ function _resetToDistrictView() {
         map.removeLayer(_individualMarkersLayer);
         _individualMarkersLayer = null;
     }
-    _hideAndroidCanvasMarkers();
-    _hideAndroidCanvasClusters();
     _visibleMarkerIdxs.clear();
     _updateMobileMarkerLabels(0);
     update(); // Re-render clusters
@@ -4002,20 +3437,7 @@ map.on('zoomend', () => {
 });
 map.on('moveend', () => {
     const mapEl = map.getContainer();
-    if (_androidPerfMode) {
-        setTimeout(() => {
-            if (!mapEl.classList.contains('is-gesture-zooming')) {
-                mapEl.classList.remove('is-map-moving', 'is-android-gesture-lite');
-                // Use _scheduleReset for consistent gesture handling
-                if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._scheduleReset();
-                if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._scheduleReset();
-                _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
-                _updateMapDebugOverlay();
-            }
-        }, _androidLiteMode ? 120 : 80);
-    } else {
-        mapEl.classList.remove('is-map-moving');
-    }
+    mapEl.classList.remove('is-map-moving');
     if (_mobile && mapEl.classList.contains('is-gesture-zooming')) return;
     const mode = _getMarkerRenderMode();
     if (['points', 'district-detail', 'manual'].includes(mode)) {
@@ -4023,10 +3445,8 @@ map.on('moveend', () => {
     }
 });
 map.on('movestart', () => {
-    if (!_androidPerfMode) return;
     const mapEl = map.getContainer();
-    mapEl.classList.add('is-map-moving', 'is-android-gesture-lite');
-    _updateMapDebugOverlay();
+    mapEl.classList.add('is-map-moving');
 });
 map.on('zoomstart', () => {
     if (!_mobile) return;
@@ -4036,9 +3456,7 @@ map.on('zoomstart', () => {
     }
     const mapEl = map.getContainer();
     mapEl.classList.add('is-gesture-zooming');
-    if (_androidPerfMode) mapEl.classList.add('is-android-gesture-lite');
     mapEl.classList.remove('show-mobile-marker-labels');
-    _updateMapDebugOverlay();
 });
 map.on('zoomend', () => {
     if (!_mobile) return;
@@ -4047,15 +3465,9 @@ map.on('zoomend', () => {
     mapEl.classList.remove('is-map-moving');
     _mobileZoomRestoreTimer = setTimeout(() => {
         _mobileZoomRestoreTimer = null;
-        mapEl.classList.remove('is-android-gesture-lite');
         scheduleMapOnlyUpdate('zoom');
-        // Use _scheduleReset instead of _reset to respect gesture check
-        if (_androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer)) _androidCanvasMarkerLayer._scheduleReset();
-        if (_androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer)) _androidCanvasClusterLayer._scheduleReset();
         _updateMobileMarkerLabels(_visibleMarkerIdxs.size);
-        _updateMapDebugOverlay();
     }, _getMobileZoomSettleDelay());
-    _updateMapDebugOverlay();
 });
 
 if(btnGps){
@@ -6709,31 +6121,8 @@ html.is-mobile-map .bt-marker-name,
 html.is-mobile-map .bt-marker-area { display: block !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
 html.is-mobile-map .bt-marker-name { color: oklch(98% 0.006 250) !important; font-weight: 850 !important; line-height: 1.1 !important; min-height: 10px !important; }
 html.is-mobile-map .bt-marker-area { color: oklch(73% 0.11 220) !important; font-size: 8px !important; font-weight: 750 !important; line-height: 1.05 !important; min-height: 8px !important; }
-html.is-android-map .map-btn,
-html.is-android-map .map-btn-group,
-html.is-android-map .mobile-bottom-nav,
-html.is-android-map .place-card,
-html.is-android-map .mob-drawer-panel,
-html.is-android-map #mapDebugOverlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 html.is-mobile-map #map .leaflet-tile-container { will-change: transform; backface-visibility: hidden; transform-style: preserve-3d; }
 html.is-mobile-map #map .leaflet-tile { opacity: 1 !important; transition: none !important; backface-visibility: hidden; }
-html.is-android-map #map .leaflet-zoom-animated { will-change: transform; }
-html.is-android-map #map.is-gesture-zooming .leaflet-marker-pane,
-html.is-android-map #map.is-gesture-zooming .leaflet-overlay-pane,
-html.is-android-map #map.is-gesture-zooming .leaflet-shadow-pane { transition: none !important; }
-html.is-android-map #map.is-gesture-zooming .bt-field-marker,
-html.is-android-map #map.is-gesture-zooming .marker-cluster,
-html.is-android-map #map.is-gesture-zooming .you-are-here-wrap { filter: none !important; box-shadow: none !important; }
-html.is-android-map #map.is-gesture-zooming .you-are-here-ring { animation: none !important; }
-html.is-android-map #map.is-map-moving .bt-field-marker { transition: none !important; filter: none !important; }
-html.is-android-map #map.is-map-moving .bt-field-marker-label,
-html.is-android-map #map.is-android-gesture-lite .bt-field-marker-label,
-html.is-android-map #map.is-android-gesture-lite .leaflet-tooltip,
-html.is-android-map #map.is-map-moving .leaflet-tooltip { display: none !important; }
-html.is-android-map #map.is-android-gesture-lite .bt-field-marker,
-html.is-android-map #map.is-android-gesture-lite .marker-cluster { transition: none !important; filter: none !important; box-shadow: none !important; }
-.android-canvas-marker-layer,
-.android-canvas-cluster-layer { z-index: 430 !important; image-rendering:auto; }
 .marker-cluster { transition: opacity 120ms ease !important; }
 .leaflet-cluster-anim .leaflet-marker-icon,
 .leaflet-cluster-anim .leaflet-marker-shadow { transition: left 0.3s cubic-bezier(0.4,0,0.2,1), top 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease !important; }
@@ -7017,13 +6406,6 @@ window.btDebug = {
         return {
             zoom: map.getZoom(),
             mode: _getMarkerRenderMode(),
-            androidPerfMode: _androidPerfMode,
-            androidLiteMode: _androidLiteMode,
-            androidCanvasMarkers: _androidCanvasMarkerLayer && map.hasLayer(_androidCanvasMarkerLayer),
-            androidCanvasMarkerCount: _androidCanvasMarkerItems.length,
-            androidCanvasClusters: _androidCanvasClusterLayer && map.hasLayer(_androidCanvasClusterLayer),
-            androidCanvasClusterCount: _androidCanvasClusterItems.length,
-            androidGestureLite: _isAndroidGestureLiteActive(),
             visibleMarkers: _visibleMarkerIdxs.size,
             markerLayerMarkers: _individualMarkersLayer ? _individualMarkersLayer.getLayers().length : 0,
             mobileMarkerLimit: _getMobileMarkerLimit(),
@@ -7058,38 +6440,13 @@ window.btDebug = {
         };
     },
     toggleMapOverlay: (enabled)=>setMapDebugOverlay(enabled === undefined ? !_mapDebugOverlayEnabled : enabled),
-    toggleAndroidLite: ()=>toggleAndroidLiteMode(),
     clearSearchPin: ()=>{_clearSearchMarker();showToast('ล้าง search pin แล้ว', false, true);},
     forceSync: ()=>doSync(false),
     clearCache: ()=>{invalidateCache();update();showToast('Cache cleared');},
     refreshApp: ()=>refreshAppNow(),
-    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),androidPerfMode:_androidPerfMode,androidLiteMode:_androidLiteMode,androidGestureLite:_isAndroidGestureLiteActive(),androidCanvasMarkers:!!(_androidCanvasMarkerLayer&&map.hasLayer(_androidCanvasMarkerLayer)),androidCanvasClusters:!!(_androidCanvasClusterLayer&&map.hasLayer(_androidCanvasClusterLayer)),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
+    exportDebug: ()=>JSON.stringify({appVersion:APP_VERSION,locations:locations.length,lists:Object.keys(locations.reduce((a,l)=>(a[l.list]=1,a),{})),map:window.btDebug.mapStats,gps:window.btDebug.gps,dataQuality:getDataQualityReport(),sha:localStorage.getItem(SYNC_SHA_KEY),ua:navigator.userAgent,screen:`${screen.width}x${screen.height}`,dpr:devicePixelRatio},null,2),
 };
 console.log('%c🗺️ BT Locations Debug','font-size:14px;font-weight:bold;','→ window.btDebug');
-
-function toggleAndroidLiteMode() {
-    if (!_androidPerfMode) {
-        showToast('โหมดลื่นพิเศษใช้กับมือถือ/Android', false, true);
-        return;
-    }
-    _androidLiteMode = !_androidLiteMode;
-    localStorage.setItem('bt_android_lite_mode', _androidLiteMode ? 'true' : 'false');
-    document.documentElement.classList.toggle('is-android-lite-map', _androidLiteMode);
-    _updateAndroidLiteButton();
-    invalidateMarkerCache();
-    update({ mapOnly: true, reason: 'android-lite' });
-    showToast(_androidLiteMode ? 'เปิดโหมดลื่นพิเศษ' : 'ปิดโหมดลื่นพิเศษ', false, true);
-}
-window.toggleAndroidLiteMode = toggleAndroidLiteMode;
-
-function _updateAndroidLiteButton() {
-    const btn = document.getElementById('btnAndroidLiteMode');
-    if (!btn) return;
-    btn.classList.toggle('active', _androidLiteMode);
-    const ico = btn.querySelector('.mob-menu-ico');
-    if (ico) ico.textContent = _androidLiteMode ? 'ON' : 'FAST';
-}
-_updateAndroidLiteButton();
 
 async function refreshAppNow() {
     showToast('กำลังรีโหลดแอป...');
