@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.7';
+const APP_VERSION = 'v7.2.8';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1678,12 +1678,11 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         }
     },
     _drawSimplified() {
-        // Fast render during gestures: simple dots, no labels, no text measurement
+        // Fast render during gestures: professional markers without labels
         if (!this._map || !this._canvas || !this._ctx) return;
         const size = this._map.getSize();
         const topLeft = this._map.containerPointToLayerPoint([0, 0]);
         const ctx = this._ctx;
-        // Critical: move canvas with map to prevent floating markers
         L.DomUtil.setPosition(this._canvas, topLeft);
         ctx.clearRect(0, 0, size.x, size.y);
         this._positions = [];
@@ -1694,13 +1693,25 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
             const layerPoint = this._map.latLngToLayerPoint([loc.lat, loc.lng]);
             const x = layerPoint.x - topLeft.x;
             const y = layerPoint.y - topLeft.y;
-            if (x < -20 || y < -20 || x > size.x + 20 || y > size.y + 20) continue;
-            // Simple solid dot - fastest path
+            if (x < -30 || y < -30 || x > size.x + 30 || y > size.y + 30) continue;
+            const color = _getMarkerColor(loc);
+            const fav = isFavorite(loc);
+            const r = fav ? 7 : 6;
+            // Outer circle with color
             ctx.beginPath();
-            ctx.arc(x, y, 5, 0, Math.PI * 2);
-            ctx.fillStyle = _getMarkerColor(loc);
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = color;
             ctx.fill();
-            this._positions.push({ idx, loc, x, y });
+            // White stroke
+            ctx.lineWidth = fav ? 2.2 : 1.8;
+            ctx.strokeStyle = fav ? 'rgba(255,226,95,0.85)' : 'rgba(255,255,255,0.9)';
+            ctx.stroke();
+            // Center dot
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.fill();
+            this._positions.push({ idx, loc, x, y, radius: r });
         }
     },
     _handleMapClick(e) {
@@ -1869,12 +1880,11 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
         }
     },
     _drawSimplified() {
-        // Fast render during gestures: simple circles + count only, no label
+        // Fast render during gestures: professional clusters without labels
         if (!this._map || !this._canvas || !this._ctx) return;
         const size = this._map.getSize();
         const topLeft = this._map.containerPointToLayerPoint([0, 0]);
         const ctx = this._ctx;
-        // Critical: move canvas with map to prevent floating clusters
         L.DomUtil.setPosition(this._canvas, topLeft);
         ctx.clearRect(0, 0, size.x, size.y);
         ctx.textAlign = 'center';
@@ -1885,16 +1895,25 @@ const AndroidCanvasClusterLayer = L.Layer.extend({
             const layerPoint = this._map.latLngToLayerPoint(center);
             const x = layerPoint.x - topLeft.x;
             const y = layerPoint.y - topLeft.y;
-            const radius = Math.max(12, item.size * 0.35);
-            if (x < -radius - 10 || y < -radius - 10 || x > size.x + radius + 10 || y > size.y + radius + 10) continue;
-            // Simple circle
+            const radius = Math.max(14, item.size * 0.4);
+            if (x < -radius - 15 || y < -radius - 15 || x > size.x + radius + 15 || y > size.y + radius + 15) continue;
+            // Main circle with color
             ctx.beginPath();
             ctx.arc(x, y, radius, 0, Math.PI * 2);
             ctx.fillStyle = item.color;
             ctx.fill();
-            // Count only, no label below
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.font = '900 13px "Noto Sans Thai", system-ui, sans-serif';
+            // White stroke
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+            ctx.stroke();
+            // Glossy highlight
+            ctx.beginPath();
+            ctx.arc(x - radius * 0.25, y - radius * 0.28, radius * 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fill();
+            // Count
+            ctx.fillStyle = 'rgba(255,255,255,0.95)';
+            ctx.font = '900 14px "Noto Sans Thai", system-ui, sans-serif';
             ctx.fillText(String(item.count), x, y);
             this._positions.push({ ...item, x, y, radius });
         }
