@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.10';
+const APP_VERSION = 'v7.2.11';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1102,7 +1102,9 @@ const _mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
     localStorage.getItem('bt_force_mobile_mode') === 'true' ||
     document.body.classList.contains('force-mobile');
 const _android = /Android/i.test(navigator.userAgent);
-const _androidPerfMode = _android || localStorage.getItem('bt_android_perf_mode') === 'true';
+// Disabled: Android now uses DOM markers like iOS (canvas causes issues)
+// const _androidPerfMode = _android || localStorage.getItem('bt_android_perf_mode') === 'true';
+const _androidPerfMode = localStorage.getItem('bt_android_perf_mode') === 'true';
 let _androidLiteMode = _androidPerfMode && localStorage.getItem('bt_android_lite_mode') === 'true';
 if (_mobile) document.documentElement.classList.add('is-mobile-map');
 if (_androidPerfMode) document.documentElement.classList.add('is-android-map');
