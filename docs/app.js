@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.9';
+const APP_VERSION = 'v7.2.10';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1678,7 +1678,7 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
         }
     },
     _drawSimplified() {
-        // Fast render during gestures: DOM-like markers (no labels)
+        // DOM-exact canvas markers (no labels) - matches .bt-field-marker CSS 100%
         if (!this._map || !this._canvas || !this._ctx) return;
         const size = this._map.getSize();
         const topLeft = this._map.containerPointToLayerPoint([0, 0]);
@@ -1696,30 +1696,54 @@ const AndroidCanvasMarkerLayer = L.Layer.extend({
             if (x < -40 || y < -40 || x > size.x + 40 || y > size.y + 40) continue;
             const color = _getMarkerColor(loc);
             const fav = isFavorite(loc);
-            const coreR = fav ? 7.5 : 6.5; // 15px vs 13px like DOM
-            const ringR = coreR + 4;
-            // Glow ring (simulates radial-gradient fade)
-            const glowGrad = ctx.createRadialGradient(x, y, coreR, x, y, ringR);
-            glowGrad.addColorStop(0, color);
-            glowGrad.addColorStop(1, 'transparent');
-            ctx.globalAlpha = 0.25;
+            // DOM sizes: .bt-field-marker-core = 13px (15px fav), container = 28px
+            // .bt-field-marker-ring has inset:2px, so ring extends to ~12px radius
+            const coreR = fav ? 7.5 : 6.5;  // 15px / 13px diameter
+            const ringR = 12;               // ~24px diameter (inset:2px from 28px container)
+            // === 1. RING (behind core) - matches .bt-field-marker-ring ===
+            // opacity: 0.75
+            ctx.globalAlpha = 0.75;
+            // background: radial-gradient(circle, color-mix(color, transparent 68%) 0%, transparent 62%)
+            const ringGrad = ctx.createRadialGradient(x, y, coreR, x, y, ringR);
+            ringGrad.addColorStop(0, color);
+            ringGrad.addColorStop(0.62, 'transparent');
             ctx.beginPath();
             ctx.arc(x, y, ringR, 0, Math.PI * 2);
-            ctx.fillStyle = glowGrad;
+            ctx.fillStyle = ringGrad;
             ctx.fill();
+            // border: 1px solid color-mix(in oklch, color, transparent 36%)
+            ctx.beginPath();
+            ctx.arc(x, y, ringR, 0, Math.PI * 2);
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.36;
+            ctx.stroke();
             ctx.globalAlpha = 1;
-            // Core: filled circle with white border (like .bt-field-marker-core)
+            // === 2. CORE (on top) - matches .bt-field-marker-core ===
+            // Glow shadow first: 0 0 18px color-mix(color, transparent 58%)
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 18;
+            ctx.globalAlpha = 0.42; // 58% transparent = 42% opacity
             ctx.beginPath();
             ctx.arc(x, y, coreR, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
-            // White border 2px
-            ctx.lineWidth = fav ? 2.5 : 2;
-            ctx.strokeStyle = fav ? '#ffe85c' : 'oklch(96% 0.008 265)';
-            ctx.stroke();
-            // Outer dark ring 1px (simulates box-shadow)
+            ctx.restore();
+            // Core fill
             ctx.beginPath();
-            ctx.arc(x, y, coreR + 1, 0, Math.PI * 2);
+            ctx.arc(x, y, coreR, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            // White border: 2px solid oklch(96% 0.008 265) / gold for fav
+            ctx.beginPath();
+            ctx.arc(x, y, coreR, 0, Math.PI * 2);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = fav ? 'oklch(86% 0.16 84)' : 'oklch(96% 0.008 265)';
+            ctx.stroke();
+            // Dark ring: box-shadow 0 0 0 1px oklch(12% 0.025 265 / 0.65)
+            ctx.beginPath();
+            ctx.arc(x, y, coreR + 0.5, 0, Math.PI * 2);
             ctx.lineWidth = 1;
             ctx.strokeStyle = 'rgba(12, 18, 30, 0.65)';
             ctx.stroke();
