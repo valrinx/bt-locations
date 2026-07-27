@@ -150,6 +150,9 @@
 
         document.querySelectorAll('[data-auth-permission]').forEach(node => {
             const allowed = has(node.dataset.authPermission);
+            if (node.hasAttribute('data-auth-hide')) {
+                node.hidden = !allowed;
+            }
             node.setAttribute('aria-disabled', allowed ? 'false' : 'true');
             if ('disabled' in node) node.disabled = !allowed;
         });

@@ -4821,11 +4821,11 @@
                         <span class="mob-gps-mode" id="mobGpsMode">OFF</span>
                     </div>
                     <div class="mob-menu-section">การทำงาน</div>
-                    <button class="mob-menu-item" onclick="doUndo(); closeMobDrawer()">
+                    <button class="mob-menu-item" data-auth-permission="restore" data-auth-hide hidden onclick="doUndo(); closeMobDrawer()">
                         <span><b>เลิกทำ</b><small>ย้อนการแก้ไขล่าสุด</small></span>
                         <span class="mob-menu-ico">UNDO</span>
                     </button>
-                    <button class="mob-menu-item" onclick="doRedo(); closeMobDrawer()">
+                    <button class="mob-menu-item" data-auth-permission="restore" data-auth-hide hidden onclick="doRedo(); closeMobDrawer()">
                         <span><b>ทำซ้ำ</b><small>เรียกคืนการแก้ไขที่ย้อนกลับ</small></span>
                         <span class="mob-menu-ico">REDO</span>
                     </button>
@@ -4879,15 +4879,15 @@
                         <span><b>Export</b><small>สำรองข้อมูลทั้งหมดเป็นไฟล์ JSON</small></span>
                         <span class="mob-menu-ico">OUT</span>
                     </button>
-                    <button class="mob-menu-item" onclick="protectedDataAction('import'); closeMobDrawer()">
+                    <button class="mob-menu-item" data-auth-permission="import" data-auth-hide hidden onclick="protectedDataAction('import'); closeMobDrawer()">
                         <span><b>Import</b><small>นำเข้า JSON, CSV, KML, GPX, GeoJSON</small></span>
                         <span class="mob-menu-ico">IN</span>
                     </button>
-                    <button class="mob-menu-item" onclick="protectedDataAction('restore'); closeMobDrawer()">
+                    <button class="mob-menu-item" data-auth-permission="restore" data-auth-hide hidden onclick="protectedDataAction('restore'); closeMobDrawer()">
                         <span><b>Restore</b><small>กู้คืนจากไฟล์ Supabase Backup</small></span>
                         <span class="mob-menu-ico">SAFE</span>
                     </button>
-                    <button class="mob-menu-item danger" onclick="protectedDataAction('deleteAll'); closeMobDrawer()">
+                    <button class="mob-menu-item danger" data-auth-permission="delete" data-auth-hide hidden onclick="protectedDataAction('deleteAll'); closeMobDrawer()">
                         <span><b>ลบทั้งหมด</b><small>ต้องมีสิทธิ์ลบข้อมูล</small></span>
                         <span class="mob-menu-ico">DEL</span>
                     </button>
@@ -6898,7 +6898,7 @@
 }
         }
     </style>
-    <link rel="stylesheet" href="redesign.css?v=7.4.1">
+    <link rel="stylesheet" href="redesign.css?v=7.4.2">
 
 </body>
 

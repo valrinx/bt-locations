@@ -753,6 +753,10 @@ body.light .sidebar {
         border-color 160ms ease;
 }
 
+.mob-menu-item[data-auth-hide][hidden] {
+    display: none !important;
+}
+
 .mob-menu-item:hover {
     border-color: var(--bd);
     background: var(--s2);
