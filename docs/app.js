@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.2';
+const APP_VERSION = 'v7.5.3';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2330,25 +2330,25 @@ function showPlaceCard(loc, idx) {
                 aria-label="เลือกแอปนำทาง" hidden>
                 <div class="map-app-popover-label">SELECT NAVIGATION</div>
                 <div class="map-app-options">
-                    <button type="button" class="map-app-btn" role="menuitem"
+                    <button type="button" class="map-app-btn map-app-google" role="menuitem"
                         onclick="event.stopPropagation();openMapApp('google',${idx})">
                         <i class="fa-brands fa-google" aria-hidden="true"></i>
                         <span><strong>Google Maps</strong><small>Driving</small></span>
                     </button>
-                    <button type="button" class="map-app-btn" role="menuitem"
+                    <button type="button" class="map-app-btn map-app-waze" role="menuitem"
                         onclick="event.stopPropagation();openMapApp('waze',${idx})">
                         <i class="fa-brands fa-waze" aria-hidden="true"></i>
                         <span><strong>Waze</strong><small>Live traffic</small></span>
                     </button>
-                    <button type="button" class="map-app-btn" role="menuitem"
+                    <button type="button" class="map-app-btn map-app-apple" role="menuitem"
                         onclick="event.stopPropagation();openMapApp('apple',${idx})">
                         <i class="fa-brands fa-apple" aria-hidden="true"></i>
                         <span><strong>Apple Maps</strong><small>iPhone / Web</small></span>
                     </button>
-                    <button type="button" class="map-app-btn" role="menuitem"
+                    <button type="button" class="map-app-btn map-app-papago" role="menuitem"
                         onclick="event.stopPropagation();openMapApp('papago',${idx})">
                         <span class="map-app-papago-mark" aria-hidden="true">P</span>
-                        <span><strong>PAPAGO!</strong><small>Android / iPhone</small></span>
+                        <span><strong>papagoMaps</strong><small>Android</small></span>
                     </button>
                 </div>
             </div>
@@ -2468,15 +2468,12 @@ document.addEventListener('keydown', event => {
 
 function _getPapagoUrl(coords, userAgent = navigator.userAgent || '') {
     const ua = userAgent;
-    const playStore = 'https://play.google.com/store/apps/details?id=com.papagoinc.papago.papagonavi';
+    const playStore = 'https://play.google.com/store/apps/details?id=com.aveiro.papago';
     if(/Android/i.test(ua)) {
         const fallback = encodeURIComponent(playStore);
-        return `intent:0,0?q=${encodeURIComponent(coords)}#Intent;scheme=geo;package=com.papagoinc.papago.papagonavi;S.browser_fallback_url=${fallback};end`;
+        return `intent:0,0?q=${encodeURIComponent(coords)}#Intent;scheme=geo;package=com.aveiro.papago;S.browser_fallback_url=${fallback};end`;
     }
-    if(/iPhone|iPad|iPod/i.test(ua)) {
-        return 'https://apps.apple.com/tw/app/id6744085544';
-    }
-    return 'https://navi.papagoinc.com/';
+    return playStore;
 }
 
 function _getMapAppUrl(app, loc) {

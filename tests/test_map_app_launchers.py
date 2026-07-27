@@ -22,9 +22,12 @@ class MapAppLauncherTests(unittest.TestCase):
         self.assertIn("https://www.google.com/maps/dir/", APP)
         self.assertIn("https://www.waze.com/ul?", APP)
         self.assertIn("https://maps.apple.com/?", APP)
-        self.assertIn("com.papagoinc.papago.papagonavi", APP)
-        self.assertIn("https://apps.apple.com/tw/app/id6744085544", APP)
-        self.assertIn("https://navi.papagoinc.com/", APP)
+        self.assertIn("com.aveiro.papago", APP)
+        self.assertIn(
+            "https://play.google.com/store/apps/details?id=com.aveiro.papago",
+            APP,
+        )
+        self.assertIn("<strong>papagoMaps</strong><small>Android</small>", APP)
         self.assertIn("userAgent = navigator.userAgent", APP)
         self.assertIn("navigate=yes", APP)
         self.assertIn("travelmode=driving", APP)
@@ -43,6 +46,14 @@ class MapAppLauncherTests(unittest.TestCase):
         self.assertIn(".map-app-btn", THEME)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", THEME)
         self.assertIn("transition: opacity 160ms ease", THEME)
+
+    def test_each_map_provider_has_a_distinct_visual_identity(self):
+        for app in ("google", "waze", "apple", "papago"):
+            with self.subTest(app=app):
+                self.assertIn(f"map-app-btn map-app-{app}", APP)
+                self.assertIn(f".map-app-{app}", THEME)
+        self.assertIn("--map-app-accent:", THEME)
+        self.assertIn("--map-app-surface:", THEME)
 
     def test_chooser_closes_on_escape_and_outside_click(self):
         self.assertIn("if(!event.target.closest('.map-app-launcher'))", APP)

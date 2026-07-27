@@ -522,15 +522,19 @@ body::after,
 }
 
 .map-app-btn {
+    --map-app-accent: var(--tx2);
+    --map-app-border: var(--bug-line);
+    --map-app-surface: transparent;
+    --map-app-surface-hover: var(--bug-panel);
     min-height: 46px;
     display: grid;
     grid-template-columns: 18px 1fr;
     align-items: center;
     gap: 8px;
     padding: 7px 8px;
-    border: 1px solid var(--bug-line);
+    border: 1px solid var(--map-app-border);
     border-radius: 0;
-    background: transparent;
+    background: var(--map-app-surface);
     color: var(--tx2);
     text-align: left;
     cursor: pointer;
@@ -543,14 +547,43 @@ body::after,
     height: 18px;
     display: grid;
     place-items: center;
+    color: var(--map-app-accent);
     font-size: 12px;
 }
 
 .map-app-papago-mark {
-    border: 1px solid currentColor;
+    border: 1px solid var(--map-app-accent);
     border-radius: 50%;
     font-family: var(--bug-mono);
     font-size: 9px;
+}
+
+.map-app-google {
+    --map-app-accent: oklch(72% 0.15 250);
+    --map-app-border: oklch(45% 0.08 250 / 0.72);
+    --map-app-surface: oklch(32% 0.045 250 / 0.32);
+    --map-app-surface-hover: oklch(38% 0.07 250 / 0.56);
+}
+
+.map-app-waze {
+    --map-app-accent: oklch(82% 0.13 205);
+    --map-app-border: oklch(49% 0.075 205 / 0.72);
+    --map-app-surface: oklch(33% 0.04 205 / 0.32);
+    --map-app-surface-hover: oklch(40% 0.065 205 / 0.56);
+}
+
+.map-app-apple {
+    --map-app-accent: oklch(90% 0.012 255);
+    --map-app-border: oklch(58% 0.018 255 / 0.65);
+    --map-app-surface: oklch(38% 0.012 255 / 0.28);
+    --map-app-surface-hover: oklch(45% 0.016 255 / 0.52);
+}
+
+.map-app-papago {
+    --map-app-accent: oklch(78% 0.16 152);
+    --map-app-border: oklch(49% 0.09 152 / 0.72);
+    --map-app-surface: oklch(33% 0.045 152 / 0.32);
+    --map-app-surface-hover: oklch(40% 0.075 152 / 0.56);
 }
 
 .map-app-btn > span:last-child {
@@ -581,14 +614,14 @@ body::after,
 }
 
 .map-app-btn:hover {
-    border-color: var(--tx);
-    background: var(--tx);
-    color: var(--bug-canvas);
+    border-color: var(--map-app-accent);
+    background: var(--map-app-surface-hover);
+    color: var(--tx);
     transform: translateY(-1px);
 }
 
 .map-app-btn:hover small {
-    color: oklch(28% 0.008 255);
+    color: var(--tx2);
 }
 
 .map-app-btn:active {
