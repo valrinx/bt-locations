@@ -888,3 +888,334 @@ body.light .mob-menu-item.danger .mob-menu-ico {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* v7.4.1 — Command deck layout
+   A structural pass that makes the map feel mounted inside an operational shell. */
+.logo-main {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 38px;
+    border: 1px solid oklch(88% 0.08 252 / 0.3);
+    border-radius: 11px;
+    color: oklch(98% 0.008 252) !important;
+    background: var(--bl);
+    box-shadow: var(--shadow-blue);
+    font-size: 20px;
+    letter-spacing: -0.08em;
+    text-shadow: none;
+}
+
+.logo-right {
+    gap: 4px;
+}
+
+.ver-info {
+    color: var(--tx3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+}
+
+.body {
+    gap: 10px;
+    padding: 10px;
+    background:
+        radial-gradient(circle at 92% 4%, var(--bl-d), transparent 28%),
+        var(--bg);
+}
+
+.sidebar {
+    overflow: hidden;
+    border: 1px solid var(--bd2);
+    border-radius: 18px;
+}
+
+.main {
+    overflow: hidden;
+    border: 1px solid var(--bd2);
+    border-radius: 18px;
+    background: var(--s1);
+    box-shadow: var(--shadow-lg);
+}
+
+.view-area,
+.map-view,
+#map {
+    border-radius: inherit;
+}
+
+.map-view::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 0 0 1px oklch(96% 0.01 255 / 0.08),
+        inset 0 18px 40px oklch(3% 0.01 255 / 0.08);
+}
+
+.btbar {
+    gap: 4px;
+    padding: 5px;
+    border: 1px solid var(--bd2);
+    border-radius: 16px;
+    background: var(--s1);
+    box-shadow: var(--shadow-lg);
+}
+
+.bt {
+    min-height: 38px;
+    padding-inline: 14px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    transition:
+        transform 170ms var(--ease-out),
+        color 170ms ease,
+        border-color 170ms ease,
+        background-color 170ms ease;
+}
+
+.bt:hover {
+    transform: translateY(-1px);
+    background: var(--s3);
+}
+
+.bt.on {
+    border-color: var(--bl-b);
+    background: var(--bl-d);
+    box-shadow: inset 0 1px 0 oklch(96% 0.01 252 / 0.06);
+}
+
+.marker-cluster > div {
+    border: 1px solid oklch(96% 0.01 255 / 0.2);
+    box-shadow:
+        0 8px 20px oklch(10% 0.03 255 / 0.3),
+        inset 0 1px 0 oklch(96% 0.01 255 / 0.18);
+}
+
+@media (min-width: 768px) {
+    body:not(.force-mobile) .header-group {
+        padding: 10px 10px 0;
+        background: var(--bg);
+    }
+
+    body:not(.force-mobile) .topbar {
+        height: 58px;
+        overflow: hidden;
+        border: 1px solid var(--bd2);
+        border-radius: 18px;
+        box-shadow: var(--shadow-md);
+    }
+
+    body:not(.force-mobile) .tb-left {
+        padding-inline: 10px 16px;
+    }
+
+    body:not(.force-mobile) .search-box {
+        max-width: 620px;
+        height: 38px;
+        border-radius: 12px;
+    }
+}
+
+/* The forced-mobile preview uses the same floating shell as a real handset. */
+body.force-mobile .topbar {
+    top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    height: 56px !important;
+    padding: 0 12px !important;
+    overflow: hidden;
+    border: 1px solid var(--bd2) !important;
+    border-radius: 18px;
+    box-shadow: var(--shadow-lg) !important;
+}
+
+body.force-mobile .logo-main {
+    width: 36px !important;
+    height: 36px !important;
+    flex-basis: 36px;
+    font-size: 18px !important;
+}
+
+body.force-mobile .tb-right .avs {
+    display: none !important;
+}
+
+body.force-mobile .auth-avatar {
+    width: 36px;
+    height: 36px;
+}
+
+body.force-mobile .mob-chips-scroll-container {
+    top: calc(env(safe-area-inset-top, 0px) + 72px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    height: 48px !important;
+    padding-inline: 4px;
+    overflow: hidden;
+    border: 1px solid var(--bd2) !important;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md) !important;
+}
+
+body.force-mobile .mob-search-wrap {
+    min-width: min(42vw, 320px);
+    border: 1px solid var(--bd2);
+    border-radius: 11px;
+    background: var(--bg);
+    box-shadow: inset 0 1px 3px oklch(3% 0.01 255 / 0.2);
+}
+
+body.force-mobile .body {
+    position: fixed !important;
+    top: calc(env(safe-area-inset-top, 0px) + 128px) !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 82px) !important;
+    gap: 0;
+    padding: 0;
+    overflow: hidden !important;
+    border: 1px solid var(--bd2);
+    border-radius: 20px;
+    background: var(--s1);
+    box-shadow: var(--shadow-lg);
+}
+
+body.force-mobile .main,
+body.force-mobile .view-area,
+body.force-mobile .map-view,
+body.force-mobile #map {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    border-radius: inherit !important;
+}
+
+body.force-mobile .mob-nav {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    height: 66px !important;
+    padding: 5px !important;
+    gap: 3px;
+    overflow: visible;
+    border: 1px solid var(--bd2);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+}
+
+body.force-mobile .mob-nb {
+    height: 54px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+}
+
+body.force-mobile .mob-nb.on {
+    border-color: var(--bl-b);
+    background: var(--bl-d);
+}
+
+body.force-mobile .mob-nb.on::after {
+    display: none;
+}
+
+body.force-mobile .mob-nb-add {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+}
+
+body.force-mobile .place-card,
+body.force-mobile .list-panel {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 82px) !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    border-radius: 20px !important;
+    transform: translateY(calc(100% + 104px)) !important;
+    transition: transform 260ms var(--ease-expo) !important;
+}
+
+body.force-mobile .place-card.open,
+body.force-mobile .list-panel.open {
+    transform: translateY(0) !important;
+}
+
+@media (max-width: 767px) {
+    body:not(.force-mobile) .topbar {
+        top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        height: 56px !important;
+        padding: 0 12px !important;
+        overflow: hidden;
+        border: 1px solid var(--bd2) !important;
+        border-radius: 18px;
+        box-shadow: var(--shadow-lg) !important;
+    }
+
+    body:not(.force-mobile) .tb-right .avs {
+        display: none !important;
+    }
+
+    body:not(.force-mobile) .mob-chips-scroll-container {
+        top: calc(env(safe-area-inset-top, 0px) + 72px) !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        height: 48px !important;
+        border: 1px solid var(--bd2) !important;
+        border-radius: 16px;
+        box-shadow: var(--shadow-md) !important;
+    }
+
+    body:not(.force-mobile) .body {
+        top: calc(env(safe-area-inset-top, 0px) + 128px) !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 82px) !important;
+        gap: 0;
+        padding: 0;
+        overflow: hidden !important;
+        border: 1px solid var(--bd2);
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+    }
+
+    body:not(.force-mobile) .mob-nav {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        height: 66px !important;
+        padding: 5px !important;
+        gap: 3px;
+        border: 1px solid var(--bd2);
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+    }
+
+    body:not(.force-mobile) .mob-nb {
+        height: 54px;
+        border: 1px solid transparent;
+        border-radius: 14px;
+    }
+
+    body:not(.force-mobile) .mob-nb.on {
+        border-color: var(--bl-b);
+        background: var(--bl-d);
+    }
+
+    body:not(.force-mobile) .mob-nb.on::after {
+        display: none;
+    }
+}
