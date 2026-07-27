@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.0';
+const APP_VERSION = 'v7.5.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2306,18 +2306,28 @@ function showPlaceCard(loc, idx) {
         ${loc.photo?`<div style="margin-bottom:12px;"><img src="${loc.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:12px;border:1px solid var(--gn);cursor:pointer;" onclick="window.open(this.src,'_blank')"></div>`:''}
         ${loc.note?`<div class="place-card-note">${_escapeHtml(loc.note)}</div>`:''}
         <div class="place-card-actions">
-            <button class="place-action-btn" onclick="openEdit(${idx})">
+            ${_hasPermission('edit') ? `<button class="place-action-btn" onclick="openEdit(${idx})">
                 <span class="place-action-icon">EDIT</span>
                 <span class="place-action-label">แก้ไข</span>
-            </button>
-            <button class="place-action-btn route" onclick="openMapsTo(${idx})">
-                <span class="place-action-icon">GO</span>
-                <span class="place-action-label">Maps</span>
-            </button>
-            <button class="place-action-btn danger" onclick="doConfirmDelete(${idx})">
+            </button>` : ''}
+            ${_hasPermission('delete') ? `<button class="place-action-btn danger" onclick="doConfirmDelete(${idx})">
                 <span class="place-action-icon">DEL</span>
                 <span class="place-action-label">ลบ</span>
-            </button>
+            </button>` : ''}
+        </div>
+        <div class="map-app-launcher" role="group" aria-label="เปิดเส้นทางด้วยแอปแผนที่">
+            <span class="map-app-launcher-label">GO</span>
+            <div class="map-app-options">
+                <button type="button" class="map-app-btn" onclick="openMapApp('google',${idx})" aria-label="เปิดเส้นทางใน Google Maps" title="Google Maps">
+                    <i class="fa-brands fa-google" aria-hidden="true"></i><span>Google</span>
+                </button>
+                <button type="button" class="map-app-btn" onclick="openMapApp('waze',${idx})" aria-label="เปิดเส้นทางใน Waze" title="Waze">
+                    <i class="fa-brands fa-waze" aria-hidden="true"></i><span>Waze</span>
+                </button>
+                <button type="button" class="map-app-btn" onclick="openMapApp('apple',${idx})" aria-label="เปิดเส้นทางใน Apple Maps" title="Apple Maps">
+                    <i class="fa-brands fa-apple" aria-hidden="true"></i><span>Apple</span>
+                </button>
+            </div>
         </div>
         <div class="place-card-info-grid">
             <div class="place-card-info-item wide">
@@ -2387,9 +2397,31 @@ function _escapeHtml(value) {
 }
 
 function closePlaceCard() { const pc = document.getElementById('placeCard'); if(pc) pc.classList.remove('open'); }
-window.openMapsTo=function(idx){
-    const loc=locations[idx]; if(!loc)return;
-    window.open(`https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`, '_blank');
+function _getMapAppUrl(app, loc) {
+    const lat = Number(loc?.lat);
+    const lng = Number(loc?.lng);
+    if(!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return '';
+    const coords = `${lat},${lng}`;
+    const urls = {
+        google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}&travelmode=driving`,
+        waze: `https://www.waze.com/ul?ll=${encodeURIComponent(coords)}&navigate=yes&utm_source=bt-locations`,
+        apple: `https://maps.apple.com/?daddr=${encodeURIComponent(coords)}&dirflg=d`
+    };
+    return urls[app] || '';
+}
+
+window.openMapApp = function(app, idx) {
+    const loc = locations[idx];
+    const url = _getMapAppUrl(app, loc);
+    if(!url) {
+        showToast('ไม่พบพิกัดสำหรับเปิดแอปแผนที่', true);
+        return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+};
+
+window.openMapsTo = function(idx) {
+    window.openMapApp('google', idx);
 };
 window.doToggleFavorite=function(idx){const loc=locations[idx];if(!loc)return;toggleFavorite(loc);invalidateCache();update();showPlaceCard(loc,idx);showToast(isFavorite(loc)?'เพิ่มในรายการโปรดแล้ว':'นำออกจากรายการโปรดแล้ว');};
 onClick('placeCardClose', closePlaceCard);

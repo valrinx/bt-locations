@@ -398,8 +398,74 @@ body::after,
 
 .place-card-info,
 .place-card-actions,
+.map-app-launcher,
 .modal-footer {
     border-color: var(--bug-line);
+}
+
+.place-card-actions:empty {
+    display: none;
+}
+
+.map-app-launcher {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 16px;
+    padding: 10px 0;
+    border-top: 1px solid var(--bug-line);
+    border-bottom: 1px solid var(--bug-line);
+}
+
+.map-app-launcher-label {
+    flex: 0 0 auto;
+    color: var(--tx3);
+    font-family: var(--bug-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+}
+
+.map-app-options {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+}
+
+.map-app-btn {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--bug-line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--tx2);
+    font-family: var(--bug-mono);
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.map-app-btn i {
+    font-size: 12px;
+}
+
+.map-app-btn:hover {
+    border-color: var(--tx);
+    background: var(--tx);
+    color: var(--bug-canvas);
+    transform: translateY(-1px);
+}
+
+.map-app-btn:active {
+    transform: translateY(0);
 }
 
 .list-view,
@@ -690,6 +756,14 @@ body.auth-required #authModalOverlay .auth-modal {
         border-right: 0;
         border-bottom: 0;
         border-left: 0;
+    }
+
+    .map-app-launcher {
+        align-items: flex-start;
+    }
+
+    .map-app-options {
+        flex-wrap: wrap;
     }
 }
 
