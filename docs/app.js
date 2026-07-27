@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.13';
+const APP_VERSION = 'v7.2.14';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -74,9 +74,6 @@ function tryParseDataFormat(json){
     return null;
 }
 const CHANGELOG_KEY = 'bt_changelog';
-const GITHUB_TOKEN_KEY = 'bt_github_token';
-const WORKER_URL_KEY = 'bt_worker_url';
-const API_KEY_KEY = 'bt_api_key';
 const SYNC_SHA_KEY = 'bt_sync_sha';
 const SYNC_SNAPSHOT_KEY = 'bt_sync_snapshot';
 const FAVORITES_KEY = 'bt_favorites';
@@ -95,11 +92,6 @@ function _cleanDMSName(n){return(n&&/\d+[°ºᵒ˚]/.test(n))?'':n;}
 const _SB_URL = 'https://uemvtttfedpvofqhnwoo.supabase.co';
 const _SB_KEY = 'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh';
 const _sb = supabase.createClient(_SB_URL, _SB_KEY);
-// Worker URL: kept for fallback compat
-const DEFAULT_WORKER_URL = 'https://bt-locations.teenson4.workers.dev';
-function getWorkerUrl(){return localStorage.getItem(WORKER_URL_KEY)||DEFAULT_WORKER_URL;}
-function getApiKey(){return localStorage.getItem(API_KEY_KEY)||'';}
-function useWorker(){return !!getWorkerUrl();}
 const undoStack = [], redoStack = [], MAX_UNDO = 20;
 let favorites = new Set((() => { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; } })());
 function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); }
@@ -5278,7 +5270,6 @@ function openInfoPanel(mode){
         }
     } else {
         document.getElementById('infoPanelTitle').textContent='BT Locations';
-        const _syncAgo=getToken()?` · ${Math.round((Date.now()-_lastSyncTime)/1000)}s ago`:'';
         const _darkLabel=document.body.classList.contains('light')?'🌙 Dark mode':'☀️ Light mode';
         const _menuGrid=(title,items)=>`
             <div style="margin-bottom:16px;padding:0 16px;animation:menuSlideIn 0.3s ease-out;">
@@ -5826,23 +5817,10 @@ async function doReset(){
 function toggleDark(){document.body.classList.toggle('light');const isLight=document.body.classList.contains('light');showToast(isLight?'Light mode':'Dark mode');closeInfo();}
 
 // ════════════════════════════════════════════
-// SUPABASE SAVE (replaces GitHub save)
+// SUPABASE SAVE
 // ════════════════════════════════════════════
-function getToken(){return '';}
-function setToken(t){}
-
 const btnGithubSave=document.getElementById('btnGithubSave');
 if(btnGithubSave) btnGithubSave.onclick=()=>{showToast('⏳ กำลังซิงค์...');_debouncedPush.flush?_debouncedPush.flush():_debouncedPush();};
-const tokenCancel=document.getElementById('tokenCancel');
-const tokenSave=document.getElementById('tokenSave');
-const tokenModalOverlay=document.getElementById('tokenModalOverlay');
-if(tokenCancel) tokenCancel.onclick=()=>{if(tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
-if(tokenSave) tokenSave.onclick=()=>{if(tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
-if(tokenModalOverlay) tokenModalOverlay.onclick=e=>{if(e.target===tokenModalOverlay)tokenModalOverlay.classList.remove('open');};
-
-function _workerHeaders(){return{'Content-Type':'application/json'};}
-async function githubFile(path,token){return{sha:null};}
-async function githubPut(path,content,sha,token,msg){}
 
 // ════════════════════════════════════════════
 // CONFIRM DIALOG
@@ -5987,7 +5965,6 @@ document.addEventListener('keydown',(e)=>{
         closeListPanel();
         clearDirections();
         document.getElementById('shareModalOverlay').classList.remove('open');
-        document.getElementById('tokenModalOverlay').classList.remove('open');
         document.getElementById('listFilterModalOverlay').classList.remove('open');
         document.getElementById('cityFilterModalOverlay').classList.remove('open');
         document.getElementById('editModalOverlay').classList.remove('open');
@@ -6399,8 +6376,6 @@ window.btDebug = {
     get locations() { return locations; },
     get filtered() { return getFiltered(); },
     get syncSha() { return localStorage.getItem(SYNC_SHA_KEY); },
-    get token() { return getToken() ? '✅ set' : '❌ none'; },
-    get worker() { return useWorker() ? `✅ ${getWorkerUrl()}` : '❌ not set'; },
     get stats() {
         const lc={};locations.forEach(l=>{lc[l.list]=(lc[l.list]||0)+1;});
         return {total:locations.length,lists:lc,mobile:_mobile,syncing:_syncing,dirty:_isDirty(),lastSync:new Date(_lastSyncTime).toLocaleString(),undoStack:undoStack.length,redoStack:redoStack.length};

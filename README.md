@@ -16,13 +16,11 @@
 | `import_takeout.py` | Import GeoJSON จาก Google Takeout |
 | `auto_city.py` | Auto-detect city จาก GPS (reverse geocoding Nominatim) |
 | `validate_data.py` | ตรวจจุดซ้ำ (< 50m) และจุดผิดปกติ (lat/lng=0, นอกไทย, ไม่มีชื่อ) |
-| `backups/` | Backup อัตโนมัติก่อนทุก build |
 | `.github/workflows/build.yml` | GitHub Actions auto build + deploy |
 | `docs/index.html` | หน้าเว็บ — HTML markup + CSS only |
 | `docs/app.js` | JavaScript logic ทั้งหมด (~1700 บรรทัด) |
 | `docs/locations.js` | ข้อมูลหมุดแยกไฟล์ (generated จาก build) |
 | `docs/all_locations.json` | สำเนา JSON สำหรับ GitHub Pages |
-| `topup_map.html` | แผนที่ Topup Locations แบบ standalone |
 | `topup_locations.csv` | ข้อมูล Topup Locations (CSV) |
 | `topup-map-site/` | Topup Locations Map site สำหรับ deploy |
 
@@ -481,7 +479,7 @@ Step-by-step
 
 ### 2026-05-02 (เช้า)
 
-- **เพิ่ม Topup Locations Map** — แผนที่แสดงจุด Topup แบบ standalone (`topup_map.html`)
+- **เพิ่ม Topup Locations Map** — แผนที่แสดงจุด Topup แบบ standalone (`topup-map-site/index.html`)
   - ค้นหาจุด BT ได้แบบ real-time
   - MarkerCluster + แสดงชื่อบน marker
   - รายการจุดแบบ side panel กดเลือกแล้ว jump ไปจุดนั้น
