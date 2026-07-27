@@ -42,10 +42,12 @@ class MapAppLauncherTests(unittest.TestCase):
         self.assertIn("Math.abs(lng) > 180", APP)
         self.assertIn("if(!url)", APP)
 
-    def test_papago_destination_name_falls_back_to_location_metadata(self):
-        self.assertIn("const destinationName = [loc.name, loc.list, loc.city]", APP)
-        self.assertIn(".find(Boolean) || coords", APP)
-        self.assertIn("papago: _getPapagoUrl(coords, destinationName)", APP)
+    def test_papago_destination_uses_coordinates_not_place_name(self):
+        self.assertIn("dlat=${encodeURIComponent(lat)}", APP)
+        self.assertIn("dlon=${encodeURIComponent(lng)}", APP)
+        self.assertIn("dname=${encodeURIComponent(coords)}", APP)
+        self.assertIn("papago: _getPapagoUrl(coords)", APP)
+        self.assertNotIn("const destinationName = [loc.name, loc.list, loc.city]", APP)
 
     def test_launcher_has_compact_popover_styles(self):
         self.assertIn(".map-app-launcher", THEME)

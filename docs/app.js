@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.5';
+const APP_VERSION = 'v7.5.6';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2466,13 +2466,13 @@ document.addEventListener('keydown', event => {
     if(event.key === 'Escape') closeMapAppPicker();
 });
 
-function _getPapagoUrl(coords, destinationName = 'BT Location', userAgent = navigator.userAgent || '') {
+function _getPapagoUrl(coords, userAgent = navigator.userAgent || '') {
     const ua = userAgent;
     const playStore = 'https://play.google.com/store/apps/details?id=com.aveiro.papago';
     if(/Android/i.test(ua)) {
         const fallback = encodeURIComponent(playStore);
         const [lat, lng] = coords.split(',');
-        const route = `route/plan/?sourceApplication=bt-locations&did=BTDEST&dlat=${encodeURIComponent(lat)}&dlon=${encodeURIComponent(lng)}&dname=${encodeURIComponent(destinationName)}&dev=0&t=0`;
+        const route = `route/plan/?sourceApplication=bt-locations&did=BTDEST&dlat=${encodeURIComponent(lat)}&dlon=${encodeURIComponent(lng)}&dname=${encodeURIComponent(coords)}&dev=0&t=0`;
         return `intent://${route}#Intent;scheme=compapago;package=com.aveiro.papago;S.browser_fallback_url=${fallback};end`;
     }
     return playStore;
@@ -2483,14 +2483,11 @@ function _getMapAppUrl(app, loc) {
     const lng = Number(loc?.lng);
     if(!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return '';
     const coords = `${lat},${lng}`;
-    const destinationName = [loc.name, loc.list, loc.city]
-        .map(value => String(value || '').trim())
-        .find(Boolean) || coords;
     const urls = {
         google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}&travelmode=driving`,
         waze: `https://www.waze.com/ul?ll=${encodeURIComponent(coords)}&navigate=yes&utm_source=bt-locations`,
         apple: `https://maps.apple.com/?daddr=${encodeURIComponent(coords)}&dirflg=d`,
-        papago: _getPapagoUrl(coords, destinationName)
+        papago: _getPapagoUrl(coords)
     };
     return urls[app] || '';
 }
