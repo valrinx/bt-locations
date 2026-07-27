@@ -57,6 +57,8 @@
 - Supabase PostgreSQL เป็น single source of truth
 - Realtime INSERT/UPDATE/DELETE broadcast ให้ทุกคนพร้อมกัน
 - Periodic pull ทุก 60 วิ เป็น fallback
+- Daily Supabase backup เป็น GitHub Actions artifact เก็บย้อนหลัง 90 วัน
+- Soft delete + cloud-aware Undo/Redo ([คู่มือกู้ข้อมูล](docs/DATA_RECOVERY.md))
 - Permalink / แชร์จุด — URL `#lat,lng,zoom`
 
 ### 📱 Mobile + Performance

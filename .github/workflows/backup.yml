@@ -1,0 +1,41 @@
+name: Backup Supabase Locations
+
+on:
+  schedule:
+    # 03:17 Asia/Bangkok every day.
+    - cron: '17 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-locations-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Export and validate Supabase locations
+        run: >-
+          python backup_supabase.py
+          --output backup-output/supabase_locations.json
+          --minimum-count 1000
+
+      - name: Upload encrypted-at-rest backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-locations-${{ github.run_id }}
+          path: backup-output/supabase_locations.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 9

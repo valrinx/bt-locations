@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.14';
+const APP_VERSION = 'v7.2.15';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -902,9 +902,9 @@ function throttle(fn, ms) {
 }
 
 // ── save: debounced + integrity check ──
-// Architecture: GitHub = SINGLE source of truth
+// Architecture: Supabase = SINGLE source of truth
 // localStorage = read cache + dirty queue (offline fallback)
-// Flow: edit → mark dirty → push GitHub → if success: clear dirty + update cache
+// Flow: edit → mark dirty → push Supabase → if success: clear dirty + update cache
 //       if push fails (offline): keep dirty → resolve on next load
 const DIRTY_KEY = 'bt_dirty';
 const BACKUP_KEY = 'bt_backup';
@@ -1025,12 +1025,51 @@ async function sbUpdate(loc){
     return true;
     // Realtime UPDATE event will update locations[] and render
 }
+async function sbRestore(loc){
+    if(!loc.sb_id)return await sbInsert(loc);
+    const {data,error}=await _sb.from('locations')
+        .update({..._locRow(loc),deleted_at:null,deleted_by:null})
+        .eq('id',loc.sb_id)
+        .select('id')
+        .maybeSingle();
+    if(error){
+        console.warn('sbRestore failed:',error.message);
+        _setSyncStatus('error');
+        return false;
+    }
+    // A legacy hard-deleted id no longer exists, so recreate only in that case.
+    if(!data){
+        delete loc.sb_id;
+        return await sbInsert(loc);
+    }
+    _writeCache();
+    return true;
+}
 async function sbDelete(loc){
     if(!loc.sb_id)return;
-    const {error}=await _sb.from('locations').delete().eq('id',loc.sb_id);
-    if(error){console.warn('sbDelete failed:',error.message);_setSyncStatus('error');return false;}
+    const deletedAt=new Date().toISOString();
+    const deletedBy=localStorage.getItem('bt_username')||'anonymous';
+    const {error}=await _sb.from('locations')
+        .update({deleted_at:deletedAt,deleted_by:deletedBy})
+        .eq('id',loc.sb_id);
+    if(error){
+        // Compatibility until migration 002_soft_delete_locations.sql is applied.
+        const missingSoftDeleteColumns=error.code==='PGRST204'||/deleted_at|deleted_by/i.test(error.message||'');
+        if(!missingSoftDeleteColumns){
+            console.warn('sbDelete failed:',error.message);
+            _setSyncStatus('error');
+            return false;
+        }
+        const {error:hardDeleteError}=await _sb.from('locations').delete().eq('id',loc.sb_id);
+        if(hardDeleteError){
+            console.warn('sbDelete fallback failed:',hardDeleteError.message);
+            _setSyncStatus('error');
+            return false;
+        }
+        console.warn('Soft-delete migration is not applied; used hard delete fallback.');
+    }
     return true;
-    // Realtime DELETE event will remove from locations[] and render
+    // Realtime UPDATE/DELETE will remove the row from locations[] and render.
 }
 async function sbBulkUpdate(locs){
     for(const loc of locs){await sbUpdate(loc);}
@@ -5792,8 +5831,75 @@ document.getElementById('fileImport').onchange=async e=>{
     );
 };
 
-function doUndo(){if(!undoStack.length){showToast('ไม่มี Undo');return;}redoStack.push(JSON.stringify(locations));locations=JSON.parse(undoStack.pop());saveLocations();invalidateCache();update();showToast('Undo แล้ว');closeInfo();}
-function doRedo(){if(!redoStack.length){showToast('ไม่มี Redo');return;}undoStack.push(JSON.stringify(locations));locations=JSON.parse(redoStack.pop());saveLocations();invalidateCache();update();showToast('Redo แล้ว');closeInfo();}
+function _sameRemoteContent(a,b){
+    const fields=['name','lat','lng','list','city','note','photo'];
+    if(fields.some(k=>(a?.[k]??'')!==(b?.[k]??'')))return false;
+    return JSON.stringify(a?.tags||[])===JSON.stringify(b?.tags||[]);
+}
+
+function _findSnapshotMatch(loc,items,used){
+    let idx=-1;
+    if(loc.sb_id)idx=items.findIndex((item,i)=>!used.has(i)&&item.sb_id===loc.sb_id);
+    if(idx<0)idx=items.findIndex((item,i)=>!used.has(i)&&_locKey(item)===_locKey(loc));
+    return idx;
+}
+
+async function _reconcileSnapshotToSupabase(previous,target){
+    if(!_sbLoaded)return true;
+    const usedPrevious=new Set();
+    let ok=true;
+
+    // Restore deleted rows and revert edited rows.
+    for(const loc of target){
+        const previousIdx=_findSnapshotMatch(loc,previous,usedPrevious);
+        if(previousIdx<0){
+            loc.updatedAt=Date.now();
+            if(!await sbRestore(loc))ok=false;
+            continue;
+        }
+        usedPrevious.add(previousIdx);
+        const current=previous[previousIdx];
+        loc.sb_id=current.sb_id||loc.sb_id;
+        if(!_sameRemoteContent(current,loc)){
+            loc.updatedAt=Date.now();
+            if(!await sbUpdate(loc))ok=false;
+        }
+    }
+
+    // Remove rows introduced by the action being undone.
+    for(let i=0;i<previous.length;i++){
+        if(!usedPrevious.has(i)&&previous[i].sb_id){
+            if(!await sbDelete(previous[i]))ok=false;
+        }
+    }
+    return ok;
+}
+
+async function _applyHistorySnapshot(sourceStack,destinationStack,label){
+    if(!sourceStack.length){showToast(`ไม่มี ${label}`);return;}
+    const previous=JSON.parse(JSON.stringify(locations));
+    const target=JSON.parse(sourceStack.pop());
+    destinationStack.push(JSON.stringify(previous));
+    locations=target;
+    saveLocations();
+    invalidateCache();
+    update();
+    closeInfo();
+
+    const restored=await _reconcileSnapshotToSupabase(previous,locations);
+    if(restored){
+        _clearDirty();
+        _writeCache();
+        _setSyncStatus('ok');
+        showToast(`${label} และบันทึกกลับ Cloud แล้ว`,false,true);
+    }else{
+        _setSyncStatus('error');
+        showToast(`${label} ในเครื่องแล้ว แต่ Cloud ยังไม่สมบูรณ์`,true);
+    }
+}
+
+async function doUndo(){return _applyHistorySnapshot(undoStack,redoStack,'Undo');}
+async function doRedo(){return _applyHistorySnapshot(redoStack,undoStack,'Redo');}
 
 function doBulkDel(){
     const f=getFiltered();
@@ -6132,7 +6238,7 @@ async function doSync(silent=true){
             if(data.length<pageSize)break;
             from+=pageSize;
         }
-        const data=allData;
+        const data=allData.filter(row=>!row.deleted_at);
         const remote=data.map(r=>normalizeLocation({
             sb_id:r.id, name:r.name||'', lat:r.lat, lng:r.lng,
             list:r.list||'', city:r.city||'', note:r.note||'',
@@ -6247,6 +6353,13 @@ function startRealtimeSync(){
         .on('postgres_changes',{event:'UPDATE',schema:'public',table:'locations'},payload=>{
             const r=payload.new;
             const idx=locations.findIndex(l=>l.sb_id===r.id);
+            if(r.deleted_at){
+                if(idx>=0){
+                    locations.splice(idx,1);
+                    _writeCache();invalidateCache();update();
+                }
+                return;
+            }
             if(idx>=0){
                 const photo=locations[idx].photo;
                 locations[idx]=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:photo||r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
