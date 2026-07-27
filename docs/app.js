@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.3';
+const APP_VERSION = 'v7.5.4';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2466,12 +2466,14 @@ document.addEventListener('keydown', event => {
     if(event.key === 'Escape') closeMapAppPicker();
 });
 
-function _getPapagoUrl(coords, userAgent = navigator.userAgent || '') {
+function _getPapagoUrl(coords, destinationName = 'BT Location', userAgent = navigator.userAgent || '') {
     const ua = userAgent;
     const playStore = 'https://play.google.com/store/apps/details?id=com.aveiro.papago';
     if(/Android/i.test(ua)) {
         const fallback = encodeURIComponent(playStore);
-        return `intent:0,0?q=${encodeURIComponent(coords)}#Intent;scheme=geo;package=com.aveiro.papago;S.browser_fallback_url=${fallback};end`;
+        const [lat, lng] = coords.split(',');
+        const route = `route/plan/?sourceApplication=bt-locations&did=BTDEST&dlat=${encodeURIComponent(lat)}&dlon=${encodeURIComponent(lng)}&dname=${encodeURIComponent(destinationName)}&dev=0&t=0`;
+        return `intent://${route}#Intent;scheme=compapago;package=com.aveiro.papago;S.browser_fallback_url=${fallback};end`;
     }
     return playStore;
 }
@@ -2485,7 +2487,7 @@ function _getMapAppUrl(app, loc) {
         google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}&travelmode=driving`,
         waze: `https://www.waze.com/ul?ll=${encodeURIComponent(coords)}&navigate=yes&utm_source=bt-locations`,
         apple: `https://maps.apple.com/?daddr=${encodeURIComponent(coords)}&dirflg=d`,
-        papago: _getPapagoUrl(coords)
+        papago: _getPapagoUrl(coords, loc.name || 'BT Location')
     };
     return urls[app] || '';
 }

@@ -27,6 +27,10 @@ class MapAppLauncherTests(unittest.TestCase):
             "https://play.google.com/store/apps/details?id=com.aveiro.papago",
             APP,
         )
+        self.assertIn("scheme=compapago", APP)
+        self.assertIn("route/plan/?sourceApplication=bt-locations", APP)
+        self.assertIn("dlat=${encodeURIComponent(lat)}", APP)
+        self.assertIn("dlon=${encodeURIComponent(lng)}", APP)
         self.assertIn("<strong>papagoMaps</strong><small>Android</small>", APP)
         self.assertIn("userAgent = navigator.userAgent", APP)
         self.assertIn("navigate=yes", APP)

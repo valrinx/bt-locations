@@ -13,10 +13,10 @@ APP = (DOCS / "app.js").read_text(encoding="utf-8")
 
 class BugattiThemeTests(unittest.TestCase):
     def test_theme_is_loaded_after_existing_styles(self):
-        self.assertLess(INDEX.index("auth.css?v=7.5.3"), INDEX.index("redesign.css?v=7.5.3"))
+        self.assertLess(INDEX.index("auth.css?v=7.5.4"), INDEX.index("redesign.css?v=7.5.4"))
         self.assertLess(
-            INDEX.index("redesign.css?v=7.5.3"),
-            INDEX.index("bugatti-theme.css?v=7.5.3"),
+            INDEX.index("redesign.css?v=7.5.4"),
+            INDEX.index("bugatti-theme.css?v=7.5.4"),
         )
 
     def test_theme_covers_core_surfaces(self):
@@ -48,8 +48,8 @@ class BugattiThemeTests(unittest.TestCase):
         self.assertNotIn("background-clip", THEME)
 
     def test_release_assets_are_versioned_and_cached(self):
-        self.assertIn("const APP_VERSION = 'v7.5.3';", APP)
-        self.assertIn("bt-locations-v7.5.3", SW)
+        self.assertIn("const APP_VERSION = 'v7.5.4';", APP)
+        self.assertIn("bt-locations-v7.5.4", SW)
         self.assertIn("'bugatti-theme.css'", SW)
 
 
