@@ -27,10 +27,10 @@ class MapAppLauncherTests(unittest.TestCase):
             "https://play.google.com/store/apps/details?id=com.aveiro.papago",
             APP,
         )
-        self.assertIn("scheme=compapago", APP)
-        self.assertIn("route/plan/?sourceApplication=bt-locations", APP)
-        self.assertIn("dlat=${encodeURIComponent(lat)}", APP)
-        self.assertIn("dlon=${encodeURIComponent(lng)}", APP)
+        self.assertIn("https://papago-m.aimap.com/download?", APP)
+        self.assertIn("compapago://poi/detail?", APP)
+        self.assertIn("schemaParams", APP)
+        self.assertIn("poiInfo", APP)
         self.assertIn("<strong>papagoMaps</strong><small>Android</small>", APP)
         self.assertIn("userAgent = navigator.userAgent", APP)
         self.assertIn("navigate=yes", APP)
@@ -42,12 +42,13 @@ class MapAppLauncherTests(unittest.TestCase):
         self.assertIn("Math.abs(lng) > 180", APP)
         self.assertIn("if(!url)", APP)
 
-    def test_papago_destination_uses_coordinates_not_place_name(self):
-        self.assertIn("dlat=${encodeURIComponent(lat)}", APP)
-        self.assertIn("dlon=${encodeURIComponent(lng)}", APP)
-        self.assertIn("dname=${encodeURIComponent(coords)}", APP)
-        self.assertIn("papago: _getPapagoUrl(coords)", APP)
-        self.assertNotIn("const destinationName = [loc.name, loc.list, loc.city]", APP)
+    def test_papago_destination_uses_the_official_shared_poi_shape(self):
+        self.assertIn("lat,", APP)
+        self.assertIn("lon: lng", APP)
+        self.assertIn("poiid: ''", APP)
+        self.assertIn("_ul: '1'", APP)
+        self.assertIn("share_from: 'bt-locations'", APP)
+        self.assertIn("papago: _getPapagoUrl(coords, loc)", APP)
 
     def test_launcher_has_compact_popover_styles(self):
         self.assertIn(".map-app-launcher", THEME)

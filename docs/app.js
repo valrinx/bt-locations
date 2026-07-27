@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.6';
+const APP_VERSION = 'v7.5.7';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2466,14 +2466,41 @@ document.addEventListener('keydown', event => {
     if(event.key === 'Escape') closeMapAppPicker();
 });
 
-function _getPapagoUrl(coords, userAgent = navigator.userAgent || '') {
+function _getPapagoUrl(coords, loc, userAgent = navigator.userAgent || '') {
     const ua = userAgent;
     const playStore = 'https://play.google.com/store/apps/details?id=com.aveiro.papago';
     if(/Android/i.test(ua)) {
-        const fallback = encodeURIComponent(playStore);
         const [lat, lng] = coords.split(',');
-        const route = `route/plan/?sourceApplication=bt-locations&did=BTDEST&dlat=${encodeURIComponent(lat)}&dlon=${encodeURIComponent(lng)}&dname=${encodeURIComponent(coords)}&dev=0&t=0`;
-        return `intent://${route}#Intent;scheme=compapago;package=com.aveiro.papago;S.browser_fallback_url=${fallback};end`;
+        const poiName = [loc?.name, loc?.list, loc?.city]
+            .map(value => String(value || '').trim())
+            .find(Boolean) || coords;
+        const address = [loc?.city, loc?.list]
+            .map(value => String(value || '').trim())
+            .filter(Boolean)
+            .filter((value, index, values) => values.indexOf(value) === index)
+            .join(', ');
+        const schemaParams = new URLSearchParams({
+            poiname: poiName,
+            lat,
+            lon: lng,
+            poiid: ''
+        });
+        const poiInfo = JSON.stringify({
+            name: poiName,
+            address,
+            lat: Number(lat),
+            lon: Number(lng),
+            poiid: ''
+        });
+        const landingParams = new URLSearchParams({
+            _ul: '1',
+            schema: `compapago://poi/detail?${schemaParams.toString()}`,
+            poiInfo,
+            share_from: 'bt-locations',
+            share_from_type: 'Web',
+            share_type: 'url'
+        });
+        return `https://papago-m.aimap.com/download?${landingParams.toString()}`;
     }
     return playStore;
 }
@@ -2487,7 +2514,7 @@ function _getMapAppUrl(app, loc) {
         google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}&travelmode=driving`,
         waze: `https://www.waze.com/ul?ll=${encodeURIComponent(coords)}&navigate=yes&utm_source=bt-locations`,
         apple: `https://maps.apple.com/?daddr=${encodeURIComponent(coords)}&dirflg=d`,
-        papago: _getPapagoUrl(coords)
+        papago: _getPapagoUrl(coords, loc)
     };
     return urls[app] || '';
 }
