@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.1';
+const APP_VERSION = 'v7.5.2';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2315,18 +2315,42 @@ function showPlaceCard(loc, idx) {
                 <span class="place-action-label">ลบ</span>
             </button>` : ''}
         </div>
-        <div class="map-app-launcher" role="group" aria-label="เปิดเส้นทางด้วยแอปแผนที่">
-            <span class="map-app-launcher-label">GO</span>
-            <div class="map-app-options">
-                <button type="button" class="map-app-btn" onclick="openMapApp('google',${idx})" aria-label="เปิดเส้นทางใน Google Maps" title="Google Maps">
-                    <i class="fa-brands fa-google" aria-hidden="true"></i><span>Google</span>
-                </button>
-                <button type="button" class="map-app-btn" onclick="openMapApp('waze',${idx})" aria-label="เปิดเส้นทางใน Waze" title="Waze">
-                    <i class="fa-brands fa-waze" aria-hidden="true"></i><span>Waze</span>
-                </button>
-                <button type="button" class="map-app-btn" onclick="openMapApp('apple',${idx})" aria-label="เปิดเส้นทางใน Apple Maps" title="Apple Maps">
-                    <i class="fa-brands fa-apple" aria-hidden="true"></i><span>Apple</span>
-                </button>
+        <div class="map-app-launcher">
+            <button type="button" class="map-app-trigger" id="mapAppTrigger"
+                onclick="toggleMapAppPicker(event)" aria-haspopup="menu" aria-expanded="false"
+                aria-controls="mapAppPicker">
+                <span class="map-app-trigger-code">GO</span>
+                <span class="map-app-trigger-copy">
+                    <strong>GO MAPS</strong>
+                    <small>เลือกแอปนำทาง</small>
+                </span>
+                <i class="fa-solid fa-chevron-up map-app-trigger-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="map-app-popover" id="mapAppPicker" role="menu"
+                aria-label="เลือกแอปนำทาง" hidden>
+                <div class="map-app-popover-label">SELECT NAVIGATION</div>
+                <div class="map-app-options">
+                    <button type="button" class="map-app-btn" role="menuitem"
+                        onclick="event.stopPropagation();openMapApp('google',${idx})">
+                        <i class="fa-brands fa-google" aria-hidden="true"></i>
+                        <span><strong>Google Maps</strong><small>Driving</small></span>
+                    </button>
+                    <button type="button" class="map-app-btn" role="menuitem"
+                        onclick="event.stopPropagation();openMapApp('waze',${idx})">
+                        <i class="fa-brands fa-waze" aria-hidden="true"></i>
+                        <span><strong>Waze</strong><small>Live traffic</small></span>
+                    </button>
+                    <button type="button" class="map-app-btn" role="menuitem"
+                        onclick="event.stopPropagation();openMapApp('apple',${idx})">
+                        <i class="fa-brands fa-apple" aria-hidden="true"></i>
+                        <span><strong>Apple Maps</strong><small>iPhone / Web</small></span>
+                    </button>
+                    <button type="button" class="map-app-btn" role="menuitem"
+                        onclick="event.stopPropagation();openMapApp('papago',${idx})">
+                        <span class="map-app-papago-mark" aria-hidden="true">P</span>
+                        <span><strong>PAPAGO!</strong><small>Android / iPhone</small></span>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="place-card-info-grid">
@@ -2396,7 +2420,65 @@ function _escapeHtml(value) {
     }[ch]));
 }
 
-function closePlaceCard() { const pc = document.getElementById('placeCard'); if(pc) pc.classList.remove('open'); }
+function closePlaceCard() {
+    closeMapAppPicker(true);
+    const pc = document.getElementById('placeCard');
+    if(pc) pc.classList.remove('open');
+}
+
+let _mapAppPickerTimer = null;
+window.toggleMapAppPicker = function(event) {
+    event?.stopPropagation();
+    const picker = document.getElementById('mapAppPicker');
+    const trigger = document.getElementById('mapAppTrigger');
+    if(!picker || !trigger) return;
+    const opening = picker.hidden;
+    window.clearTimeout(_mapAppPickerTimer);
+    if(opening) {
+        picker.hidden = false;
+        window.requestAnimationFrame(() => picker.classList.add('is-open'));
+        trigger.setAttribute('aria-expanded', 'true');
+    } else {
+        closeMapAppPicker();
+    }
+};
+
+function closeMapAppPicker(immediate = false) {
+    const picker = document.getElementById('mapAppPicker');
+    const trigger = document.getElementById('mapAppTrigger');
+    if(!picker) return;
+    window.clearTimeout(_mapAppPickerTimer);
+    picker.classList.remove('is-open');
+    trigger?.setAttribute('aria-expanded', 'false');
+    if(immediate) {
+        picker.hidden = true;
+    } else {
+        _mapAppPickerTimer = window.setTimeout(() => {
+            if(!picker.classList.contains('is-open')) picker.hidden = true;
+        }, 170);
+    }
+}
+
+document.addEventListener('click', event => {
+    if(!event.target.closest('.map-app-launcher')) closeMapAppPicker();
+});
+document.addEventListener('keydown', event => {
+    if(event.key === 'Escape') closeMapAppPicker();
+});
+
+function _getPapagoUrl(coords, userAgent = navigator.userAgent || '') {
+    const ua = userAgent;
+    const playStore = 'https://play.google.com/store/apps/details?id=com.papagoinc.papago.papagonavi';
+    if(/Android/i.test(ua)) {
+        const fallback = encodeURIComponent(playStore);
+        return `intent:0,0?q=${encodeURIComponent(coords)}#Intent;scheme=geo;package=com.papagoinc.papago.papagonavi;S.browser_fallback_url=${fallback};end`;
+    }
+    if(/iPhone|iPad|iPod/i.test(ua)) {
+        return 'https://apps.apple.com/tw/app/id6744085544';
+    }
+    return 'https://navi.papagoinc.com/';
+}
+
 function _getMapAppUrl(app, loc) {
     const lat = Number(loc?.lat);
     const lng = Number(loc?.lng);
@@ -2405,7 +2487,8 @@ function _getMapAppUrl(app, loc) {
     const urls = {
         google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}&travelmode=driving`,
         waze: `https://www.waze.com/ul?ll=${encodeURIComponent(coords)}&navigate=yes&utm_source=bt-locations`,
-        apple: `https://maps.apple.com/?daddr=${encodeURIComponent(coords)}&dirflg=d`
+        apple: `https://maps.apple.com/?daddr=${encodeURIComponent(coords)}&dirflg=d`,
+        papago: _getPapagoUrl(coords)
     };
     return urls[app] || '';
 }
@@ -2417,6 +2500,7 @@ window.openMapApp = function(app, idx) {
         showToast('ไม่พบพิกัดสำหรับเปิดแอปแผนที่', true);
         return;
     }
+    closeMapAppPicker(true);
     window.open(url, '_blank', 'noopener,noreferrer');
 };
 

@@ -408,53 +408,176 @@ body::after,
 }
 
 .map-app-launcher {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    position: relative;
     margin: 0 0 16px;
     padding: 10px 0;
     border-top: 1px solid var(--bug-line);
     border-bottom: 1px solid var(--bug-line);
 }
 
-.map-app-launcher-label {
-    flex: 0 0 auto;
-    color: var(--tx3);
-    font-family: var(--bug-mono);
-    font-size: 9px;
-    letter-spacing: 0.14em;
-}
-
-.map-app-options {
-    display: flex;
+.map-app-trigger {
+    width: 100%;
+    min-height: 42px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    min-width: 0;
-}
-
-.map-app-btn {
-    min-height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border: 1px solid var(--bug-line);
+    gap: 10px;
+    padding: 7px 10px;
+    border: 1px solid var(--bug-line-strong);
     border-radius: 999px;
     background: transparent;
+    color: var(--tx);
+    text-align: left;
+    cursor: pointer;
+    transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.map-app-trigger:hover,
+.map-app-trigger[aria-expanded="true"] {
+    border-color: var(--tx);
+    background: oklch(97% 0.004 255 / 0.055);
+}
+
+.map-app-trigger-code {
+    min-width: 28px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--bug-line);
+    border-radius: 999px;
     color: var(--tx2);
     font-family: var(--bug-mono);
     font-size: 9px;
+    letter-spacing: 0.08em;
+}
+
+.map-app-trigger-copy {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.map-app-trigger-copy strong,
+.map-app-trigger-copy small {
+    font-family: var(--bug-mono);
     font-weight: 400;
-    letter-spacing: 0.04em;
+}
+
+.map-app-trigger-copy strong {
+    font-size: 10px;
+    letter-spacing: 0.09em;
+}
+
+.map-app-trigger-copy small {
+    overflow: hidden;
+    color: var(--tx3);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.map-app-trigger-chevron {
+    color: var(--tx3);
+    font-size: 9px;
+    transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), color 160ms ease;
+}
+
+.map-app-trigger[aria-expanded="true"] .map-app-trigger-chevron {
+    color: var(--tx);
+    transform: rotate(180deg);
+}
+
+.map-app-popover[hidden] {
+    display: none !important;
+}
+
+.map-app-popover {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--bug-line-strong);
+    background: var(--bug-raised);
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 160ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.map-app-popover.is-open {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.map-app-popover-label {
+    margin-bottom: 8px;
+    color: var(--tx3);
+    font-family: var(--bug-mono);
+    font-size: 8px;
+    letter-spacing: 0.12em;
+}
+
+.map-app-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.map-app-btn {
+    min-height: 46px;
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border: 1px solid var(--bug-line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--tx2);
+    text-align: left;
     cursor: pointer;
     transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.map-app-btn i {
+.map-app-btn i,
+.map-app-papago-mark {
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
     font-size: 12px;
+}
+
+.map-app-papago-mark {
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font-family: var(--bug-mono);
+    font-size: 9px;
+}
+
+.map-app-btn > span:last-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.map-app-btn strong,
+.map-app-btn small {
+    overflow: hidden;
+    font-family: var(--bug-mono);
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.map-app-btn strong {
+    color: currentColor;
+    font-size: 9px;
+    letter-spacing: 0.03em;
+}
+
+.map-app-btn small {
+    color: var(--tx3);
+    font-size: 8px;
 }
 
 .map-app-btn:hover {
@@ -462,6 +585,10 @@ body::after,
     background: var(--tx);
     color: var(--bug-canvas);
     transform: translateY(-1px);
+}
+
+.map-app-btn:hover small {
+    color: oklch(28% 0.008 255);
 }
 
 .map-app-btn:active {
@@ -758,12 +885,10 @@ body.auth-required #authModalOverlay .auth-modal {
         border-left: 0;
     }
 
-    .map-app-launcher {
+    .map-app-trigger-copy {
         align-items: flex-start;
-    }
-
-    .map-app-options {
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 1px;
     }
 }
 
