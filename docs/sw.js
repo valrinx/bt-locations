@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bt-locations-v7.4.3';
+const CACHE_NAME = 'bt-locations-v7.5.0';
 // Only truly static assets (libs, icons) — NOT app code
 const STATIC_ASSETS = [
   './manifest.json',
@@ -10,10 +10,11 @@ const STATIC_ASSETS = [
   'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css',
   'https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js',
   'https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js',
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&display=swap'
+  'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600&display=swap',
+  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400&family=JetBrains+Mono:wght@400&family=Saira+Condensed:wght@400&display=swap'
 ];
 // App code files — always network-first (never serve stale)
-const APP_FILES = ['index.html', 'app.js', 'auth.js', 'auth.css', 'redesign.css', 'locations.js'];
+const APP_FILES = ['index.html', 'app.js', 'auth.js', 'auth.css', 'redesign.css', 'bugatti-theme.css', 'locations.js'];
 
 // Install: cache static assets
 self.addEventListener('install', event => {

@@ -1,0 +1,851 @@
+/* BT Locations — Bugatti-inspired field interface
+   Visual chrome stays monochrome; operational marker and status colors remain semantic. */
+
+:root,
+body.light {
+    --bg: oklch(8% 0.008 255);
+    --s1: oklch(10.5% 0.009 255);
+    --s2: oklch(13% 0.01 255);
+    --s3: oklch(16% 0.012 255);
+    --s4: oklch(20% 0.012 255);
+    --bd: oklch(97% 0.004 255 / 0.10);
+    --bd2: oklch(97% 0.004 255 / 0.17);
+    --bd3: oklch(97% 0.004 255 / 0.28);
+    --tx: oklch(96% 0.005 255);
+    --tx2: oklch(79% 0.008 255);
+    --tx3: oklch(61% 0.012 255);
+    --accent: oklch(88% 0.025 245);
+    --accent2: oklch(96% 0.005 255);
+    --accent-soft: oklch(88% 0.025 245 / 0.10);
+    --bug-canvas: oklch(8% 0.008 255);
+    --bug-panel: oklch(11% 0.009 255 / 0.97);
+    --bug-panel-solid: oklch(11% 0.009 255);
+    --bug-raised: oklch(14% 0.011 255);
+    --bug-line: oklch(97% 0.004 255 / 0.14);
+    --bug-line-strong: oklch(97% 0.004 255 / 0.32);
+    --bug-display: "Saira Condensed", "Noto Sans Thai", Arial, sans-serif;
+    --bug-body: "Noto Sans Thai", system-ui, sans-serif;
+    --bug-editorial: "Cormorant Garamond", "Noto Sans Thai", serif;
+    --bug-mono: "JetBrains Mono", "Noto Sans Thai", ui-monospace, monospace;
+}
+
+* {
+    scrollbar-color: var(--bug-line-strong) transparent;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+    font-family: var(--bug-body);
+}
+
+body {
+    background: var(--bug-canvas);
+    color: var(--tx);
+}
+
+body::before,
+body::after,
+.app::before,
+.app::after {
+    content: none !important;
+}
+
+.app {
+    background: var(--bug-canvas);
+}
+
+/* ── Type system ───────────────────────────────────────── */
+.logo-main,
+.auth-modal-header h2,
+.modal-header h2,
+.mob-drawer-title,
+.place-card-name,
+.sv-v,
+.count-pill strong {
+    font-family: var(--bug-display);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+}
+
+.logo-sub,
+.logo-right,
+.vt,
+.bt,
+.mob-nb-lbl,
+.sec-hd,
+.modal-btn,
+.form-btn,
+.auth-submit,
+.auth-wide,
+.auth-link,
+.tb-icon-btn,
+.map-btn,
+.lv-tb-btn,
+.place-action-btn,
+.pca-btn,
+.mob-menu-ico,
+.mob-gps-mode,
+.auth-role-badge,
+.auth-permission-chip,
+.auth-user-save {
+    font-family: var(--bug-mono);
+    font-weight: 400;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+/* ── Full-bleed command shell ───────────────────────────── */
+.topbar {
+    background: var(--bug-panel-solid);
+    border-bottom: 1px solid var(--bug-line);
+    box-shadow: none;
+}
+
+.logo-main {
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--tx);
+    font-size: 24px;
+    line-height: 1;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.logo-sub {
+    color: var(--tx);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+}
+
+.logo-right {
+    color: var(--tx3);
+    font-size: 8px;
+}
+
+.body,
+.sidebar,
+.main,
+.view-area,
+.map-view,
+#map {
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.body {
+    gap: 0;
+    padding: 0;
+    background: var(--bug-canvas);
+}
+
+.sidebar {
+    background: var(--bug-panel-solid);
+    border: 0;
+    border-right: 1px solid var(--bug-line);
+}
+
+.main {
+    background: var(--bug-canvas);
+    border: 0;
+}
+
+.vtabs,
+.btbar,
+.mob-nav {
+    background: var(--bug-panel-solid);
+    border-color: var(--bug-line);
+    box-shadow: none;
+}
+
+.vt,
+.bt,
+.mob-nb {
+    color: var(--tx3);
+    transition: color 180ms ease, background-color 180ms ease;
+}
+
+.vt.active,
+.bt.active,
+.mob-nb.active {
+    color: var(--tx);
+    background: oklch(97% 0.004 255 / 0.05);
+}
+
+.vt.active::after,
+.bt.active::after,
+.mob-nb.active::after {
+    background: var(--tx);
+    box-shadow: none;
+}
+
+.mob-nb-add,
+.fab {
+    background: var(--tx);
+    color: var(--bug-canvas);
+    border: 1px solid var(--tx);
+    box-shadow: none;
+}
+
+.mob-nb-add:hover,
+.fab:hover {
+    background: transparent;
+    color: var(--tx);
+    transform: translateY(-2px);
+}
+
+/* ── Controls: precise outlines, no ornament ────────────── */
+.search-box,
+.chip,
+.pill-badge,
+.tb-icon-btn,
+.auth-avatar,
+.map-btn,
+.count-pill,
+.lv-tb-btn,
+.modal-btn,
+.form-btn,
+.auth-submit,
+.auth-wide,
+.auth-link,
+.place-action-btn,
+.pca-btn,
+.mob-gps-mode,
+.auth-user-save {
+    background: transparent;
+    color: var(--tx);
+    border: 1px solid var(--bug-line-strong);
+    box-shadow: none;
+}
+
+.search-box,
+.chip,
+.pill-badge,
+.lv-tb-btn,
+.modal-btn,
+.form-btn,
+.auth-submit,
+.auth-wide,
+.auth-link,
+.place-action-btn,
+.pca-btn,
+.mob-gps-mode,
+.auth-user-save {
+    border-radius: 999px;
+}
+
+.tb-icon-btn,
+.auth-avatar,
+.map-btn {
+    border-radius: 50%;
+}
+
+.search-box:focus-within,
+.chip:hover,
+.chip.active,
+.tb-icon-btn:hover,
+.map-btn:hover,
+.lv-tb-btn:hover,
+.modal-btn:hover,
+.form-btn:hover,
+.auth-submit:hover,
+.auth-wide:hover,
+.auth-link:hover,
+.place-action-btn:hover,
+.pca-btn:hover,
+.mob-gps-mode:hover,
+.auth-user-save:hover {
+    background: var(--tx);
+    color: var(--bug-canvas);
+    border-color: var(--tx);
+    box-shadow: none;
+}
+
+.search-box input,
+.search-box input::placeholder {
+    color: var(--tx2);
+}
+
+.live-p {
+    background: oklch(76% 0.16 150);
+    box-shadow: none;
+}
+
+.mob-chips-scroll-container {
+    background: var(--bug-panel-solid);
+    border-bottom: 1px solid var(--bug-line);
+    box-shadow: none;
+}
+
+/* ── Navigation and filters ─────────────────────────────── */
+.sec-hd {
+    color: var(--tx3);
+    border-bottom-color: var(--bug-line);
+}
+
+.fi,
+.ci,
+.flist-item,
+.clist-item {
+    border-radius: 0;
+    border: 1px solid transparent;
+    transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.fi:hover,
+.ci:hover,
+.flist-item:hover,
+.clist-item:hover,
+.fi.active,
+.ci.active,
+.flist-item.active,
+.clist-item.active {
+    background: oklch(97% 0.004 255 / 0.045);
+    border-color: var(--bug-line);
+    color: var(--tx);
+    box-shadow: none;
+}
+
+/* ── Map as the full-bleed visual canvas ────────────────── */
+.map-btn-group {
+    background: var(--bug-panel);
+    border: 1px solid var(--bug-line);
+    border-radius: 999px;
+    box-shadow: none;
+}
+
+.map-btn-group .map-btn {
+    border-color: transparent;
+}
+
+.count-pill {
+    border-radius: 0;
+    background: var(--bug-panel);
+}
+
+.leaflet-control-zoom,
+.leaflet-control-layers,
+.leaflet-bar {
+    border: 1px solid var(--bug-line) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.leaflet-bar a,
+.leaflet-control-layers {
+    background: var(--bug-panel-solid) !important;
+    color: var(--tx) !important;
+    border-color: var(--bug-line) !important;
+}
+
+.map-popup,
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+    background: var(--bug-panel-solid);
+    color: var(--tx);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.leaflet-popup-content-wrapper {
+    border: 1px solid var(--bug-line-strong);
+}
+
+/* ── Cards, lists, statistics ───────────────────────────── */
+.place-card,
+.list-panel,
+.info-panel,
+.mob-drawer-panel,
+.modal,
+.modal-overlay .modal,
+.auth-modal,
+.auth-admin-modal,
+.chip-dropdown,
+.toast,
+.save-toast {
+    background: var(--bug-panel-solid);
+    border: 1px solid var(--bug-line-strong);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.place-card-header,
+.list-panel-header,
+.info-panel-header,
+.modal-header,
+.auth-modal-header,
+.mob-drawer-hd {
+    background: transparent;
+    border-bottom: 1px solid var(--bug-line);
+}
+
+.place-card-name {
+    font-size: clamp(24px, 3vw, 40px);
+    line-height: 1;
+}
+
+.place-card-note {
+    font-family: var(--bug-editorial);
+    font-size: 17px;
+    line-height: 1.55;
+}
+
+.place-card-info,
+.place-card-actions,
+.modal-footer {
+    border-color: var(--bug-line);
+}
+
+.list-view,
+.stats-view {
+    background: var(--bug-canvas);
+}
+
+.lv-toolbar {
+    background: var(--bug-panel-solid);
+    border-bottom: 1px solid var(--bug-line);
+    box-shadow: none;
+}
+
+.list-item,
+.lp-item,
+.ms-item,
+.sv-card,
+.sv-panel {
+    background: transparent;
+    border: 1px solid var(--bug-line);
+    border-radius: 0;
+    box-shadow: none;
+    transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.list-item:hover,
+.lp-item:hover,
+.ms-item:hover,
+.sv-card:hover {
+    background: oklch(97% 0.004 255 / 0.035);
+    border-color: var(--bug-line-strong);
+    transform: translateY(-2px);
+    box-shadow: none;
+}
+
+.sv-v {
+    color: var(--tx);
+}
+
+.bug-stats-kpi,
+.bug-stats-panel,
+.bug-stats-row,
+.show-all-lists,
+.show-all-cities {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.bug-stats-kpi,
+.bug-stats-panel {
+    background: transparent !important;
+    border-color: var(--bug-line) !important;
+}
+
+.bug-stats-row,
+.show-all-lists,
+.show-all-cities {
+    background: oklch(97% 0.004 255 / 0.035) !important;
+}
+
+.sv-inner [data-count-up] {
+    color: var(--tx) !important;
+    font-family: var(--bug-display);
+    font-weight: 400 !important;
+    letter-spacing: 0.05em;
+}
+
+.ltable {
+    border-collapse: collapse;
+}
+
+.ltable th {
+    font-family: var(--bug-mono);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--bug-panel-solid);
+    color: var(--tx2);
+}
+
+.ltable th,
+.ltable td {
+    border-color: var(--bug-line);
+}
+
+/* ── Forms and authentication ───────────────────────────── */
+.modal-overlay,
+.auth-modal-overlay {
+    background: oklch(4% 0.006 255 / 0.88);
+    backdrop-filter: none;
+}
+
+.auth-modal,
+.auth-admin-modal,
+.modal {
+    animation: bug-panel-in 220ms ease-out both;
+}
+
+body.auth-required #authModalOverlay .auth-modal {
+    box-shadow: none;
+}
+
+.auth-modal-header h2,
+.modal-header h2 {
+    font-size: clamp(28px, 5vw, 44px);
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.auth-close,
+.modal-close,
+.mob-drawer-close,
+.place-card-close,
+.list-panel-close,
+.info-panel-close {
+    background: transparent;
+    color: var(--tx2);
+    border: 1px solid var(--bug-line);
+    border-radius: 50%;
+    box-shadow: none;
+}
+
+.auth-close:hover,
+.modal-close:hover,
+.mob-drawer-close:hover,
+.place-card-close:hover,
+.list-panel-close:hover,
+.info-panel-close:hover {
+    color: var(--tx);
+    border-color: var(--tx);
+    background: transparent;
+}
+
+.auth-tabs {
+    gap: 0;
+    border-bottom: 1px solid var(--bug-line);
+    background: transparent;
+}
+
+.auth-tab {
+    border: 0;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--tx3);
+    font-family: var(--bug-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.auth-tab.active {
+    color: var(--tx);
+    background: transparent;
+    border-bottom-color: var(--tx);
+    box-shadow: none;
+}
+
+.auth-gate-note,
+.auth-account-card,
+.auth-permission-summary,
+.auth-admin-help,
+.auth-user-row {
+    background: transparent;
+    border: 1px solid var(--bug-line);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.frow input,
+.frow textarea,
+.frow select,
+.auth-form input,
+.auth-form select,
+.auth-form textarea {
+    background: transparent;
+    color: var(--tx);
+    border: 0;
+    border-bottom: 1px solid var(--bug-line-strong);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.frow input:focus,
+.frow textarea:focus,
+.frow select:focus,
+.auth-form input:focus,
+.auth-form select:focus,
+.auth-form textarea:focus {
+    border-bottom-color: var(--tx);
+    outline: none;
+    box-shadow: none;
+}
+
+.auth-role-badge,
+.auth-permission-chip {
+    border-radius: 999px;
+    background: transparent;
+    color: var(--tx2);
+    border: 1px solid var(--bug-line);
+}
+
+.auth-permission-toggle {
+    border-radius: 0;
+    background: transparent;
+    border-color: var(--bug-line);
+}
+
+.auth-permission-toggle:has(input:checked) {
+    background: oklch(97% 0.004 255 / 0.05);
+    border-color: var(--tx2);
+}
+
+/* ── Mobile tool sheet ──────────────────────────────────── */
+.mob-drawer-bg {
+    background: oklch(4% 0.006 255 / 0.82);
+    backdrop-filter: none;
+}
+
+.mob-drawer-panel {
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+}
+
+.mob-menu-section {
+    border-color: var(--bug-line);
+}
+
+.mob-menu-item,
+.mob-gps-status {
+    background: transparent;
+    border: 1px solid var(--bug-line);
+    border-radius: 0;
+    box-shadow: none;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.mob-menu-item:hover {
+    background: oklch(97% 0.004 255 / 0.045);
+    border-color: var(--bug-line-strong);
+    transform: translateX(3px);
+}
+
+.mob-menu-ico {
+    background: transparent;
+    border: 1px solid var(--bug-line);
+    border-radius: 50%;
+    color: var(--tx2);
+}
+
+/* ── Feedback and motion ────────────────────────────────── */
+.toast,
+.save-toast {
+    color: var(--tx);
+}
+
+@keyframes bug-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .logo-main {
+        font-size: 21px;
+    }
+
+    .mob-chips-scroll-container {
+        border-radius: 0;
+    }
+
+    .mob-nav {
+        border-radius: 0;
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+    }
+
+    .place-card,
+    .list-panel,
+    .info-panel,
+    .mob-drawer-panel {
+        border-right: 0;
+        border-bottom: 0;
+        border-left: 0;
+    }
+}
+
+@media (min-width: 768px) {
+    body:not(.force-mobile) .header-group {
+        padding: 0;
+        background: var(--bug-canvas);
+    }
+
+    body:not(.force-mobile) .topbar {
+        border: 0;
+        border-bottom: 1px solid var(--bug-line);
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    body:not(.force-mobile) .search-box {
+        border-radius: 999px;
+    }
+}
+
+body.force-mobile .topbar {
+    top: env(safe-area-inset-top, 0px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--bug-line) !important;
+    border-radius: 0;
+    box-shadow: none !important;
+}
+
+body.force-mobile .mob-chips-scroll-container {
+    top: calc(env(safe-area-inset-top, 0px) + 56px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--bug-line) !important;
+    border-radius: 0;
+    box-shadow: none !important;
+}
+
+body.force-mobile .body {
+    top: calc(env(safe-area-inset-top, 0px) + 104px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+body.force-mobile .mob-nav {
+    bottom: env(safe-area-inset-bottom, 0px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    border: 0;
+    border-top: 1px solid var(--bug-line);
+    border-radius: 0;
+    box-shadow: none;
+}
+
+body.force-mobile .mob-nb {
+    border-radius: 0;
+}
+
+body.force-mobile .mob-nb-add {
+    border-radius: 50%;
+}
+
+body.force-mobile .place-card,
+body.force-mobile .list-panel {
+    left: 0 !important;
+    right: 0 !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
+    border-radius: 0 !important;
+}
+
+body.force-mobile .modal {
+    border-radius: 0 !important;
+}
+
+@media (max-width: 767px) {
+    body:not(.force-mobile) .topbar,
+    body.force-mobile .topbar {
+        top: env(safe-area-inset-top, 0px) !important;
+        left: 0 !important;
+        right: 0 !important;
+        border: 0 !important;
+        border-bottom: 1px solid var(--bug-line) !important;
+        border-radius: 0;
+        box-shadow: none !important;
+    }
+
+    body:not(.force-mobile) .mob-chips-scroll-container,
+    body.force-mobile .mob-chips-scroll-container {
+        top: calc(env(safe-area-inset-top, 0px) + 56px) !important;
+        left: 0 !important;
+        right: 0 !important;
+        border: 0 !important;
+        border-bottom: 1px solid var(--bug-line) !important;
+        border-radius: 0;
+        box-shadow: none !important;
+    }
+
+    body:not(.force-mobile) .body,
+    body.force-mobile .body {
+        top: calc(env(safe-area-inset-top, 0px) + 104px) !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    body:not(.force-mobile) .mob-nav,
+    body.force-mobile .mob-nav {
+        bottom: env(safe-area-inset-bottom, 0px) !important;
+        left: 0 !important;
+        right: 0 !important;
+        border: 0;
+        border-top: 1px solid var(--bug-line);
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    body:not(.force-mobile) .mob-nb,
+    body.force-mobile .mob-nb {
+        border-radius: 0;
+    }
+
+    body:not(.force-mobile) .mob-nb-add,
+    body.force-mobile .mob-nb-add {
+        border-radius: 50%;
+    }
+
+    body.force-mobile .place-card,
+    body.force-mobile .list-panel {
+        left: 0 !important;
+        right: 0 !important;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 66px) !important;
+        border-radius: 0 !important;
+    }
+
+    body:not(.force-mobile) .modal {
+        border-radius: 0 !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

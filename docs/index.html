@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BT Locations</title>
-    <meta name="theme-color" content="#0b0c10">
+    <meta name="theme-color" content="#08090b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
@@ -16,6 +16,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400&family=JetBrains+Mono:wght@400&family=Saira+Condensed:wght@400&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -5820,7 +5823,7 @@
             'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh'
         );
     </script>
-    <link rel="stylesheet" href="auth.css?v=7.4.3">
+    <link rel="stylesheet" href="auth.css?v=7.5.0">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -6363,23 +6366,23 @@
             // Build new UI
             let html = `
                 <!-- Summary Cards -->
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
-                    <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                <div class="bug-stats-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+                    <div class="bug-stats-kpi" style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
                         <div data-count-up="${locs.length}" style="font-size:24px;font-weight:700;color:var(--bl);">0</div>
                         <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">จุดทั้งหมด</div>
                     </div>
-                    <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                    <div class="bug-stats-kpi" style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
                         <div data-count-up="${Object.keys(lists).length}" style="font-size:24px;font-weight:700;color:var(--bl);">0</div>
                         <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">รายการ</div>
                     </div>
-                    <div style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
+                    <div class="bug-stats-kpi" style="background:var(--s1);border-radius:12px;padding:12px;text-align:center;border:0.5px solid var(--bd2);">
                         <div data-count-up="${Object.keys(cities).length}" style="font-size:24px;font-weight:700;color:var(--bl);">0</div>
                         <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;">เขต</div>
                     </div>
                 </div>
                 
                 <!-- Top Lists with Pie Chart -->
-                <div style="background:var(--s1);border-radius:16px;padding:16px;margin-bottom:16px;border:0.5px solid var(--bd2);">
+                <div class="bug-stats-panel" style="background:var(--s1);border-radius:16px;padding:16px;margin-bottom:16px;border:0.5px solid var(--bd2);">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                         <div style="font-size:12px;font-weight:600;color:var(--tx);">สัดส่วนรายการ (Top ${Math.min(5, sortedLists.length)})</div>
                         <div style="font-size:10px;color:var(--tx3);">${sortedLists.length} รายการทั้งหมด</div>
@@ -6432,14 +6435,14 @@
                 
                 <!-- Cities Grid -->
                 ${sortedCities.length > 0 ? `
-                    <div style="background:var(--s1);border-radius:16px;padding:16px;border:0.5px solid var(--bd2);">
+                    <div class="bug-stats-panel" style="background:var(--s1);border-radius:16px;padding:16px;border:0.5px solid var(--bd2);">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                             <div style="font-size:12px;font-weight:600;color:var(--tx);">จุดต่อเขต</div>
                             <div style="font-size:10px;color:var(--tx3);">${sortedCities.length} เขต</div>
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
                             ${sortedCities.slice(0, 10).map(([n,c],i)=>`
-                                <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;">
+                                <div class="bug-stats-row" style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;">
                                     <div style="width:6px;height:6px;border-radius:50%;background:var(--bl);"></div>
                                     <div style="flex:1;min-width:0;">
                                         <div style="font-size:11px;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
@@ -6453,7 +6456,7 @@
                 ` : ''}
                 
                 <!-- Recent Items from Changelog -->
-                <div style="background:var(--s1);border-radius:16px;padding:16px;margin-top:16px;border:0.5px solid var(--bd2);">
+                <div class="bug-stats-panel" style="background:var(--s1);border-radius:16px;padding:16px;margin-top:16px;border:0.5px solid var(--bd2);">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                         <div style="font-size:12px;font-weight:600;color:var(--tx);">กิจกรรมล่าสุด</div>
                         <div style="font-size:10px;color:var(--tx3);">จาก Changelog</div>
@@ -6487,7 +6490,7 @@
                     const d = new Date(e.t);
                     const ts = d.toLocaleDateString('th-TH', {day:'numeric', month:'short'}) + ' ' + d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
                     return `
-                        <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--s2);border-radius:10px;">
+                        <div class="bug-stats-row" style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--s2);border-radius:10px;">
                             <div style="width:32px;height:32px;border-radius:8px;background:${actionColor[e.a] || 'var(--bl)'};display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;">${actionIcon[e.a] || '❓'}</div>
                             <div style="flex:1;min-width:0;cursor:pointer;" onclick="window.showChangelogDetail(${e.t})">
                                 <div style="font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.n || 'ไม่มีชื่อ'}</div>
@@ -6899,7 +6902,8 @@
 }
         }
     </style>
-    <link rel="stylesheet" href="redesign.css?v=7.4.3">
+    <link rel="stylesheet" href="redesign.css?v=7.5.0">
+    <link rel="stylesheet" href="bugatti-theme.css?v=7.5.0">
 
 </body>
 

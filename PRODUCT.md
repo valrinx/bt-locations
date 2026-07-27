@@ -22,7 +22,10 @@ unauthorized access or changes.
 ## Brand Personality
 
 Operational, compact, and trustworthy. The interface should feel like a focused
-field tool whose controls are predictable under time pressure.
+field tool whose controls are predictable under time pressure. Its visual
+language is automotive and precise: near-black full-bleed surfaces, hairline
+dividers, wide-tracked labels, outline controls, and restrained stateful motion.
+Operational marker and status colors remain visible where they carry meaning.
 
 ## Anti-references
 
@@ -37,6 +40,7 @@ color alone.
 3. Enforce every permission in the database, not only in the interface.
 4. Preserve the established dense field-tool interaction language.
 5. Prefer recoverable operations and clear audit ownership.
+6. Use the map as the primary visual canvas and keep surrounding chrome quiet.
 
 ## Accessibility & Inclusion
 
