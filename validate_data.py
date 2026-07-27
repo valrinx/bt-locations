@@ -11,6 +11,13 @@ import math
 
 JSON_FILE = 'all_locations.json'
 
+
+def configure_console():
+    """Use UTF-8 for Thai diagnostic output on Windows terminals."""
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
+
 # Thailand bounding box (approximate)
 TH_LAT_MIN, TH_LAT_MAX = 5.5, 20.5
 TH_LNG_MIN, TH_LNG_MAX = 97.0, 106.0
@@ -29,6 +36,7 @@ def haversine(lat1, lng1, lat2, lng2):
 
 
 def main():
+    configure_console()
     fix_mode = '--fix' in sys.argv
 
     with open(JSON_FILE, 'r', encoding='utf-8') as f:

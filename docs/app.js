@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.12';
+const APP_VERSION = 'v7.2.13';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -1700,6 +1700,10 @@ function update(options = {}) {
     const mapOnly = !!options.mapOnly;
     const updateStart = performance.now();
     const filtered = getFiltered();
+    const totalBadge = document.getElementById('totalBadge');
+    if (totalBadge) {
+        totalBadge.textContent = `${locations.length.toLocaleString('th-TH')} จุด`;
+    }
     const markerRenderStart = performance.now();
     renderMarkers(filtered);
     _lastMarkerRenderMs = Math.round((performance.now() - markerRenderStart) * 10) / 10;
