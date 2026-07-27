@@ -545,6 +545,12 @@ body.light .sidebar {
     animation: modalLift 220ms var(--ease-expo);
 }
 
+.modal.auth-modal,
+body.force-mobile .modal.auth-modal {
+    width: min(440px, calc(100vw - 24px)) !important;
+    max-height: min(680px, calc(100dvh - 24px)) !important;
+}
+
 @keyframes overlayIn {
     from { opacity: 0; }
     to { opacity: 1; }

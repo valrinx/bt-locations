@@ -75,6 +75,31 @@
     background: var(--s1);
 }
 
+.auth-gate-note {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--bl) 24%, transparent);
+    border-radius: 10px;
+    background: var(--bl-d);
+    color: var(--tx2);
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+body.auth-required {
+    overflow: hidden;
+}
+
+body.auth-required #authModalOverlay {
+    z-index: 10000;
+}
+
+body.auth-required #authModalOverlay .auth-modal {
+    box-shadow:
+        0 8px 18px oklch(3% 0.01 255 / 0.34),
+        0 34px 90px oklch(3% 0.01 255 / 0.62);
+}
+
 .auth-tab {
     min-height: 38px;
     border: 0;

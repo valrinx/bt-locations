@@ -40,6 +40,7 @@
             : (state.user?.email || '');
     };
     const isAdmin = () => state.profile?.is_admin === true;
+    const signInRequired = () => state.ready && !state.user;
     const has = permission => {
         if (!state.user || !state.profile) return false;
         return isAdmin() || state.profile[`can_${permission}`] === true;
@@ -85,7 +86,31 @@
     }
 
     function close() {
+        if (signInRequired()) {
+            el('authEmail')?.focus();
+            return false;
+        }
         setOpen(el('authModalOverlay'), false);
+        return true;
+    }
+
+    function renderSignInGate() {
+        const required = signInRequired();
+        const app = el('app');
+        const closeButton = document.querySelector('[data-auth-close]');
+        document.body.classList.toggle('auth-required', required);
+        if (app) {
+            app.inert = required;
+            if (required) app.setAttribute('aria-hidden', 'true');
+            else app.removeAttribute('aria-hidden');
+        }
+        if (closeButton) closeButton.hidden = required;
+        if (!required) return;
+
+        setMode('signin');
+        renderAccount();
+        setOpen(el('authModalOverlay'), true);
+        window.setTimeout(() => el('authEmail')?.focus(), 40);
     }
 
     function renderPermissionSummary() {
@@ -108,7 +133,12 @@
         if (el('authModalSubtitle')) {
             el('authModalSubtitle').textContent = signedIn
                 ? 'ตรวจสอบบัญชีและสิทธิ์ที่ได้รับ'
-                : 'เข้าสู่ระบบเพื่อจัดการข้อมูล';
+                : 'เข้าสู่ระบบหรือสมัครสมาชิกก่อนใช้แผนที่';
+        }
+        if (el('authModalTitle')) {
+            el('authModalTitle').textContent = signedIn
+                ? 'บัญชี BT Locations'
+                : 'ยินดีต้อนรับสู่ BT Locations';
         }
         if (!signedIn) return;
 
@@ -159,6 +189,7 @@
 
         if (displayName) localStorage.setItem('bt_username', displayName);
         renderAccount();
+        renderSignInGate();
         window.dispatchEvent(new CustomEvent('bt-auth-changed', {
             detail: { user: state.user, profile: state.profile }
         }));
@@ -248,7 +279,7 @@
             window.showToast?.(error.message, true);
             return;
         }
-        close();
+        await applySession(null);
         window.showToast?.('ออกจากระบบแล้ว');
     }
 
