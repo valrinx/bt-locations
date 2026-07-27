@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.4';
+const APP_VERSION = 'v7.5.5';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2483,11 +2483,14 @@ function _getMapAppUrl(app, loc) {
     const lng = Number(loc?.lng);
     if(!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return '';
     const coords = `${lat},${lng}`;
+    const destinationName = [loc.name, loc.list, loc.city]
+        .map(value => String(value || '').trim())
+        .find(Boolean) || coords;
     const urls = {
         google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(coords)}&travelmode=driving`,
         waze: `https://www.waze.com/ul?ll=${encodeURIComponent(coords)}&navigate=yes&utm_source=bt-locations`,
         apple: `https://maps.apple.com/?daddr=${encodeURIComponent(coords)}&dirflg=d`,
-        papago: _getPapagoUrl(coords, loc.name || 'BT Location')
+        papago: _getPapagoUrl(coords, destinationName)
     };
     return urls[app] || '';
 }
