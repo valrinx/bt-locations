@@ -54,6 +54,9 @@
 
 ### ☁️ Sync + Multi-user
 - Multi-user collaboration — **Supabase Realtime** (8 คน live sync ทันที)
+- Supabase Auth — คนทั่วไปดูแผนที่ได้, สมาชิกใหม่เริ่มเป็น Viewer
+- Admin กำหนดสิทธิ์แยก: แก้ไข / ลบ / Import / Restore
+- Row Level Security บังคับสิทธิ์ที่ฐานข้อมูล ป้องกันการเรียก API ข้าม UI
 - Supabase PostgreSQL เป็น single source of truth
 - Realtime INSERT/UPDATE/DELETE broadcast ให้ทุกคนพร้อมกัน
 - Periodic pull ทุก 60 วิ เป็น fallback
@@ -94,6 +97,17 @@ python -m http.server 8080
 ```
 
 เปิด [http://localhost:8080](http://localhost:8080)
+
+## บัญชีและสิทธิ์
+
+1. กด avatar มุมขวาบน หรือเมนู **บัญชี** บนมือถือ
+2. สมัครสมาชิกด้วยอีเมลและรหัสผ่านอย่างน้อย 8 ตัวอักษร
+3. สมาชิกใหม่อ่านแผนที่ได้ แต่ยังแก้ข้อมูลไม่ได้
+4. Admin เปิด **จัดการสิทธิ์ผู้ใช้** แล้วเปิดสิทธิ์ที่ต้องการให้แต่ละบัญชี
+
+สิทธิ์ถูกตรวจทั้งใน UI และ Supabase RLS/RPC จึงไม่สามารถข้ามข้อจำกัดด้วยการ
+เรียก API โดยตรงได้ ดู migration ที่
+`supabase_migrations/003_auth_permissions.sql`
 
 ---
 

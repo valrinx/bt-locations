@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.2.16';
+const APP_VERSION = 'v7.3.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -91,7 +91,18 @@ function _cleanDMSName(n){return(n&&/\d+[°ºᵒ˚]/.test(n))?'':n;}
 // ── Supabase ──
 const _SB_URL = 'https://uemvtttfedpvofqhnwoo.supabase.co';
 const _SB_KEY = 'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh';
-const _sb = supabase.createClient(_SB_URL, _SB_KEY);
+const _sb = window.btSupabase || supabase.createClient(_SB_URL, _SB_KEY);
+function _hasPermission(permission){ return window.btAuth?.has(permission) === true; }
+function _requirePermission(permission,label){
+    if(!window.btAuth){
+        showToast('กำลังเตรียมระบบบัญชี กรุณาลองอีกครั้ง',true);
+        return false;
+    }
+    return window.btAuth.require(permission,label) === true;
+}
+function _currentActor(){
+    return window.btAuth?.actor?.() || localStorage.getItem('bt_username') || '';
+}
 const undoStack = [], redoStack = [], MAX_UNDO = 20;
 let favorites = new Set((() => { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; } })());
 function saveFavorites() { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...favorites])); }
@@ -284,6 +295,7 @@ function setFilterCity(name){
 // ── Edit group (list or city): rename / delete ──
 let _editGroupType = '', _editGroupOldName = '';
 function openEditGroup(type, name){
+    if(!_requirePermission('edit','แก้ไขกลุ่มข้อมูล'))return;
     _editGroupType = type;
     _editGroupOldName = name;
     const label = type === 'list' ? 'รายการ' : 'เมือง/เขต';
@@ -304,6 +316,7 @@ document.getElementById('editGroupModalOverlay').onclick = e => {
         document.getElementById('editGroupModalOverlay').classList.remove('open');
 };
 document.getElementById('editGroupSave').onclick = () => {
+    if(!_requirePermission('edit','แก้ไขกลุ่มข้อมูล'))return;
     const newName = document.getElementById('editGroupInput').value.trim();
     if(!newName){ showToast('กรุณากรอกชื่อ', true); return; }
     if(newName === _editGroupOldName){ document.getElementById('editGroupModalOverlay').classList.remove('open'); return; }
@@ -319,6 +332,7 @@ document.getElementById('editGroupSave').onclick = () => {
     showToast(`เปลี่ยนชื่อเป็น "${newName}" แล้ว`, false, true);
 };
 document.getElementById('editGroupDelete').onclick = () => {
+    if(!_requirePermission('edit','แก้ไขกลุ่มข้อมูล'))return;
     const label = _editGroupType==='list' ? 'รายการ' : 'เมือง/เขต';
     const count = locations.filter(l => _editGroupType==='list' ? l.list===_editGroupOldName : l.city===_editGroupOldName).length;
     document.getElementById('editGroupModalOverlay').classList.remove('open');
@@ -341,6 +355,7 @@ document.getElementById('editGroupDelete').onclick = () => {
     );
 };
 document.getElementById('editGroupDeleteAll').onclick = () => {
+    if(!_requirePermission('delete','ลบข้อมูล'))return;
     const count = locations.filter(l => l.list===_editGroupOldName).length;
     document.getElementById('editGroupModalOverlay').classList.remove('open');
     showConfirm('delete', `ลบหมุด ${count} จุดใน "${_editGroupOldName}"?`,
@@ -503,6 +518,7 @@ onClick('btnImportData', () => protectedDataAction('importModal'));
 
 // Import modal functions
 window.openImportModal = function(){
+    if(!_requirePermission('import',' Import ข้อมูล'))return;
     const modal = document.getElementById('importModalOverlay');
     if(modal) modal.classList.add('open');
     const jsonText = document.getElementById('importJsonText');
@@ -514,7 +530,26 @@ window.closeImportModal = function(){
     const modal = document.getElementById('importModalOverlay');
     if(modal) modal.classList.remove('open');
 };
+async function _importLocationsToCloud(rows,replaceExisting=false){
+    if(!_requirePermission('import',' Import ข้อมูล'))return false;
+    if(replaceExisting&&!_requirePermission('delete',' Replace ข้อมูลเดิม'))return false;
+    _setSyncStatus('syncing');
+    const payload=rows.map(loc=>_locRow(loc));
+    const {error}=await _sb.rpc('import_locations',{
+        rows_json:payload,
+        replace_existing:replaceExisting
+    });
+    if(error){
+        console.warn('Import failed:',error.message);
+        _setSyncStatus('error');
+        showToast(`Import ไม่สำเร็จ: ${error.message}`,true);
+        return false;
+    }
+    await doSync(false);
+    return true;
+}
 window.doImportData = async function(){
+    if(!_requirePermission('import',' Import ข้อมูล'))return;
     const jsonText = document.getElementById('importJsonText').value.trim();
     const url = document.getElementById('importUrl').value.trim();
     
@@ -553,13 +588,11 @@ window.doImportData = async function(){
             showToast('❌ ไม่มีพิกัดที่ผ่านการตรวจสอบ', true);
             return;
         }
+        if(!_requirePermission('delete',' Replace ข้อมูลเดิม'))return;
         pushUndo();
-        locations = data;
-        saveLocations();
-        invalidateCache();
-        update();
         closeImportModal();
-        showToast(`✅ นำเข้า ${locations.length} จุด${formatImportReport(prepared.report)}`, false, true);
+        const imported=await _importLocationsToCloud(data,true);
+        if(imported)showToast(`✅ นำเข้า ${data.length} จุด${formatImportReport(prepared.report)}`, false, true);
     } else {
         showToast('❌ ไม่พบข้อมูลที่ถูกต้อง', true);
     }
@@ -1003,7 +1036,7 @@ function _locRow(l){
         note: l.note||'',
         tags: Array.isArray(l.tags)?l.tags.join(','):(l.tags||''),
         photo: l.photo||'',
-        added_by: localStorage.getItem('bt_username')||'',
+        added_by: _currentActor(),
         updated_at: new Date(l.updatedAt||Date.now()).toISOString(),
     };
 }
@@ -1026,47 +1059,24 @@ async function sbUpdate(loc){
     // Realtime UPDATE event will update locations[] and render
 }
 async function sbRestore(loc){
-    if(!loc.sb_id)return await sbInsert(loc);
-    const {data,error}=await _sb.from('locations')
-        .update({..._locRow(loc),deleted_at:null,deleted_by:null})
-        .eq('id',loc.sb_id)
-        .select('id')
-        .maybeSingle();
+    const row={..._locRow(loc)};
+    if(loc.sb_id)row.id=loc.sb_id;
+    const {error}=await _sb.rpc('restore_locations',{rows_json:[row]});
     if(error){
         console.warn('sbRestore failed:',error.message);
         _setSyncStatus('error');
         return false;
     }
-    // A legacy hard-deleted id no longer exists, so recreate only in that case.
-    if(!data){
-        delete loc.sb_id;
-        return await sbInsert(loc);
-    }
     _writeCache();
     return true;
 }
 async function sbDelete(loc){
-    if(!loc.sb_id)return;
-    const deletedAt=new Date().toISOString();
-    const deletedBy=localStorage.getItem('bt_username')||'anonymous';
-    const {error}=await _sb.from('locations')
-        .update({deleted_at:deletedAt,deleted_by:deletedBy})
-        .eq('id',loc.sb_id);
+    if(!loc.sb_id)return true;
+    const {error}=await _sb.rpc('soft_delete_locations',{location_ids:[loc.sb_id]});
     if(error){
-        // Compatibility until migration 002_soft_delete_locations.sql is applied.
-        const missingSoftDeleteColumns=error.code==='PGRST204'||/deleted_at|deleted_by/i.test(error.message||'');
-        if(!missingSoftDeleteColumns){
-            console.warn('sbDelete failed:',error.message);
-            _setSyncStatus('error');
-            return false;
-        }
-        const {error:hardDeleteError}=await _sb.from('locations').delete().eq('id',loc.sb_id);
-        if(hardDeleteError){
-            console.warn('sbDelete fallback failed:',hardDeleteError.message);
-            _setSyncStatus('error');
-            return false;
-        }
-        console.warn('Soft-delete migration is not applied; used hard delete fallback.');
+        console.warn('sbDelete failed:',error.message);
+        _setSyncStatus('error');
+        return false;
     }
     return true;
     // Realtime UPDATE/DELETE will remove the row from locations[] and render.
@@ -2689,6 +2699,7 @@ function openListPickerSheet() {
 }
 
 function openMergeListSheet() {
+    if(!_requirePermission('edit','รวมรายการ'))return;
     if(!filterList){
         showToast('เลือก List ที่ต้องการรวมก่อน', true);
         openListPickerSheet();
@@ -3028,6 +3039,7 @@ onClick('chipNearby', ()=>{
 });
 
 onClick('btnMergeList', ()=>{
+    if(!_requirePermission('edit','รวมรายการ'))return;
     const counts={}; locations.forEach(l=>{counts[l.list]=(counts[l.list]||0)+1;});
     const lists=Object.keys(counts).filter(n=>n!==filterList).sort();
     if(!lists.length){showToast('ไม่มีรายการอื่นให้รวม',true);return;}
@@ -3063,6 +3075,7 @@ onClick('btnMergeList', ()=>{
 });
 
 onClick('chipCity', ()=>{
+    if(!_requirePermission('edit','รวมเขต'))return;
     const counts={}; locations.forEach(l=>{if(l.city)counts[l.city]=(counts[l.city]||0)+1;});
     const cities=Object.keys(counts).filter(n=>n!==filterCity).sort();
     if(!cities.length){showToast('ไม่มีเขตอื่นให้รวม',true);return;}
@@ -3618,6 +3631,7 @@ if(btnUseGpsModal) btnUseGpsModal.onclick=()=>{
 const crosshair=document.getElementById('crosshair'), addBanner=document.getElementById('addBanner'), fab=document.getElementById('btnFab');
 
 window.openAddMode = function(){
+    if(!_requirePermission('edit','เพิ่มสถานที่'))return;
     if(addMode){cancelAddMode();return;}
     
     // Auto-switch back to map if we are on List or Stats
@@ -3706,6 +3720,7 @@ map.on('click',e=>{
 });
 
 window.openAddAt=function(lat,lng){
+    if(!_requirePermission('edit','เพิ่มสถานที่'))return;
     map.closePopup(); editingIndex=-1;
     document.getElementById('editModalTitle').textContent='เพิ่มสถานที่';
     document.getElementById('modalName').value='';
@@ -3813,6 +3828,7 @@ photoInput.onchange=e=>{
 photoRemoveBtn.onclick=()=>setPhotoPreview('');
 
 window.openEdit=function(idx){
+    if(!_requirePermission('edit','แก้ไขสถานที่'))return;
     const loc=locations[idx]; if(!loc)return;
     editingIndex=idx;
     document.getElementById('editModalTitle').textContent='แก้ไขสถานที่';
@@ -3845,6 +3861,7 @@ if(editModalOverlay) editModalOverlay.onclick=e=>{if(e.target===editModalOverlay
 
 const editModalSave=document.getElementById('editModalSave');
 if(editModalSave) editModalSave.onclick=()=>{
+    if(!_requirePermission('edit','บันทึกสถานที่'))return;
     const name=_cleanDMSName(document.getElementById('modalName').value.trim());
     const list=document.getElementById('modalList').value.trim()||'ไม่มีรายการ';
     const city=document.getElementById('modalCity').value.trim();
@@ -3905,6 +3922,7 @@ if(editModalSave) editModalSave.onclick=()=>{
 // DELETE
 // ════════════════════════════════════════════
 window.doConfirmDelete=function(idx){
+    if(!_requirePermission('delete','ลบสถานที่'))return;
     const loc=locations[idx]; if(!loc)return;
     showConfirm('delete','ลบสถานที่?',`"${loc.name||loc.list}" จะถูกลบ (Undo ได้)`,()=>{
         addChangelogEntry('delete',loc);
@@ -5349,7 +5367,12 @@ function openInfoPanel(mode){
                     ['↪️','ทำซ้ำ','omRedoM',''],
                     ['📤','Export','omExportM',''],
                     ['📥','Import','omImportM',''],
+                    ['🛟','Restore','omRestoreM',''],
                     ['🔄','Sync','omSyncM',''],
+                ])}
+                ${_menuGrid('บัญชี',[
+                    ['👤',window.btAuth?.state?.user?'บัญชีของฉัน':'เข้าสู่ระบบ','omAccountM',''],
+                    ...(window.btAuth?.state?.profile?.is_admin?[['🛡️','จัดการผู้ใช้','omAdminM','']]:[]),
                 ])}
                 ${_menuGrid('ดูข้อมูล',[
                     ['📊','สถิติ','omStatsM',''],
@@ -5365,7 +5388,10 @@ function openInfoPanel(mode){
             </div>`;
         const b=(id,fn)=>{const el=document.getElementById(id);if(el)el.onclick=fn;};
         b('omExportM',  doExport);
-        b('omImportM',  ()=>{closeInfo();document.getElementById('fileImport').click();});
+        b('omImportM',  ()=>{closeInfo();protectedDataAction('import');});
+        b('omRestoreM', ()=>{closeInfo();protectedDataAction('restore');});
+        b('omAccountM', ()=>{closeInfo();window.btAuth?.open();});
+        b('omAdminM',   ()=>{closeInfo();window.btAuth?.openAdmin();});
         b('omStatsM',   ()=>openInfoPanel('stats'));
         b('omChangelogM',()=>openInfoPanel('changelog'));
         b('omMapDebugM',()=>{closeInfo();setMapDebugOverlay(!_mapDebugOverlayEnabled);});
@@ -5520,34 +5546,93 @@ function fallbackExport(jsonStr, filename) {
     });
 }
 
-const DATA_ACTION_CODE = '125355';
-function confirmDataAction(label, callback) {
-    const code = prompt(`กรอกรหัสยืนยันสำหรับ ${label}`);
-    if (code === null) return false;
-    if (code !== DATA_ACTION_CODE) {
-        showToast('รหัสยืนยันไม่ถูกต้อง', true);
-        return false;
+function protectedDataAction(action) {
+    if (action === 'export') {
+        return doExport();
     }
-    callback();
+    if (action === 'import') {
+        if(!_requirePermission('import',' Import ข้อมูล'))return false;
+        document.getElementById('fileImport').click();
+        return true;
+    }
+    if (action === 'importModal') {
+        return openImportModal();
+    }
+    if (action === 'restore') {
+        if(!_requirePermission('restore',' Restore ข้อมูล'))return false;
+        document.getElementById('restoreFileInput')?.click();
+        return true;
+    }
+    if (action === 'deleteAll') {
+        if(!_requirePermission('delete','ลบข้อมูลทั้งหมด'))return false;
+        return doDeleteAllLocations();
+    }
+}
+
+async function _restoreBackupRows(rows){
+    const batchSize=100;
+    let restored=0;
+    _setSyncStatus('syncing');
+    for(let start=0;start<rows.length;start+=batchSize){
+        const batch=rows.slice(start,start+batchSize).map(row=>({
+            id:row.id||undefined,
+            name:_cleanDMSName(row.name)||'',
+            lat:Number(row.lat),
+            lng:Number(row.lng),
+            list:row.list||'',
+            city:row.city||'',
+            note:row.note||'',
+            tags:Array.isArray(row.tags)?row.tags.join(','):(row.tags||''),
+            photo:row.photo||'',
+            added_by:row.added_by||_currentActor()
+        }));
+        const {error}=await _sb.rpc('restore_locations',{rows_json:batch});
+        if(error){
+            _setSyncStatus('error');
+            showToast(`Restore ไม่สำเร็จที่ชุด ${Math.floor(start/batchSize)+1}: ${error.message}`,true);
+            return false;
+        }
+        restored+=batch.length;
+    }
+    await doSync(false);
+    showToast(`Restore สำเร็จ ${restored} จุด`,false,true);
     return true;
 }
 
-function protectedDataAction(action) {
-    if (action === 'export') {
-        return confirmDataAction('Export', doExport);
+const restoreFileInput=document.getElementById('restoreFileInput');
+if(restoreFileInput)restoreFileInput.onchange=async event=>{
+    const file=event.target.files?.[0];
+    event.target.value='';
+    if(!file||!_requirePermission('restore',' Restore ข้อมูล'))return;
+    try{
+        const payload=JSON.parse(await file.text());
+        if(payload?.schema!=='bt-locations-supabase-backup'||!Array.isArray(payload.locations)){
+            throw new Error('ไฟล์นี้ไม่ใช่ Supabase Backup ของ BT Locations');
+        }
+        if(Number(payload.count)!==payload.locations.length){
+            throw new Error('จำนวนข้อมูลในไฟล์ไม่ตรงกับ metadata');
+        }
+        const invalid=payload.locations.find(row=>
+            !Number.isFinite(Number(row?.lat))||
+            !Number.isFinite(Number(row?.lng))||
+            Number(row.lat)<-90||Number(row.lat)>90||
+            Number(row.lng)<-180||Number(row.lng)>180
+        );
+        if(invalid)throw new Error('พบพิกัดที่ไม่ถูกต้องในไฟล์ Backup');
+        const createdAt=payload.createdAt?new Date(payload.createdAt).toLocaleString('th-TH'):'ไม่ระบุเวลา';
+        showConfirm(
+            'restore',
+            `Restore ${payload.locations.length} จุด?`,
+            `ไฟล์สำรองวันที่ ${createdAt}\nระบบจะคืนแถวที่หายหรือถูกลบ และอัปเดตแถวเดิมโดยไม่ลบข้อมูลอื่น`,
+            ()=>_restoreBackupRows(payload.locations)
+        );
+    }catch(error){
+        showToast(`เปิดไฟล์ Backup ไม่สำเร็จ: ${error.message}`,true);
     }
-    if (action === 'import') {
-        return confirmDataAction('Import', () => document.getElementById('fileImport').click());
-    }
-    if (action === 'importModal') {
-        return confirmDataAction('Import', openImportModal);
-    }
-    if (action === 'deleteAll') {
-        return confirmDataAction('ลบข้อมูลทั้งหมด', () => doDeleteAllLocations());
-    }
-}
+};
 
 function doDeleteAllLocations() {
+    if(!_requirePermission('delete','ลบข้อมูลทั้งหมด'))return;
     if (!locations.length) { showToast('ไม่มีข้อมูลให้ลบ'); return; }
     showConfirm('delete', `ลบทั้งหมด ${locations.length} จุด?`, 'การลบนี้จะบันทึกไว้ใน Undo เพื่อกู้คืนได้ทันที', async () => {
         pushUndo();
@@ -5562,12 +5647,15 @@ function doDeleteAllLocations() {
         showToast(`ลบทั้งหมด ${toDelete.length} จุดแล้ว กด Undo เพื่อกู้คืน`, true);
         if (_sbLoaded) {
             const withId = toDelete.filter(l => l.sb_id);
-            const withoutId = toDelete.filter(l => !l.sb_id);
-            for (const l of withId) await sbDelete(l);
-            if (withoutId.length) {
-                const coords = withoutId.map(l => `(lat.eq.${l.lat},lng.eq.${l.lng})`);
-                const {error} = await _sb.from('locations').delete().or(coords.join(','));
-                if (error) console.warn('sbDelete by coord failed:', error.message);
+            if(withId.length){
+                const {error}=await _sb.rpc('soft_delete_locations',{
+                    location_ids:withId.map(l=>l.sb_id)
+                });
+                if(error){
+                    console.warn('Bulk delete failed:',error.message);
+                    _setSyncStatus('error');
+                    showToast(`ลบ Cloud ไม่สำเร็จ: ${error.message}`,true);
+                }
             }
         }
     });
@@ -5775,6 +5863,7 @@ function _parseFileText(text, ext, fallbackListName){
 }
 
 document.getElementById('fileImport').onchange=async e=>{
+    if(!_requirePermission('import',' Import ข้อมูล')){e.target.value='';return;}
     const files=[...e.target.files]; e.target.value='';
     if(!files.length)return;
 
@@ -5813,20 +5902,25 @@ document.getElementById('fileImport').onchange=async e=>{
     const importReportText=reportText?`\nตรวจข้อมูล: ${reportText.replace(/^ · /,'')}`:'';
     const multiText=files.length>1?` (${files.length} ไฟล์)`:'';
     const doMerge=async()=>{
-        pushUndo();
         const existing=new Set(locations.map(exactCoordKey));
         const toAdd=[];
         allImp.forEach(loc=>{
             const key=exactCoordKey(loc);
-            if(!existing.has(key)){locations.push(loc);existing.add(key);toAdd.push(loc);}
+            if(!existing.has(key)){existing.add(key);toAdd.push(loc);}
         });
-        saveLocations();invalidateCache();update();
-        showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${allImp.length-toAdd.length} ซ้ำ)`,false,true);
-        if(_sbLoaded){for(const loc of toAdd){await sbInsert(loc);}}
+        if(!toAdd.length){showToast('ไม่มีจุดใหม่สำหรับ Merge');return;}
+        pushUndo();
+        const ok=await _importLocationsToCloud(toAdd,false);
+        if(ok)showToast(`Merge: เพิ่ม ${toAdd.length} จุดใหม่ (ข้าม ${allImp.length-toAdd.length} ซ้ำ)`,false,true);
     };
     closeImportModal();
     showConfirm('import',`Import ${allImp.length} จุด${multiText}?`,`${fileNames}${importReportText}\nเลือก Merge หรือ Replace`,
-        async()=>{pushUndo();locations=allImp;saveLocations();invalidateCache();update();showToast(`Replace: ${allImp.length} จุด`,false,true);if(_sbLoaded){for(const loc of allImp){await sbInsert(loc);}}},
+        async()=>{
+            if(!_requirePermission('delete',' Replace ข้อมูลเดิม'))return;
+            pushUndo();
+            const ok=await _importLocationsToCloud(allImp,true);
+            if(ok)showToast(`Replace: ${allImp.length} จุด`,false,true);
+        },
         doMerge
     );
 };
@@ -5862,20 +5956,26 @@ async function _reconcileSnapshotToSupabase(previous,target){
         loc.sb_id=current.sb_id||loc.sb_id;
         if(!_sameRemoteContent(current,loc)){
             loc.updatedAt=Date.now();
-            if(!await sbUpdate(loc))ok=false;
+            if(!await sbRestore(loc))ok=false;
         }
     }
 
     // Remove rows introduced by the action being undone.
-    for(let i=0;i<previous.length;i++){
-        if(!usedPrevious.has(i)&&previous[i].sb_id){
-            if(!await sbDelete(previous[i]))ok=false;
+    const removeIds=previous
+        .filter((loc,index)=>!usedPrevious.has(index)&&loc.sb_id)
+        .map(loc=>loc.sb_id);
+    if(removeIds.length){
+        const {error}=await _sb.rpc('restore_remove_locations',{location_ids:removeIds});
+        if(error){
+            console.warn('Restore remove failed:',error.message);
+            ok=false;
         }
     }
     return ok;
 }
 
 async function _applyHistorySnapshot(sourceStack,destinationStack,label){
+    if(!_requirePermission('restore',` ${label} ข้อมูล`))return;
     if(!sourceStack.length){showToast(`ไม่มี ${label}`);return;}
     const previous=JSON.parse(JSON.stringify(locations));
     const target=JSON.parse(sourceStack.pop());
@@ -5902,12 +6002,18 @@ async function doUndo(){return _applyHistorySnapshot(undoStack,redoStack,'Undo')
 async function doRedo(){return _applyHistorySnapshot(redoStack,undoStack,'Redo');}
 
 function doBulkDel(){
+    if(!_requirePermission('delete','ลบข้อมูล'))return;
     const f=getFiltered();
     if(!filterList&&!filterCity&&!document.getElementById('search').value&&!nearbyMode){showToast('กรุณา filter ก่อน',true);return;}
     if(!f.length){showToast('ไม่มีจุดในตัวกรอง',true);return;}
     showConfirm('delete',`ลบ ${f.length} จุด?`,'จุดที่อยู่ในตัวกรองปัจจุบันจะถูกลบทั้งหมด',()=>{
         pushUndo();const rm=new Set(f);const toDelSb=[...rm];locations=locations.filter(l=>!rm.has(l));_clearSearchMarkerIfDeleted(toDelSb);saveLocations();invalidateCache();update();showToast(`ลบ ${f.length} จุดแล้ว`);
-        if(_sbLoaded)toDelSb.forEach(l=>sbDelete(l));
+        if(_sbLoaded){
+            const ids=toDelSb.filter(l=>l.sb_id).map(l=>l.sb_id);
+            if(ids.length)_sb.rpc('soft_delete_locations',{location_ids:ids}).then(({error})=>{
+                if(error){console.warn('Bulk delete failed:',error.message);_setSyncStatus('error');}
+            });
+        }
     });
     closeInfo();
 }
@@ -6251,7 +6357,7 @@ async function doSync(silent=true){
         const pendingPush = [];
         let merged = null;
         const dirtyNow = _isDirty();
-        const effectiveDirty = dirtyAtStart || dirtyNow;
+        const effectiveDirty = _hasPermission('edit') && (dirtyAtStart || dirtyNow);
         const clearingAll = effectiveDirty && locations.length === 0;
         const forceMerge = !_sbLoaded && locations.length > 0 && remote.length === 0;
         // If dirty: always use local as source of truth, merge remote only for non-conflicting items

@@ -4546,6 +4546,7 @@
                     <div class="tb-sep"></div>
                     <div class="tb-icon-btn" id="btnImportData" title="นำเข้าข้อมูล">↓</div>
                     <div class="tb-icon-btn" id="btnUpload" title="Export">↑</div>
+                    <button class="auth-avatar" id="searchAvatar" type="button" title="เข้าสู่ระบบหรือจัดการบัญชี">B</button>
                 </div>
             </div>
 
@@ -4882,9 +4883,22 @@
                         <span><b>Import</b><small>นำเข้า JSON, CSV, KML, GPX, GeoJSON</small></span>
                         <span class="mob-menu-ico">IN</span>
                     </button>
+                    <button class="mob-menu-item" onclick="protectedDataAction('restore'); closeMobDrawer()">
+                        <span><b>Restore</b><small>กู้คืนจากไฟล์ Supabase Backup</small></span>
+                        <span class="mob-menu-ico">SAFE</span>
+                    </button>
                     <button class="mob-menu-item danger" onclick="protectedDataAction('deleteAll'); closeMobDrawer()">
-                        <span><b>ลบทั้งหมด</b><small>ต้องกรอกรหัสยืนยันก่อนลบ</small></span>
+                        <span><b>ลบทั้งหมด</b><small>ต้องมีสิทธิ์ลบข้อมูล</small></span>
                         <span class="mob-menu-ico">DEL</span>
+                    </button>
+                    <div class="mob-menu-section">บัญชี</div>
+                    <button class="mob-menu-item" onclick="window.btAuth?.open(); closeMobDrawer()">
+                        <span><b id="mobAccountTitle">เข้าสู่ระบบ</b><small id="mobAccountDetail">ลงชื่อเข้าใช้เพื่อจัดการข้อมูล</small></span>
+                        <span class="mob-menu-ico">USER</span>
+                    </button>
+                    <button class="mob-menu-item" id="mobAdminUsers" hidden onclick="window.btAuth?.openAdmin(); closeMobDrawer()">
+                        <span><b>จัดการผู้ใช้</b><small>กำหนดสิทธิ์แก้ไข ลบ Import และ Restore</small></span>
+                        <span class="mob-menu-ico">ADMIN</span>
                     </button>
                 </div>
             </div>
@@ -5216,6 +5230,100 @@
             </div>
         </div>
     </div>
+
+    <!-- Account / Sign-in Modal -->
+    <div class="modal-overlay" id="authModalOverlay" aria-hidden="true">
+        <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+            <div class="modal-header auth-modal-header">
+                <div>
+                    <div id="authModalTitle">บัญชี BT Locations</div>
+                    <small id="authModalSubtitle">เข้าสู่ระบบเพื่อจัดการข้อมูล</small>
+                </div>
+                <button class="auth-close" type="button" data-auth-close aria-label="ปิด">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="authGuestView">
+                    <div class="auth-tabs" role="tablist">
+                        <button class="auth-tab active" id="authSignInTab" type="button" role="tab">เข้าสู่ระบบ</button>
+                        <button class="auth-tab" id="authSignUpTab" type="button" role="tab">สมัครสมาชิก</button>
+                    </div>
+                    <form id="authForm" class="auth-form">
+                        <div class="frow" id="authDisplayNameRow" hidden>
+                            <label for="authDisplayName">ชื่อที่แสดง</label>
+                            <input id="authDisplayName" type="text" autocomplete="name" maxlength="80" placeholder="ชื่อของคุณ">
+                        </div>
+                        <div class="frow">
+                            <label for="authEmail">อีเมล</label>
+                            <input id="authEmail" type="email" autocomplete="email" required placeholder="name@example.com">
+                        </div>
+                        <div class="frow">
+                            <label for="authPassword">รหัสผ่าน</label>
+                            <input id="authPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="อย่างน้อย 8 ตัวอักษร">
+                        </div>
+                        <div class="auth-message" id="authMessage" role="status"></div>
+                        <button class="modal-btn modal-btn-save auth-submit" id="authSubmit" type="submit">เข้าสู่ระบบ</button>
+                        <button class="auth-link" id="authForgotPassword" type="button">ลืมรหัสผ่าน?</button>
+                    </form>
+                </div>
+                <div id="authAccountView" hidden>
+                    <div class="auth-account-card">
+                        <div class="auth-account-avatar" id="authAccountAvatar">B</div>
+                        <div>
+                            <strong id="authAccountName">ผู้ใช้งาน</strong>
+                            <small id="authAccountEmail"></small>
+                        </div>
+                        <span class="auth-role-badge" id="authRoleBadge">Viewer</span>
+                    </div>
+                    <div class="auth-permission-summary" id="authPermissionSummary"></div>
+                    <button class="modal-btn modal-btn-save auth-wide" id="authManageUsers" type="button" hidden>จัดการสิทธิ์ผู้ใช้</button>
+                    <button class="modal-btn modal-btn-cancel auth-wide" id="authSignOut" type="button">ออกจากระบบ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Recovery Modal -->
+    <div class="modal-overlay" id="passwordRecoveryOverlay" aria-hidden="true">
+        <div class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="passwordRecoveryTitle">
+            <div class="modal-header auth-modal-header">
+                <div>
+                    <div id="passwordRecoveryTitle">ตั้งรหัสผ่านใหม่</div>
+                    <small>กรอกรหัสผ่านใหม่สำหรับบัญชีนี้</small>
+                </div>
+                <button class="auth-close" type="button" data-recovery-close aria-label="ปิด">✕</button>
+            </div>
+            <form class="modal-body auth-form" id="passwordRecoveryForm">
+                <div class="frow">
+                    <label for="passwordRecoveryValue">รหัสผ่านใหม่</label>
+                    <input id="passwordRecoveryValue" type="password" autocomplete="new-password" minlength="8" required>
+                </div>
+                <div class="auth-message" id="passwordRecoveryMessage" role="status"></div>
+                <button class="modal-btn modal-btn-save auth-submit" type="submit">บันทึกรหัสผ่านใหม่</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Permission Modal -->
+    <div class="modal-overlay" id="adminUsersOverlay" aria-hidden="true">
+        <div class="modal auth-admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminUsersTitle">
+            <div class="modal-header auth-modal-header">
+                <div>
+                    <div id="adminUsersTitle">จัดการสิทธิ์ผู้ใช้</div>
+                    <small>สมาชิกใหม่จะเป็น Viewer จนกว่าผู้ดูแลจะอนุญาต</small>
+                </div>
+                <button class="auth-close" type="button" data-admin-close aria-label="ปิด">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-admin-help">สิทธิ์ถูกตรวจสอบที่ฐานข้อมูล ไม่ได้อาศัยการซ่อนปุ่มเพียงอย่างเดียว</div>
+                <div class="auth-message" id="adminUsersMessage" role="status"></div>
+                <div class="auth-user-list" id="adminUsersList">
+                    <div class="auth-loading">กำลังโหลดผู้ใช้…</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="restoreFileInput" accept=".json,application/json" hidden>
 
     <!-- List Filter Modal (app.js uses: listFilterModalOverlay, listChoiceList) -->
     <div class="modal-overlay" id="listFilterModalOverlay">
@@ -5702,9 +5810,16 @@
 
 
     <!-- ════════════════════════════════════════
-     SCRIPT LOADING
+    SCRIPT LOADING
 ════════════════════════════════════════ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        window.btSupabase = supabase.createClient(
+            'https://uemvtttfedpvofqhnwoo.supabase.co',
+            'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh'
+        );
+    </script>
+    <link rel="stylesheet" href="auth.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -5713,6 +5828,11 @@
             var v = Date.now();
             var app = document.createElement('script');
             app.src = 'app.js?v=' + v;
+            app.onload = function () {
+                var auth = document.createElement('script');
+                auth.src = 'auth.js?v=' + v;
+                document.head.appendChild(auth);
+            };
             document.head.appendChild(app);
         })();
 

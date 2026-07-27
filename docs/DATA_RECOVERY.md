@@ -5,8 +5,7 @@
 1. **Supabase** is the live source of truth.
 2. **GitHub Actions** exports the `locations` table every day at 03:17
    Asia/Bangkok. Each artifact is retained for 90 days.
-3. **Soft delete** retains deleted rows in Supabase after migration
-   `002_soft_delete_locations.sql` is applied.
+3. **Soft delete** retains deleted rows in Supabase.
 4. **Browser cache and Undo/Redo** provide fast local recovery. Undo/Redo also
    reconciles the restored snapshot back to Supabase.
 5. **Manual Export** downloads a portable JSON copy from the app.
@@ -15,14 +14,17 @@ The scheduled backup refuses to upload an artifact when fewer than 1,000 active
 locations are returned. This prevents an empty or severely truncated table from
 being accepted as a healthy backup.
 
-## Enable soft delete
+## Enable recovery and permissions
 
-Apply this file once in the Supabase SQL editor:
+Apply these files once in the Supabase SQL editor, in order:
 
 `supabase_migrations/002_soft_delete_locations.sql`
 
-Until the migration is applied, the app remains compatible but falls back to
-hard deletion and logs a warning in the browser console.
+`supabase_migrations/003_auth_permissions.sql`
+
+Migration 003 removes anonymous write access. Restore operations require a
+signed-in user with the **Restore** permission; deleting existing rows during a
+Replace import additionally requires **Delete**.
 
 ## Create and verify a backup locally
 
@@ -55,9 +57,19 @@ an existing active row.
 
 After reviewing the counts:
 
-```bash
+```powershell
+$env:SUPABASE_AUTH_EMAIL = "approved-user@example.com"
+$env:SUPABASE_AUTH_PASSWORD = "your-password"
 python restore_supabase.py path/to/supabase_locations.json --apply
 ```
+
+The account must have the Restore permission. As an alternative, provide a
+short-lived `SUPABASE_ACCESS_TOKEN`. Never save a password or access token in
+the repository.
+
+An approved user can also choose **Restore** in the app and select the
+`supabase_locations.json` backup. The app validates its schema, metadata count,
+and coordinates before asking for confirmation.
 
 Create another backup immediately after restoration and compare its count and
 checksum.

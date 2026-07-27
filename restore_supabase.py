@@ -12,7 +12,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 from backup_supabase import (
@@ -22,9 +21,6 @@ from backup_supabase import (
     fetch_all_rows,
     validate_rows,
 )
-
-
-SERVER_FIELDS = {"id", "created_at", "deleted_at", "deleted_by"}
 
 
 def coordinate_key(row: dict) -> tuple[str, str]:
@@ -73,12 +69,16 @@ def plan_restore(backup_rows: list[dict], live_rows: list[dict]) -> dict:
 
 
 def request_json(
-    method: str, url: str, anon_key: str, body: object | None = None
-) -> None:
+    method: str,
+    url: str,
+    anon_key: str,
+    body: object | None = None,
+    access_token: str | None = None,
+) -> object | None:
     data = None
     headers = {
         "apikey": anon_key,
-        "Authorization": f"Bearer {anon_key}",
+        "Authorization": f"Bearer {access_token or anon_key}",
         "Accept": "application/json",
         "Prefer": "return=minimal",
         "User-Agent": "bt-locations-restore/1.0",
@@ -87,27 +87,51 @@ def request_json(
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
     request = Request(url, data=data, headers=headers, method=method)
-    with urlopen(request, timeout=30):
-        pass
+    with urlopen(request, timeout=30) as response:
+        raw = response.read()
+        return json.loads(raw) if raw else None
 
 
-def writable_row(row: dict) -> dict:
-    return {key: value for key, value in row.items() if key not in SERVER_FIELDS}
+def restore_row(row: dict) -> dict:
+    return {
+        key: value
+        for key, value in row.items()
+        if key not in {"created_at", "deleted_at", "deleted_by"}
+    }
+
+
+def sign_in(base_url: str, anon_key: str, email: str, password: str) -> str:
+    result = request_json(
+        "POST",
+        f"{base_url.rstrip('/')}/auth/v1/token?grant_type=password",
+        anon_key,
+        {"email": email, "password": password},
+    )
+    if not isinstance(result, dict) or not result.get("access_token"):
+        raise ValueError("Supabase sign-in did not return an access token")
+    return str(result["access_token"])
 
 
 def apply_restore(
-    base_url: str, anon_key: str, restore_plan: dict, batch_size: int = 100
+    base_url: str,
+    anon_key: str,
+    access_token: str,
+    restore_plan: dict,
+    batch_size: int = 100,
 ) -> None:
-    endpoint = f"{base_url.rstrip('/')}/rest/v1/locations"
-    for deleted_row, backup_row in restore_plan["reactivate"]:
-        row_id = quote(str(deleted_row["id"]), safe="")
-        body = writable_row(backup_row)
-        body.update({"deleted_at": None, "deleted_by": None})
-        request_json("PATCH", f"{endpoint}?id=eq.{row_id}", anon_key, body)
-
-    inserts = [writable_row(row) for row in restore_plan["insert"]]
-    for start in range(0, len(inserts), batch_size):
-        request_json("POST", endpoint, anon_key, inserts[start : start + batch_size])
+    endpoint = f"{base_url.rstrip('/')}/rest/v1/rpc/restore_locations"
+    rows = [
+        restore_row(backup_row)
+        for _, backup_row in restore_plan["reactivate"]
+    ] + [restore_row(row) for row in restore_plan["insert"]]
+    for start in range(0, len(rows), batch_size):
+        request_json(
+            "POST",
+            endpoint,
+            anon_key,
+            {"rows_json": rows[start : start + batch_size]},
+            access_token=access_token,
+        )
 
 
 def main() -> int:
@@ -132,7 +156,17 @@ def main() -> int:
             f"{len(restore_plan['insert'])} to insert"
         )
         if args.apply:
-            apply_restore(base_url, anon_key, restore_plan)
+            access_token = os.environ.get("SUPABASE_ACCESS_TOKEN")
+            if not access_token:
+                email = os.environ.get("SUPABASE_AUTH_EMAIL")
+                password = os.environ.get("SUPABASE_AUTH_PASSWORD")
+                if not email or not password:
+                    raise ValueError(
+                        "--apply requires SUPABASE_ACCESS_TOKEN or both "
+                        "SUPABASE_AUTH_EMAIL and SUPABASE_AUTH_PASSWORD"
+                    )
+                access_token = sign_in(base_url, anon_key, email, password)
+            apply_restore(base_url, anon_key, access_token, restore_plan)
             print("Restore applied. Run the backup command again to verify.")
         else:
             print("Dry run only. Re-run with --apply after reviewing these counts.")
