@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.8';
+const APP_VERSION = 'v7.6.0';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -815,6 +815,11 @@ function normalizeLocation(l) {
         list: l.list || 'Uncategorized',
         city: l.city || '',
         note: l.note || '',
+        workflow_status: l.workflow_status || 'new',
+        assigned_to: l.assigned_to || '',
+        due_at: l.due_at || '',
+        verified_at: l.verified_at || '',
+        verified_by: l.verified_by || '',
         updatedAt: l.updatedAt || Date.now(),
         ...(l.tags && l.tags.length ? { tags: l.tags } : {}),
         ...(l.photo ? { photo: l.photo } : {}),
@@ -1042,9 +1047,106 @@ function _locRow(l){
 }
 // Supabase write-only helpers — do NOT touch local array or render.
 // Realtime subscription is the ONLY place that updates locations[] and calls update().
+const OUTBOX_KEY = 'bt_offline_outbox_v1';
+let _drainingOutbox = false;
+function _readOutbox(){
+    try{
+        const value=JSON.parse(localStorage.getItem(OUTBOX_KEY)||'[]');
+        return Array.isArray(value)?value:[];
+    }catch{return [];}
+}
+function _writeOutbox(items){
+    localStorage.setItem(OUTBOX_KEY,JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent('bt-outbox-changed',{detail:{count:items.length}}));
+}
+function _queueOutbox(operation,payload){
+    const items=_readOutbox();
+    const identity=payload.location?.sb_id||payload.locationId||'';
+    if(operation==='update'&&identity){
+        const existing=items.find(item=>item.operation==='update'&&(item.location?.sb_id||item.locationId)===identity);
+        if(existing){
+            existing.location=JSON.parse(JSON.stringify(payload.location));
+            existing.createdAt=Date.now();
+            _writeOutbox(items);
+            return existing;
+        }
+    }
+    const item={
+        id:crypto.randomUUID?.()||`${Date.now()}-${Math.random()}`,
+        operation,
+        ...JSON.parse(JSON.stringify(payload)),
+        createdAt:Date.now(),
+        attempts:0
+    };
+    items.push(item);
+    _writeOutbox(items);
+    _markDirty();
+    return item;
+}
+function _isNetworkWriteError(error){
+    const message=String(error?.message||error||'').toLowerCase();
+    return !navigator.onLine||message.includes('failed to fetch')||message.includes('network')||message.includes('load failed');
+}
+async function _drainOutbox(){
+    if(_drainingOutbox||!navigator.onLine||!_hasPermission('edit'))return false;
+    const items=_readOutbox();
+    if(!items.length)return true;
+    _drainingOutbox=true;
+    _setSyncStatus('syncing');
+    const remaining=[];
+    try{
+        for(let index=0;index<items.length;index++){
+            const item=items[index];
+            item.attempts=(item.attempts||0)+1;
+            let error=null;
+            if(item.operation==='insert'){
+                const result=await _sb.from('locations').insert(_locRow(item.location)).select('id').single();
+                error=result.error;
+                if(!error&&result.data?.id){
+                    const local=locations.find(loc=>!loc.sb_id&&_locKey(loc)===_locKey(item.location));
+                    if(local)local.sb_id=result.data.id;
+                }
+            }else if(item.operation==='update'){
+                if(!item.location?.sb_id){
+                    item.operation='insert';
+                    remaining.push(item);
+                    continue;
+                }
+                ({error}=await _sb.from('locations').update(_locRow(item.location)).eq('id',item.location.sb_id));
+            }else if(item.operation==='delete'){
+                ({error}=await _sb.rpc('soft_delete_locations',{location_ids:[item.locationId]}));
+            }
+            if(error){
+                item.lastError=error.message||String(error);
+                remaining.push(item,...items.slice(index+1));
+                break;
+            }
+        }
+        _writeOutbox(remaining);
+        if(!remaining.length){
+            _clearDirty();
+            _setSyncStatus('ok');
+            _writeCache();
+            return true;
+        }
+        _setSyncStatus('error');
+        return false;
+    }finally{
+        _drainingOutbox=false;
+    }
+}
+window.btOutbox={
+    list:()=>_readOutbox().map(item=>({...item})),
+    drain:_drainOutbox
+};
+
 async function sbInsert(loc){
     const {data,error}=await _sb.from('locations').insert(_locRow(loc)).select('id').single();
-    if(error){console.warn('sbInsert failed:',error.message);_setSyncStatus('error');return false;}
+    if(error){
+        console.warn('sbInsert failed:',error.message);
+        if(_isNetworkWriteError(error))_queueOutbox('insert',{location:loc});
+        _setSyncStatus('error');return false;
+    }
     if(data && data.id)loc.sb_id=data.id;
     _writeCache();
     return true;
@@ -1053,7 +1155,11 @@ async function sbInsert(loc){
 async function sbUpdate(loc){
     if(!loc.sb_id)return await sbInsert(loc);
     const {error}=await _sb.from('locations').update(_locRow(loc)).eq('id',loc.sb_id);
-    if(error){console.warn('sbUpdate failed:',error.message);_setSyncStatus('error');return false;}
+    if(error){
+        console.warn('sbUpdate failed:',error.message);
+        if(_isNetworkWriteError(error))_queueOutbox('update',{location:loc});
+        _setSyncStatus('error');return false;
+    }
     _writeCache();
     return true;
     // Realtime UPDATE event will update locations[] and render
@@ -1075,6 +1181,7 @@ async function sbDelete(loc){
     const {error}=await _sb.rpc('soft_delete_locations',{location_ids:[loc.sb_id]});
     if(error){
         console.warn('sbDelete failed:',error.message);
+        if(_isNetworkWriteError(error))_queueOutbox('delete',{locationId:loc.sb_id,location:loc});
         _setSyncStatus('error');
         return false;
     }
@@ -1772,6 +1879,7 @@ function update(options = {}) {
     _lastUpdateKind = 'full';
     _lastFullUpdateMs = Math.round((performance.now() - updateStart) * 10) / 10;
     _updateMapDebugOverlay();
+    window.dispatchEvent(new CustomEvent('bt-locations-updated',{detail:{count:locations.length}}));
     return filtered;
 }
 
@@ -2485,16 +2593,6 @@ function _getPapagoUrl(coords, loc, userAgent = navigator.userAgent || '') {
     return playStore;
 }
 
-function _getPapagoLandingUrl(schema) {
-    const params = new URLSearchParams({
-        schema,
-        share_from: 'bt-locations',
-        share_from_type: 'Web',
-        share_type: 'url'
-    });
-    return `https://papago-m.aimap.com/download?${params.toString()}`;
-}
-
 function _openPapagoApp(schema) {
     const frameId = 'papagoDeepLinkFrame';
     document.getElementById(frameId)?.remove();
@@ -2521,7 +2619,10 @@ function _openPapagoApp(schema) {
     const fallbackTimer = window.setTimeout(() => {
         cleanup();
         if(!appOpened && document.visibilityState === 'visible') {
-            window.location.assign(_getPapagoLandingUrl(schema));
+            const params = new URL(schema).searchParams;
+            const coords = `${params.get('lat') || ''},${params.get('lon') || ''}`;
+            if(navigator.clipboard?.writeText) navigator.clipboard.writeText(coords).catch(()=>{});
+            showToast('เปิด papagoMaps ไม่สำเร็จ คัดลอกพิกัดไว้แล้ว กรุณาวางในแอป', true);
         }
     }, 1800);
 
@@ -4534,6 +4635,52 @@ window.doDirectionsTo = function(idx) {
 // routeLine & routeMode hoisted to top of file
 let _routeStops=[]; // ordered stops [{lat,lng,name,list,city,...}]
 let _routeDist=0, _routeDur=0, _routeUseOSRM=false;
+const ROUTE_RUN_KEY='bt_route_run_v1';
+let _routeRun={active:false,completed:{},skipped:{},current:0};
+function _routeStopKey(stop){return stop.sb_id||`${Number(stop.lat).toFixed(6)},${Number(stop.lng).toFixed(6)}`;}
+function _saveRouteRun(){
+    localStorage.setItem(ROUTE_RUN_KEY,JSON.stringify({
+        ..._routeRun,
+        stops:_routeStops.map(stop=>({sb_id:stop.sb_id||'',lat:stop.lat,lng:stop.lng,name:stop.name||'',list:stop.list||'',city:stop.city||''}))
+    }));
+}
+function _routeRunStart(){
+    if(!_routeStops.length)return;
+    _routeRun={active:true,completed:{},skipped:{},current:0};
+    _saveRouteRun();
+    _renderRoutePanel();
+}
+function _routeRunMark(idx,result){
+    const stop=_routeStops[idx];
+    if(!stop)return;
+    const key=_routeStopKey(stop);
+    delete _routeRun.completed[key];
+    delete _routeRun.skipped[key];
+    if(result==='completed')_routeRun.completed[key]=Date.now();
+    if(result==='skipped')_routeRun.skipped[key]=Date.now();
+    const next=_routeStops.findIndex((candidate,index)=>index>idx&&!_routeRun.completed[_routeStopKey(candidate)]&&!_routeRun.skipped[_routeStopKey(candidate)]);
+    _routeRun.current=next>=0?next:idx;
+    _saveRouteRun();
+    _renderRoutePanel();
+}
+function _routeRunFinish(){
+    _routeRun={active:false,completed:{},skipped:{},current:0};
+    localStorage.removeItem(ROUTE_RUN_KEY);
+    _renderRoutePanel();
+    showToast('จบเส้นทางหน้างานแล้ว',false,true);
+}
+async function _resumeRouteRun(){
+    try{
+        const saved=JSON.parse(localStorage.getItem(ROUTE_RUN_KEY)||'null');
+        if(!saved?.active||!Array.isArray(saved.stops)||!saved.stops.length)return false;
+        _routeStops=saved.stops.map(normalizeLocation);
+        _routeRun={active:true,completed:saved.completed||{},skipped:saved.skipped||{},current:Number(saved.current)||0};
+        routeMode=true;
+        await _routeDraw();
+        showToast('เปิดเส้นทางหน้างานที่ค้างไว้แล้ว',false,true);
+        return true;
+    }catch{return false;}
+}
 
 function clearRoute(){
     if(routeLine){map.removeLayer(routeLine);routeLine=null;}
@@ -4741,6 +4888,37 @@ function _renderRoutePanel(){
     html+=`</div>`;
     body.innerHTML=html;
 
+    const toolbar=body.querySelector('.rp-toolbar');
+    if(toolbar){
+        const runButton=document.createElement('button');
+        runButton.className='rp-btn';
+        runButton.dataset.rp=_routeRun.active?'finish':'run';
+        runButton.textContent=_routeRun.active?'จบงาน':'เริ่มงาน';
+        toolbar.insertBefore(runButton,toolbar.querySelector('[data-rp="navigate"]'));
+    }
+    if(_routeRun.active){
+        body.querySelectorAll('.rp-stop').forEach((row,index)=>{
+            const stop=_routeStops[index];
+            const key=_routeStopKey(stop);
+            row.dataset.runState=_routeRun.completed[key]?'completed':_routeRun.skipped[key]?'skipped':_routeRun.current===index?'current':'';
+            const remove=row.querySelector('[data-rp="remove"]');
+            const complete=document.createElement('button');
+            complete.className='rp-stop-btn';
+            complete.dataset.rp='complete';
+            complete.dataset.idx=String(index);
+            complete.title='เสร็จแล้ว';
+            complete.textContent='✓';
+            const skip=document.createElement('button');
+            skip.className='rp-stop-btn';
+            skip.dataset.rp='skip';
+            skip.dataset.idx=String(index);
+            skip.title='ข้ามจุดนี้';
+            skip.textContent='SKIP';
+            row.insertBefore(complete,remove);
+            row.insertBefore(skip,remove);
+        });
+    }
+
     // Bind all buttons via event delegation
     body.addEventListener('click',_routePanelClick);
 }
@@ -4754,6 +4932,10 @@ function _routePanelClick(e){
         case 'optimize':_routeOptimize();break;
         case 'avoid':_showAvoidSettings();break;
         case 'add':_routeAddStop();break;
+        case 'run':_routeRunStart();break;
+        case 'finish':_routeRunFinish();break;
+        case 'complete':_routeRunMark(idx,'completed');break;
+        case 'skip':_routeRunMark(idx,'skipped');break;
         case 'navigate':_routeNavigate();break;
         case 'up':_routeMoveStop(idx,-1);break;
         case 'down':_routeMoveStop(idx,1);break;
@@ -4830,6 +5012,11 @@ function _routeNavigate(){
 
 async function doRoute(){
     try {
+        const savedRun=JSON.parse(localStorage.getItem(ROUTE_RUN_KEY)||'null');
+        if(savedRun?.active&&Array.isArray(savedRun.stops)&&savedRun.stops.length&&confirm('มีเส้นทางหน้างานที่ยังไม่จบ ต้องการทำต่อหรือไม่?')){
+            await _resumeRouteRun();
+            return;
+        }
         const filtered=getFiltered();
         if(filtered.length<2){showToast('ต้องมีอย่างน้อย 2 จุด',true);return;}
         if(filtered.length>500){showToast('มากเกินไป (สูงสุด 500 จุด)',true);return;}
@@ -6520,6 +6707,11 @@ async function doSync(silent=true){
             list:r.list||'', city:r.city||'', note:r.note||'',
             tags:r.tags?r.tags.split(',').filter(Boolean):[],
             photo:r.photo||'',
+            workflow_status:r.workflow_status||'new',
+            assigned_to:r.assigned_to||'',
+            due_at:r.due_at||'',
+            verified_at:r.verified_at||'',
+            verified_by:r.verified_by||'',
             updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now(),
         }));
         
@@ -6579,6 +6771,7 @@ async function doSync(silent=true){
             locations = remote;
         }
 
+        let pushFailed=false;
         for(const item of pendingPush){
             let ok;
             if(item.loc){
@@ -6588,13 +6781,16 @@ async function doSync(silent=true){
             } else {
                 ok = await sbUpdate(item);
             }
-            if(!ok) console.warn('[SYNC] push failed for', item.loc?.name || item.name);
+            if(!ok){
+                pushFailed=true;
+                console.warn('[SYNC] push failed for', item.loc?.name || item.name);
+            }
         }
 
-        _clearDirty();
+        if(!pushFailed&&!_readOutbox().length)_clearDirty();
         localStorage.setItem(STORAGE_KEY,JSON.stringify(locations)); // bypass saveLocations
         invalidateCache();update();
-        _setSyncStatus('ok');_lastSyncTime=Date.now();
+        _setSyncStatus(pushFailed?'error':'ok');_lastSyncTime=Date.now();
         if(!silent)showToast(`✅ โหลด ${locations.length} จุดจาก Supabase`,false,true);
     }catch(err){
         _setSyncStatus('error');
@@ -6620,7 +6816,7 @@ function startRealtimeSync(){
                 return;
             }
             if(!existsById&&!existsByCoord){
-                const loc=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
+                const loc=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:r.photo||'',workflow_status:r.workflow_status||'new',assigned_to:r.assigned_to||'',due_at:r.due_at||'',verified_at:r.verified_at||'',verified_by:r.verified_by||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
                 locations.push(loc);
                 _writeCache();invalidateCache();update();
                 showToast(`📍 จุดใหม่: "${r.name||'ไม่มีชื่อ'}"`);
@@ -6638,7 +6834,7 @@ function startRealtimeSync(){
             }
             if(idx>=0){
                 const photo=locations[idx].photo;
-                locations[idx]=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:photo||r.photo||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
+                locations[idx]=normalizeLocation({sb_id:r.id,name:r.name,lat:r.lat,lng:r.lng,list:r.list,city:r.city,note:r.note||'',tags:r.tags?r.tags.split(',').filter(Boolean):[],photo:photo||r.photo||'',workflow_status:r.workflow_status||'new',assigned_to:r.assigned_to||'',due_at:r.due_at||'',verified_at:r.verified_at||'',verified_by:r.verified_by||'',updatedAt:r.updated_at?new Date(r.updated_at).getTime():Date.now()});
                 _writeCache();invalidateCache();update();
             }
         })

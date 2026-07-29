@@ -27,7 +27,6 @@ class MapAppLauncherTests(unittest.TestCase):
             "https://play.google.com/store/apps/details?id=com.aveiro.papago",
             APP,
         )
-        self.assertIn("https://papago-m.aimap.com/download?", APP)
         self.assertIn("compapago://poi/detail?", APP)
         self.assertIn("schemaParams", APP)
         self.assertIn("<strong>papagoMaps</strong><small>Android</small>", APP)
@@ -45,7 +44,6 @@ class MapAppLauncherTests(unittest.TestCase):
         self.assertIn("lat,", APP)
         self.assertIn("lon: lng", APP)
         self.assertIn("poiid: ''", APP)
-        self.assertIn("share_from: 'bt-locations'", APP)
         self.assertIn("papago: _getPapagoUrl(coords, loc)", APP)
 
     def test_papago_schema_is_called_during_the_original_user_gesture(self):
@@ -53,8 +51,15 @@ class MapAppLauncherTests(unittest.TestCase):
         self.assertIn("document.createElement('iframe')", APP)
         self.assertIn("frame.src = schema", APP)
         self.assertIn("document.visibilityState === 'hidden'", APP)
-        self.assertIn("window.location.assign(_getPapagoLandingUrl(schema))", APP)
+        self.assertIn("navigator.clipboard", APP)
         self.assertIn("if(app === 'papago' && url.startsWith('compapago://'))", APP)
+
+    def test_papago_failure_does_not_replace_the_app_with_a_black_page(self):
+        start = APP.index("function _openPapagoApp")
+        end = APP.index("function _getMapAppUrl", start)
+        launcher = APP[start:end]
+        self.assertNotIn("window.location.assign", launcher)
+        self.assertIn("navigator.clipboard", launcher)
 
     def test_launcher_has_compact_popover_styles(self):
         self.assertIn(".map-app-launcher", THEME)

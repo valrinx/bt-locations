@@ -22,6 +22,16 @@ Apply these files once in the Supabase SQL editor, in order:
 
 `supabase_migrations/003_auth_permissions.sql`
 
+For per-location revision history, workflow fields, duplicate merge, bulk update,
+and one-click rollback, also apply:
+
+`supabase_migrations/004_field_operations.sql`
+
+This migration is additive and keeps existing rows valid. Every later insert,
+update, soft delete, restore, merge, and rollback is recorded in
+`location_revisions`. Users with Restore permission can roll back one location
+without replacing the rest of the database.
+
 Migration 003 removes anonymous write access. Restore operations require a
 signed-in user with the **Restore** permission; deleting existing rows during a
 Replace import additionally requires **Delete**.

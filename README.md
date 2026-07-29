@@ -64,6 +64,16 @@
 - Soft delete + cloud-aware Undo/Redo ([คู่มือกู้ข้อมูล](docs/DATA_RECOVERY.md))
 - Permalink / แชร์จุด — URL `#lat,lng,zoom`
 
+### 🧭 Field Operations (v7.6.0)
+- Data Quality Inbox — รวมจุดไม่มีชื่อ ชื่อเป็นพิกัด และกลุ่มพิกัดซ้ำ
+- Merge จุดซ้ำแบบ soft delete โดยต้องมีสิทธิ์แก้ไขและลบ
+- สถานะงาน: ใหม่ / มอบหมายแล้ว / กำลังดำเนินการ / ตรวจสอบแล้ว / หาไม่พบ / เสร็จสิ้น
+- มอบหมายผู้รับผิดชอบ และแก้ไข List / เมือง / สถานะหลายจุดพร้อมกัน (สูงสุด 500 จุด)
+- Server-side revision history และ rollback รายจุดด้วยสิทธิ์ Restore
+- Offline write outbox เก็บรายการแก้ไขในอุปกรณ์และส่งใหม่เมื่อกลับมาออนไลน์
+- Route Run Mode — ทำเครื่องหมายเสร็จ/ข้าม และกลับมาทำเส้นทางที่ค้างไว้
+- papagoMaps fallback คัดลอกพิกัดโดยไม่พาออกจากหน้าเว็บเมื่อเปิดแอปไม่สำเร็จ
+
 ### 📱 Mobile + Performance
 - PWA / Offline support — Service Worker + manifest + cache tiles
 - Mobile UX: long-press เพิ่มจุด, swipe-down ปิด place card, vibration feedback
@@ -108,6 +118,15 @@ python -m http.server 8080
 สิทธิ์ถูกตรวจทั้งใน UI และ Supabase RLS/RPC จึงไม่สามารถข้ามข้อจำกัดด้วยการ
 เรียก API โดยตรงได้ ดู migration ที่
 `supabase_migrations/003_auth_permissions.sql`
+
+ฟีเจอร์ Field Operations ต้องรัน migration ต่อไปนี้ใน Supabase SQL Editor หลัง
+`003_auth_permissions.sql`:
+
+`supabase_migrations/004_field_operations.sql`
+
+หน้าเว็บ v7.6.0 ยังคงรองรับ schema เดิมสำหรับ CRUD ปกติ หากยังไม่ได้รัน migration
+เมนูคุณภาพข้อมูลยังเปิดดูได้ แต่ Workflow, Bulk Update, Merge และ Server History
+จะยังไม่เขียนข้อมูลจนกว่าจะติดตั้ง migration สำเร็จ
 
 ---
 

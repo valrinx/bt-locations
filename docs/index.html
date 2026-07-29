@@ -5823,7 +5823,8 @@
             'sb_publishable_2MH9_WZUfdAiBqtDwSFuOg_QeiWkPyh'
         );
     </script>
-    <link rel="stylesheet" href="auth.css?v=7.5.8">
+    <link rel="stylesheet" href="auth.css?v=7.6.0">
+    <link rel="stylesheet" href="field-ops.css?v=7.6.0">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -5835,6 +5836,11 @@
             app.onload = function () {
                 var auth = document.createElement('script');
                 auth.src = 'auth.js?v=' + v;
+                auth.onload = function () {
+                    var fieldOps = document.createElement('script');
+                    fieldOps.src = 'field-ops.js?v=' + v;
+                    document.head.appendChild(fieldOps);
+                };
                 document.head.appendChild(auth);
             };
             document.head.appendChild(app);
@@ -6902,8 +6908,8 @@
 }
         }
     </style>
-    <link rel="stylesheet" href="redesign.css?v=7.5.8">
-    <link rel="stylesheet" href="bugatti-theme.css?v=7.5.8">
+    <link rel="stylesheet" href="redesign.css?v=7.6.0">
+    <link rel="stylesheet" href="bugatti-theme.css?v=7.6.0">
 
 </body>
 
