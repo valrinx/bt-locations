@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.5.7';
+const APP_VERSION = 'v7.5.8';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -2474,35 +2474,59 @@ function _getPapagoUrl(coords, loc, userAgent = navigator.userAgent || '') {
         const poiName = [loc?.name, loc?.list, loc?.city]
             .map(value => String(value || '').trim())
             .find(Boolean) || coords;
-        const address = [loc?.city, loc?.list]
-            .map(value => String(value || '').trim())
-            .filter(Boolean)
-            .filter((value, index, values) => values.indexOf(value) === index)
-            .join(', ');
         const schemaParams = new URLSearchParams({
             poiname: poiName,
             lat,
             lon: lng,
             poiid: ''
         });
-        const poiInfo = JSON.stringify({
-            name: poiName,
-            address,
-            lat: Number(lat),
-            lon: Number(lng),
-            poiid: ''
-        });
-        const landingParams = new URLSearchParams({
-            _ul: '1',
-            schema: `compapago://poi/detail?${schemaParams.toString()}`,
-            poiInfo,
-            share_from: 'bt-locations',
-            share_from_type: 'Web',
-            share_type: 'url'
-        });
-        return `https://papago-m.aimap.com/download?${landingParams.toString()}`;
+        return `compapago://poi/detail?${schemaParams.toString()}`;
     }
     return playStore;
+}
+
+function _getPapagoLandingUrl(schema) {
+    const params = new URLSearchParams({
+        schema,
+        share_from: 'bt-locations',
+        share_from_type: 'Web',
+        share_type: 'url'
+    });
+    return `https://papago-m.aimap.com/download?${params.toString()}`;
+}
+
+function _openPapagoApp(schema) {
+    const frameId = 'papagoDeepLinkFrame';
+    document.getElementById(frameId)?.remove();
+    const frame = document.createElement('iframe');
+    frame.id = frameId;
+    frame.hidden = true;
+    frame.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(frame);
+
+    let appOpened = false;
+    const cleanup = () => {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        frame.remove();
+    };
+    const onVisibilityChange = () => {
+        if(document.visibilityState === 'hidden') {
+            appOpened = true;
+            window.clearTimeout(fallbackTimer);
+            cleanup();
+        }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    const fallbackTimer = window.setTimeout(() => {
+        cleanup();
+        if(!appOpened && document.visibilityState === 'visible') {
+            window.location.assign(_getPapagoLandingUrl(schema));
+        }
+    }, 1800);
+
+    // Must run synchronously inside the user's click for Android Chrome.
+    frame.src = schema;
 }
 
 function _getMapAppUrl(app, loc) {
@@ -2527,6 +2551,10 @@ window.openMapApp = function(app, idx) {
         return;
     }
     closeMapAppPicker(true);
+    if(app === 'papago' && url.startsWith('compapago://')) {
+        _openPapagoApp(url);
+        return;
+    }
     window.open(url, '_blank', 'noopener,noreferrer');
 };
 
