@@ -57,7 +57,7 @@ class FieldOperationsMigrationTests(unittest.TestCase):
 
 class FieldOperationsFrontendTests(unittest.TestCase):
     def test_new_assets_are_loaded_and_network_first(self):
-        self.assertIn('href="field-ops.css?v=7.6.0"', INDEX)
+        self.assertIn('href="field-ops.css?v=7.6.1"', INDEX)
         self.assertIn("fieldOps.src = 'field-ops.js?v=' + v", INDEX)
         self.assertIn("'field-ops.js'", SW)
         self.assertIn("'field-ops.css'", SW)
@@ -90,6 +90,18 @@ class FieldOperationsFrontendTests(unittest.TestCase):
         papago = APP[papago_start:papago_end]
         self.assertIn("navigator.clipboard", papago)
         self.assertNotIn("window.location.assign", papago)
+
+    def test_quality_inbox_can_search_filter_and_reveal_more(self):
+        self.assertIn('id="fieldOpsQualitySearch"', OPS)
+        self.assertIn('id="fieldOpsQualityFilter"', OPS)
+        self.assertIn("matchesLocation(item.loc, query)", OPS)
+        self.assertIn("data-quality-more", OPS)
+
+    def test_location_rows_can_focus_the_map(self):
+        self.assertIn("data-view-index", OPS)
+        self.assertIn("window.btMapFocusLocation?.(index)", OPS)
+        self.assertIn("window.btMapFocusLocation = function", APP)
+        self.assertIn("showLocationDetails(loc, index)", APP)
 
 
 if __name__ == "__main__":

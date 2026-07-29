@@ -14,6 +14,9 @@
         selected: new Set(),
         profiles: [],
         query: '',
+        qualityQuery: '',
+        qualityFilter: 'all',
+        qualityLimit: 100,
         historyLocationId: ''
     };
     const $ = (selector, root = document) => root.querySelector(selector);
@@ -25,6 +28,19 @@
     const locationId = loc => loc?.sb_id || '';
     const displayName = loc => String(loc?.name || '').trim() || 'ไม่มีชื่อ';
     const coords = loc => `${Number(loc.lat).toFixed(6)}, ${Number(loc.lng).toFixed(6)}`;
+    const locationIndex = loc => locations().indexOf(loc);
+    const matchesLocation = (loc, query) => {
+        const needle = String(query || '').trim().toLocaleLowerCase('th');
+        if (!needle) return true;
+        return [
+            loc?.name,
+            loc?.list,
+            loc?.city,
+            coords(loc),
+            `${loc?.lat},${loc?.lng}`,
+            `${loc?.lat}, ${loc?.lng}`
+        ].some(value => String(value || '').toLocaleLowerCase('th').includes(needle));
+    };
 
     function qualityReport() {
         const rows = locations();
@@ -160,31 +176,83 @@
 
     function renderQuality(body) {
         const report = qualityReport();
-        const missing = report.missingNames.slice(0, 100);
-        const duplicateRows = report.duplicateGroups.slice(0, 100);
+        const filter = state.qualityFilter;
+        const query = state.qualityQuery;
+        const showMissing = filter === 'all' || filter === 'missing';
+        const showCoordinates = filter === 'all' || filter === 'coordinate';
+        const showDuplicates = filter === 'all' || filter === 'duplicate';
+        const filteredMissing = showMissing
+            ? report.missingNames.filter(item => matchesLocation(item.loc, query))
+            : [];
+        const filteredCoordinates = showCoordinates
+            ? report.coordinateNames.filter(item => matchesLocation(item.loc, query))
+            : [];
+        const filteredDuplicates = showDuplicates
+            ? report.duplicateGroups.filter(group => group.some(item => matchesLocation(item.loc, query)))
+            : [];
+        const missing = filteredMissing.slice(0, state.qualityLimit);
+        const coordinateRows = filteredCoordinates.slice(0, state.qualityLimit);
+        const duplicateRows = filteredDuplicates.slice(0, state.qualityLimit);
+        const filteredCount = filteredMissing.length + filteredCoordinates.length + filteredDuplicates.length;
+        const hasMore = filteredMissing.length > missing.length ||
+            filteredCoordinates.length > coordinateRows.length ||
+            filteredDuplicates.length > duplicateRows.length;
+        const viewButton = index =>
+            `<button class="field-ops-btn map" data-view-index="${index}" aria-label="ดูตำแหน่งบนแผนที่">ดูตำแหน่ง</button>`;
+        const editButton = index =>
+            `<button class="field-ops-btn primary" data-edit-index="${index}" ${can('edit') ? '' : 'disabled'}>เพิ่มชื่อ</button>`;
         body.innerHTML = `
+            <div class="field-ops-tools" role="search">
+                <label class="field-ops-field">
+                    <span>ค้นหารายการ</span>
+                    <input id="fieldOpsQualitySearch" type="search" inputmode="search"
+                        value="${escapeHtml(state.qualityQuery)}"
+                        placeholder="ชื่อ, รายการ, เมือง หรือ 13.81, 100.54"
+                        autocomplete="off">
+                </label>
+                <label class="field-ops-field">
+                    <span>ประเภทปัญหา</span>
+                    <select id="fieldOpsQualityFilter">
+                        <option value="all" ${filter === 'all' ? 'selected' : ''}>ทั้งหมด</option>
+                        <option value="missing" ${filter === 'missing' ? 'selected' : ''}>ไม่มีชื่อ</option>
+                        <option value="coordinate" ${filter === 'coordinate' ? 'selected' : ''}>ชื่อเป็นพิกัด</option>
+                        <option value="duplicate" ${filter === 'duplicate' ? 'selected' : ''}>พิกัดซ้ำ</option>
+                    </select>
+                </label>
+            </div>
             <div class="field-ops-summary">
-                <strong>รายการที่ควรตรวจ ${report.count.toLocaleString()} รายการ</strong>
-                <span>แสดงสูงสุดประเภทละ 100</span>
+                <strong aria-live="polite">พบ ${filteredCount.toLocaleString()} จาก ${report.count.toLocaleString()} รายการ</strong>
+                <span>เลื่อนลงเพื่อดูรายการทั้งหมด</span>
             </div>
             ${!can('edit') ? '<div class="field-ops-notice">บัญชีนี้ดูรายการได้ แต่ต้องมีสิทธิ์แก้ไขจึงจะเปลี่ยนข้อมูลได้</div>' : ''}
-            <div class="field-ops-summary"><strong>ไม่มีชื่อ ${report.missingNames.length.toLocaleString()}</strong></div>
+            ${showMissing ? `<div class="field-ops-summary"><strong>ไม่มีชื่อ ${filteredMissing.length.toLocaleString()}</strong></div>
             <div class="field-ops-list">
                 ${missing.map(({ loc, index }) => rowHtml(
                     displayName(loc),
                     `${escapeHtml(loc.list)} · ${escapeHtml(loc.city)} · ${coords(loc)}`,
-                    `<button class="field-ops-btn primary" data-edit-index="${index}" ${can('edit') ? '' : 'disabled'}>เพิ่มชื่อ</button>`
+                    `${viewButton(index)}${editButton(index)}`
                 )).join('') || emptyHtml('ไม่พบจุดที่ไม่มีชื่อ')}
-            </div>
-            <div class="field-ops-summary" style="margin-top:20px"><strong>พิกัดซ้ำ ${report.duplicateGroups.length.toLocaleString()} กลุ่ม</strong></div>
+            </div>` : ''}
+            ${showCoordinates ? `<div class="field-ops-summary field-ops-section-head"><strong>ชื่อเป็นพิกัด ${filteredCoordinates.length.toLocaleString()}</strong></div>
+            <div class="field-ops-list">
+                ${coordinateRows.map(({ loc, index }) => rowHtml(
+                    displayName(loc),
+                    `${escapeHtml(loc.list)} · ${escapeHtml(loc.city)} · ${coords(loc)}`,
+                    `${viewButton(index)}${editButton(index)}`
+                )).join('') || emptyHtml('ไม่พบจุดที่ใช้พิกัดเป็นชื่อ')}
+            </div>` : ''}
+            ${showDuplicates ? `<div class="field-ops-summary field-ops-section-head"><strong>พิกัดซ้ำ ${filteredDuplicates.length.toLocaleString()} กลุ่ม</strong></div>
             <div class="field-ops-list">
                 ${duplicateRows.map((group, groupIndex) => rowHtml(
                     `${group.length} จุดที่พิกัดเดียวกัน`,
                     `${coords(group[0].loc)} · ${group.map(item => displayName(item.loc)).join(' / ')}`,
-                    `<button class="field-ops-btn danger" data-merge-group="${groupIndex}"
+                    `${viewButton(group[0].index)}<button class="field-ops-btn danger" data-merge-group="${groupIndex}"
                         ${can('edit') && can('delete') && group.every(item => locationId(item.loc)) ? '' : 'disabled'}>รวมข้อมูล</button>`
                 )).join('') || emptyHtml('ไม่พบพิกัดซ้ำ')}
-            </div>`;
+            </div>` : ''}
+            ${hasMore ? `<div class="field-ops-load-more">
+                <button class="field-ops-btn" data-quality-more>แสดงเพิ่มอีก 100 รายการต่อประเภท</button>
+            </div>` : ''}`;
         body._duplicateGroups = duplicateRows;
     }
 
@@ -203,9 +271,7 @@
 
     function renderWork(body) {
         const query = state.query.toLowerCase();
-        const rows = locations().filter(loc => !query ||
-            displayName(loc).toLowerCase().includes(query) ||
-            String(loc.city || '').toLowerCase().includes(query));
+        const rows = locations().filter(loc => matchesLocation(loc, query));
         body.innerHTML = `
             <div class="field-ops-form">
                 <label class="field-ops-field wide">
@@ -220,6 +286,7 @@
             <div class="field-ops-list">
                 ${rows.slice(0, 150).map(loc => {
                     const id = locationId(loc);
+                    const index = locationIndex(loc);
                     return `<div class="field-ops-row">
                         <div class="field-ops-row-main">
                             <div class="field-ops-row-title">${escapeHtml(displayName(loc))}</div>
@@ -227,6 +294,7 @@
                             <span class="field-ops-status">${STATUS_LABELS[loc.workflow_status] || STATUS_LABELS.new}</span>
                         </div>
                         <div class="field-ops-actions">
+                            <button class="field-ops-btn map" data-view-index="${index}">ดูตำแหน่ง</button>
                             <select aria-label="สถานะ" data-work-status="${id}" ${can('edit') && id ? '' : 'disabled'}>
                                 ${workflowOptions(loc.workflow_status || 'new')}
                             </select>
@@ -245,7 +313,8 @@
         const rows = locations().filter(loc => !query ||
             displayName(loc).toLowerCase().includes(query) ||
             String(loc.list || '').toLowerCase().includes(query) ||
-            String(loc.city || '').toLowerCase().includes(query));
+            String(loc.city || '').toLowerCase().includes(query) ||
+            coords(loc).includes(query));
         body.innerHTML = `
             <div class="field-ops-form">
                 <label class="field-ops-field wide">
@@ -380,6 +449,17 @@
             window.openEdit?.(Number(edit.dataset.editIndex));
             return;
         }
+        const view = event.target.closest('[data-view-index]');
+        if (view) {
+            const index = Number(view.dataset.viewIndex);
+            close();
+            window.btMapFocusLocation?.(index);
+            return;
+        }
+        if (event.target.closest('[data-quality-more]')) {
+            state.qualityLimit += 100;
+            return render();
+        }
         const merge = event.target.closest('[data-merge-group]');
         if (merge) return mergeDuplicateGroup(Number(merge.dataset.mergeGroup));
         const saveWork = event.target.closest('[data-save-work]');
@@ -414,9 +494,26 @@
             state.historyLocationId = event.target.value;
             loadHistory();
         }
+        if (event.target.id === 'fieldOpsQualityFilter') {
+            state.qualityFilter = event.target.value;
+            state.qualityLimit = 100;
+            render();
+        }
     }
 
     function onShellInput(event) {
+        if (event.target.id === 'fieldOpsQualitySearch') {
+            state.qualityQuery = event.target.value;
+            state.qualityLimit = 100;
+            window.clearTimeout(onShellInput.qualityTimer);
+            onShellInput.qualityTimer = window.setTimeout(() => {
+                render();
+                const search = $('#fieldOpsQualitySearch');
+                search?.focus();
+                search?.setSelectionRange(search.value.length, search.value.length);
+            }, 180);
+            return;
+        }
         if (event.target.id === 'fieldOpsWorkSearch' || event.target.id === 'fieldOpsBulkSearch') {
             state.query = event.target.value;
             window.clearTimeout(onShellInput.timer);

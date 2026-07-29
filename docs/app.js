@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════
-const APP_VERSION = 'v7.6.0';
+const APP_VERSION = 'v7.6.1';
 
 // Hoisted early — used by renderMarkers before route section loads
 let routeLine = null, routeMode = false;
@@ -6957,6 +6957,29 @@ function startAutoSync(){
 // ════════════════════════════════════════════
 // DEBUG MODE
 // ════════════════════════════════════════════
+window.btMapFocusLocation = function(indexOrLocation) {
+    const loc = typeof indexOrLocation === 'number'
+        ? locations[indexOrLocation]
+        : indexOrLocation;
+    const lat = Number(loc?.lat);
+    const lng = Number(loc?.lng);
+    if (!loc || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+        showToast('ไม่พบพิกัดของตำแหน่งนี้', true);
+        return false;
+    }
+    const index = getLocIndex(loc);
+    closeMobDrawer?.();
+    closeListPanel?.();
+    closePlaceCard?.();
+    map.invalidateSize();
+    map.flyTo([lat, lng], Math.max(map.getZoom(), 16), {
+        animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        duration: _mobile ? 0.3 : 0.55
+    });
+    window.setTimeout(() => showLocationDetails(loc, index), _mobile ? 320 : 560);
+    return true;
+};
+
 window.btDebug = {
     get locations() { return locations; },
     get filtered() { return getFiltered(); },

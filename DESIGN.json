@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-29T12:10:17.843Z",
+  "title": "Design System: BT Locations",
+  "extensions": {
+    "colorMeta": {
+      "carbon-night": {
+        "role": "neutral",
+        "displayName": "Carbon Night",
+        "canonical": "oklch(8% 0.008 255)",
+        "tonalRamp": ["oklch(15% 0.008 255)", "oklch(26% 0.008 255)", "oklch(37% 0.008 255)", "oklch(48% 0.008 255)", "oklch(59% 0.008 255)", "oklch(71% 0.008 255)", "oklch(83% 0.008 255)", "oklch(95% 0.008 255)"]
+      },
+      "instrument-graphite": {
+        "role": "neutral",
+        "displayName": "Instrument Graphite",
+        "canonical": "oklch(11% 0.009 255)",
+        "tonalRamp": ["oklch(15% 0.009 255)", "oklch(26% 0.009 255)", "oklch(37% 0.009 255)", "oklch(48% 0.009 255)", "oklch(59% 0.009 255)", "oklch(71% 0.009 255)", "oklch(83% 0.009 255)", "oklch(95% 0.009 255)"]
+      },
+      "machined-graphite": {
+        "role": "neutral",
+        "displayName": "Machined Graphite",
+        "canonical": "oklch(14% 0.011 255)",
+        "tonalRamp": ["oklch(15% 0.011 255)", "oklch(26% 0.011 255)", "oklch(37% 0.011 255)", "oklch(48% 0.011 255)", "oklch(59% 0.011 255)", "oklch(71% 0.011 255)", "oklch(83% 0.011 255)", "oklch(95% 0.011 255)"]
+      },
+      "hairline-alloy": {
+        "role": "neutral",
+        "displayName": "Hairline Alloy",
+        "canonical": "oklch(97% 0.004 255 / 0.14)",
+        "tonalRamp": ["oklch(15% 0.004 255)", "oklch(26% 0.004 255)", "oklch(37% 0.004 255)", "oklch(48% 0.004 255)", "oklch(59% 0.004 255)", "oklch(71% 0.004 255)", "oklch(83% 0.004 255)", "oklch(95% 0.004 255)"]
+      },
+      "strong-alloy": {
+        "role": "neutral",
+        "displayName": "Strong Alloy",
+        "canonical": "oklch(97% 0.004 255 / 0.32)",
+        "tonalRamp": ["oklch(15% 0.004 255)", "oklch(26% 0.004 255)", "oklch(37% 0.004 255)", "oklch(48% 0.004 255)", "oklch(59% 0.004 255)", "oklch(71% 0.004 255)", "oklch(83% 0.004 255)", "oklch(95% 0.004 255)"]
+      },
+      "instrument-white": {
+        "role": "neutral",
+        "displayName": "Instrument White",
+        "canonical": "oklch(96% 0.005 255)",
+        "tonalRamp": ["oklch(15% 0.005 255)", "oklch(26% 0.005 255)", "oklch(37% 0.005 255)", "oklch(48% 0.005 255)", "oklch(59% 0.005 255)", "oklch(71% 0.005 255)", "oklch(83% 0.005 255)", "oklch(95% 0.005 255)"]
+      },
+      "secondary-readout": {
+        "role": "neutral",
+        "displayName": "Secondary Readout",
+        "canonical": "oklch(79% 0.008 255)",
+        "tonalRamp": ["oklch(15% 0.008 255)", "oklch(26% 0.008 255)", "oklch(37% 0.008 255)", "oklch(48% 0.008 255)", "oklch(59% 0.008 255)", "oklch(71% 0.008 255)", "oklch(83% 0.008 255)", "oklch(95% 0.008 255)"]
+      },
+      "muted-readout": {
+        "role": "neutral",
+        "displayName": "Muted Readout",
+        "canonical": "oklch(61% 0.012 255)",
+        "tonalRamp": ["oklch(15% 0.012 255)", "oklch(26% 0.012 255)", "oklch(37% 0.012 255)", "oklch(48% 0.012 255)", "oklch(59% 0.012 255)", "oklch(71% 0.012 255)", "oklch(83% 0.012 255)", "oklch(95% 0.012 255)"]
+      },
+      "cold-alloy": {
+        "role": "primary",
+        "displayName": "Cold Alloy",
+        "canonical": "oklch(88% 0.025 245)",
+        "tonalRamp": ["oklch(15% 0.025 245)", "oklch(26% 0.025 245)", "oklch(37% 0.025 245)", "oklch(48% 0.025 245)", "oklch(59% 0.025 245)", "oklch(71% 0.025 245)", "oklch(83% 0.025 245)", "oklch(95% 0.025 245)"]
+      },
+      "signal-mint": {
+        "role": "secondary",
+        "displayName": "Signal Mint",
+        "canonical": "oklch(76% 0.16 150)",
+        "tonalRamp": ["oklch(15% 0.04 150)", "oklch(26% 0.07 150)", "oklch(37% 0.1 150)", "oklch(48% 0.13 150)", "oklch(59% 0.15 150)", "oklch(71% 0.16 150)", "oklch(83% 0.12 150)", "oklch(95% 0.04 150)"]
+      },
+      "signal-amber": {
+        "role": "tertiary",
+        "displayName": "Signal Amber",
+        "canonical": "oklch(79% 0.15 78)",
+        "tonalRamp": ["oklch(15% 0.04 78)", "oklch(26% 0.07 78)", "oklch(37% 0.1 78)", "oklch(48% 0.13 78)", "oklch(59% 0.15 78)", "oklch(71% 0.15 78)", "oklch(83% 0.11 78)", "oklch(95% 0.04 78)"]
+      },
+      "signal-red": {
+        "role": "tertiary",
+        "displayName": "Signal Red",
+        "canonical": "oklch(69% 0.19 25)",
+        "tonalRamp": ["oklch(15% 0.05 25)", "oklch(26% 0.09 25)", "oklch(37% 0.13 25)", "oklch(48% 0.16 25)", "oklch(59% 0.19 25)", "oklch(71% 0.17 25)", "oklch(83% 0.12 25)", "oklch(95% 0.04 25)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Instrument Display", "purpose": "Place names, panel headings, and major numerical readouts." },
+      "title": { "displayName": "Panel Title", "purpose": "Compact panel and section ownership." },
+      "body": { "displayName": "Operational Body", "purpose": "Instructions, data values, and readable interface copy." },
+      "label": { "displayName": "Command Readout", "purpose": "Tabs, controls, coordinates, timestamps, and status codes." },
+      "editorial": { "displayName": "Human Note", "purpose": "Place notes and short contextual narrative only." }
+    },
+    "shadows": [
+      {
+        "name": "tool-sheet-lift",
+        "value": "-18px 0 50px oklch(4% 0.01 255 / 0.55)",
+        "purpose": "Separates a desktop field-operations sheet from the map."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px oklch(67% 0.15 230 / 0.12)",
+        "purpose": "Communicates keyboard and form focus without decorative depth."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-precision",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Panel reveals, compact transforms, and stateful movement."
+      },
+      {
+        "name": "ease-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Larger mobile sheet and drawer transitions."
+      },
+      {
+        "name": "duration-control",
+        "value": "160ms",
+        "purpose": "Hover, focus, active, and compact control feedback."
+      },
+      {
+        "name": "duration-panel",
+        "value": "220ms",
+        "purpose": "Dialogs, drawers, and field-operations sheets."
+      }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "720px" },
+      { "name": "compact-map", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Command Button",
+      "kind": "button",
+      "refersTo": "button-command",
+      "description": "Primary shell command with precise outline and inversion feedback.",
+      "html": "<button class=\"ds-command-btn\">SYNC</button>",
+      "css": ".ds-command-btn { min-height: 40px; padding: 8px 14px; border: 1px solid var(--bug-line-strong); border-radius: 999px; background: transparent; color: var(--tx); font: 400 10px/1.2 var(--bug-mono); letter-spacing: .09em; text-transform: uppercase; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 160ms ease; } .ds-command-btn:hover, .ds-command-btn:focus-visible { background: var(--tx); color: var(--bug-canvas); border-color: var(--tx); outline: none; } .ds-command-btn:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Operational Button",
+      "kind": "button",
+      "refersTo": "button-operational",
+      "description": "Compact action used inside dense data-management rows.",
+      "html": "<button class=\"ds-operational-btn\">ดูตำแหน่ง</button>",
+      "css": ".ds-operational-btn { min-height: 34px; padding: 7px 10px; border: 1px solid oklch(74% .08 155 / .38); border-radius: 7px; background: oklch(68% .08 155 / .1); color: oklch(82% .08 155); font: 750 10px/1.2 var(--bug-body); transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease; } .ds-operational-btn:hover, .ds-operational-btn:focus-visible { border-color: oklch(76% .1 230 / .7); background: oklch(23% .03 250); outline: none; } .ds-operational-btn:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Command Input",
+      "kind": "input",
+      "refersTo": "input-command",
+      "description": "Transparent form field with a precise lower boundary.",
+      "html": "<label class=\"ds-field\"><span>ชื่อสถานที่</span><input placeholder=\"ค้นหาหรือระบุชื่อ\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: var(--tx3); font: 400 10px/1.2 var(--bug-mono); letter-spacing: .09em; } .ds-field input { min-height: 40px; padding: 8px 0; border: 0; border-bottom: 1px solid var(--bug-line-strong); border-radius: 0; background: transparent; color: var(--tx); font: 400 13px/1.5 var(--bug-body); outline: none; } .ds-field input:focus { border-bottom-color: var(--tx); } .ds-field input:disabled { opacity: .45; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Compact filter state with text and boundary feedback.",
+      "html": "<button class=\"ds-filter-chip\" aria-pressed=\"true\">ทั้งหมด</button>",
+      "css": ".ds-filter-chip { min-height: 36px; padding: 7px 10px; border: 1px solid var(--bug-line-strong); border-radius: 999px; background: transparent; color: var(--tx2); font: 400 10px/1.2 var(--bug-mono); letter-spacing: .06em; transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease; } .ds-filter-chip:hover, .ds-filter-chip:focus-visible, .ds-filter-chip[aria-pressed=\"true\"] { background: oklch(97% .004 255 / .05); color: var(--tx); border-color: var(--tx2); outline: none; }"
+    },
+    {
+      "name": "Command Tabs",
+      "kind": "nav",
+      "description": "Flat horizontal tabs with one active instrument readout.",
+      "html": "<nav class=\"ds-tabs\" aria-label=\"มุมมอง\"><button class=\"ds-tab\" aria-selected=\"true\">คุณภาพข้อมูล</button><button class=\"ds-tab\" aria-selected=\"false\">งานของทีม</button></nav>",
+      "css": ".ds-tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--bug-line); background: var(--bug-panel-solid); } .ds-tab { min-height: 36px; padding: 8px 10px; border: 0; border-bottom: 1px solid transparent; border-radius: 0; background: transparent; color: var(--tx3); font: 400 10px/1.2 var(--bug-mono); transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease; } .ds-tab:hover, .ds-tab:focus-visible { color: var(--tx2); outline: none; } .ds-tab[aria-selected=\"true\"] { color: var(--tx); border-bottom-color: var(--tx); background: oklch(97% .004 255 / .04); }"
+    },
+    {
+      "name": "Operational Row",
+      "kind": "card",
+      "refersTo": "row-operational",
+      "description": "Dense location row that separates inspection from mutation.",
+      "html": "<article class=\"ds-row\"><div><strong>ไม่มีชื่อ</strong><small>บางซื่อ · กรุงเทพฯ · 13.814758, 100.542936</small></div><button>ดูตำแหน่ง</button></article>",
+      "css": ".ds-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 12px; min-height: 56px; padding: 10px 11px; border: 1px solid var(--bug-line); border-radius: 8px; background: var(--bug-raised); color: var(--tx); } .ds-row div { min-width: 0; } .ds-row strong, .ds-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row strong { font: 700 12px/1.2 var(--bug-body); } .ds-row small { margin-top: 4px; color: var(--tx3); font: 600 10px/1.35 var(--bug-mono); } .ds-row button { min-height: 34px; padding: 7px 10px; border: 1px solid var(--bug-line-strong); border-radius: 7px; background: transparent; color: var(--tx2); } .ds-row button:hover, .ds-row button:focus-visible { color: var(--tx); border-color: var(--tx); outline: none; }"
+    },
+    {
+      "name": "Command Panel",
+      "kind": "custom",
+      "refersTo": "panel-command",
+      "description": "Full-height control plane with a stable header and independent scrolling body.",
+      "html": "<section class=\"ds-panel\"><header><small>FIELD OPERATIONS</small><h2>ศูนย์จัดการข้อมูล</h2></header><div class=\"ds-panel-body\">พื้นที่ทำงาน</div></section>",
+      "css": ".ds-panel { width: min(620px,92vw); min-height: 300px; border: 1px solid var(--bug-line-strong); border-radius: 0; background: var(--bug-panel-solid); color: var(--tx); box-shadow: -18px 0 50px oklch(4% .01 255 / .55); } .ds-panel header { padding: 18px 18px 14px; border-bottom: 1px solid var(--bug-line); } .ds-panel small { color: var(--tx2); font: 400 9px/1.2 var(--bug-mono); letter-spacing: .16em; } .ds-panel h2 { margin: 4px 0 0; font: 400 24px/1.15 var(--bug-display); letter-spacing: .08em; } .ds-panel-body { padding: 16px; color: var(--tx2); font: 400 13px/1.5 var(--bug-body); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Precision Cockpit",
+    "overview": "BT Locations behaves like an automotive instrument panel built for field operations. A field operator glances at a mounted phone inside a vehicle under mixed daylight and dashboard shadow, so the interface uses near-black full-bleed surfaces, crisp readouts, and stable hairline boundaries. The map remains the visual canvas while surrounding controls stay quiet and predictable.\n\nThe system is operational, compact, and trustworthy. Density is intentional, motion confirms state, and semantic color appears only when it carries information. It explicitly rejects marketing-page styling, decorative dashboard patterns, playful security flows, hidden permission states, and interactions that rely on hover or color alone.",
+    "keyCharacteristics": [
+      "Full-bleed Carbon Night surfaces with restrained tonal separation.",
+      "Automotive display type paired with utilitarian body and mono readouts.",
+      "Hairline boundaries, precise outlines, and compact touch-safe controls.",
+      "Flat surfaces at rest with rare elevation for overlays and tool sheets.",
+      "Semantic signals remain readable through text, shape, and state labels.",
+      "Responsive structure that preserves the map as the primary canvas."
+    ],
+    "rules": [
+      { "name": "The One Signal Rule", "body": "Cold Alloy occupies no more than ten percent of a screen. Signal colors are reserved for operational meaning.", "section": "colors" },
+      { "name": "The Tinted Neutral Rule", "body": "Pure black and pure white are forbidden. Every neutral carries the cool instrument hue.", "section": "colors" },
+      { "name": "The Readout Rule", "body": "Coordinates, timestamps, status codes, and compact commands always use the mono role.", "section": "typography" },
+      { "name": "The Thai Clarity Rule", "body": "Never force uppercase or excessive letter spacing onto Thai text.", "section": "typography" },
+      { "name": "The Flat-at-Rest Rule", "body": "Persistent navigation, cards, map controls, lists, and statistics have no shadow.", "section": "elevation" },
+      { "name": "The Boundary Before Shadow Rule", "body": "Add a hairline boundary first. Use a shadow only when two temporary surfaces still merge visually.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do preserve Carbon Night as the full-bleed canvas and Instrument Graphite for control planes.",
+      "Do keep the map primary and surrounding chrome quiet.",
+      "Do use one-pixel Hairline Alloy boundaries before introducing elevation.",
+      "Do keep operational motion between 160 and 220 milliseconds with ease-out-quart or ease-out-expo curves.",
+      "Do provide keyboard focus, touch-safe targets, reduced-motion behavior, and text labels for every status.",
+      "Do keep authorization visible before destructive actions and preserve recoverable workflows.",
+      "Do use Signal Mint, Signal Amber, and Signal Red only for operational meaning."
+    ],
+    "donts": [
+      "Don't use marketing-page styling.",
+      "Don't introduce decorative dashboard patterns.",
+      "Don't make security flows playful.",
+      "Don't hide permission states.",
+      "Don't create interactions that rely on hover or visual color alone.",
+      "Don't use pure black, pure white, neon accents, gradient text, or decorative gradients.",
+      "Don't use glassmorphism as a default surface treatment.",
+      "Don't add a colored side-stripe border to cards, rows, callouts, or alerts.",
+      "Don't use identical decorative card grids or hero-metric templates.",
+      "Don't add ambient shadows to persistent navigation, cards, lists, statistics, or map controls.",
+      "Don't use display or editorial type for form labels, buttons, coordinates, or status readouts."
+    ]
+  }
+}

@@ -126,7 +126,22 @@
 
 .field-ops-body {
     overflow: auto;
+    overscroll-behavior: contain;
     padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
+    scrollbar-gutter: stable;
+}
+
+.field-ops-tools {
+    position: sticky;
+    z-index: 4;
+    top: -14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(150px, .7fr);
+    gap: 8px;
+    margin: -14px -16px 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid oklch(83% 0.016 250 / 0.12);
+    background: oklch(11% 0.017 255 / 0.98);
 }
 
 .field-ops-summary {
@@ -188,6 +203,8 @@
 
 .field-ops-actions {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 6px;
 }
 
@@ -208,9 +225,36 @@
     color: oklch(87% 0.1 230);
 }
 
+.field-ops-btn.map {
+    border-color: oklch(74% 0.08 155 / 0.38);
+    background: oklch(68% 0.08 155 / 0.1);
+    color: oklch(82% 0.08 155);
+}
+
+.field-ops-btn:hover:not(:disabled),
+.field-ops-btn:focus-visible {
+    border-color: oklch(76% 0.1 230 / 0.7);
+    background: oklch(23% 0.03 250);
+    outline: none;
+}
+
+.field-ops-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
 .field-ops-btn.danger {
     border-color: oklch(66% 0.18 25 / 0.36);
     color: oklch(76% 0.14 25);
+}
+
+.field-ops-section-head {
+    margin-top: 20px;
+}
+
+.field-ops-load-more {
+    display: flex;
+    justify-content: center;
+    padding: 18px 0 4px;
 }
 
 .field-ops-btn:disabled {
@@ -339,8 +383,16 @@
         grid-template-columns: 1fr;
     }
 
+    .field-ops-tools {
+        grid-template-columns: 1fr;
+    }
+
     .field-ops-row {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .field-ops-actions {
+        justify-content: flex-start;
     }
 }
 
